@@ -17,7 +17,6 @@ const ItemDetailPage = ({ user }) => {
   const [selectedMyItem, setSelectedMyItem] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   
-  // NAYA STATE: Balance error handle karne ke liye
   const [balanceError, setBalanceError] = useState(null);
 
   useEffect(() => {
@@ -40,7 +39,7 @@ const ItemDetailPage = ({ user }) => {
       return;
     }
     setShowModal(true);
-    setBalanceError(null); // Reset error when opening modal
+    setBalanceError(null); 
     try {
       const response = await axios.get(`${API_URL}/items/me`, { withCredentials: true });
       const myActiveItems = response.data.data.filter(i => i.status === 'active');
@@ -66,12 +65,12 @@ const ItemDetailPage = ({ user }) => {
     } catch (error) {
       console.error('Asli Error Details:', error.response?.data || error);
       
-      // NAYA LOGIC: Agar backend ne "insufficientCredits: true" bheja hai, toh error show karo
       if (error.response?.data?.insufficientCredits) {
         setBalanceError(error.response.data.message);
       } else {
+        // NAYA LOGIC: Alert hata diya, direct modal me error set karega
         const errorMessage = error.response?.data?.message || error.message;
-        alert(`Swap Failed: ${errorMessage}`);
+        setBalanceError(errorMessage);
       }
     } finally {
       setSubmitting(false);
@@ -80,6 +79,11 @@ const ItemDetailPage = ({ user }) => {
 
   if (loading) return <div className="text-center text-emerald-400 mt-20 font-medium animate-pulse">Loading item details...</div>;
   if (!item) return <div className="text-center text-white mt-20">Item not found.</div>;
+
+  const targetValue = item.estimated_value || 0;
+  const selectedItemObj = myItems.find(i => i._id === selectedMyItem);
+  const offeredValue = selectedItemObj?.estimated_value || 0;
+  const requiredCredits = Math.max(0, targetValue - offeredValue);
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -156,21 +160,19 @@ const ItemDetailPage = ({ user }) => {
             </div>
             
             <div className="p-6 overflow-y-auto flex-1 bg-gray-900/50">
-              {/* NAYA: Error Message UI for Insufficient Balance */}
               {balanceError && (
                 <div className="mb-6 bg-red-500/10 border border-red-500/50 p-4 rounded-xl flex items-start gap-3">
                   <AlertCircle className="w-6 h-6 text-red-400 flex-shrink-0" />
                   <div>
                     <p className="text-sm font-bold text-red-400 mb-1">Transaction Failed</p>
                     <p className="text-sm text-gray-300">{balanceError}</p>
-                    {/* Yahan Buy Credits page ka link banayenge baad me */}
-                  <Link 
-  to="/wallet" 
-  onClick={() => setShowModal(false)} // Modal band karke le jao
-  className="mt-3 inline-block bg-red-500 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-red-600 transition"
->
-  Get More Credits
-</Link>
+                    <Link 
+                      to="/wallet" 
+                      onClick={() => setShowModal(false)} 
+                      className="mt-3 inline-block bg-red-500 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-red-600 transition"
+                    >
+                      Get More Credits
+                    </Link>
                   </div>
                 </div>
               )}
@@ -181,24 +183,43 @@ const ItemDetailPage = ({ user }) => {
                   <Link to="/add-item" onClick={() => setShowModal(false)} className="inline-block bg-emerald-500 text-white px-6 py-2 rounded-full font-medium hover:bg-emerald-600 transition">Add an Item Now</Link>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {myItems.map(myItem => (
-                    <div 
-                      key={myItem._id} 
-                      onClick={() => setSelectedMyItem(myItem._id)}
-                      className={`cursor-pointer rounded-xl overflow-hidden border-2 transition flex flex-col ${selectedMyItem === myItem._id ? 'border-emerald-500 scale-95 shadow-lg shadow-emerald-500/20' : 'border-gray-700 hover:border-gray-500 bg-gray-800'}`}
-                    >
-                      {myItem.images && myItem.images.length > 0 && myItem.images[0] ? (
-                        <img src={myItem.images[0]} alt={myItem.title} className="w-full h-32 object-cover" />
-                      ) : (
-                        <div className="w-full h-32 bg-gray-900 flex items-center justify-center"><Package className="w-10 h-10 text-gray-600" /></div>
-                      )}
-                      <div className="p-3">
-                        <p className="text-sm font-medium text-white truncate">{myItem.title}</p>
+                <>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    {myItems.map(myItem => (
+                      <div 
+                        key={myItem._id} 
+                        onClick={() => setSelectedMyItem(myItem._id)}
+                        className={`cursor-pointer rounded-xl overflow-hidden border-2 transition flex flex-col ${selectedMyItem === myItem._id ? 'border-emerald-500 scale-95 shadow-lg shadow-emerald-500/20' : 'border-gray-700 hover:border-gray-500 bg-gray-800'}`}
+                      >
+                        {myItem.images && myItem.images.length > 0 && myItem.images[0] ? (
+                          <img src={myItem.images[0]} alt={myItem.title} className="w-full h-32 object-cover" />
+                        ) : (
+                          <div className="w-full h-32 bg-gray-900 flex items-center justify-center"><Package className="w-10 h-10 text-gray-600" /></div>
+                        )}
+                        <div className="p-3">
+                          <p className="text-sm font-medium text-white truncate">{myItem.title}</p>
+                          <p className="text-xs text-yellow-500 mt-1 font-semibold flex items-center gap-1">
+                            🪙 {myItem.estimated_value || '0'} Credits
+                          </p>
+                        </div>
                       </div>
+                    ))}
+                  </div>
+
+                  {selectedMyItem && selectedItemObj && (
+                    <div className="mt-6">
+                      {requiredCredits > 0 ? (
+                        <div className="bg-blue-500/10 border border-blue-500/30 p-4 rounded-xl text-blue-200 text-sm">
+                          <strong className="text-blue-400">Trade Info:</strong> The requested item is {targetValue} Credits, but your offered item is {offeredValue} Credits. If the owner accepts this swap, a difference of <strong className="text-white">{requiredCredits} Credits</strong> will be automatically deducted from your wallet.
+                        </div>
+                      ) : (
+                        <div className="bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-xl text-emerald-200 text-sm">
+                          <strong className="text-emerald-400">Fair Trade:</strong> No extra credits will be deducted for this swap.
+                        </div>
+                      )}
                     </div>
-                  ))}
-                </div>
+                  )}
+                </>
               )}
             </div>
 

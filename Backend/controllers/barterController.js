@@ -1,6 +1,6 @@
 const BarterRequest = require('../models/BarterRequest');
 const Item = require('../models/Item');
-const User = require('../models/User'); // User model chahiye balance check ke liye
+const User = require('../models/User'); 
 
 const createBarterRequest = async (req, res) => {
   try {
@@ -11,22 +11,43 @@ const createBarterRequest = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Target item not found' });
     }
 
+    const offeredItemData = await Item.findById(offeredItem);
+    if (!offeredItemData) {
+      return res.status(404).json({ success: false, message: 'Offered item not found' });
+    }
+
     if (targetItem.owner.toString() === req.user._id.toString()) {
       return res.status(400).json({ success: false, message: 'You cannot make an offer on your own item' });
     }
 
-    // --- NAYA LOGIC: Account Credits Check Karein ---
-    const currentUser = await User.findById(req.user._id);
-    
-    // Agar target item ki value jyada hai user ke account credits se
-    if (currentUser.account_credits < targetItem.estimated_value) {
+    // --- NAYA LOGIC: Spam Protection (Check existing request) ---
+    const existingRequest = await BarterRequest.findOne({
+      requester: req.user._id,
+      item: requestedItem,
+      status: { $in: ['PENDING', 'ACCEPTED'] } // Agar pehle se pending ya accepted hai
+    });
+
+    if (existingRequest) {
       return res.status(400).json({ 
         success: false, 
-        message: `Insufficient Credits! This item requires ${targetItem.estimated_value} credits, but you only have ${currentUser.account_credits}. Please buy more credits.`,
-        insufficientCredits: true // Frontend ko pata chalega ki popup/modal dikhana hai
+        message: 'You have already sent a request for this item. Please wait for the owner to respond!' 
       });
     }
-    // ------------------------------------------------
+    // -------------------------------------------------------------
+
+    const currentUser = await User.findById(req.user._id);
+    
+    const targetValue = targetItem.estimated_value || 0;
+    const offeredValue = offeredItemData.estimated_value || 0;
+    const requiredCredits = Math.max(0, targetValue - offeredValue);
+
+    if (currentUser.account_credits < requiredCredits) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Insufficient Credits! This swap requires ${requiredCredits} credits to cover the difference, but you only have ${currentUser.account_credits}.`,
+        insufficientCredits: true 
+      });
+    }
 
     const newRequest = new BarterRequest({
       supabaseId: `mongo-barter-${Date.now()}`,
@@ -159,35 +180,53 @@ const deleteBarterRequest = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
-// --- NAYA FUNCTION: Swap Accept/Reject Handle Karne Ke Liye ---
+
 const updateSwapStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body; // 'ACCEPTED' ya 'REJECTED' aayega frontend se
+    const { status } = req.body; 
     const userId = req.user._id;
 
-    // 1. Swap request find karo
-    const barter = await BarterRequest.findById(id);
+    const barter = await BarterRequest.findById(id).populate('item offered_item');
 
     if (!barter) {
       return res.status(404).json({ success: false, message: 'Swap request not found' });
     }
 
-    // 2. Check karo ki jo user accept/reject kar raha hai, kya wahi owner (receiver) hai?
     if (barter.owner.toString() !== userId.toString()) {
       return res.status(403).json({ success: false, message: 'Not authorized to respond to this request' });
     }
 
-    // 3. Status update karo
+    if (barter.status !== 'PENDING') {
+      return res.status(400).json({ success: false, message: 'This request has already been processed' });
+    }
+
+    const targetValue = barter.item.estimated_value || 0;
+    const offeredValue = barter.offered_item.estimated_value || 0;
+    const requiredCredits = Math.max(0, targetValue - offeredValue);
+
+    if (status === 'ACCEPTED') {
+      const requester = await User.findById(barter.requester);
+      
+      if (requiredCredits > 0) {
+        if (requester.account_credits < requiredCredits) {
+          return res.status(400).json({ 
+            success: false, 
+            message: 'Cannot accept swap. The requester no longer has enough credits.' 
+          });
+        }
+        
+        requester.account_credits -= requiredCredits;
+        await requester.save();
+      }
+
+      await Item.findByIdAndUpdate(barter.item._id, { status: 'swapped' });
+      await Item.findByIdAndUpdate(barter.offered_item._id, { status: 'swapped' });
+    }
+
     barter.status = status;
     barter.updated_at = Date.now();
     await barter.save();
-
-    // 4. Agar ACCEPT ho gaya, toh dono items ko 'swapped' mark kar do
-    if (status === 'ACCEPTED') {
-      await Item.findByIdAndUpdate(barter.item, { status: 'swapped' });
-      await Item.findByIdAndUpdate(barter.offered_item, { status: 'swapped' });
-    }
 
     res.status(200).json({ 
       success: true, 
@@ -196,7 +235,7 @@ const updateSwapStatus = async (req, res) => {
     });
 
   } catch (error) {
-    console.error(error);
+    console.error('Error in updateSwapStatus:', error);
     res.status(500).json({ success: false, message: 'Server error while updating swap status' });
   }
 };

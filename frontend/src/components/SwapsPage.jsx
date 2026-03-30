@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { RefreshCw, Check, X, MessageSquare, Package, Eye } from 'lucide-react';
+import { RefreshCw, Check, X, MessageSquare, Package, Eye, AlertCircle } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
@@ -12,12 +12,16 @@ const SwapsPage = ({ user }) => {
   const [loading, setLoading] = useState(true);
   
   const [processingId, setProcessingId] = useState(null);
+  
+  // NAYA STATE: Error handle karne ke liye
+  const [actionError, setActionError] = useState({ id: null, message: '' });
 
   if (!user) return <Navigate to="/login" />;
 
   useEffect(() => {
     const fetchSwaps = async () => {
       setLoading(true);
+      setActionError({ id: null, message: '' }); // Tab change par error reset
       try {
         const endpoint = activeTab === 'received' ? `${API_URL}/barter/received` : `${API_URL}/barter/sent`;
         const response = await axios.get(endpoint, { withCredentials: true });
@@ -34,6 +38,7 @@ const SwapsPage = ({ user }) => {
 
   const handleStatusUpdate = async (swapId, newStatus) => {
     setProcessingId(swapId);
+    setActionError({ id: null, message: '' }); // Naya action lene par purana error hatao
     try {
       const response = await axios.put(`${API_URL}/barter/${swapId}/status`, 
         { status: newStatus },
@@ -44,7 +49,11 @@ const SwapsPage = ({ user }) => {
       }
     } catch (error) {
       console.error('Error updating status:', error);
-      alert(error.response?.data?.message || 'Failed to update status');
+      // NAYA LOGIC: Alert ki jagah UI mein error set karo
+      setActionError({ 
+        id: swapId, 
+        message: error.response?.data?.message || 'Failed to update status' 
+      });
     } finally {
       setProcessingId(null);
     }
@@ -120,6 +129,17 @@ const SwapsPage = ({ user }) => {
                   </Link>
                 </div>
               </div>
+
+              {/* NAYA: Error Message UI agar Accept fail ho jaye */}
+              {actionError.id === swap._id && (
+                <div className="mb-6 bg-red-500/10 border border-red-500/50 p-4 rounded-xl flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-bold text-red-400 mb-1">Action Failed</p>
+                    <p className="text-sm text-gray-300">{actionError.message}</p>
+                  </div>
+                </div>
+              )}
 
               <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                 <div className="flex-1 w-full bg-[#181a1d] rounded-2xl p-5 border border-gray-800/50">
