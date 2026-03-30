@@ -33,27 +33,96 @@ const registerUser = async (req, res) => {
     const { full_name, email, password, phone, city } = req.body;
 
     let user = await User.findOne({ email });
+    
+    // Agar user exist karta hai toh check karo verify hua hai ya nahi
     if (user) {
-      return res.status(400).json({ success: false, message: 'User already exists with this email' });
+      if (user.isVerified) {
+        return res.status(400).json({ success: false, message: 'User already exists with this email' });
+      } else {
+        // Agar verify nahi hua hai, toh uski details update kar denge naye password ke sath
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(password, salt);
+        user.full_name = full_name;
+        user.phone = phone;
+        user.city = city;
+      }
+    } else {
+   
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+
+      user = new User({
+        full_name,
+        email,
+        password: hashedPassword,
+        phone,
+        city,
+        isVerified: false 
+      });
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    user = new User({
-      full_name,
-      email,
-      password: hashedPassword,
-      phone,
-      city
-    });
+    // 6-digit OTP generate karo
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    user.otp = otp;
+    user.otpExpiry = Date.now() + 10 * 60 * 1000; 
 
     await user.save();
-    sendTokenResponse(user, 201, res, 'Registration successful!');
+
+
+    const message = `Hi ${full_name},\n\nYour OTP for Dealit registration is: ${otp}\n\nThis OTP is valid for 10 minutes.\n\nRegards,\nTeam Dealit`;
+    
+    await sendEmail({
+      email: user.email,
+      subject: 'Verify your Dealit Account',
+      message
+    });
+
+    res.status(200).json({ 
+      success: true, 
+      message: 'OTP sent to your email. Please verify to complete registration.',
+      email: user.email
+    });
 
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: 'Server Error during registration' });
+  }
+};
+
+
+const verifyOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ success: false, message: 'Please provide email and OTP' });
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({ success: false, message: 'Account is already verified. Please login.' });
+    }
+
+ 
+    if (user.otp !== otp || user.otpExpiry < Date.now()) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
+    }
+
+    user.isVerified = true;
+    user.otp = undefined;
+    user.otpExpiry = undefined;
+    await user.save();
+
+    sendTokenResponse(user, 200, res, 'Account verified and logged in successfully!');
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server Error during OTP verification' });
   }
 };
 
@@ -68,6 +137,15 @@ const loginUser = async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    if (!user.isVerified) {
+      if (user.otp === undefined && user.password) {
+        user.isVerified = true;
+        await user.save();
+      } else {
+        return res.status(403).json({ success: false, message: 'Please verify your email first. Register again to get a new OTP.' });
+      }
     }
 
     if (!user.password) {
@@ -180,7 +258,7 @@ const getUserProfile = async (req, res) => {
   }
 };
 
-// NAYA: Profile picture update karne ka function
+
 const updateProfilePic = async (req, res) => {
   try {
     const { profilePic } = req.body;
@@ -208,6 +286,7 @@ const updateProfilePic = async (req, res) => {
 
 module.exports = {
   registerUser,
+  verifyOtp, 
   loginUser,
   logoutUser,
   forgotPassword,

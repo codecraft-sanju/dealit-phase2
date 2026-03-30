@@ -15,7 +15,11 @@ const userSchema = new mongoose.Schema({
   profilePic: { type: String, default: '' },
   
   account_credits: { type: Number, default: 50 }, // Welcome bonus of 50 credits
-  
+
+  isVerified: { type: Boolean, default: false },
+  otp: { type: String },
+  otpExpiry: { type: Date },
+
   resetPasswordOtp: { type: String },
   resetPasswordOtpExpiry: { type: Date },
   created_at: { type: Date, default: Date.now },
