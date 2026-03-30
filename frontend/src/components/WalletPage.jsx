@@ -3,7 +3,8 @@ import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { ArrowLeft, Wallet, Coins, CreditCard, ChevronRight, ShieldCheck, Zap } from 'lucide-react';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_BACKEND_API;
+const API_URL = `${API_BASE}/api`;
 
 const loadRazorpayScript = () => {
   return new Promise((resolve) => {

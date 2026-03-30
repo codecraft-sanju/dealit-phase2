@@ -29,7 +29,11 @@ const createItem = async (req, res) => {
 
 const getItems = async (req, res) => {
   try {
-    const items = await Item.find({ status: 'active' })
+    // NAYA: Yahan condition change ki hai taaki sirf > 0 credits wale items aayein
+    const items = await Item.find({ 
+        status: 'active',
+        estimated_value: { $gt: 0 } 
+      })
       .populate('owner', 'full_name city email')
       .sort({ created_at: -1 });
     

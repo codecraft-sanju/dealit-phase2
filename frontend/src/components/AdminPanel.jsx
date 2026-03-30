@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Shield, Users, Package, Trash2, X, CheckCircle, Edit, List, AlertTriangle } from 'lucide-react';
+import { Shield, Users, Package, Trash2, X, CheckCircle, Edit, List, AlertTriangle, Eye, Coins,User } from 'lucide-react';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_BACKEND_API ;
+const API_URL = `${API_BASE}/api`;
 
 const AdminPanel = ({ user }) => {
   const [activeTab, setActiveTab] = useState('pending');
@@ -18,10 +19,14 @@ const AdminPanel = ({ user }) => {
     title: '', description: '', category: '', condition: '', estimated_value: '', preferred_item: ''
   });
 
-  // NAYA: Reject Modal States
+  // Reject Modal States
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [rejectingItemId, setRejectingItemId] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
+
+  // NAYA: View Details Modal States
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [viewingItem, setViewingItem] = useState(null);
 
   if (!user || user.role !== 'admin') {
     return <Navigate to="/" />;
@@ -57,7 +62,6 @@ const AdminPanel = ({ user }) => {
     }
   };
 
-  // NAYA: Reject logic with reason
   const handleRejectClick = (id) => {
     setRejectingItemId(id);
     setRejectionReason('');
@@ -102,7 +106,6 @@ const AdminPanel = ({ user }) => {
     }
   };
 
-  // --- Edit Item Logic ---
   const handleEditClick = (item) => {
     setEditingItemId(item._id);
     setEditForm({
@@ -135,6 +138,12 @@ const AdminPanel = ({ user }) => {
     } finally {
       setUpdating(false);
     }
+  };
+
+  // NAYA: View Details Click Handler
+  const handleViewClick = (item) => {
+    setViewingItem(item);
+    setIsViewModalOpen(true);
   };
 
   return (
@@ -247,7 +256,6 @@ const AdminPanel = ({ user }) => {
                             }`}>
                               {row.status}
                             </span>
-                            {/* NAYA: Admin panel me bhi reason dikhega agar reject hua hai */}
                             {row.status === 'rejected' && row.rejection_reason && (
                               <span className="text-[10px] text-red-400 max-w-[150px] truncate" title={row.rejection_reason}>
                                 Reason: {row.rejection_reason}
@@ -261,21 +269,36 @@ const AdminPanel = ({ user }) => {
                     <td className="px-6 py-4 text-right">
                       {activeTab === 'pending' ? (
                         <div className="flex justify-end gap-3">
+                          {/* NAYA: View Details Button */}
+                          <button 
+                            onClick={() => handleViewClick(row)}
+                            className="bg-blue-500/10 hover:bg-blue-500 hover:text-white text-blue-400 border border-blue-500/20 transition px-3 py-2 rounded-xl font-semibold flex items-center gap-1.5"
+                            title="View Information"
+                          >
+                            <Eye className="w-4 h-4" /> View
+                          </button>
                           <button 
                             onClick={() => handleApprove(row._id)}
-                            className="bg-emerald-500/10 hover:bg-emerald-500 hover:text-white text-emerald-400 border border-emerald-500/20 transition px-4 py-2 rounded-xl font-semibold flex items-center gap-2"
+                            className="bg-emerald-500/10 hover:bg-emerald-500 hover:text-white text-emerald-400 border border-emerald-500/20 transition px-3 py-2 rounded-xl font-semibold flex items-center gap-1.5"
                           >
-                            <CheckCircle className="w-4 h-4" /> Approve
+                            <CheckCircle className="w-4 h-4" />
                           </button>
                           <button 
                             onClick={() => handleRejectClick(row._id)}
-                            className="bg-red-500/10 hover:bg-red-500 hover:text-white text-red-400 border border-red-500/20 transition px-4 py-2 rounded-xl font-semibold flex items-center gap-2"
+                            className="bg-red-500/10 hover:bg-red-500 hover:text-white text-red-400 border border-red-500/20 transition px-3 py-2 rounded-xl font-semibold flex items-center gap-1.5"
                           >
-                            <X className="w-4 h-4" /> Reject
+                            <X className="w-4 h-4" />
                           </button>
                         </div>
                       ) : activeTab === 'items' ? (
                         <div className="flex justify-end gap-2">
+                          <button 
+                            onClick={() => handleViewClick(row)}
+                            className="text-gray-400 hover:text-blue-400 transition p-2 hover:bg-blue-400/10 rounded-lg"
+                            title="View Item"
+                          >
+                            <Eye className="w-5 h-5" />
+                          </button>
                           <button 
                             onClick={() => handleEditClick(row)}
                             className="text-gray-400 hover:text-blue-400 transition p-2 hover:bg-blue-400/10 rounded-lg"
@@ -308,6 +331,121 @@ const AdminPanel = ({ user }) => {
           </div>
         )}
       </div>
+
+      {/* --- MODAL FOR VIEWING ITEM DETAILS --- */}
+      {isViewModalOpen && viewingItem && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 py-8 bg-black/80 backdrop-blur-sm">
+          <div className="bg-gray-800 w-full max-w-3xl rounded-3xl border border-gray-700 shadow-2xl overflow-hidden flex flex-col max-h-full">
+            
+            {/* Header */}
+            <div className="p-6 border-b border-gray-700 flex justify-between items-center bg-gray-900/50">
+              <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                <Eye className="w-6 h-6 text-blue-400" /> Item Information
+              </h2>
+              <button onClick={() => setIsViewModalOpen(false)} className="text-gray-400 hover:text-white transition p-2 bg-gray-800 hover:bg-gray-700 rounded-full">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Content Body */}
+            <div className="p-6 overflow-y-auto flex-1 space-y-6">
+              
+              {/* Image Gallery */}
+              {viewingItem.images && viewingItem.images.length > 0 ? (
+                <div>
+                  <p className="text-sm text-gray-500 mb-2 font-bold uppercase tracking-wider">Uploaded Images</p>
+                  <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
+                    {viewingItem.images.map((img, idx) => (
+                      <a key={idx} href={img} target="_blank" rel="noopener noreferrer">
+                        <img src={img} alt={`view-${idx}`} className="w-40 h-40 object-cover rounded-xl border border-gray-700 flex-shrink-0 hover:border-blue-500 transition" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-gray-900 p-6 rounded-xl border border-gray-700 text-center text-gray-500 flex flex-col items-center">
+                  <Package className="w-8 h-8 mb-2" />
+                  <p>No images uploaded for this item.</p>
+                </div>
+              )}
+
+              {/* Information Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Title</p>
+                  <p className="text-xl font-bold text-white">{viewingItem.title}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Estimated Value</p>
+                  <p className="text-xl font-bold text-yellow-500 flex items-center gap-1">
+                    <Coins className="w-5 h-5"/> {viewingItem.estimated_value || '0'} Credits
+                  </p>
+                </div>
+                <div className="md:col-span-2">
+                  <p className="text-sm text-gray-500 mb-1">Description</p>
+                  <p className="text-gray-300 bg-gray-900/50 p-4 rounded-xl border border-gray-700 leading-relaxed">
+                    {viewingItem.description}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Category & Condition</p>
+                  <p className="text-gray-300 font-medium">{viewingItem.category} <span className="text-gray-600 px-2">•</span> {viewingItem.condition}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Looking for in return</p>
+                  <p className="text-emerald-400 font-medium">{viewingItem.preferred_item || 'Open to offers'}</p>
+                </div>
+
+                {/* Owner Information Section */}
+                <div className="md:col-span-2 border-t border-gray-700 pt-6 mt-2">
+                  <p className="text-sm text-blue-400 font-bold mb-4 uppercase tracking-wider flex items-center gap-2">
+                    <User className="w-4 h-4" /> Owner Details
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-gray-900/30 p-5 rounded-2xl border border-gray-700">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-0.5">Full Name</p>
+                      <p className="text-sm text-white font-medium">{viewingItem.owner?.full_name || 'Unknown'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-0.5">Email Address</p>
+                      <p className="text-sm text-white font-medium">{viewingItem.owner?.email || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-0.5">Phone Number</p>
+                      <p className="text-sm text-white font-medium">{viewingItem.owner?.phone || 'Not provided'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Actions */}
+            <div className="p-6 border-t border-gray-700 bg-gray-900/50 flex justify-end gap-3 flex-wrap">
+              <button onClick={() => setIsViewModalOpen(false)} className="px-6 py-2.5 rounded-xl font-bold text-gray-400 hover:text-white transition">
+                Close
+              </button>
+              
+              {/* Agar item pending me hai, toh approve/reject ke option modal ke andar hi de do */}
+              {viewingItem.status === 'pending' && (
+                <>
+                  <button 
+                    onClick={() => { setIsViewModalOpen(false); handleRejectClick(viewingItem._id); }} 
+                    className="px-6 py-2.5 rounded-xl font-bold bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white transition flex items-center gap-2"
+                  >
+                    <X className="w-4 h-4" /> Reject Item
+                  </button>
+                  <button 
+                    onClick={() => { setIsViewModalOpen(false); handleApprove(viewingItem._id); }} 
+                    className="px-6 py-2.5 rounded-xl font-bold bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 transition flex items-center gap-2"
+                  >
+                    <CheckCircle className="w-4 h-4" /> Approve Item
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* --- MODAL FOR REJECTION REASON --- */}
       {isRejectModalOpen && (
