@@ -1,0 +1,123 @@
+const Item = require('../models/Item');
+
+const createItem = async (req, res) => {
+  try {
+    const { title, description, category, condition, images, preferred_item, estimated_value } = req.body;
+
+    const newItem = new Item({
+      supabaseId: `mongo-${Date.now()}`,
+      owner: req.user._id,
+      title,
+      description,
+      category,
+      condition,
+      images: images || [],
+      preferred_item,
+      status: 'pending', // Naya item humesha pending rahega
+      estimated_value: estimated_value || 0,
+      created_at: Date.now(),
+      updated_at: Date.now()
+    });
+
+    const savedItem = await newItem.save();
+    res.status(201).json({ success: true, data: savedItem });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+const getItems = async (req, res) => {
+  try {
+    const items = await Item.find({ status: 'active' })
+      .populate('owner', 'full_name city email')
+      .sort({ created_at: -1 });
+    
+    res.status(200).json({ success: true, count: items.length, data: items });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+// NAYA FUNCTION: Sirf logged-in user ke khud ke items laane ke liye
+const getMyItems = async (req, res) => {
+  try {
+    const items = await Item.find({ owner: req.user._id }).sort({ created_at: -1 });
+    res.status(200).json({ success: true, count: items.length, data: items });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+const getItemById = async (req, res) => {
+  try {
+    const item = await Item.findById(req.params.id).populate('owner', 'full_name city email');
+    
+    if (!item) {
+      return res.status(404).json({ success: false, message: 'Item not found' });
+    }
+    
+    res.status(200).json({ success: true, data: item });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+const updateItem = async (req, res) => {
+  try {
+    let item = await Item.findById(req.params.id);
+
+    if (!item) {
+      return res.status(404).json({ success: false, message: 'Item not found' });
+    }
+
+    if (item.owner.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(401).json({ success: false, message: 'Not authorized to update this item' });
+    }
+
+    req.body.updated_at = Date.now();
+
+    item = await Item.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true
+    });
+
+    res.status(200).json({ success: true, data: item });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+const deleteItem = async (req, res) => {
+  try {
+    const item = await Item.findById(req.params.id);
+
+    if (!item) {
+      return res.status(404).json({ success: false, message: 'Item not found' });
+    }
+
+    if (item.owner.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(401).json({ success: false, message: 'Not authorized to delete this item' });
+    }
+
+    await item.deleteOne();
+
+    res.status(200).json({ success: true, message: 'Item removed' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+module.exports = {
+  createItem,
+  getItems,
+  getMyItems, 
+  getItemById,
+  updateItem,
+  deleteItem
+};
