@@ -38,7 +38,8 @@ const createOrder = async (req, res) => {
 // 2. Payment Verify karke User ke Credits update karne ki API
 const verifyPayment = async (req, res) => {
   try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, amount } = req.body;
+    // FIX 1: req.body se 'amount' hata diya hai taki frontend manipulation ka risk na rahe
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
     
     // Auth middleware se user ID aayegi
     const userId = req.user._id; 
@@ -50,17 +51,32 @@ const verifyPayment = async (req, res) => {
       .update(body.toString())
       .digest('hex');
 
-    const isAuthentic = expectedSignature === razorpay_signature;
+    // FIX 2: === ki jagah crypto.timingSafeEqual use kiya for better security (Medium risk bug fix)
+    const expectedBuffer = Buffer.from(expectedSignature, 'hex');
+    const signatureBuffer = Buffer.from(razorpay_signature, 'hex');
+    
+    let isAuthentic = false;
+    if (expectedBuffer.length === signatureBuffer.length) {
+        isAuthentic = crypto.timingSafeEqual(expectedBuffer, signatureBuffer);
+    }
 
     if (isAuthentic) {
+      // FIX 3: Razorpay server se order details fetch karke actual amount nikalna (Critical bug fix)
+      const orderDetails = await razorpayInstance.orders.fetch(razorpay_order_id);
+
+      if (orderDetails.status !== 'paid') {
+          return res.status(400).json({ success: false, message: 'Payment incomplete at Razorpay end.' });
+      }
+
       // Payment verify ho gayi, ab User ke credits badha do (1 Rs = 1 Credit)
-      const creditsToAdd = Number(amount); 
+      // Razorpay paise me amount deta hai, isliye 100 se divide kiya
+      const creditsToAdd = orderDetails.amount / 100; 
 
       const updatedUser = await User.findByIdAndUpdate(
         userId,
         { $inc: { account_credits: creditsToAdd } }, // Credits increment kar rahe hain
         { new: true }
-      ).select('-password'); // Password fetch karne ki zaroorat nahi hai
+      ).select('-password'); 
 
       res.status(200).json({
         success: true,

@@ -85,7 +85,7 @@ const WalletPage = ({ user, setUser }) => {
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
-                amount: amount,
+                // CHANGED: amount ko yaha se hata diya gaya hai kyunki ab backend Razorpay API se actual amount fetch karta hai.
               },
               { withCredentials: true }
             );
