@@ -21,6 +21,14 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
+
+app.get('/', (req, res) => {
+  res.status(200).json({ 
+    success: true, 
+    message: 'Backend is running successfully!' 
+  });
+});
+
 app.use('/api/users', userRoutes);
 app.use('/api/items', itemRoutes);
 app.use('/api/barter', barterRoutes);
