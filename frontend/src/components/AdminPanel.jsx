@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Shield, Users, Package, Trash2, X, CheckCircle, Edit, List, AlertTriangle, Eye, Coins, User, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { Shield, Users, Package, Trash2, X, CheckCircle, Edit, List, AlertTriangle, Eye, Coins, User, ShieldAlert, ShieldCheck, Mail, Phone, MapPin, Calendar, Wallet } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API ;
@@ -24,9 +24,13 @@ const AdminPanel = ({ user }) => {
   const [rejectingItemId, setRejectingItemId] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
 
-  // NAYA: View Details Modal States
+  // View Item Details Modal States
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [viewingItem, setViewingItem] = useState(null);
+
+  // NAYA: View User Details Modal States
+  const [isViewUserModalOpen, setIsViewUserModalOpen] = useState(false);
+  const [viewingUser, setViewingUser] = useState(null);
 
   if (!user || user.role !== 'admin') {
     return <Navigate to="/" />;
@@ -89,13 +93,15 @@ const AdminPanel = ({ user }) => {
     try {
       await axios.delete(`${API_URL}/admin/users/${id}`, { withCredentials: true });
       setData(data.filter(u => u._id !== id));
+      if (isViewUserModalOpen && viewingUser?._id === id) {
+        setIsViewUserModalOpen(false);
+      }
     } catch (error) {
       console.error(`Error deleting user:`, error);
       alert(error.response?.data?.message || 'Failed to delete user.');
     }
   };
 
-  // NAYA: Handle Role Change (Make Admin / Remove Admin)
   const handleUpdateRole = async (id, currentRole) => {
     const newRole = currentRole === 'admin' ? 'user' : 'admin';
     const actionText = newRole === 'admin' ? 'make this user an admin' : 'remove admin rights from this user';
@@ -110,8 +116,10 @@ const AdminPanel = ({ user }) => {
       );
       
       if (response.data.success) {
-        // Update user state locally without refreshing
         setData(data.map(u => u._id === id ? { ...u, role: newRole } : u));
+        if (isViewUserModalOpen && viewingUser?._id === id) {
+          setViewingUser({ ...viewingUser, role: newRole });
+        }
       }
     } catch (error) {
       console.error('Error updating user role:', error);
@@ -167,6 +175,12 @@ const AdminPanel = ({ user }) => {
   const handleViewClick = (item) => {
     setViewingItem(item);
     setIsViewModalOpen(true);
+  };
+
+  // NAYA: Handle View User Click
+  const handleViewUserClick = (userData) => {
+    setViewingUser(userData);
+    setIsViewUserModalOpen(true);
   };
 
   return (
@@ -233,8 +247,19 @@ const AdminPanel = ({ user }) => {
                     {activeTab === 'users' ? (
                       <>
                         <td className="px-6 py-4">
-                          <p className="font-bold text-white text-base">{row.full_name}</p>
-                          <p className="text-xs text-gray-400 mt-0.5">{row.email}</p>
+                          <div className="flex items-center gap-3">
+                            {row.profilePic ? (
+                              <img src={row.profilePic} alt="Profile" className="w-10 h-10 rounded-full object-cover border border-gray-600" />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-gray-900 border border-gray-600 flex items-center justify-center text-gray-500">
+                                <User className="w-5 h-5" />
+                              </div>
+                            )}
+                            <div>
+                              <p className="font-bold text-white text-base">{row.full_name}</p>
+                              <p className="text-xs text-gray-400 mt-0.5">{row.email}</p>
+                            </div>
+                          </div>
                         </td>
                         <td className="px-6 py-4 text-gray-300">{row.phone || 'N/A'}</td>
                         <td className="px-6 py-4 text-gray-300 capitalize">{row.city || 'N/A'}</td>
@@ -338,13 +363,21 @@ const AdminPanel = ({ user }) => {
                         </div>
                       ) : (
                         <div className="flex justify-end gap-2">
-                          {/* NAYA: Make Admin / Remove Admin Button */}
+                          {/* NAYA: View User Profile Button */}
+                          <button 
+                            onClick={() => handleViewUserClick(row)}
+                            className="text-gray-400 hover:text-blue-400 transition p-2 hover:bg-blue-400/10 rounded-lg"
+                            title="View User Profile"
+                          >
+                            <Eye className="w-5 h-5" />
+                          </button>
+
                           <button 
                             onClick={() => handleUpdateRole(row._id, row.role)}
                             className={`transition p-2 rounded-lg flex items-center justify-center ${
                               row.role === 'admin' 
                                 ? 'text-purple-400 hover:text-purple-300 hover:bg-purple-400/10' 
-                                : 'text-blue-400 hover:text-blue-300 hover:bg-blue-400/10'
+                                : 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-400/10'
                             }`}
                             title={row.role === 'admin' ? "Remove Admin Role" : "Make Admin"}
                           >
@@ -368,6 +401,96 @@ const AdminPanel = ({ user }) => {
           </div>
         )}
       </div>
+
+      {/* --- MODAL FOR VIEWING USER DETAILS (NAYA) --- */}
+      {isViewUserModalOpen && viewingUser && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 py-8 bg-black/80 backdrop-blur-sm">
+          <div className="bg-gray-800 w-full max-w-2xl rounded-3xl border border-gray-700 shadow-2xl overflow-hidden flex flex-col">
+            
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 h-24 relative">
+              <button onClick={() => setIsViewUserModalOpen(false)} className="absolute top-4 right-4 text-white/70 hover:text-white transition p-2 bg-black/20 hover:bg-black/40 rounded-full">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="px-8 pb-8 relative">
+              {/* User Avatar */}
+              <div className="absolute -top-12 left-8">
+                <div className="w-24 h-24 bg-gray-900 border-4 border-gray-800 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
+                  {viewingUser.profilePic ? (
+                    <img src={viewingUser.profilePic} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="w-10 h-10 text-gray-400" />
+                  )}
+                </div>
+              </div>
+
+              {/* Wallet Tag */}
+              <div className="absolute top-4 right-8 bg-yellow-500/10 border border-yellow-500/20 px-4 py-2 rounded-xl flex items-center gap-2">
+                 <Wallet className="w-5 h-5 text-yellow-500" />
+                 <div>
+                   <p className="text-[10px] text-yellow-500/80 font-bold uppercase tracking-wider">Credits</p>
+                   <p className="text-lg font-bold text-yellow-500 leading-none">{viewingUser.account_credits || 0}</p>
+                 </div>
+              </div>
+
+              <div className="pt-16">
+                <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                  {viewingUser.full_name} 
+                </h2>
+                <span className={`inline-block px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-md mt-2 border ${
+                  viewingUser.role === 'admin' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                }`}>
+                  Role: {viewingUser.role}
+                </span>
+
+                <div className="mt-8 space-y-4">
+                  <div className="flex items-center gap-3 text-gray-300 bg-gray-900/50 p-4 rounded-xl border border-gray-700">
+                    <Mail className="w-5 h-5 text-gray-500" />
+                    <div>
+                      <p className="text-xs text-gray-500 font-medium">Email Address</p>
+                      <p className="font-medium">{viewingUser.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 text-gray-300 bg-gray-900/50 p-4 rounded-xl border border-gray-700">
+                    <Phone className="w-5 h-5 text-gray-500" />
+                    <div>
+                      <p className="text-xs text-gray-500 font-medium">Phone Number</p>
+                      <p className="font-medium">{viewingUser.phone || 'Not provided'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 text-gray-300 bg-gray-900/50 p-4 rounded-xl border border-gray-700">
+                    <MapPin className="w-5 h-5 text-gray-500" />
+                    <div>
+                      <p className="text-xs text-gray-500 font-medium">Location</p>
+                      <p className="font-medium capitalize">{viewingUser.city || 'Not provided'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 text-gray-300 bg-gray-900/50 p-4 rounded-xl border border-gray-700">
+                    <Calendar className="w-5 h-5 text-gray-500" />
+                    <div>
+                      <p className="text-xs text-gray-500 font-medium">Joined Platform</p>
+                      <p className="font-medium">{new Date(viewingUser.created_at).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-6 border-t border-gray-700 bg-gray-900/50 flex justify-end gap-3">
+              <button 
+                onClick={() => handleUpdateRole(viewingUser._id, viewingUser.role)}
+                className="px-6 py-2.5 rounded-xl font-bold text-gray-300 bg-gray-800 hover:text-white hover:bg-gray-700 border border-gray-700 transition"
+              >
+                {viewingUser.role === 'admin' ? "Remove Admin" : "Make Admin"}
+              </button>
+              <button onClick={() => setIsViewUserModalOpen(false)} className="px-6 py-2.5 rounded-xl font-bold bg-blue-500 hover:bg-blue-600 text-white transition">
+                Close Profile
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* --- MODAL FOR VIEWING ITEM DETAILS --- */}
       {isViewModalOpen && viewingItem && (

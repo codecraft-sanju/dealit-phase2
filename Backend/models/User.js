@@ -12,6 +12,7 @@ const userSchema = new mongoose.Schema({
     enum: ['user', 'admin'], 
     default: 'user' 
   },
+  profilePic: { type: String, default: '' },
   
   account_credits: { type: Number, default: 50 }, // Welcome bonus of 50 credits
   

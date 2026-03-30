@@ -180,11 +180,38 @@ const getUserProfile = async (req, res) => {
   }
 };
 
+// NAYA: Profile picture update karne ka function
+const updateProfilePic = async (req, res) => {
+  try {
+    const { profilePic } = req.body;
+    
+    if (!profilePic) {
+      return res.status(400).json({ success: false, message: 'Please provide an image URL' });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { profilePic: profilePic, updated_at: Date.now() },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    res.status(200).json({ success: true, message: 'Profile picture updated', data: user });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server Error updating profile pic' });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
   logoutUser,
   forgotPassword,
   resetPassword,
-  getUserProfile
+  getUserProfile,
+  updateProfilePic 
 };
