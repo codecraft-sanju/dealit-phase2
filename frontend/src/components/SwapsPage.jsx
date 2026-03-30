@@ -8,48 +8,55 @@ const API_URL = `${API_BASE}/api`;
 
 const SwapsPage = ({ user }) => {
   const [activeTab, setActiveTab] = useState('received');
-  const [swaps, setSwaps] = useState([]);
+  
+  // NAYA LOGIC: Dono tabs ke data ke liye alag-alag state banai
+  const [receivedSwaps, setReceivedSwaps] = useState([]);
+  const [sentSwaps, setSentSwaps] = useState([]);
+  
   const [loading, setLoading] = useState(true);
-  
   const [processingId, setProcessingId] = useState(null);
-  
-  // NAYA STATE: Error handle karne ke liye
   const [actionError, setActionError] = useState({ id: null, message: '' });
 
   if (!user) return <Navigate to="/login" />;
 
   useEffect(() => {
-    const fetchSwaps = async () => {
+    // NAYA LOGIC: Page load hote hi ek sath dono APIs call hongi
+    const fetchAllSwaps = async () => {
       setLoading(true);
-      setActionError({ id: null, message: '' }); // Tab change par error reset
+      setActionError({ id: null, message: '' });
       try {
-        const endpoint = activeTab === 'received' ? `${API_URL}/barter/received` : `${API_URL}/barter/sent`;
-        const response = await axios.get(endpoint, { withCredentials: true });
-        setSwaps(response.data.data || []);
+        const [receivedRes, sentRes] = await Promise.all([
+          axios.get(`${API_URL}/barter/received`, { withCredentials: true }),
+          axios.get(`${API_URL}/barter/sent`, { withCredentials: true })
+        ]);
+        
+        setReceivedSwaps(receivedRes.data.data || []);
+        setSentSwaps(sentRes.data.data || []);
       } catch (error) {
         console.error('Error fetching swaps:', error);
-        setSwaps([]);
       } finally {
         setLoading(false);
       }
     };
-    fetchSwaps();
-  }, [activeTab]);
+    
+    fetchAllSwaps();
+  }, []); // Ab dependency array khali hai, toh ye sirf ek baar chalega tab change par nahi
 
   const handleStatusUpdate = async (swapId, newStatus) => {
     setProcessingId(swapId);
-    setActionError({ id: null, message: '' }); // Naya action lene par purana error hatao
+    setActionError({ id: null, message: '' }); 
     try {
       const response = await axios.put(`${API_URL}/barter/${swapId}/status`, 
         { status: newStatus },
         { withCredentials: true }
       );
       if (response.data.success) {
-        setSwaps(swaps.map(s => s._id === swapId ? { ...s, status: newStatus } : s));
+        // NAYA LOGIC: Jis list me item hai, sirf usi ko update karo
+        setReceivedSwaps(receivedSwaps.map(s => s._id === swapId ? { ...s, status: newStatus } : s));
+        setSentSwaps(sentSwaps.map(s => s._id === swapId ? { ...s, status: newStatus } : s));
       }
     } catch (error) {
       console.error('Error updating status:', error);
-      // NAYA LOGIC: Alert ki jagah UI mein error set karo
       setActionError({ 
         id: swapId, 
         message: error.response?.data?.message || 'Failed to update status' 
@@ -59,37 +66,40 @@ const SwapsPage = ({ user }) => {
     }
   };
 
+  // NAYA LOGIC: Jo tab active hai, sirf uske items render karne ke liye nikal lo
+  const displaySwaps = activeTab === 'received' ? receivedSwaps : sentSwaps;
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-white mb-2">My Swaps & DMs 💅</h1>
-        <p className="text-gray-400 text-lg">Slide into these trades fr fr 🚀</p>
+        <h1 className="text-4xl font-bold text-white mb-2">My Swaps & DMs</h1>
+        <p className="text-gray-400 text-lg">Slide into these trades</p>
       </div>
 
       <div className="flex bg-gray-900 rounded-2xl p-1 mb-8 w-fit border border-gray-800">
         <button 
-          onClick={() => setActiveTab('received')}
+          onClick={() => { setActiveTab('received'); setActionError({ id: null, message: '' }); }}
           className={`px-6 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === 'received' ? 'bg-[#f97316] text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}
         >
-          Vibes Received 📩 ({activeTab === 'received' ? swaps.length : '0'})
+          Vibes Received ({receivedSwaps.length})
         </button>
         <button 
-          onClick={() => setActiveTab('sent')}
+          onClick={() => { setActiveTab('sent'); setActionError({ id: null, message: '' }); }}
           className={`px-6 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === 'sent' ? 'bg-[#f97316] text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}
         >
-          Vibes Sent 📤 ({activeTab === 'sent' ? swaps.length : '0'})
+          Vibes Sent ({sentSwaps.length})
         </button>
       </div>
 
       <div className="space-y-6">
         {loading ? (
           <div className="text-center text-emerald-400 py-10 animate-pulse font-medium">Loading your vibes...</div>
-        ) : swaps.length === 0 ? (
+        ) : displaySwaps.length === 0 ? (
           <div className="text-center bg-gray-800 border border-gray-700 rounded-3xl py-16 px-6">
             <p className="text-gray-400 text-lg">No trades here yet. Go send some vibes! 🌬️</p>
           </div>
         ) : (
-          swaps.map((swap) => (
+          displaySwaps.map((swap) => (
             <div key={swap._id} className="bg-[#1f2125] border border-gray-800 rounded-2xl p-6">
               
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-gray-800 pb-4 gap-4">
@@ -130,7 +140,6 @@ const SwapsPage = ({ user }) => {
                 </div>
               </div>
 
-              {/* NAYA: Error Message UI agar Accept fail ho jaye */}
               {actionError.id === swap._id && (
                 <div className="mb-6 bg-red-500/10 border border-red-500/50 p-4 rounded-xl flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
