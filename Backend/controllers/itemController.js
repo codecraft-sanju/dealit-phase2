@@ -14,7 +14,7 @@ const createItem = async (req, res) => {
       images: images || [],
       preferred_item,
       status: 'pending', // Naya item humesha pending rahega
-      estimated_value: estimated_value || 0,
+      estimated_value: estimated_value || 0, // Yeh ab directly credits ka kaam karega
       created_at: Date.now(),
       updated_at: Date.now()
     });
@@ -40,7 +40,7 @@ const getItems = async (req, res) => {
   }
 };
 
-// NAYA FUNCTION: Sirf logged-in user ke khud ke items laane ke liye
+// Sirf logged-in user ke khud ke items laane ke liye
 const getMyItems = async (req, res) => {
   try {
     const items = await Item.find({ owner: req.user._id }).sort({ created_at: -1 });

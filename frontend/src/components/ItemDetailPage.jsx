@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Package, RefreshCw, ArrowLeft, X } from 'lucide-react';
+import { Package, RefreshCw, ArrowLeft, X, AlertCircle } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL = 'http://localhost:5000/api';
@@ -15,6 +15,9 @@ const ItemDetailPage = ({ user }) => {
   const [myItems, setMyItems] = useState([]);
   const [selectedMyItem, setSelectedMyItem] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  
+  // NAYA STATE: Balance error handle karne ke liye
+  const [balanceError, setBalanceError] = useState(null);
 
   useEffect(() => {
     const fetchItemDetails = async () => {
@@ -36,6 +39,7 @@ const ItemDetailPage = ({ user }) => {
       return;
     }
     setShowModal(true);
+    setBalanceError(null); // Reset error when opening modal
     try {
       const response = await axios.get(`${API_URL}/items/me`, { withCredentials: true });
       const myActiveItems = response.data.data.filter(i => i.status === 'active');
@@ -48,8 +52,8 @@ const ItemDetailPage = ({ user }) => {
   const handleConfirmOrder = async () => {
     if (!selectedMyItem) return;
     setSubmitting(true);
+    setBalanceError(null);
     try {
-      // YAHAN CHANGE KIYA HAI (/barter)
       await axios.post(`${API_URL}/barter`, {
         requestedItem: item._id,
         offeredItem: selectedMyItem,
@@ -59,9 +63,15 @@ const ItemDetailPage = ({ user }) => {
       setShowModal(false);
       navigate('/swaps'); 
     } catch (error) {
-      const errorMessage = error.response?.data?.message || error.message;
       console.error('Asli Error Details:', error.response?.data || error);
-      alert(`Swap Failed: ${errorMessage}`);
+      
+      // NAYA LOGIC: Agar backend ne "insufficientCredits: true" bheja hai, toh error show karo
+      if (error.response?.data?.insufficientCredits) {
+        setBalanceError(error.response.data.message);
+      } else {
+        const errorMessage = error.response?.data?.message || error.message;
+        alert(`Swap Failed: ${errorMessage}`);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -103,10 +113,14 @@ const ItemDetailPage = ({ user }) => {
               <p className="text-xs text-gray-500 mb-1">Condition</p>
               <p className="text-white font-medium">{item.condition || 'N/A'}</p>
             </div>
+            
             <div className="bg-gray-900 p-4 rounded-xl border border-gray-700">
-              <p className="text-xs text-gray-500 mb-1">Est. Value</p>
-              <p className="text-white font-medium">₹{item.estimated_value || '0'}</p>
+              <p className="text-xs text-gray-500 mb-1">Item Value</p>
+              <p className="text-white font-medium flex items-center gap-1">
+                <span className="text-yellow-500">🪙</span> {item.estimated_value || '0'} Credits
+              </p>
             </div>
+
             <div className="col-span-2 bg-emerald-500/10 p-4 rounded-xl border border-emerald-500/30">
               <p className="text-xs text-emerald-500 mb-1">Owner is looking for:</p>
               <p className="text-emerald-400 font-bold">{item.preferred_item || 'Open to offers'}</p>
@@ -141,6 +155,25 @@ const ItemDetailPage = ({ user }) => {
             </div>
             
             <div className="p-6 overflow-y-auto flex-1 bg-gray-900/50">
+              {/* NAYA: Error Message UI for Insufficient Balance */}
+              {balanceError && (
+                <div className="mb-6 bg-red-500/10 border border-red-500/50 p-4 rounded-xl flex items-start gap-3">
+                  <AlertCircle className="w-6 h-6 text-red-400 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-bold text-red-400 mb-1">Transaction Failed</p>
+                    <p className="text-sm text-gray-300">{balanceError}</p>
+                    {/* Yahan Buy Credits page ka link banayenge baad me */}
+                  <Link 
+  to="/wallet" 
+  onClick={() => setShowModal(false)} // Modal band karke le jao
+  className="mt-3 inline-block bg-red-500 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-red-600 transition"
+>
+  Get More Credits
+</Link>
+                  </div>
+                </div>
+              )}
+
               {myItems.length === 0 ? (
                 <div className="text-center py-10">
                   <p className="text-gray-400 mb-4">You don't have any active items to offer yet.</p>

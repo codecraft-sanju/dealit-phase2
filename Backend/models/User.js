@@ -12,6 +12,9 @@ const userSchema = new mongoose.Schema({
     enum: ['user', 'admin'], 
     default: 'user' 
   },
+  
+  account_credits: { type: Number, default: 50 }, // Welcome bonus of 50 credits
+  
   resetPasswordOtp: { type: String },
   resetPasswordOtpExpiry: { type: Date },
   created_at: { type: Date, default: Date.now },

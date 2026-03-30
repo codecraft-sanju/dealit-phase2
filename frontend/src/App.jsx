@@ -1,18 +1,45 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useNavigate, Navigate } from 'react-router-dom';
-import { Home, Package, MessageSquare, User, LogIn, PlusCircle, Search, LogOut, ArrowLeft, Shield, UploadCloud, RefreshCw, Eye, X, AlertCircle, Phone, MapPin, Mail, Calendar } from 'lucide-react';
+import { BrowserRouter as Router, Routes, Route, Link, useNavigate, Navigate, useLocation } from 'react-router-dom';
+
+// NAYA: Check icon ko import me add kiya Accept button ke liye
+import { Home, Package, MessageSquare, User, LogIn, PlusCircle, Search, LogOut, ArrowLeft, Shield, UploadCloud, RefreshCw, Eye, X, AlertCircle, Phone, MapPin, Mail, Calendar, Coins, Wallet, Check } from 'lucide-react';
 import axios from 'axios';
 import AdminPanel from './components/AdminPanel'; // Make sure this path is correct based on your folder structure
 import ItemDetailPage from './components/ItemDetailPage';
-
-// CHANGES MADE HERE: Imported ChatPage component
 import ChatPage from './components/ChatPage';
+import WalletPage from './components/WalletPage';
 
 const API_URL = 'http://localhost:5000/api';
 
 // --- COMPONENTS ---
 
 const Navbar = ({ user }) => {
+  const location = useLocation();
+  const [credits, setCredits] = useState(user?.account_credits || 0);
+
+  useEffect(() => {
+    const fetchFreshCredits = async () => {
+      if (!user) return;
+      try {
+        const response = await axios.get(`${API_URL}/users/profile`, { withCredentials: true });
+        if (response.data.success) {
+          const freshCredits = response.data.data.account_credits;
+          setCredits(freshCredits);
+          
+          const storedUser = JSON.parse(localStorage.getItem('dealit_user'));
+          if (storedUser) {
+            storedUser.account_credits = freshCredits;
+            localStorage.setItem('dealit_user', JSON.stringify(storedUser));
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching fresh credits:', error);
+      }
+    };
+
+    fetchFreshCredits();
+  }, [user, location.pathname]);
+
   return (
     <nav className="sticky top-0 z-50 bg-gray-900 border-b border-gray-800 px-4 py-3 shadow-lg">
       <div className="max-w-7xl mx-auto flex justify-between items-center">
@@ -43,6 +70,12 @@ const Navbar = ({ user }) => {
                   <Shield className="w-5 h-5" /> <span className="hidden sm:block text-sm font-medium">Admin</span>
                 </Link>
               )}
+              
+              <Link to="/wallet" className="bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border border-yellow-500/20 px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm transition cursor-pointer">
+                <Coins className="w-4 h-4" />
+                <span className="text-sm font-bold">{credits}</span>
+              </Link>
+
               <Link to="/swaps" className="text-gray-300 hover:text-emerald-400 transition flex items-center gap-1">
                 <RefreshCw className="w-5 h-5" /> <span className="hidden sm:block text-sm font-medium">Swaps</span>
               </Link>
@@ -50,7 +83,6 @@ const Navbar = ({ user }) => {
                 <MessageSquare className="w-5 h-5" /> <span className="hidden sm:block text-sm font-medium">Chat</span>
               </Link>
               
-              {/* CHANGED: Dashboard ki jagah seedha Profile link */}
               <Link to="/profile" className="text-gray-300 hover:text-emerald-400 transition flex items-center gap-1">
                 <div className="w-7 h-7 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
                   <User className="w-4 h-4" />
@@ -73,7 +105,6 @@ const Navbar = ({ user }) => {
   );
 };
 
-// NAYA: PROFILE PAGE COMPONENT
 const ProfilePage = ({ user, onLogout }) => {
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -114,13 +145,21 @@ const ProfilePage = ({ user, onLogout }) => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           
-          {/* User Details Card */}
           <div className="md:col-span-2 bg-gray-800 rounded-3xl border border-gray-700 shadow-xl overflow-hidden">
             <div className="bg-gradient-to-r from-emerald-600 to-cyan-600 h-24"></div>
             <div className="px-8 pb-8 relative">
               <div className="w-24 h-24 bg-gray-900 border-4 border-gray-800 rounded-full flex items-center justify-center absolute -top-12 shadow-lg">
                 <User className="w-10 h-10 text-emerald-400" />
               </div>
+              
+              <div className="absolute top-4 right-8 bg-yellow-500/10 border border-yellow-500/20 px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm">
+                 <Wallet className="w-5 h-5 text-yellow-500" />
+                 <div>
+                   <p className="text-[10px] text-yellow-500/80 font-bold uppercase tracking-wider">My Wallet</p>
+                   <p className="text-lg font-bold text-yellow-500 leading-none">{profileData?.account_credits || 0} <span className="text-xs">Credits</span></p>
+                 </div>
+              </div>
+
               <div className="pt-16">
                 <h2 className="text-2xl font-bold text-white">{profileData?.full_name}</h2>
                 <span className="inline-block px-3 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-bold uppercase tracking-wider rounded-md mt-2 border border-emerald-500/20">
@@ -161,7 +200,6 @@ const ProfilePage = ({ user, onLogout }) => {
             </div>
           </div>
 
-          {/* Quick Actions Card */}
           <div className="flex flex-col gap-6">
             <Link to="/dashboard" className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl border border-gray-700 p-8 shadow-xl hover:border-emerald-500/50 transition group flex flex-col items-center justify-center text-center h-full">
               <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition border border-emerald-500/20">
@@ -220,18 +258,29 @@ const HomePage = () => {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {items.map((item) => (
-            <div key={item._id} className="bg-gray-800 rounded-2xl overflow-hidden border border-gray-700 hover:border-emerald-500/50 transition duration-300 group flex flex-col">
-              <Link to={`/item/${item._id}`} className="block h-48 overflow-hidden bg-gray-900 flex items-center justify-center cursor-pointer">
+            <div key={item._id} className="bg-gray-800 rounded-2xl overflow-hidden border border-gray-700 hover:border-emerald-500/50 transition duration-300 group flex flex-col relative">
+              
+              <div className="absolute top-3 right-3 z-10">
+                 <span className="bg-gray-900/80 backdrop-blur-md border border-yellow-500/30 text-yellow-500 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg">
+                   <Coins className="w-3.5 h-3.5" /> 
+                   {item.estimated_value || '0'} 
+                 </span>
+              </div>
+
+              <Link to={`/item/${item._id}`} className="block h-48 overflow-hidden bg-gray-900 flex items-center justify-center cursor-pointer relative">
                 {item.images && item.images.length > 0 && item.images[0] ? (
                   <img src={item.images[0]} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
                 ) : (
                   <Package className="w-12 h-12 text-gray-600" />
                 )}
+                <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent opacity-60"></div>
               </Link>
+              
               <div className="p-5 flex-1 flex flex-col">
                 <Link to={`/item/${item._id}`} className="flex justify-between items-start mb-2 hover:text-emerald-400 transition">
                   <h3 className="text-lg font-semibold text-white leading-tight line-clamp-2">{item.title}</h3>
                 </Link>
+                
                 <div className="mt-auto">
                   <p className="text-xs text-gray-400 mb-3 inline-block bg-gray-700 px-2 py-1 rounded">Condition: {item.condition || 'Not specified'}</p>
                   <div className="pt-3 pb-3 border-t border-gray-700">
@@ -304,7 +353,6 @@ const DashboardPage = ({ user }) => {
                   <div className="w-full h-full flex items-center justify-center"><Package className="w-12 h-12 text-gray-600" /></div>
                 )}
                 
-                {/* STATUS BADGE */}
                 <div className="absolute top-3 right-3">
                   <span className={`px-3 py-1 rounded-md text-xs font-bold uppercase tracking-wider backdrop-blur-md ${
                     item.status === 'active' ? 'bg-emerald-500/80 text-white border border-emerald-500/50' :
@@ -320,7 +368,6 @@ const DashboardPage = ({ user }) => {
               <div className="p-5 flex-1 flex flex-col">
                 <h3 className="text-xl font-bold text-white mb-2 truncate">{item.title}</h3>
                 
-                {/* Rejection Reason */}
                 {item.status === 'rejected' && item.rejection_reason && (
                   <div className="mb-4 bg-red-500/10 border border-red-500/20 p-3 rounded-xl flex items-start gap-2">
                     <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
@@ -336,9 +383,12 @@ const DashboardPage = ({ user }) => {
                     <p className="text-xs text-gray-500 mb-1">Category</p>
                     <p className="text-sm font-medium text-gray-300 truncate">{item.category}</p>
                   </div>
+                  
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Est. Value</p>
-                    <p className="text-sm font-medium text-gray-300 truncate">₹{item.estimated_value}</p>
+                    <p className="text-xs text-gray-500 mb-1">Item Value</p>
+                    <p className="text-sm font-medium text-gray-300 truncate flex items-center gap-1">
+                      <span className="text-yellow-500">🪙</span> {item.estimated_value} Credits
+                    </p>
                   </div>
                 </div>
                 
@@ -358,10 +408,13 @@ const SwapsPage = ({ user }) => {
   const [activeTab, setActiveTab] = useState('received');
   const [swaps, setSwaps] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // NAYA: Status update loading manage karne ke liye
+  const [processingId, setProcessingId] = useState(null);
 
   if (!user) return <Navigate to="/login" />;
 
- useEffect(() => {
+  useEffect(() => {
     const fetchSwaps = async () => {
       setLoading(true);
       try {
@@ -377,6 +430,26 @@ const SwapsPage = ({ user }) => {
     };
     fetchSwaps();
   }, [activeTab]);
+
+  // NAYA: Backend API call karke swap accept/reject karna
+  const handleStatusUpdate = async (swapId, newStatus) => {
+    setProcessingId(swapId);
+    try {
+      const response = await axios.put(`${API_URL}/barter/${swapId}/status`, 
+        { status: newStatus },
+        { withCredentials: true }
+      );
+      if (response.data.success) {
+        // UI mein instantly array update kar do bina refresh kiye
+        setSwaps(swaps.map(s => s._id === swapId ? { ...s, status: newStatus } : s));
+      }
+    } catch (error) {
+      console.error('Error updating status:', error);
+      alert(error.response?.data?.message || 'Failed to update status');
+    } finally {
+      setProcessingId(null);
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -410,23 +483,44 @@ const SwapsPage = ({ user }) => {
         ) : (
           swaps.map((swap) => (
             <div key={swap._id} className="bg-[#1f2125] border border-gray-800 rounded-2xl p-6">
-              {/* CHANGES MADE HERE: Added flex layout to place the Chat button next to request info */}
-              <div className="flex justify-between items-center mb-6 border-b border-gray-800 pb-4">
+              
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-gray-800 pb-4 gap-4">
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-mono text-gray-500">Request #{swap._id.substring(0, 8)}</span>
                   <span className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider ${
                     swap.status === 'GHOSTING' ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 
                     swap.status === 'ACCEPTED' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' :
+                    swap.status === 'REJECTED' ? 'bg-red-500/10 text-red-500 border border-red-500/20' :
                     'bg-gray-700 text-gray-300'
                   }`}>
                     {swap.status} {swap.status === 'GHOSTING' && '👻'}
                   </span>
                 </div>
                 
-                {/* CHANGES MADE HERE: Added the Chat Button Link */}
-                <Link to={`/chat/${swap._id}`} className="bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-white px-4 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2 border border-emerald-500/30">
-                  <MessageSquare className="w-4 h-4" /> Chat
-                </Link>
+                {/* NAYA: Accept/Reject Buttons */}
+                <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                  {activeTab === 'received' && swap.status === 'PENDING' && (
+                    <>
+                      <button
+                        onClick={() => handleStatusUpdate(swap._id, 'ACCEPTED')}
+                        disabled={processingId === swap._id}
+                        className="flex-1 md:flex-none bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-white px-4 py-2 rounded-xl text-sm font-bold transition flex items-center justify-center gap-1 border border-emerald-500/30 disabled:opacity-50"
+                      >
+                        {processingId === swap._id ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Accept
+                      </button>
+                      <button
+                        onClick={() => handleStatusUpdate(swap._id, 'REJECTED')}
+                        disabled={processingId === swap._id}
+                        className="flex-1 md:flex-none bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white px-4 py-2 rounded-xl text-sm font-bold transition flex items-center justify-center gap-1 border border-red-500/30 disabled:opacity-50"
+                      >
+                        <X className="w-4 h-4" /> Reject
+                      </button>
+                    </>
+                  )}
+                  <Link to={`/chat/${swap._id}`} className="flex-1 md:flex-none bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white px-4 py-2 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 border border-gray-700">
+                    <MessageSquare className="w-4 h-4" /> Chat
+                  </Link>
+                </div>
               </div>
 
               <div className="flex flex-col md:flex-row items-center justify-between gap-6">
@@ -610,8 +704,11 @@ const AddItemPage = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Estimated Value (₹)</label>
+              <label className="block text-sm font-medium text-gray-300 mb-1 flex items-center gap-1">
+                Item Value (Credits <span className="text-yellow-500">🪙</span>)
+              </label>
               <input type="number" name="estimated_value" value={formData.estimated_value} onChange={handleInputChange} className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" placeholder="0" />
+              <p className="text-xs text-emerald-500 mt-1"> 1 Rupee = 1 Credit. Enter a fair value!</p>
             </div>
 
             <div>
@@ -926,9 +1023,8 @@ function App() {
             <Route path="/add-item" element={user ? <AddItemPage /> : <Navigate to="/login" />} />
             <Route path="/item/:id" element={<ItemDetailPage user={user} />} />
             <Route path="/swaps" element={user ? <SwapsPage user={user} /> : <Navigate to="/login" />} />
-
-            {/* CHANGES MADE HERE: Added ChatPage Route */}
             <Route path="/chat/:barterId" element={user ? <ChatPage user={user} /> : <Navigate to="/login" />} />
+            <Route path="/wallet" element={user ? <WalletPage user={user} setUser={setUser} /> : <Navigate to="/login" />} />
             
             <Route path="*" element={<div className="text-white text-center mt-20 text-xl">404 - Page Not Found</div>} />
           </Routes>

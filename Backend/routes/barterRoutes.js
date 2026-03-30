@@ -6,7 +6,8 @@ const {
   getSentRequests,
   getBarterRequestById, 
   updateBarterRequest, 
-  deleteBarterRequest 
+  deleteBarterRequest,
+  updateSwapStatus // Naya function import kiya
 } = require('../controllers/barterController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -14,6 +15,7 @@ router.route('/').post(protect, createBarterRequest);
 
 router.route('/received').get(protect, getReceivedRequests);
 router.route('/sent').get(protect, getSentRequests);
+router.route('/:id/status').put(protect, updateSwapStatus);
 
 router.route('/:id')
   .get(protect, getBarterRequestById)

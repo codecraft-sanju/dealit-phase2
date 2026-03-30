@@ -17,10 +17,10 @@ const itemSchema = new mongoose.Schema({
     default: 'pending' 
   },
   
- 
   rejection_reason: { type: String },
+
+  estimated_value: { type: Number, default: 0 },
   
-  estimated_value: { type: Number },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now }
 });

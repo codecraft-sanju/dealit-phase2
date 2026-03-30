@@ -14,10 +14,12 @@
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
+    "crypto": "^1.0.1",
     "csvtojson": "^2.0.14",
     "dotenv": "^17.3.1",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.3.3",
-    "nodemailer": "^8.0.4"
+    "nodemailer": "^8.0.4",
+    "razorpay": "^2.9.6"
   }
 }

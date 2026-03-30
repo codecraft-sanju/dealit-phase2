@@ -11,15 +11,20 @@ const sendTokenResponse = (user, statusCode, res, message) => {
   const options = {
     expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     httpOnly: true, 
-    // Localhost par smoothly chalne ke liye isko simple rakha hai.
     sameSite: 'lax' 
   };
 
   res.status(statusCode).cookie('token', token, options).json({
     success: true,
     message,
-    // role add kar diya hai taaki frontend check kar sake ki admin hai ya normal user
-    user: { id: user._id, full_name: user.full_name, email: user.email, role: user.role }
+    // NAYA: account_credits bhi bhej rahe hain taaki frontend me dikha sakein
+    user: { 
+      id: user._id, 
+      full_name: user.full_name, 
+      email: user.email, 
+      role: user.role,
+      account_credits: user.account_credits 
+    }
   });
 };
 
@@ -162,10 +167,8 @@ const resetPassword = async (req, res) => {
   }
 };
 
-// NAYA FUNCTION: User ki puri profile detail lane ke liye
 const getUserProfile = async (req, res) => {
   try {
-    // req.user._id protect middleware se aayega
     const user = await User.findById(req.user._id).select('-password');
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
@@ -183,5 +186,5 @@ module.exports = {
   logoutUser,
   forgotPassword,
   resetPassword,
-  getUserProfile // NAYA: Export kiya
+  getUserProfile
 };
