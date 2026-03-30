@@ -9,7 +9,7 @@ const API_URL = `${API_BASE}/api`;
 const SwapsPage = ({ user }) => {
   const [activeTab, setActiveTab] = useState('received');
   
-  // NAYA LOGIC: Dono tabs ke data ke liye alag-alag state banai
+
   const [receivedSwaps, setReceivedSwaps] = useState([]);
   const [sentSwaps, setSentSwaps] = useState([]);
   
@@ -17,10 +17,9 @@ const SwapsPage = ({ user }) => {
   const [processingId, setProcessingId] = useState(null);
   const [actionError, setActionError] = useState({ id: null, message: '' });
 
-  if (!user) return <Navigate to="/login" />;
-
   useEffect(() => {
-    // NAYA LOGIC: Page load hote hi ek sath dono APIs call hongi
+   
+    if (!user) return;
     const fetchAllSwaps = async () => {
       setLoading(true);
       setActionError({ id: null, message: '' });
@@ -40,7 +39,8 @@ const SwapsPage = ({ user }) => {
     };
     
     fetchAllSwaps();
-  }, []); // Ab dependency array khali hai, toh ye sirf ek baar chalega tab change par nahi
+  }, [user]); 
+  if (!user) return <Navigate to="/login" />;
 
   const handleStatusUpdate = async (swapId, newStatus) => {
     setProcessingId(swapId);
@@ -51,7 +51,6 @@ const SwapsPage = ({ user }) => {
         { withCredentials: true }
       );
       if (response.data.success) {
-        // NAYA LOGIC: Jis list me item hai, sirf usi ko update karo
         setReceivedSwaps(receivedSwaps.map(s => s._id === swapId ? { ...s, status: newStatus } : s));
         setSentSwaps(sentSwaps.map(s => s._id === swapId ? { ...s, status: newStatus } : s));
       }
@@ -66,7 +65,6 @@ const SwapsPage = ({ user }) => {
     }
   };
 
-  // NAYA LOGIC: Jo tab active hai, sirf uske items render karne ke liye nikal lo
   const displaySwaps = activeTab === 'received' ? receivedSwaps : sentSwaps;
 
   return (
@@ -81,13 +79,13 @@ const SwapsPage = ({ user }) => {
           onClick={() => { setActiveTab('received'); setActionError({ id: null, message: '' }); }}
           className={`px-6 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === 'received' ? 'bg-[#f97316] text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}
         >
-          Vibes Received ({receivedSwaps.length})
+          Vibes Received  ({receivedSwaps.length})
         </button>
         <button 
           onClick={() => { setActiveTab('sent'); setActionError({ id: null, message: '' }); }}
           className={`px-6 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === 'sent' ? 'bg-[#f97316] text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}
         >
-          Vibes Sent ({sentSwaps.length})
+          Vibes Sent  ({sentSwaps.length})
         </button>
       </div>
 

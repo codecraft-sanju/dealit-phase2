@@ -16,7 +16,6 @@ const loadRazorpayScript = () => {
   });
 };
 
-// NAYA: Props mein setUser bhi receive kar rahe hain
 const WalletPage = ({ user, setUser }) => {
   const navigate = useNavigate();
   const [profileData, setProfileData] = useState(null);
@@ -24,7 +23,6 @@ const WalletPage = ({ user, setUser }) => {
   const [customAmount, setCustomAmount] = useState('');
   const [processing, setProcessing] = useState(false);
 
-  // Yeh predefined packages hain user ke liye
   const packages = [
     { id: 1, credits: 100, price: 100, tag: 'Starter' },
     { id: 2, credits: 500, price: 500, tag: 'Most Popular', highlight: true },
@@ -32,6 +30,12 @@ const WalletPage = ({ user, setUser }) => {
   ];
 
   useEffect(() => {
+    // OPTIMIZATION: Agar user nahi hai toh API call mat karo
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
     const fetchProfile = async () => {
       try {
         const response = await axios.get(`${API_URL}/users/profile`, { withCredentials: true });
@@ -43,13 +47,12 @@ const WalletPage = ({ user, setUser }) => {
       }
     };
     fetchProfile();
-  }, []);
+  }, [user]); // DEPENDENCY UPDATE: user add kiya
 
   const handlePayment = async (amount) => {
     if (!amount || amount <= 0) return;
     setProcessing(true);
 
-    // Step 1: Check if Razorpay script loaded
     const isScriptLoaded = await loadRazorpayScript();
     if (!isScriptLoaded) {
       alert('Failed to load Razorpay SDK. Please check your internet connection.');
@@ -58,7 +61,6 @@ const WalletPage = ({ user, setUser }) => {
     }
 
     try {
-      // Step 2: Backend se order create karo
       const orderResponse = await axios.post(
         `${API_URL}/payment/create-order`, 
         { amount },
@@ -67,9 +69,9 @@ const WalletPage = ({ user, setUser }) => {
 
       const orderData = orderResponse.data.data;
 
-      // Step 3: Razorpay Popup config
       const options = {
-        key: 'rzp_test_SNwkfTU2QHMrsu', // Tumhari Test Key
+     
+        key: import.meta.env.VITE_RAZORPAY_KEY, 
         amount: orderData.amount, 
         currency: orderData.currency,
         name: 'Dealit',
@@ -77,7 +79,6 @@ const WalletPage = ({ user, setUser }) => {
         order_id: orderData.id,
         handler: async function (response) {
           try {
-            // Step 4: Payment success hone par Backend me verify karo
             const verifyResponse = await axios.post(
               `${API_URL}/payment/verify`,
               {
@@ -90,18 +91,15 @@ const WalletPage = ({ user, setUser }) => {
             );
 
             if (verifyResponse.data.success) {
-              // LOCAL UPDATE: Wallet page ka data instantly update
               setProfileData((prev) => ({
                 ...prev,
                 account_credits: prev.account_credits + amount
               }));
               
-              // GLOBAL UPDATE: Navbar aur puri app ka data instantly update
               const updatedUser = verifyResponse.data.user;
               setUser(updatedUser);
               localStorage.setItem('dealit_user', JSON.stringify(updatedUser));
               
-              // Custom input clear kar do
               setCustomAmount('');
               alert(`🎉 Success! ${amount} Credits have been added to your wallet.`);
             }
@@ -116,7 +114,7 @@ const WalletPage = ({ user, setUser }) => {
           contact: profileData?.phone || '',
         },
         theme: {
-          color: '#10b981', // Emerald 500 theme se match karne ke liye
+          color: '#10b981',
         },
       };
 
@@ -126,14 +124,12 @@ const WalletPage = ({ user, setUser }) => {
         alert(`Payment Failed! Reason: ${response.error.description}`);
       });
 
-      // Open the Razorpay Popup
       paymentObject.open();
 
     } catch (error) {
       console.error('Error initiating payment:', error);
       alert('Could not start payment process. Please try again.');
     } finally {
-      // Button ko wapas normal state me le aao popup khulne ke baad
       setProcessing(false);
     }
   };
@@ -147,7 +143,6 @@ const WalletPage = ({ user, setUser }) => {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
-      {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <Link to="/profile" className="p-2 bg-gray-800 rounded-full text-gray-400 hover:text-white transition border border-gray-700 hover:border-gray-500">
           <ArrowLeft className="w-5 h-5" />
@@ -165,10 +160,8 @@ const WalletPage = ({ user, setUser }) => {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* LEFT COLUMN: Current Balance */}
           <div className="lg:col-span-1 space-y-6">
             <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl border border-gray-700 shadow-xl overflow-hidden relative">
-              {/* Background Glow */}
               <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/10 rounded-full blur-3xl transform translate-x-10 -translate-y-10"></div>
               
               <div className="p-8 relative z-10 text-center">
@@ -186,7 +179,6 @@ const WalletPage = ({ user, setUser }) => {
               </div>
             </div>
 
-            {/* Info Card */}
             <div className="bg-gray-800/50 rounded-2xl border border-gray-700/50 p-6">
               <h3 className="text-white font-bold mb-3 flex items-center gap-2">
                 <Zap className="w-5 h-5 text-yellow-500" /> Why buy credits?
@@ -208,7 +200,6 @@ const WalletPage = ({ user, setUser }) => {
             </div>
           </div>
 
-          {/* RIGHT COLUMN: Buy Credits Packages */}
           <div className="lg:col-span-2">
             <div className="bg-gray-800 rounded-3xl border border-gray-700 shadow-xl p-8">
               <h2 className="text-2xl font-bold text-white mb-6">Add Credits</h2>
@@ -255,7 +246,6 @@ const WalletPage = ({ user, setUser }) => {
                 ))}
               </div>
 
-              {/* Custom Amount Field */}
               <div className="border-t border-gray-700 pt-8 mt-4">
                 <h3 className="text-lg font-bold text-white mb-4">Custom Amount</h3>
                 <form onSubmit={handleCustomSubmit} className="flex flex-col sm:flex-row gap-4">
