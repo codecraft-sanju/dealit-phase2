@@ -17,7 +17,6 @@ const sendTokenResponse = (user, statusCode, res, message) => {
   res.status(statusCode).cookie('token', token, options).json({
     success: true,
     message,
-    // NAYA: account_credits bhi bhej rahe hain taaki frontend me dikha sakein
     user: { 
       id: user._id, 
       full_name: user.full_name, 
@@ -31,23 +30,28 @@ const sendTokenResponse = (user, statusCode, res, message) => {
 const registerUser = async (req, res) => {
   try {
     const { full_name, email, password, phone, city } = req.body;
+    
+    // NAYA: Check if OTP is enabled in .env
+    const isOtpEnabled = process.env.ENABLE_OTP === 'true'; 
 
     let user = await User.findOne({ email });
     
-    // Agar user exist karta hai toh check karo verify hua hai ya nahi
     if (user) {
       if (user.isVerified) {
         return res.status(400).json({ success: false, message: 'User already exists with this email' });
       } else {
-        // Agar verify nahi hua hai, toh uski details update kar denge naye password ke sath
         const salt = await bcrypt.genSalt(10);
         user.password = await bcrypt.hash(password, salt);
         user.full_name = full_name;
         user.phone = phone;
         user.city = city;
+        
+        // Agar OTP disabled hai, toh automatically verify kardo
+        if (!isOtpEnabled) {
+          user.isVerified = true;
+        }
       }
     } else {
-   
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -57,38 +61,47 @@ const registerUser = async (req, res) => {
         password: hashedPassword,
         phone,
         city,
-        isVerified: false 
+        // Agar OTP disabled hai, toh directly true save hoga
+        isVerified: !isOtpEnabled 
       });
     }
 
-    // 6-digit OTP generate karo
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    user.otp = otp;
-    user.otpExpiry = Date.now() + 10 * 60 * 1000; 
+    // --- LOGIC SPLIT: OTP ENABLED VS DISABLED ---
+    if (isOtpEnabled) {
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      user.otp = otp;
+      user.otpExpiry = Date.now() + 10 * 60 * 1000; 
 
-    await user.save();
+      await user.save();
 
+      const message = `Hi ${full_name},\n\nYour OTP for Dealit registration is: ${otp}\n\nThis OTP is valid for 10 minutes.\n\nRegards,\nTeam Dealit`;
+      
+      await sendEmail({
+        email: user.email,
+        subject: 'Verify your Dealit Account',
+        message
+      });
 
-    const message = `Hi ${full_name},\n\nYour OTP for Dealit registration is: ${otp}\n\nThis OTP is valid for 10 minutes.\n\nRegards,\nTeam Dealit`;
-    
-    await sendEmail({
-      email: user.email,
-      subject: 'Verify your Dealit Account',
-      message
-    });
-
-    res.status(200).json({ 
-      success: true, 
-      message: 'OTP sent to your email. Please verify to complete registration.',
-      email: user.email
-    });
+      return res.status(200).json({ 
+        success: true, 
+        requiresOtp: true, // NAYA: Frontend ko batane ke liye ki OTP chahiye
+        message: 'OTP sent to your email. Please verify to complete registration.',
+        email: user.email
+      });
+    } else {
+      // OTP Disabled hai -> Direct save karke Token bhej do
+      user.otp = undefined;
+      user.otpExpiry = undefined;
+      await user.save();
+      
+      return sendTokenResponse(user, 201, res, 'Registration successful!');
+    }
 
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: 'Server Error during registration' });
   }
 };
-
 
 const verifyOtp = async (req, res) => {
   try {
@@ -108,7 +121,6 @@ const verifyOtp = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Account is already verified. Please login.' });
     }
 
- 
     if (user.otp !== otp || user.otpExpiry < Date.now()) {
       return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
     }
@@ -257,7 +269,6 @@ const getUserProfile = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server Error fetching profile' });
   }
 };
-
 
 const updateProfilePic = async (req, res) => {
   try {

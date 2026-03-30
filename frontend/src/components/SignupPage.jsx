@@ -18,7 +18,7 @@ const SignupPage = ({ setUser }) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSignup = async (e) => {
+ const handleSignup = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
@@ -26,8 +26,16 @@ const SignupPage = ({ setUser }) => {
     try {
       const response = await axios.post(`${API_URL}/users/register`, formData, { withCredentials: true });
       if (response.data.success) {
-        setRegisteredEmail(response.data.email || formData.email);
-        setStep(2); 
+      
+        if (response.data.requiresOtp) {
+          setRegisteredEmail(response.data.email || formData.email);
+          setStep(2); // OTP screen dikhao
+        } else {
+          // Direct login (OTP disabled in backend)
+          setUser(response.data.user);
+          localStorage.setItem('dealit_user', JSON.stringify(response.data.user));
+          navigate('/'); // Home page pe bhej do
+        }
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Something went wrong during signup.');
