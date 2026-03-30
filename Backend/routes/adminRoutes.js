@@ -5,7 +5,8 @@ const {
   updateItemStatus, 
   getAllUsers, 
   deleteUser, 
-  getAllItems 
+  getAllItems,
+  updateUserRole // NAYA: Import the new controller function
 } = require('../controllers/adminController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
@@ -23,5 +24,8 @@ router.route('/users')
 
 router.route('/users/:id')
   .delete(protect, admin, deleteUser);
+
+router.route('/users/role/:id')
+  .put(protect, admin, updateUserRole);
 
 module.exports = router;

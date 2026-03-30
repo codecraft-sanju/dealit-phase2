@@ -13,20 +13,15 @@ const getPendingItems = async (req, res) => {
 
 const updateItemStatus = async (req, res) => {
   try {
-    // NAYA: rejection_reason bhi req.body se receive karenge
     const { status, rejection_reason } = req.body; 
 
     if (!['active', 'rejected'].includes(status)) {
       return res.status(400).json({ success: false, message: 'Invalid status value' });
     }
-
-    // Update object setup
     const updateData = { 
       status: status, 
       updated_at: Date.now() 
     };
-
-    // Agar item reject ho raha hai toh reason dalo, warna reason ko clear kar do
     if (status === 'rejected') {
       updateData.rejection_reason = rejection_reason || 'No reason provided by admin.';
     } else {
@@ -69,6 +64,34 @@ const getAllUsers = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
+const updateUserRole = async (req, res) => {
+  try {
+    const { role } = req.body;
+
+    if (!['user', 'admin'].includes(role)) {
+      return res.status(400).json({ success: false, message: 'Invalid role provided' });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { role: role, updated_at: Date.now() },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    res.status(200).json({ 
+      success: true, 
+      message: `User role updated to ${role} successfully`, 
+      data: user 
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
 
 const deleteUser = async (req, res) => {
   try {
@@ -95,5 +118,6 @@ module.exports = {
   updateItemStatus,
   getAllItems, 
   getAllUsers, 
+  updateUserRole, 
   deleteUser   
 };

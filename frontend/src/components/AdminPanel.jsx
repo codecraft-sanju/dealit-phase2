@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Shield, Users, Package, Trash2, X, CheckCircle, Edit, List, AlertTriangle, Eye, Coins,User } from 'lucide-react';
+import { Shield, Users, Package, Trash2, X, CheckCircle, Edit, List, AlertTriangle, Eye, Coins, User, ShieldAlert, ShieldCheck } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API ;
@@ -91,7 +91,31 @@ const AdminPanel = ({ user }) => {
       setData(data.filter(u => u._id !== id));
     } catch (error) {
       console.error(`Error deleting user:`, error);
-      alert('Failed to delete user.');
+      alert(error.response?.data?.message || 'Failed to delete user.');
+    }
+  };
+
+  // NAYA: Handle Role Change (Make Admin / Remove Admin)
+  const handleUpdateRole = async (id, currentRole) => {
+    const newRole = currentRole === 'admin' ? 'user' : 'admin';
+    const actionText = newRole === 'admin' ? 'make this user an admin' : 'remove admin rights from this user';
+    
+    if (!window.confirm(`Are you sure you want to ${actionText}?`)) return;
+
+    try {
+      const response = await axios.put(
+        `${API_URL}/admin/users/role/${id}`, 
+        { role: newRole }, 
+        { withCredentials: true }
+      );
+      
+      if (response.data.success) {
+        // Update user state locally without refreshing
+        setData(data.map(u => u._id === id ? { ...u, role: newRole } : u));
+      }
+    } catch (error) {
+      console.error('Error updating user role:', error);
+      alert(error.response?.data?.message || 'Failed to update user role.');
     }
   };
 
@@ -140,7 +164,6 @@ const AdminPanel = ({ user }) => {
     }
   };
 
-  // NAYA: View Details Click Handler
   const handleViewClick = (item) => {
     setViewingItem(item);
     setIsViewModalOpen(true);
@@ -269,7 +292,6 @@ const AdminPanel = ({ user }) => {
                     <td className="px-6 py-4 text-right">
                       {activeTab === 'pending' ? (
                         <div className="flex justify-end gap-3">
-                          {/* NAYA: View Details Button */}
                           <button 
                             onClick={() => handleViewClick(row)}
                             className="bg-blue-500/10 hover:bg-blue-500 hover:text-white text-blue-400 border border-blue-500/20 transition px-3 py-2 rounded-xl font-semibold flex items-center gap-1.5"
@@ -315,13 +337,28 @@ const AdminPanel = ({ user }) => {
                           </button>
                         </div>
                       ) : (
-                        <button 
-                          onClick={() => handleDeleteUser(row._id)}
-                          className="text-gray-500 hover:text-red-400 transition p-2 hover:bg-red-400/10 rounded-lg"
-                          title="Delete User"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
+                        <div className="flex justify-end gap-2">
+                          {/* NAYA: Make Admin / Remove Admin Button */}
+                          <button 
+                            onClick={() => handleUpdateRole(row._id, row.role)}
+                            className={`transition p-2 rounded-lg flex items-center justify-center ${
+                              row.role === 'admin' 
+                                ? 'text-purple-400 hover:text-purple-300 hover:bg-purple-400/10' 
+                                : 'text-blue-400 hover:text-blue-300 hover:bg-blue-400/10'
+                            }`}
+                            title={row.role === 'admin' ? "Remove Admin Role" : "Make Admin"}
+                          >
+                            {row.role === 'admin' ? <ShieldAlert className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5" />}
+                          </button>
+
+                          <button 
+                            onClick={() => handleDeleteUser(row._id)}
+                            className="text-gray-500 hover:text-red-400 transition p-2 hover:bg-red-400/10 rounded-lg"
+                            title="Delete User"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -425,7 +462,6 @@ const AdminPanel = ({ user }) => {
                 Close
               </button>
               
-              {/* Agar item pending me hai, toh approve/reject ke option modal ke andar hi de do */}
               {viewingItem.status === 'pending' && (
                 <>
                   <button 
