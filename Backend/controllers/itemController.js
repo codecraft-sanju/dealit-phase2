@@ -117,11 +117,52 @@ const deleteItem = async (req, res) => {
   }
 };
 
+// NAYA: Search items functionality added here
+const searchItems = async (req, res) => {
+  try {
+    const { q } = req.query;
+
+    if (!q) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Please provide a search query' 
+      });
+    }
+
+    const searchRegex = new RegExp(q, 'i');
+
+    const items = await Item.find({
+      status: 'active',
+      estimated_value: { $gt: 0 },
+      $or: [
+        { title: searchRegex },
+        { description: searchRegex },
+        { category: searchRegex }
+      ]
+    })
+    .populate('owner', 'full_name city email profilePic')
+    .sort({ created_at: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: items.length,
+      data: items
+    });
+  } catch (error) {
+    console.error('Error searching items:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server Error while searching items' 
+    });
+  }
+};
+
 module.exports = {
   createItem,
   getItems,
   getMyItems, 
   getItemById,
   updateItem,
-  deleteItem
+  deleteItem,
+  searchItems 
 };

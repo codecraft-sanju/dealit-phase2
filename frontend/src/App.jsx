@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Link, useNavigate, Navigate, us
 import { Package, X, AlertCircle, ArrowLeft, Edit2, Trash2 } from 'lucide-react';
 import axios from 'axios';
 
-// Component Imports
+import SearchPage from './components/SearchPage';
 import AdminPanel from './components/AdminPanel'; 
 import ItemDetailPage from './components/ItemDetailPage';
 import ChatPage from './components/ChatPage';
@@ -272,6 +272,7 @@ function App() {
             <Route path="/swaps" element={user ? <SwapsPage user={user} /> : <Navigate to="/login" />} />
             <Route path="/chat/:barterId" element={user ? <ChatPage user={user} /> : <Navigate to="/login" />} />
             <Route path="/wallet" element={user ? <WalletPage user={user} setUser={setUser} /> : <Navigate to="/login" />} />
+            <Route path="/search" element={<SearchPage />} />
             
             <Route path="*" element={<div className="text-white text-center mt-20 text-xl">404 - Page Not Found</div>} />
           </Routes>
