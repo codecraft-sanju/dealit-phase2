@@ -196,7 +196,7 @@ const ItemDetailPage = ({ user }) => {
         </div>
 
         {/* RIGHT: Details Section */}
-        <div className="flex flex-col h-full px-5 md:px-0 pt-6 md:pt-0">
+        <div className="flex flex-col h-full px-5 md:px-0 pt-6 md:pt-0 pb-16 md:pb-0">
           
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-3">
@@ -243,8 +243,8 @@ const ItemDetailPage = ({ user }) => {
             </p>
           </div>
 
-          {/* Desktop Button - Sticky Bottom on Mobile */}
-          <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-lg border-t border-slate-100 z-30 md:static md:bg-transparent md:border-none md:p-0 md:mt-auto">
+          {/* FIX: Changed bottom-0 to bottom-20 on mobile so it sits above the Navbar */}
+          <div className="fixed bottom-20 md:bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-lg border-t border-slate-100 z-40 md:static md:bg-transparent md:border-none md:p-0 md:mt-auto">
             {user && item.owner?._id === user.id ? (
               <button disabled className="w-full bg-slate-100 text-slate-400 py-4 rounded-xl font-bold text-sm cursor-not-allowed border border-slate-200">
                 This is your item
