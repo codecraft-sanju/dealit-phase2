@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Link, Navigate } from 'react-router-dom';
-import { RefreshCw, Check, X, MessageSquare, Package, Eye, AlertCircle } from 'lucide-react';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { RefreshCw, Check, X, MessageSquare, Package, Eye, AlertCircle, ArrowRightLeft, ChevronLeft } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
 const SwapsPage = ({ user }) => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('received');
   
-
   const [receivedSwaps, setReceivedSwaps] = useState([]);
   const [sentSwaps, setSentSwaps] = useState([]);
   
@@ -18,7 +18,6 @@ const SwapsPage = ({ user }) => {
   const [actionError, setActionError] = useState({ id: null, message: '' });
 
   useEffect(() => {
-   
     if (!user) return;
     const fetchAllSwaps = async () => {
       setLoading(true);
@@ -40,6 +39,7 @@ const SwapsPage = ({ user }) => {
     
     fetchAllSwaps();
   }, [user]); 
+
   if (!user) return <Navigate to="/login" />;
 
   const handleStatusUpdate = async (swapId, newStatus) => {
@@ -68,129 +68,175 @@ const SwapsPage = ({ user }) => {
   const displaySwaps = activeTab === 'received' ? receivedSwaps : sentSwaps;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-white mb-2">My Swaps & DMs</h1>
-        <p className="text-gray-400 text-lg">Slide into these trades</p>
-      </div>
-
-      <div className="flex bg-gray-900 rounded-2xl p-1 mb-8 w-fit border border-gray-800">
-        <button 
-          onClick={() => { setActiveTab('received'); setActionError({ id: null, message: '' }); }}
-          className={`px-6 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === 'received' ? 'bg-[#f97316] text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}
-        >
-          Vibes Received  ({receivedSwaps.length})
-        </button>
-        <button 
-          onClick={() => { setActiveTab('sent'); setActionError({ id: null, message: '' }); }}
-          className={`px-6 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === 'sent' ? 'bg-[#f97316] text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}
-        >
-          Vibes Sent  ({sentSwaps.length})
-        </button>
-      </div>
-
-      <div className="space-y-6">
-        {loading ? (
-          <div className="text-center text-emerald-400 py-10 animate-pulse font-medium">Loading your vibes...</div>
-        ) : displaySwaps.length === 0 ? (
-          <div className="text-center bg-gray-800 border border-gray-700 rounded-3xl py-16 px-6">
-            <p className="text-gray-400 text-lg">No trades here yet. Go send some vibes! 🌬️</p>
-          </div>
-        ) : (
-          displaySwaps.map((swap) => (
-            <div key={swap._id} className="bg-[#1f2125] border border-gray-800 rounded-2xl p-6">
-              
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-gray-800 pb-4 gap-4">
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-mono text-gray-500">Request #{swap._id.substring(0, 8)}</span>
-                  <span className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider ${
-                    swap.status === 'GHOSTING' ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 
-                    swap.status === 'ACCEPTED' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' :
-                    swap.status === 'REJECTED' ? 'bg-red-500/10 text-red-500 border border-red-500/20' :
-                    'bg-gray-700 text-gray-300'
-                  }`}>
-                    {swap.status} {swap.status === 'GHOSTING' && '👻'}
-                  </span>
-                </div>
-                
-                <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-                  {activeTab === 'received' && swap.status === 'PENDING' && (
-                    <>
-                      <button
-                        onClick={() => handleStatusUpdate(swap._id, 'ACCEPTED')}
-                        disabled={processingId === swap._id}
-                        className="flex-1 md:flex-none bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-white px-4 py-2 rounded-xl text-sm font-bold transition flex items-center justify-center gap-1 border border-emerald-500/30 disabled:opacity-50"
-                      >
-                        {processingId === swap._id ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Accept
-                      </button>
-                      <button
-                        onClick={() => handleStatusUpdate(swap._id, 'REJECTED')}
-                        disabled={processingId === swap._id}
-                        className="flex-1 md:flex-none bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white px-4 py-2 rounded-xl text-sm font-bold transition flex items-center justify-center gap-1 border border-red-500/30 disabled:opacity-50"
-                      >
-                        <X className="w-4 h-4" /> Reject
-                      </button>
-                    </>
-                  )}
-                  <Link to={`/chat/${swap._id}`} className="flex-1 md:flex-none bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white px-4 py-2 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 border border-gray-700">
-                    <MessageSquare className="w-4 h-4" /> Chat
-                  </Link>
-                </div>
-              </div>
-
-              {actionError.id === swap._id && (
-                <div className="mb-6 bg-red-500/10 border border-red-500/50 p-4 rounded-xl flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-bold text-red-400 mb-1">Action Failed</p>
-                    <p className="text-sm text-gray-300">{actionError.message}</p>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                <div className="flex-1 w-full bg-[#181a1d] rounded-2xl p-5 border border-gray-800/50">
-                  <p className="text-xs text-gray-500 font-bold tracking-widest mb-4">THEY HAVE</p>
-                  <div className="flex items-center gap-4">
-                    {swap.requestedItem?.images && swap.requestedItem.images.length > 0 && swap.requestedItem.images[0] ? (
-                       <img src={swap.requestedItem.images[0]} alt="Item" className="w-20 h-20 rounded-xl object-cover border border-gray-700" />
-                    ) : (
-                       <div className="w-20 h-20 bg-gray-900 rounded-xl border border-gray-700 flex items-center justify-center"><Package className="w-8 h-8 text-gray-600"/></div>
-                    )}
-                    <div>
-                      <h3 className="text-lg font-bold text-white mb-1">{swap.requestedItem?.title || 'Unknown Item'}</h3>
-                      <p className="text-sm text-gray-400 mb-2">{swap.requestedItem?.condition || 'N/A'}</p>
-                      <button className="text-[#f97316] text-sm font-medium flex items-center gap-1 hover:underline">
-                        <Eye className="w-4 h-4" /> View Details
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="hidden md:flex flex-shrink-0 items-center justify-center p-3 bg-gray-800 rounded-full border border-gray-700">
-                  <RefreshCw className="w-6 h-6 text-gray-400" />
-                </div>
-
-                <div className="flex-1 w-full bg-[#181a1d] rounded-2xl p-5 border border-gray-800/50">
-                  <p className="text-xs text-gray-500 font-bold tracking-widest mb-4">YOU OFFER</p>
-                  <div className="flex items-center gap-4">
-                    {swap.offeredItem?.images && swap.offeredItem.images.length > 0 && swap.offeredItem.images[0] ? (
-                       <img src={swap.offeredItem.images[0]} alt="Item" className="w-20 h-20 rounded-xl object-cover border border-gray-700" />
-                    ) : (
-                       <div className="w-20 h-20 bg-gray-900 rounded-xl border border-gray-700 flex items-center justify-center"><Package className="w-8 h-8 text-gray-600"/></div>
-                    )}
-                    <div>
-                      <h3 className="text-lg font-bold text-white mb-3">{swap.offeredItem?.title || 'Unknown Item'}</h3>
-                      <button className="text-[#f97316] text-sm font-medium flex items-center gap-1 hover:underline">
-                        <Eye className="w-4 h-4" /> View Details
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+    <div className="max-w-md mx-auto bg-[#f4f2f9] min-h-screen pb-24 md:max-w-7xl relative font-sans">
+      
+      <div className="sticky top-0 z-50 bg-[#f4f2f9]">
+        {/* CHANGE 1 & 2: 
+          - Added 'sticky top-0 z-50' to keep the header fixed while scrolling.
+          - Added the Back Button with ChevronLeft.
+        */}
+        <div className="bg-[#6B46C1] pt-6 pb-12 px-5 md:px-8 rounded-b-[2rem] shadow-md relative z-10">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => navigate(-1)} 
+              className="p-1.5 -ml-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all backdrop-blur-sm border border-white/10"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+            <div>
+              <h1 className="text-xl md:text-2xl font-bold tracking-wide leading-tight text-white">My Swaps</h1>
+              <p className="text-[11px] md:text-sm text-purple-200 font-medium mt-0.5">Review offers and lock deals</p>
             </div>
-          ))
-        )}
+          </div>
+        </div>
+
+        <div className="px-5 md:px-8 -mt-7 relative z-20 pb-4">
+          <div className="bg-white rounded-2xl p-1.5 shadow-sm border border-gray-100 flex gap-2">
+            <button 
+              onClick={() => { setActiveTab('received'); setActionError({ id: null, message: '' }); }}
+              className={`flex-1 md:flex-none px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${
+                activeTab === 'received' 
+                  ? 'bg-[#EBE5F7] text-[#6B46C1] shadow-sm' 
+                  : 'text-gray-500 hover:text-[#6B46C1] hover:bg-gray-50'
+              }`}
+            >
+              Received ({receivedSwaps.length})
+            </button>
+            <button 
+              onClick={() => { setActiveTab('sent'); setActionError({ id: null, message: '' }); }}
+              className={`flex-1 md:flex-none px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${
+                activeTab === 'sent' 
+                  ? 'bg-[#EBE5F7] text-[#6B46C1] shadow-sm' 
+                  : 'text-gray-500 hover:text-[#6B46C1] hover:bg-gray-50'
+              }`}
+            >
+              Sent ({sentSwaps.length})
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-5 md:px-8 relative z-10">
+        <div className="space-y-5">
+          {loading ? (
+            <div className="text-center text-[#805ad5] py-12 animate-pulse font-bold bg-white rounded-[2rem] shadow-sm border border-gray-100">
+              Loading your trades...
+            </div>
+          ) : displaySwaps.length === 0 ? (
+            <div className="text-center bg-white border border-gray-100 rounded-[2rem] py-16 px-6 shadow-sm">
+              <div className="bg-[#f8f6ff] w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Package className="w-10 h-10 text-[#A388E1]" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-1">No trades found</h3>
+              <p className="text-sm text-gray-500">You don't have any {activeTab} offers right now.</p>
+            </div>
+          ) : (
+            displaySwaps.map((swap) => (
+              <div key={swap._id} className="bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow rounded-[2rem] p-5 md:p-7">
+                
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 pb-5 border-b border-gray-100 gap-4">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-bold text-gray-400 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
+                      #{swap._id.substring(0, 8)}
+                    </span>
+                    <span className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide ${
+                      swap.status === 'GHOSTING' ? 'bg-orange-100 text-orange-700' : 
+                      swap.status === 'ACCEPTED' ? 'bg-green-100 text-green-700' :
+                      swap.status === 'REJECTED' ? 'bg-red-100 text-red-700' :
+                      'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      {swap.status} {swap.status === 'GHOSTING' && '👻'}
+                    </span>
+                  </div>
+                  
+                  <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                    {activeTab === 'received' && swap.status === 'PENDING' && (
+                      <>
+                        <button
+                          onClick={() => handleStatusUpdate(swap._id, 'ACCEPTED')}
+                          disabled={processingId === swap._id}
+                          className="flex-1 md:flex-none bg-[#E6F4EA] hover:bg-[#CEEAD6] text-[#137333] px-5 py-2.5 rounded-xl text-sm font-bold transition flex items-center justify-center gap-1.5 disabled:opacity-50"
+                        >
+                          {processingId === swap._id ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Accept
+                        </button>
+                        <button
+                          onClick={() => handleStatusUpdate(swap._id, 'REJECTED')}
+                          disabled={processingId === swap._id}
+                          className="flex-1 md:flex-none bg-[#FCE8E6] hover:bg-[#FAD2CF] text-[#C5221F] px-5 py-2.5 rounded-xl text-sm font-bold transition flex items-center justify-center gap-1.5 disabled:opacity-50"
+                        >
+                          <X className="w-4 h-4" /> Reject
+                        </button>
+                      </>
+                    )}
+                    <Link to={`/chat/${swap._id}`} className="flex-1 md:flex-none bg-[#F8F9FA] hover:bg-[#EBE5F7] hover:text-[#6B46C1] text-gray-600 px-5 py-2.5 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 border border-gray-200 hover:border-[#d6bcfa]">
+                      <MessageSquare className="w-4 h-4" /> Chat
+                    </Link>
+                  </div>
+                </div>
+
+                {actionError.id === swap._id && (
+                  <div className="mb-6 bg-red-50 border border-red-100 p-4 rounded-xl flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-bold text-red-700 mb-0.5">Action Failed</p>
+                      <p className="text-sm text-red-600">{actionError.message}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 relative">
+                  
+                  <div className="flex-1 w-full bg-[#fcfbff] rounded-2xl p-4 md:p-5 border border-[#f0eaff]">
+                    <p className="text-[10px] text-[#A388E1] font-extrabold uppercase tracking-wider mb-3">
+                      {activeTab === 'received' ? 'They are offering' : 'You are requesting'}
+                    </p>
+                    <div className="flex items-center gap-4">
+                      {swap.offeredItem?.images && swap.offeredItem.images.length > 0 && swap.offeredItem.images[0] ? (
+                         <img src={swap.offeredItem.images[0]} alt="Item" className="w-16 h-16 md:w-20 md:h-20 rounded-xl object-cover border border-gray-100 shadow-sm" />
+                      ) : (
+                         <div className="w-16 h-16 md:w-20 md:h-20 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center shadow-sm">
+                           <Package className="w-8 h-8 text-gray-300"/>
+                         </div>
+                      )}
+                      <div>
+                        <h3 className="text-base md:text-lg font-bold text-gray-900 mb-1 line-clamp-1">{swap.offeredItem?.title || 'Unknown Item'}</h3>
+                        <button className="text-[#805ad5] text-xs font-bold flex items-center gap-1 hover:underline bg-[#f4f2f9] px-2.5 py-1 rounded-md w-fit">
+                          <Eye className="w-3.5 h-3.5" /> View Item
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 md:relative md:translate-x-0 md:translate-y-0 z-10">
+                    <div className="flex items-center justify-center w-10 h-10 bg-white rounded-full border border-gray-100 shadow-md">
+                      <ArrowRightLeft className="w-5 h-5 text-[#A388E1] md:rotate-0 rotate-90" />
+                    </div>
+                  </div>
+
+                  <div className="flex-1 w-full bg-[#fcfbff] rounded-2xl p-4 md:p-5 border border-[#f0eaff]">
+                    <p className="text-[10px] text-[#A388E1] font-extrabold uppercase tracking-wider mb-3">
+                      {activeTab === 'received' ? 'For your item' : 'From your items'}
+                    </p>
+                    <div className="flex items-center gap-4">
+                      {swap.requestedItem?.images && swap.requestedItem.images.length > 0 && swap.requestedItem.images[0] ? (
+                         <img src={swap.requestedItem.images[0]} alt="Item" className="w-16 h-16 md:w-20 md:h-20 rounded-xl object-cover border border-gray-100 shadow-sm" />
+                      ) : (
+                         <div className="w-16 h-16 md:w-20 md:h-20 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center shadow-sm">
+                           <Package className="w-8 h-8 text-gray-300"/>
+                         </div>
+                      )}
+                      <div>
+                        <h3 className="text-base md:text-lg font-bold text-gray-900 mb-1 line-clamp-1">{swap.requestedItem?.title || 'Unknown Item'}</h3>
+                        <p className="text-xs text-gray-500 font-medium mb-2">{swap.requestedItem?.condition || 'N/A'}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );
