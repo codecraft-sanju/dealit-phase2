@@ -6,9 +6,11 @@
 .auth-container {
   position: relative;
   width: 100%;
+  /* 100dvh ensures it fits PERFECTLY on mobile without scroll */
   min-height: 100vh;
+  height: 100dvh; 
   background: #fff;
-  overflow: hidden;
+  overflow: hidden; /* Strict no-scroll rule */
 }
 
 .auth-container::before {
@@ -21,7 +23,7 @@
   right: 48%;
   transform: translateY(-50%);
   z-index: 6;
-  transition: 1.8s ease-in-out;
+  transition: 1.5s ease-in-out; /* Super smooth transition */
 }
 
 .auth-container__forms {
@@ -72,7 +74,7 @@
   display: grid;
   grid-template-columns: 1fr;
   z-index: 5;
-  transition: 1s 0.7s ease-in-out;
+  transition: 1s 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55); /* Buttery bouncy transition */
 }
 
 .form__title {
@@ -140,17 +142,19 @@
   text-transform: uppercase;
   font-weight: 600;
   margin: 10px auto;
-  transition: 0.5s;
+  transition: 0.3s;
   display: block;
 }
 
 .form__submit:hover {
   background-color: #8b70ca;
+  transform: scale(1.02);
 }
 
 .form__submit:disabled {
   background-color: #d1c4e9;
   cursor: not-allowed;
+  transform: scale(1);
 }
 
 .panel {
@@ -271,10 +275,10 @@
   margin: 0 auto 10px auto;
 }
 
+/* TABLET VIEW */
 @media (max-width: 870px) {
   .auth-container {
-    min-height: 800px;
-    height: 100vh;
+    height: 100dvh;
   }
   .auth-container::before {
     width: 1500px;
@@ -284,14 +288,14 @@
     transform: translateX(-50%);
     right: initial;
     top: initial;
-    transition: 2s ease-in-out;
+    transition: 1.5s ease-in-out;
   }
   .auth-form {
     width: 100%;
     left: 50%;
-    top: 95%;
+    top: 98%; /* Anchors form correctly to avoid overflow */
     transform: translate(-50%, -100%);
-    transition: 1s 0.8s ease-in-out;
+    transition: 1s 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
   }
   .auth-container__panels {
     grid-template-columns: 1fr;
@@ -301,14 +305,10 @@
     flex-direction: row;
     justify-content: space-around;
     align-items: center;
-    padding: 2.5rem 8%;
+    padding: 1.5rem 8%;
   }
-  .panel__left {
-    grid-row: 1 / 2;
-  }
-  .panel__right {
-    grid-row: 3 / 4;
-  }
+  .panel__left { grid-row: 1 / 2; }
+  .panel__right { grid-row: 3 / 4; }
   .panel__image {
     width: 200px;
     transition: 0.9s 0.6s ease-in-out;
@@ -323,7 +323,7 @@
   }
   .auth-container.sign-up-mode::before {
     transform: translate(-50%, 100%);
-    bottom: 32%;
+    bottom: 25%;
     right: initial;
   }
   .auth-container.sign-up-mode .panel__left .panel__image,
@@ -331,28 +331,85 @@
     transform: translateY(-300px);
   }
   .auth-container.sign-up-mode .auth-form {
-    top: 5%;
+    top: 2%; /* Snug to top to give maximum space for inputs */
     transform: translate(-50%, 0);
     left: 50%;
   }
 }
 
+/* MOBILE VIEW - The absolute perfection magic happens here */
 @media (max-width: 570px) {
   .auth-form-wrap {
     padding: 0 1.5rem;
   }
+  .form__title {
+    font-size: 1.8rem;
+    margin-bottom: 2px;
+  }
+  .form__text {
+    font-size: 0.8rem;
+    margin-bottom: 8px;
+  }
+  /* Slimmed down inputs */
+  .form__input-field {
+    height: 42px; 
+    margin: 6px auto;
+  }
+  .form__input-field input {
+    font-size: 0.95rem;
+  }
+  .form__input-field svg {
+    width: 1rem;
+    height: 1rem;
+  }
+  .form__submit {
+    height: 42px;
+    margin: 8px auto 5px auto;
+    font-size: 0.9rem;
+  }
+  .error-message {
+    padding: 6px;
+    margin-bottom: 6px;
+    font-size: 0.8rem;
+  }
   .panel__image {
-    display: none;
+    display: none; /* Hide images completely to save space */
   }
+  
+  /* Panel flex magic - puts Title and Button on the same line! */
   .panel__content {
-    padding: 0.5rem 1rem;
+    padding: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
   }
+  .panel {
+    padding: 1rem 1.5rem;
+  }
+  .panel__title {
+    font-size: 1.2rem;
+    margin: 0;
+    text-align: left;
+  }
+  .panel__paragraph {
+    display: none; /* Crucial: Hides paragraph so NO SCROLL happens */
+  }
+  .auth-btn-transparent {
+    width: 110px;
+    height: 35px;
+    font-size: 0.75rem;
+    margin: 0;
+  }
+  
+  /* Adjusted circles to give maximum room to the form boxes */
   .auth-container::before {
-    bottom: 72%;
+    bottom: 78%; 
     left: 50%;
   }
   .auth-container.sign-up-mode::before {
-    bottom: 28%;
+    bottom: 22%; 
     left: 50%;
   }
 }
