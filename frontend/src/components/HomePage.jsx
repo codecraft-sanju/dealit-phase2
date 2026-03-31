@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, Coins, ChevronRight, Plus, Smartphone, Shirt, Watch, Home as HomeIcon, Gamepad2 } from 'lucide-react';
+import { Package, Coins, ChevronRight, Plus, Smartphone, Shirt, Watch, Home as HomeIcon, Gamepad2, UserCircle } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
-const HomePage = () => {
+// Yahan user prop ko add kiya gaya hai
+const HomePage = ({ user }) => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -41,23 +42,44 @@ const HomePage = () => {
         </h1>
         <p className="text-sm text-gray-500 mb-6">Now you don't need money to get things!</p>
 
-        <div className="bg-gradient-to-r from-[#A388E1] to-[#b7a3eb] rounded-3xl p-5 text-white shadow-lg shadow-[#A388E1]/30 relative overflow-hidden">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-2">
-              <div className="bg-yellow-400 p-1.5 rounded-full">
-                <Coins className="w-5 h-5 text-yellow-900" />
+        {/* Dynamic Top Banner: Login status ke hisaab se change hoga */}
+        {user ? (
+          <div className="bg-gradient-to-r from-[#A388E1] to-[#b7a3eb] rounded-3xl p-5 text-white shadow-lg shadow-[#A388E1]/30 relative overflow-hidden">
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-2">
+                <div className="bg-yellow-400 p-1.5 rounded-full">
+                  <Coins className="w-5 h-5 text-yellow-900" />
+                </div>
+                <span className="text-2xl font-bold">{user.account_credits || 0} <span className="text-lg font-normal opacity-90">credits</span></span>
               </div>
-              <span className="text-2xl font-bold">300 <span className="text-lg font-normal opacity-90">credits</span></span>
+              <Link to="/wallet" className="bg-[#FFF4D2] text-[#8B70CA] text-xs font-bold px-3 py-2 rounded-full flex items-center gap-1 shadow-sm">
+                Earn More <ChevronRight className="w-3 h-3" />
+              </Link>
             </div>
-            <button className="bg-[#FFF4D2] text-[#8B70CA] text-xs font-bold px-3 py-2 rounded-full flex items-center gap-1 shadow-sm">
-              Earn More Credits <ChevronRight className="w-3 h-3" />
-            </button>
+            <div className="flex justify-between items-center text-xs font-medium">
+              <span className="bg-white/20 px-3 py-1 rounded-full backdrop-blur-sm">₹ 1 = 1 credit</span>
+              <Link to="/wallet" className="text-white/80 cursor-pointer hover:text-white transition">Buy Credits</Link>
+            </div>
           </div>
-          <div className="flex justify-between items-center text-xs font-medium">
-            <span className="bg-white/20 px-3 py-1 rounded-full backdrop-blur-sm">₹ 1 = 1 credit</span>
-            <span className="text-white/80 cursor-pointer hover:text-white transition">Buy Credits</span>
+        ) : (
+          <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-3xl p-5 text-white shadow-lg shadow-gray-900/30 relative overflow-hidden">
+            <div className="flex justify-between items-center mb-2">
+              <div>
+                <h3 className="text-lg font-bold">Join Dealit Today!</h3>
+                <p className="text-xs text-gray-300 mt-1">Sign in to earn credits and start trading.</p>
+              </div>
+              <UserCircle className="w-10 h-10 text-gray-400 opacity-50" />
+            </div>
+            <div className="mt-4 flex gap-3">
+              <Link to="/login" className="flex-1 bg-white text-gray-900 text-center text-sm font-bold px-4 py-2.5 rounded-xl shadow-sm hover:bg-gray-100 transition">
+                Login
+              </Link>
+              <Link to="/signup" className="flex-1 bg-[#A388E1] text-white text-center text-sm font-bold px-4 py-2.5 rounded-xl shadow-sm hover:bg-[#8b70ca] transition">
+                Sign Up
+              </Link>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <div className="px-5 py-4">
@@ -102,7 +124,7 @@ const HomePage = () => {
               <Link 
                 to={`/item/${item._id}`} 
                 key={item._id} 
-                className="bg-[#F8F6FF] rounded-3xl p-4 min-w-[150px] w-[150px] flex-shrink-0 snap-start relative block"
+                className="bg-[#F8F6FF] rounded-3xl p-4 min-w-[150px] w-[150px] flex-shrink-0 snap-start relative block hover:shadow-md transition-shadow"
               >
                 <div className="h-24 w-full flex items-center justify-center mb-4">
                   {item.images && item.images.length > 0 && item.images[0] ? (
@@ -136,7 +158,8 @@ const HomePage = () => {
             <p className="text-xs text-gray-500 mb-4 leading-relaxed">
               List items you no longer need and earn instant credits to exchange for products you want!
             </p>
-            <Link to="/add-item" className="bg-[#FFE28A] text-gray-900 px-4 py-2 rounded-full text-sm font-bold inline-flex items-center gap-1 shadow-sm hover:bg-[#FFD75E] transition">
+            {/* Dynamic Link: Agar login nahi hai, toh add-item ki jagah login pe bhejega */}
+            <Link to={user ? "/add-item" : "/login"} className="bg-[#FFE28A] text-gray-900 px-4 py-2 rounded-full text-sm font-bold inline-flex items-center gap-1 shadow-sm hover:bg-[#FFD75E] transition">
               <Plus className="w-4 h-4" /> List an Item
             </Link>
           </div>

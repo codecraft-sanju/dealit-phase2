@@ -250,10 +250,10 @@ function App() {
         <main>
           <Routes>
            
-            <Route path="/" element={
+        <Route path="/" element={
               <>
                 <Navbar user={user} onLogout={handleLogout} />
-                <HomePage />
+                <HomePage user={user} /> {/* Yahan 'user' prop add kiya */}
               </>
             } />
             
