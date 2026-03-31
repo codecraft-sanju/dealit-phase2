@@ -154,15 +154,15 @@ const WalletPage = ({ user, setUser }) => {
   ];
 
   return (
-    <div className="max-w-md mx-auto bg-white min-h-screen pb-24 md:max-w-7xl relative overflow-hidden">
+    <div className="max-w-md mx-auto bg-white min-h-screen pb-24 md:max-w-7xl relative">
       
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-white flex justify-between items-center px-5 pt-6 pb-4 md:px-8">
-        <Link to="/" className="text-gray-800 hover:text-[#A388E1] transition">
+      <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm flex justify-between items-center px-5 py-4 md:px-8 transition-all">
+        <Link to="/" className="p-2 -ml-2 text-gray-700 hover:text-[#A388E1] hover:bg-gray-50 rounded-full transition-colors">
           <ArrowLeft className="w-6 h-6" />
         </Link>
-        <h1 className="text-xl font-bold text-gray-900">Earn Credits</h1>
-        <button className="text-gray-800 hover:text-[#A388E1] transition">
+        <h1 className="text-lg font-bold text-gray-900">Earn Credits</h1>
+        <button className="p-2 -mr-2 text-gray-700 hover:text-[#A388E1] hover:bg-gray-50 rounded-full transition-colors">
           <MoreHorizontal className="w-6 h-6" />
         </button>
       </div>
@@ -170,7 +170,7 @@ const WalletPage = ({ user, setUser }) => {
       {loading ? (
         <div className="text-center text-[#A388E1] py-20 font-medium animate-pulse">Loading wallet details...</div>
       ) : (
-        <div className="md:grid md:grid-cols-2 md:gap-8 md:px-8">
+        <div className="md:grid md:grid-cols-2 md:gap-8 md:px-8 mt-4">
           
           <div className="space-y-6 mt-2">
             {/* Top Purple Banner - Gets a golden glow when celebration happens */}
