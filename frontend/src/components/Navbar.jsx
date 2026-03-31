@@ -116,6 +116,14 @@ const Navbar = ({ user }) => {
               
               {user && (
                 <>
+                  {/* --- CHANGE MADE HERE: Added mobile admin button --- */}
+                  {user.role === 'admin' && (
+                    <Link to="/admin" className="flex items-center justify-center bg-gray-800 text-white w-7 h-7 rounded-full shadow-md border border-gray-700 hover:bg-gray-900 transition">
+                      <Shield className="w-3.5 h-3.5" />
+                    </Link>
+                  )}
+                  {/* --- END OF CHANGE --- */}
+
                   <button className="text-gray-600 hover:text-[#A388E1] p-1">
                     <Bell className="w-6 h-6" />
                   </button>
