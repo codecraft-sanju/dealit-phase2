@@ -22,7 +22,7 @@ const WalletPage = ({ user, setUser }) => {
   const [loading, setLoading] = useState(true);
   const [customAmount, setCustomAmount] = useState('');
   const [processing, setProcessing] = useState(false);
-  const [showPaymentForm, setShowPaymentForm] = useState(false); // New state to toggle payment form smoothly
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -137,7 +137,7 @@ const WalletPage = ({ user, setUser }) => {
   return (
     <div className="max-w-md mx-auto bg-white min-h-screen pb-24 md:max-w-7xl">
       {/* Header */}
-      <div className="flex justify-between items-center px-5 pt-6 pb-4 md:px-8">
+      <div className="sticky top-0 z-50 bg-white flex justify-between items-center px-5 pt-6 pb-4 md:px-8">
         <Link to="/" className="text-gray-800 hover:text-[#A388E1] transition">
           <ArrowLeft className="w-6 h-6" />
         </Link>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { Package, ArrowLeft, Edit2, Trash2, AlertCircle, Coins, Plus } from 'lucide-react';
+import { Package, ChevronLeft, Edit2, Trash2, AlertCircle, Coins, Plus } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
@@ -40,22 +40,27 @@ const DashboardPage = ({ user }) => {
   };
 
   return (
-    <div className="max-w-md mx-auto bg-white min-h-screen pb-24 md:max-w-7xl">
-      {/* Header Section (Purple) */}
-      <div className="bg-[#6B46C1] px-4 py-5 md:px-6 flex items-center gap-4 text-white shadow-md md:rounded-b-[2rem]">
-        <Link 
-          to="/profile" 
-          className="p-1 hover:bg-white/20 rounded-full transition-colors"
-        >
-          <ArrowLeft className="w-7 h-7" />
-        </Link>
-        <div>
-          <h1 className="text-xl font-bold tracking-wide leading-tight">My Dashboard</h1>
-          <p className="text-sm text-purple-200 font-medium mt-0.5">Manage all your listed items here</p>
+    <div className="max-w-md mx-auto bg-white min-h-screen pb-24 md:max-w-7xl relative font-sans">
+      
+      <div className="sticky top-0 z-50 bg-white">
+        {/* Header Section (Purple) */}
+        <div className="bg-[#6B46C1] pt-6 pb-8 px-5 md:px-8 rounded-b-[2rem] shadow-md relative z-10">
+          <div className="flex items-center gap-3">
+            <Link 
+              to="/profile" 
+              className="p-1.5 -ml-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all backdrop-blur-sm border border-white/10"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </Link>
+            <div>
+              <h1 className="text-xl md:text-2xl font-bold tracking-wide leading-tight text-white">My Dashboard</h1>
+              <p className="text-[11px] md:text-sm text-purple-200 font-medium mt-0.5">Manage all your listed items here</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="px-5 md:px-6 mt-6">
+      <div className="px-5 md:px-8 mt-6 relative z-10">
         {loading ? (
           <div className="text-center text-[#A388E1] py-20 animate-pulse font-medium">Loading your items...</div>
         ) : myItems.length === 0 ? (

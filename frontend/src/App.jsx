@@ -16,8 +16,7 @@ import LoginPage from './components/LoginPage';
 import SignupPage from './components/SignupPage';
 import Navbar from './components/Navbar'; // NAYA IMPORT
 import AddItemPage from './components/AddItemPage'; // NAYA IMPORT ADDITEMPAGE KE LIYE
-
-// Changes made here: Imported the newly extracted DashboardPage
+import ItemsPage from './components/ItemsPage';
 import DashboardPage from './components/DashboardPage';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
@@ -273,6 +272,7 @@ function App() {
             <Route path="/chat/:barterId" element={user ? <ChatPage user={user} /> : <Navigate to="/login" />} />
             <Route path="/wallet" element={user ? <WalletPage user={user} setUser={setUser} /> : <Navigate to="/login" />} />
             <Route path="/search" element={<SearchPage />} />
+            <Route path="/items" element={<ItemsPage />} />
             
             <Route path="*" element={<div className="text-white text-center mt-20 text-xl">404 - Page Not Found</div>} />
           </Routes>
