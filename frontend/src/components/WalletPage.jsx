@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
-import { ArrowLeft, Wallet, Coins, CreditCard, ChevronRight, Check, MoreHorizontal, Plus, Package } from 'lucide-react';
+import { ArrowLeft, Wallet, Coins, CreditCard, ChevronRight, Check, MoreHorizontal, Plus, Package, Sparkles } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
@@ -23,6 +23,10 @@ const WalletPage = ({ user, setUser }) => {
   const [customAmount, setCustomAmount] = useState('');
   const [processing, setProcessing] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
+
+  // Celebration States
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [addedAmount, setAddedAmount] = useState(0);
 
   useEffect(() => {
     if (!user) {
@@ -94,7 +98,15 @@ const WalletPage = ({ user, setUser }) => {
               
               setCustomAmount('');
               setShowPaymentForm(false);
-              alert(`🎉 Success! ${amount} Credits have been added to your wallet.`);
+              
+              // TRIGGER THE COIN SHOWER CELEBRATION
+              setAddedAmount(amount);
+              setShowCelebration(true);
+              
+              // Auto hide celebration after 5.5 seconds
+              setTimeout(() => {
+                setShowCelebration(false);
+              }, 5500);
             }
           } catch (error) {
             console.error('Verification failed', error);
@@ -134,10 +146,18 @@ const WalletPage = ({ user, setUser }) => {
 
   if (!user) return <Navigate to="/login" />;
 
+  // Golden gradients to mimic shiny coins
+  const coinGradients = [
+    'radial-gradient(circle, #FFF099 20%, #FBBF24 80%, #D97706 100%)',
+    'radial-gradient(circle, #FEF08A 20%, #F59E0B 80%, #B45309 100%)',
+    'radial-gradient(circle, #FDE047 20%, #EAB308 80%, #92400E 100%)'
+  ];
+
   return (
-    <div className="max-w-md mx-auto bg-white min-h-screen pb-24 md:max-w-7xl">
+    <div className="max-w-md mx-auto bg-white min-h-screen pb-24 md:max-w-7xl relative overflow-hidden">
+      
       {/* Header */}
-      <div className="sticky top-0 z-50 bg-white flex justify-between items-center px-5 pt-6 pb-4 md:px-8">
+      <div className="sticky top-0 z-40 bg-white flex justify-between items-center px-5 pt-6 pb-4 md:px-8">
         <Link to="/" className="text-gray-800 hover:text-[#A388E1] transition">
           <ArrowLeft className="w-6 h-6" />
         </Link>
@@ -152,16 +172,27 @@ const WalletPage = ({ user, setUser }) => {
       ) : (
         <div className="md:grid md:grid-cols-2 md:gap-8 md:px-8">
           
-          <div className="space-y-6">
-            {/* Top Purple Banner */}
-            <div className="mx-5 md:mx-0 bg-gradient-to-r from-[#A388E1] to-[#b7a3eb] rounded-3xl p-5 text-white shadow-lg shadow-[#A388E1]/30 relative overflow-hidden">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="bg-yellow-400 p-1.5 rounded-full z-10">
+          <div className="space-y-6 mt-2">
+            {/* Top Purple Banner - Gets a golden glow when celebration happens */}
+            <div className={`mx-5 md:mx-0 bg-gradient-to-r from-[#A388E1] to-[#b7a3eb] rounded-3xl p-5 text-white shadow-lg relative overflow-hidden transition-all duration-1000 ${showCelebration ? 'shadow-yellow-400/50 scale-[1.02]' : 'shadow-[#A388E1]/30'}`}>
+              <div className="flex items-center gap-2 mb-4 relative z-10">
+                <div className={`bg-yellow-400 p-1.5 rounded-full transition-transform duration-700 ${showCelebration ? 'rotate-180 scale-110' : ''}`}>
                   <Coins className="w-6 h-6 text-yellow-900" />
                 </div>
-                <span className="text-3xl font-bold z-10">{profileData?.account_credits || 0} <span className="text-xl font-normal opacity-90">credits</span></span>
+                <span className="text-4xl font-black relative">
+                  {profileData?.account_credits || 0}
+                  
+                  {/* Magical floating addition text */}
+                  {showCelebration && (
+                    <span className="absolute -top-6 -right-16 text-2xl text-yellow-300 font-black floating-up drop-shadow-[0_0_8px_rgba(253,224,71,0.8)] flex items-center">
+                      +{addedAmount} <Sparkles className="w-4 h-4 ml-1 animate-spin" />
+                    </span>
+                  )}
+                  
+                  <span className="text-xl font-medium opacity-90 ml-1">credits</span>
+                </span>
               </div>
-              <div className="inline-block bg-white/20 px-3 py-1 rounded-full backdrop-blur-sm text-xs font-medium z-10 relative">
+              <div className="inline-block bg-white/20 px-3 py-1 rounded-full backdrop-blur-sm text-xs font-medium z-10 relative border border-white/10">
                 ₹ 1 = 1 credit
               </div>
               
@@ -175,7 +206,7 @@ const WalletPage = ({ user, setUser }) => {
               <h2 className="text-lg font-bold text-gray-900 mb-4">Ways to Earn Credits</h2>
 
               {/* Card 1: List Items */}
-              <div className="bg-[#F8F6FF] rounded-3xl p-5 relative overflow-hidden mb-4 border border-[#EBE5F7]">
+              <div className="bg-[#F8F6FF] rounded-3xl p-5 relative overflow-hidden mb-4 border border-[#EBE5F7] hover:shadow-md transition-shadow">
                 <h3 className="font-bold text-gray-900 mb-3">List Items to Earn Credits</h3>
                 <ul className="space-y-2 mb-5 w-2/3 relative z-10">
                   <li className="flex items-start gap-2 text-xs text-gray-600 font-medium">
@@ -198,7 +229,7 @@ const WalletPage = ({ user, setUser }) => {
               </div>
 
               {/* Card 2: Buy Credits */}
-              <div className="bg-[#F8F6FF] rounded-3xl p-5 relative overflow-hidden mb-4 border border-[#EBE5F7]">
+              <div className="bg-[#F8F6FF] rounded-3xl p-5 relative overflow-hidden mb-4 border border-[#EBE5F7] hover:shadow-md transition-shadow">
                 <div className="w-2/3 relative z-10">
                   <h3 className="font-bold text-gray-900 mb-1">Buy Credits</h3>
                   <p className="text-xs text-gray-500 font-medium mb-4">
@@ -218,7 +249,7 @@ const WalletPage = ({ user, setUser }) => {
 
                 {/* Form expansion for Custom Amount Payment */}
                 {showPaymentForm && (
-                  <form onSubmit={handleCustomSubmit} className="mt-5 pt-5 border-t border-[#EBE5F7] relative z-10">
+                  <form onSubmit={handleCustomSubmit} className="mt-5 pt-5 border-t border-[#EBE5F7] relative z-10 animate-in slide-in-from-top-2 duration-300">
                     <div className="flex gap-2 items-center">
                       <div className="relative flex-1">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold">₹</span>
@@ -229,7 +260,7 @@ const WalletPage = ({ user, setUser }) => {
                           value={customAmount}
                           onChange={(e) => setCustomAmount(e.target.value)}
                           placeholder="Amount (Min 10)"
-                          className="w-full bg-white border border-gray-200 rounded-xl pl-8 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#A388E1]/50 font-bold"
+                          className="w-full bg-white border border-gray-200 rounded-xl pl-8 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#A388E1] font-bold shadow-inner"
                           disabled={processing}
                         />
                       </div>
@@ -239,7 +270,7 @@ const WalletPage = ({ user, setUser }) => {
                         className={`px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center justify-center gap-1 ${
                           !customAmount || customAmount < 10 || processing
                             ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                            : 'bg-[#FFE28A] text-gray-900 hover:bg-[#FFD75E] shadow-sm'
+                            : 'bg-[#FFE28A] text-gray-900 hover:bg-[#FFD75E] shadow-md hover:-translate-y-0.5'
                         }`}
                       >
                         {processing ? '...' : 'Pay'} <ChevronRight className="w-4 h-4" />
@@ -255,7 +286,7 @@ const WalletPage = ({ user, setUser }) => {
               </div>
 
               {/* Card 3: Sell Items */}
-              <div className="bg-[#FFF9E5] rounded-3xl p-5 relative overflow-hidden border border-[#FFE28A]/50">
+              <div className="bg-[#FFF9E5] rounded-3xl p-5 relative overflow-hidden border border-[#FFE28A]/50 hover:shadow-md transition-shadow">
                 <h3 className="font-bold text-gray-900 mb-1">Got unused items?</h3>
                 <h4 className="font-bold text-gray-900 mb-1 text-sm">Sell them to earn credits now!</h4>
                 <p className="text-xs text-gray-600 font-medium mb-4 w-2/3 relative z-10 leading-relaxed">
@@ -275,6 +306,77 @@ const WalletPage = ({ user, setUser }) => {
           </div>
         </div>
       )}
+
+      {/* --- PREMIUM COIN SHOWER OVERLAY (NO POPUP) --- */}
+      {showCelebration && (
+        <div className="fixed inset-0 z-[100] pointer-events-none overflow-hidden">
+          {/* Coin Generator */}
+          {[...Array(40)].map((_, i) => {
+            const size = Math.random() * 16 + 12; // 12px to 28px (larger to look like coins)
+            const isSparkle = i % 5 === 0; // Every 5th element is a sparkle instead of a coin
+
+            if (isSparkle) {
+              const style = {
+                left: `${Math.random() * 100}%`,
+                animationDuration: `${Math.random() * 2 + 1}s`,
+                animationDelay: `${Math.random() * 0.5}s`,
+                width: `${size}px`,
+                height: `${size}px`,
+                color: '#FDE047',
+              };
+              return (
+                <div key={i} className="coin-piece flex items-center justify-center" style={style}>
+                  <Sparkles size={size} />
+                </div>
+              );
+            }
+
+            const style = {
+              left: `${Math.random() * 100}%`,
+              animationDuration: `${Math.random() * 2.5 + 2}s`, // Falling speed
+              animationDelay: `${Math.random() * 0.3}s`,
+              background: coinGradients[Math.floor(Math.random() * coinGradients.length)],
+              width: `${size}px`,
+              height: `${size}px`,
+              borderRadius: '50%',
+              border: '1px solid #D97706',
+              boxShadow: 'inset 0 0 4px rgba(217, 119, 6, 0.6), 0 2px 4px rgba(0,0,0,0.2)',
+            };
+            return <div key={i} className="coin-piece" style={style} />;
+          })}
+        </div>
+      )}
+
+      {/* Embedded CSS for Coin Animations */}
+      <style>{`
+        @keyframes coinFall {
+          0% { 
+            transform: translateY(-10vh) rotateX(0deg) rotateY(0deg); 
+            opacity: 1; 
+          }
+          100% { 
+            transform: translateY(110vh) rotateX(1080deg) rotateY(720deg); 
+            opacity: 0; 
+          }
+        }
+        .coin-piece {
+          position: absolute;
+          top: -10%;
+          z-index: 50;
+          /* Coins tumbling in 3D */
+          animation: coinFall linear forwards;
+        }
+        
+        @keyframes floatUp {
+          0% { opacity: 0; transform: translateY(15px) scale(0.9); }
+          20% { opacity: 1; transform: translateY(0px) scale(1.1); }
+          80% { opacity: 1; transform: translateY(-30px) scale(1); }
+          100% { opacity: 0; transform: translateY(-45px) scale(0.9); }
+        }
+        .floating-up {
+          animation: floatUp 3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+      `}</style>
     </div>
   );
 };

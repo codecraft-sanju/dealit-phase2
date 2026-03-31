@@ -250,17 +250,19 @@ function App() {
         
         <main>
           <Routes>
-           
-        <Route path="/" element={
+            
+            <Route path="/" element={
               <>
                 <Navbar user={user} onLogout={handleLogout} />
-                <HomePage user={user} /> {/* Yahan 'user' prop add kiya */}
+                <HomePage user={user} />
               </>
             } />
             
-           <Route path="/login" element={<AuthPage defaultMode="login" setUser={setUser} />} />
-            <Route path="/signup" element={<AuthPage defaultMode="signup" setUser={setUser} />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage setUser={setUser} />} />
+  
+            <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <AuthPage defaultMode="login" setUser={setUser} />} />
+            <Route path="/signup" element={user ? <Navigate to="/dashboard" replace /> : <AuthPage defaultMode="signup" setUser={setUser} />} />
+            <Route path="/forgot-password" element={user ? <Navigate to="/dashboard" replace /> : <ForgotPasswordPage setUser={setUser} />} />
+          
             
             <Route path="/profile" element={user ? <ProfilePage user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/dashboard" element={user ? <DashboardPage user={user} /> : <Navigate to="/login" />} />
@@ -268,7 +270,15 @@ function App() {
             
             <Route path="/admin" element={<AdminPanel user={user} />} />
             <Route path="/add-item" element={user ? <AddItemPage /> : <Navigate to="/login" />} />
-            <Route path="/item/:id" element={<ItemDetailPage user={user} />} />
+            
+            {/* YAHAN CHANGE KIYA HAI: Navbar ko ItemDetailPage ke upar add kar diya hai */}
+            <Route path="/item/:id" element={
+              <>
+                <Navbar user={user} onLogout={handleLogout} />
+                <ItemDetailPage user={user} />
+              </>
+            } />
+            
             <Route path="/swaps" element={user ? <SwapsPage user={user} /> : <Navigate to="/login" />} />
             <Route path="/chat/:barterId" element={user ? <ChatPage user={user} /> : <Navigate to="/login" />} />
             <Route path="/wallet" element={user ? <WalletPage user={user} setUser={setUser} /> : <Navigate to="/login" />} />
