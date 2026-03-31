@@ -10,6 +10,9 @@ const ProfilePage = ({ user, onLogout }) => {
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploadingImage, setUploadingImage] = useState(false);
+  
+  // NAYA: State to track if the page is scrolled
+  const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -23,6 +26,20 @@ const ProfilePage = ({ user, onLogout }) => {
       }
     };
     fetchProfile();
+  }, []);
+
+  // NAYA: Listen for scroll events to shrink the header
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 20) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const handleImageUpload = async (e) => {
@@ -69,21 +86,40 @@ const ProfilePage = ({ user, onLogout }) => {
   return (
     <div className="max-w-md mx-auto bg-gray-50 min-h-screen pb-24 md:max-w-7xl md:bg-white md:px-4">
       
-      {/* Header Banner (Purple) */}
-      <div className="bg-[#6B46C1] pt-6 pb-20 px-5 md:px-8 md:rounded-b-[2rem] shadow-md relative z-10">
+      {/* Sticky Header Nav with Smooth Shrink Effect */}
+      <div 
+        className={`sticky top-0 z-50 bg-[#6B46C1] px-5 md:px-8 transition-all duration-300 ease-in-out ${
+          isScrolled ? 'pt-3 pb-3 shadow-md' : 'pt-6 pb-4'
+        }`}
+      >
         <div className="flex justify-between items-center text-white">
-          <div>
-            <h1 className="text-2xl font-bold tracking-wide leading-tight">My Profile</h1>
-            <p className="text-sm text-purple-200 font-medium mt-0.5">Manage your account</p>
+          <div className="flex flex-col justify-center">
+            <h1 className={`font-bold tracking-wide leading-tight transition-all duration-300 ${
+              isScrolled ? 'text-xl' : 'text-2xl'
+            }`}>
+              My Profile
+            </h1>
+            {/* Subtitle smoothly fades and shrinks out when scrolled */}
+            <p className={`text-purple-200 font-medium transition-all duration-300 overflow-hidden ${
+              isScrolled ? 'max-h-0 opacity-0 text-[0px] mt-0' : 'max-h-10 opacity-100 text-sm mt-0.5'
+            }`}>
+              Manage your account
+            </p>
           </div>
           <button 
             onClick={onLogout}
-            className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-red-500 rounded-full text-sm font-bold transition-colors shadow-sm border border-white/20 hover:border-red-500"
+            className={`flex items-center gap-2 bg-white/10 hover:bg-red-500 rounded-full font-bold transition-all duration-300 shadow-sm border border-white/20 hover:border-red-500 ${
+              isScrolled ? 'px-3 py-1.5 text-xs' : 'px-4 py-2 text-sm'
+            }`}
           >
-            <LogOut className="w-4 h-4" /> <span className="hidden sm:inline">Logout</span>
+            <LogOut className={`transition-all duration-300 ${isScrolled ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} /> 
+            <span className="hidden sm:inline">Logout</span>
           </button>
         </div>
       </div>
+
+      {/* Purple Backdrop for the overlap effect (Scrolls with page) */}
+      <div className="bg-[#6B46C1] h-16 md:rounded-b-[2rem] shadow-md relative z-10 w-full"></div>
 
       <div className="px-5 md:px-8 -mt-12 relative z-20">
         {loading ? (
