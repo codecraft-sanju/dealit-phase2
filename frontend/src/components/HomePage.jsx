@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, Coins, RefreshCw } from 'lucide-react';
+import { Package, Coins, ChevronRight, Plus, Smartphone, Shirt, Watch, Home as HomeIcon, Gamepad2 } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
@@ -24,64 +24,138 @@ const HomePage = () => {
     fetchItems();
   }, []);
 
+  const categories = [
+    { name: 'Electronics', icon: Smartphone, active: true },
+    { name: 'Fashion', icon: Shirt, active: false },
+    { name: 'Gear', icon: Watch, active: false },
+    { name: 'Home', icon: HomeIcon, active: false },
+    { name: 'Toys', icon: Gamepad2, active: false },
+  ];
+
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Latest on Dealit</h1>
-        <p className="text-gray-400">Discover items up for trade in your community.</p>
+    <div className="max-w-md mx-auto bg-white min-h-screen pb-24 md:max-w-7xl md:px-4">
+      <div className="px-5 pt-6 pb-2">
+        <h1 className="text-2xl font-bold text-gray-900 leading-tight mb-1">
+          Turn unused items into <br />
+          things you <span className="text-[#A388E1]">want</span>
+        </h1>
+        <p className="text-sm text-gray-500 mb-6">Now you don't need money to get things!</p>
+
+        <div className="bg-gradient-to-r from-[#A388E1] to-[#b7a3eb] rounded-3xl p-5 text-white shadow-lg shadow-[#A388E1]/30 relative overflow-hidden">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center gap-2">
+              <div className="bg-yellow-400 p-1.5 rounded-full">
+                <Coins className="w-5 h-5 text-yellow-900" />
+              </div>
+              <span className="text-2xl font-bold">300 <span className="text-lg font-normal opacity-90">credits</span></span>
+            </div>
+            <button className="bg-[#FFF4D2] text-[#8B70CA] text-xs font-bold px-3 py-2 rounded-full flex items-center gap-1 shadow-sm">
+              Earn More Credits <ChevronRight className="w-3 h-3" />
+            </button>
+          </div>
+          <div className="flex justify-between items-center text-xs font-medium">
+            <span className="bg-white/20 px-3 py-1 rounded-full backdrop-blur-sm">₹ 1 = 1 credit</span>
+            <span className="text-white/80 cursor-pointer hover:text-white transition">Buy Credits</span>
+          </div>
+        </div>
       </div>
 
-      {loading ? (
-        <div className="text-center text-emerald-400 mt-20 animate-pulse font-medium">Loading items...</div>
-      ) : items.length === 0 ? (
-        <div className="text-center text-gray-400 mt-20 bg-gray-800 py-10 rounded-xl border border-gray-700">
-          No items available right now. Be the first to add one!
-        </div>
-      ) : (
-      
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
-          {items.map((item) => (
-            <div key={item._id} className="bg-gray-800 rounded-2xl overflow-hidden border border-gray-700 hover:border-emerald-500/50 transition duration-300 group flex flex-col relative">
-              
-              <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-10">
-                 {/* Changes made: Reduced badge size on mobile */}
-                 <span className="bg-gray-900/80 backdrop-blur-md border border-yellow-500/30 text-yellow-500 px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[10px] sm:text-xs font-bold flex items-center gap-1 sm:gap-1.5 shadow-lg">
-                   <Coins className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> 
-                   {item.estimated_value || '0'} 
-                 </span>
-              </div>
-
-              {/* Changes made: Reduced image height on mobile (h-32) to fit 2 columns properly */}
-              <Link to={`/item/${item._id}`} className="block h-32 sm:h-48 overflow-hidden bg-gray-900 flex items-center justify-center cursor-pointer relative">
-                {item.images && item.images.length > 0 && item.images[0] ? (
-                  <img src={item.images[0]} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
-                ) : (
-                  <Package className="w-8 h-8 sm:w-12 sm:h-12 text-gray-600" />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent opacity-60"></div>
-              </Link>
-              
-              {/* Changes made: Adjusted padding and text sizes for mobile */}
-              <div className="p-3 sm:p-5 flex-1 flex flex-col">
-                <Link to={`/item/${item._id}`} className="flex justify-between items-start mb-2 hover:text-emerald-400 transition">
-                  <h3 className="text-sm sm:text-lg font-semibold text-white leading-tight line-clamp-2">{item.title}</h3>
-                </Link>
-                
-                <div className="mt-auto">
-                  <p className="text-[10px] sm:text-xs text-gray-400 mb-2 sm:mb-3 inline-block bg-gray-700 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded">Condition: {item.condition || 'Not specified'}</p>
-                  <div className="pt-2 pb-2 sm:pt-3 sm:pb-3 border-t border-gray-700">
-                    <p className="text-[10px] sm:text-xs text-gray-400 mb-0.5 sm:mb-1">Looking for:</p>
-                    <p className="text-xs sm:text-sm font-medium text-emerald-400 truncate">{item.preferred_item || 'Open to offers'}</p>
-                  </div>
-                  <Link to={`/item/${item._id}`} className="w-full bg-emerald-500/10 hover:bg-emerald-500 hover:text-white text-emerald-400 border border-emerald-500/50 transition py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2">
-                    <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4" /> Swap
-                  </Link>
+      <div className="px-5 py-4">
+        <div className="flex gap-4 overflow-x-auto hide-scrollbar items-center pb-2">
+          {categories.map((cat, index) => (
+            <div key={index} className={`flex flex-col items-center gap-2 min-w-max cursor-pointer`}>
+              {cat.active ? (
+                <div className="bg-[#EBE5F7] text-[#A388E1] px-4 py-2.5 rounded-full flex items-center gap-2 border border-[#A388E1]/20">
+                  <cat.icon className="w-5 h-5" />
+                  <span className="text-sm font-bold">{cat.name}</span>
                 </div>
-              </div>
+              ) : (
+                <>
+                  <div className="bg-[#F8F9FA] text-gray-500 p-3 rounded-2xl w-14 h-14 flex items-center justify-center border border-gray-100 shadow-sm">
+                    <cat.icon className="w-6 h-6" />
+                  </div>
+                  <span className="text-xs text-gray-500 font-medium">{cat.name}</span>
+                </>
+              )}
             </div>
           ))}
         </div>
-      )}
+      </div>
+
+      <div className="px-5 py-2">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold text-gray-900">Popular Items</h2>
+          <Link to="/items" className="text-sm font-semibold text-gray-500 flex items-center gap-1 hover:text-[#A388E1]">
+            See All <ChevronRight className="w-4 h-4" />
+          </Link>
+        </div>
+
+        {loading ? (
+          <div className="text-center text-[#A388E1] py-10 animate-pulse font-medium">Loading items...</div>
+        ) : items.length === 0 ? (
+          <div className="text-center text-gray-400 py-10 bg-gray-50 rounded-2xl border border-gray-100">
+            No items available right now. Be the first to add one!
+          </div>
+        ) : (
+          <div className="flex overflow-x-auto hide-scrollbar gap-4 pb-4 snap-x">
+            {items.map((item) => (
+              <Link 
+                to={`/item/${item._id}`} 
+                key={item._id} 
+                className="bg-[#F8F6FF] rounded-3xl p-4 min-w-[150px] w-[150px] flex-shrink-0 snap-start relative block"
+              >
+                <div className="h-24 w-full flex items-center justify-center mb-4">
+                  {item.images && item.images.length > 0 && item.images[0] ? (
+                    <img src={item.images[0]} alt={item.title} className="max-h-full max-w-full object-contain mix-blend-multiply drop-shadow-md" />
+                  ) : (
+                    <Package className="w-10 h-10 text-[#A388E1]/40" />
+                  )}
+                </div>
+                
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900 leading-tight mb-1 line-clamp-2">{item.title}</h3>
+                  <div className="flex items-center gap-1 mt-2">
+                    <div className="bg-yellow-100 rounded-full p-0.5">
+                      <Coins className="w-3 h-3 text-yellow-600" />
+                    </div>
+                    <span className="font-bold text-gray-900 text-sm">{item.estimated_value || '0'}</span>
+                    <span className="text-xs text-gray-400 line-through ml-1">₹{((item.estimated_value || 0) * 1.6).toFixed(0)}</span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="px-5 py-4">
+        <div className="bg-[#EBE5F7] rounded-3xl p-5 relative overflow-hidden">
+          <div className="w-2/3 relative z-10">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Got unused items?</h3>
+            <p className="text-sm text-gray-700 font-bold mb-1">List them to earn credits now!</p>
+            <p className="text-xs text-gray-500 mb-4 leading-relaxed">
+              List items you no longer need and earn instant credits to exchange for products you want!
+            </p>
+            <Link to="/add-item" className="bg-[#FFE28A] text-gray-900 px-4 py-2 rounded-full text-sm font-bold inline-flex items-center gap-1 shadow-sm hover:bg-[#FFD75E] transition">
+              <Plus className="w-4 h-4" /> List an Item
+            </Link>
+          </div>
+          
+          <div className="absolute -right-4 -bottom-4 w-32 h-32 opacity-20">
+            <Package className="w-full h-full text-[#A388E1]" />
+          </div>
+        </div>
+      </div>
+
+      <style>{`
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .hide-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
     </div>
   );
 };

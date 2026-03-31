@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate, Navigate, useLocation, useParams } from 'react-router-dom';
-import { Package, X, AlertCircle, ArrowLeft, Edit2, Trash2, UploadCloud } from 'lucide-react';
+import { Package, X, AlertCircle, ArrowLeft, Edit2, Trash2 } from 'lucide-react';
 import axios from 'axios';
 
 // Component Imports
@@ -15,6 +15,7 @@ import ForgotPasswordPage from './components/ForgotPasswordPage';
 import LoginPage from './components/LoginPage';
 import SignupPage from './components/SignupPage';
 import Navbar from './components/Navbar'; // NAYA IMPORT
+import AddItemPage from './components/AddItemPage'; // NAYA IMPORT ADDITEMPAGE KE LIYE
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -343,186 +344,6 @@ const EditItemPage = () => {
 
           <button type="submit" disabled={saving} className={`w-full font-bold rounded-xl px-4 py-4 transition mt-4 ${saving ? 'bg-blue-600 text-gray-300 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600 text-white shadow-lg shadow-blue-500/20'}`}>
             {saving ? 'Saving Changes...' : 'Save Changes'}
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-};
-
-const AddItemPage = () => {
-  const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    category: '',
-    condition: '',
-    preferred_item: '',
-    estimated_value: ''
-  });
-  const [images, setImages] = useState([]);
-  const [uploading, setUploading] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const handleInputChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleImageUpload = async (e) => {
-    const files = Array.from(e.target.files);
-    
-    if (images.length + files.length > 5) {
-      setError('You can only upload a maximum of 5 images.');
-      return;
-    }
-
-    setUploading(true);
-    setError('');
-
-    const uploadedUrls = [...images];
-
-    try {
-      for (const file of files) {
-        const data = new FormData();
-        data.append('file', file);
-        data.append('upload_preset', 'salon_preset');
-
-        const response = await axios.post(
-          `https://api.cloudinary.com/v1_1/dvoenforj/image/upload`,
-          data
-        );
-        uploadedUrls.push(response.data.secure_url);
-      }
-      setImages(uploadedUrls);
-    } catch (err) {
-      console.error('Upload Error:', err);
-      setError('Failed to upload images. Please try again.');
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const removeImage = (indexToRemove) => {
-    setImages(images.filter((_, index) => index !== indexToRemove));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-
-    if (images.length < 3) {
-      setError('Please upload at least 3 images of your item.');
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const response = await axios.post(
-        `${API_URL}/items`,
-        { ...formData, images },
-        { withCredentials: true }
-      );
-
-      if (response.data.success) {
-        navigate('/dashboard'); 
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to list item. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
-      <div className="bg-gray-800 rounded-2xl border border-gray-700 p-8 shadow-xl">
-        <h2 className="text-3xl font-bold text-white mb-2">List an Item</h2>
-        <p className="text-gray-400 mb-8">Add details and photos to offer your item for barter.</p>
-
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-sm px-4 py-3 rounded-xl mb-6">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-300 mb-1">Title</label>
-              <input type="text" name="title" required value={formData.title} onChange={handleInputChange} className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" placeholder="What are you trading?" />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-300 mb-1">Description</label>
-              <textarea name="description" required rows="4" value={formData.description} onChange={handleInputChange} className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 resize-none" placeholder="Describe the item in detail..."></textarea>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Category</label>
-              <select name="category" required value={formData.category} onChange={handleInputChange} className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500">
-                <option value="">Select Category</option>
-                <option value="Electronics">Electronics</option>
-                <option value="Fashion">Fashion</option>
-                <option value="Home">Home & Garden</option>
-                <option value="Vehicles">Vehicles</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Condition</label>
-              <select name="condition" required value={formData.condition} onChange={handleInputChange} className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500">
-                <option value="">Select Condition</option>
-                <option value="New">Brand New</option>
-                <option value="Like New">Like New</option>
-                <option value="Used">Used - Good</option>
-                <option value="Fair">Fair</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1 flex items-center gap-1">
-                Item Value (Credits <span className="text-yellow-500">🪙</span>)
-              </label>
-              <input type="number" name="estimated_value" value={formData.estimated_value} onChange={handleInputChange} className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" placeholder="0" />
-              <p className="text-xs text-emerald-500 mt-1"> 1 Rupee = 1 Credit. Enter a fair value!</p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Preferred Item in Return</label>
-              <input type="text" name="preferred_item" value={formData.preferred_item} onChange={handleInputChange} className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" placeholder="What are you looking for?" />
-            </div>
-          </div>
-
-          <div className="border-t border-gray-700 pt-6">
-            <label className="block text-sm font-medium text-gray-300 mb-2">Photos (Min 3, Max 5)</label>
-            
-            <div className="flex flex-wrap gap-4 mb-4">
-              {images.map((url, index) => (
-                <div key={index} className="relative w-24 h-24 rounded-lg overflow-hidden border border-gray-700">
-                  <img src={url} alt={`Upload ${index + 1}`} className="w-full h-full object-cover" />
-                  <button type="button" onClick={() => removeImage(index)} className="absolute top-1 right-1 bg-gray-900/80 p-1 rounded-full text-white hover:bg-red-500 transition">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-              
-              {images.length < 5 && (
-                <label className="w-24 h-24 border-2 border-dashed border-gray-600 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500 hover:bg-gray-700/50 transition">
-                  <UploadCloud className="w-6 h-6 text-gray-400 mb-1" />
-                  <span className="text-xs text-gray-400">Add Photo</span>
-                  <input type="file" multiple accept="image/*" onChange={handleImageUpload} disabled={uploading} className="hidden" />
-                </label>
-              )}
-            </div>
-            {uploading && <p className="text-emerald-400 text-sm">Uploading images...</p>}
-            <p className="text-xs text-gray-500">{images.length} / 5 photos uploaded</p>
-          </div>
-
-          <button type="submit" disabled={loading || uploading} className={`w-full font-bold rounded-xl px-4 py-4 transition mt-4 ${loading || uploading ? 'bg-emerald-600 text-gray-300 cursor-not-allowed' : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20'}`}>
-            {loading ? 'Listing Item...' : 'List Item Now'}
           </button>
         </form>
       </div>

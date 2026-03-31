@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
-import { ArrowLeft, Wallet, Coins, CreditCard, ChevronRight, ShieldCheck, Zap } from 'lucide-react';
+import { ArrowLeft, Wallet, Coins, CreditCard, ChevronRight, Check, MoreHorizontal, Plus, Package } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
@@ -22,15 +22,9 @@ const WalletPage = ({ user, setUser }) => {
   const [loading, setLoading] = useState(true);
   const [customAmount, setCustomAmount] = useState('');
   const [processing, setProcessing] = useState(false);
-
-  const packages = [
-    { id: 1, credits: 100, price: 100, tag: 'Starter' },
-    { id: 2, credits: 500, price: 500, tag: 'Most Popular', highlight: true },
-    { id: 3, credits: 1000, price: 1000, tag: 'Pro Trader' }
-  ];
+  const [showPaymentForm, setShowPaymentForm] = useState(false); // New state to toggle payment form smoothly
 
   useEffect(() => {
-    // OPTIMIZATION: Agar user nahi hai toh API call mat karo
     if (!user) {
       setLoading(false);
       return;
@@ -47,7 +41,7 @@ const WalletPage = ({ user, setUser }) => {
       }
     };
     fetchProfile();
-  }, [user]); // DEPENDENCY UPDATE: user add kiya
+  }, [user]);
 
   const handlePayment = async (amount) => {
     if (!amount || amount <= 0) return;
@@ -70,7 +64,6 @@ const WalletPage = ({ user, setUser }) => {
       const orderData = orderResponse.data.data;
 
       const options = {
-     
         key: import.meta.env.VITE_RAZORPAY_KEY, 
         amount: orderData.amount, 
         currency: orderData.currency,
@@ -85,7 +78,6 @@ const WalletPage = ({ user, setUser }) => {
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
-                // CHANGED: amount ko yaha se hata diya gaya hai kyunki ab backend Razorpay API se actual amount fetch karta hai.
               },
               { withCredentials: true }
             );
@@ -101,6 +93,7 @@ const WalletPage = ({ user, setUser }) => {
               localStorage.setItem('dealit_user', JSON.stringify(updatedUser));
               
               setCustomAmount('');
+              setShowPaymentForm(false);
               alert(`🎉 Success! ${amount} Credits have been added to your wallet.`);
             }
           } catch (error) {
@@ -114,7 +107,7 @@ const WalletPage = ({ user, setUser }) => {
           contact: profileData?.phone || '',
         },
         theme: {
-          color: '#10b981',
+          color: '#A388E1',
         },
       };
 
@@ -142,147 +135,140 @@ const WalletPage = ({ user, setUser }) => {
   if (!user) return <Navigate to="/login" />;
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
-      <div className="flex items-center gap-4 mb-8">
-        <Link to="/profile" className="p-2 bg-gray-800 rounded-full text-gray-400 hover:text-white transition border border-gray-700 hover:border-gray-500">
-          <ArrowLeft className="w-5 h-5" />
+    <div className="max-w-md mx-auto bg-white min-h-screen pb-24 md:max-w-7xl">
+      {/* Header */}
+      <div className="flex justify-between items-center px-5 pt-6 pb-4 md:px-8">
+        <Link to="/" className="text-gray-800 hover:text-[#A388E1] transition">
+          <ArrowLeft className="w-6 h-6" />
         </Link>
-        <div>
-          <h1 className="text-3xl font-bold text-white flex items-center gap-2">
-            <Wallet className="w-8 h-8 text-emerald-400" /> My Wallet
-          </h1>
-          <p className="text-gray-400 text-sm">Manage your credits and transactions.</p>
-        </div>
+        <h1 className="text-xl font-bold text-gray-900">Earn Credits</h1>
+        <button className="text-gray-800 hover:text-[#A388E1] transition">
+          <MoreHorizontal className="w-6 h-6" />
+        </button>
       </div>
 
       {loading ? (
-        <div className="text-center text-emerald-400 py-20 font-medium animate-pulse">Loading wallet details...</div>
+        <div className="text-center text-[#A388E1] py-20 font-medium animate-pulse">Loading wallet details...</div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="md:grid md:grid-cols-2 md:gap-8 md:px-8">
           
-          <div className="lg:col-span-1 space-y-6">
-            <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl border border-gray-700 shadow-xl overflow-hidden relative">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/10 rounded-full blur-3xl transform translate-x-10 -translate-y-10"></div>
-              
-              <div className="p-8 relative z-10 text-center">
-                <div className="w-16 h-16 bg-yellow-500/10 border border-yellow-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-inner">
-                  <Coins className="w-8 h-8 text-yellow-500" />
+          <div className="space-y-6">
+            {/* Top Purple Banner */}
+            <div className="mx-5 md:mx-0 bg-gradient-to-r from-[#A388E1] to-[#b7a3eb] rounded-3xl p-5 text-white shadow-lg shadow-[#A388E1]/30 relative overflow-hidden">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="bg-yellow-400 p-1.5 rounded-full z-10">
+                  <Coins className="w-6 h-6 text-yellow-900" />
                 </div>
-                <p className="text-gray-400 font-bold tracking-widest text-xs uppercase mb-1">Available Balance</p>
-                <h2 className="text-5xl font-black text-white mb-2 flex justify-center items-end gap-1">
-                  {profileData?.account_credits || 0} <span className="text-xl text-yellow-500 mb-1">🪙</span>
-                </h2>
-                <p className="text-sm text-gray-500">1 Credit = ₹1 INR</p>
+                <span className="text-3xl font-bold z-10">{profileData?.account_credits || 0} <span className="text-xl font-normal opacity-90">credits</span></span>
               </div>
-              <div className="bg-gray-900/80 p-4 border-t border-gray-700 flex items-center justify-center gap-2 text-xs text-emerald-400 font-medium">
-                <ShieldCheck className="w-4 h-4" /> 100% Secure Transactions
+              <div className="inline-block bg-white/20 px-3 py-1 rounded-full backdrop-blur-sm text-xs font-medium z-10 relative">
+                ₹ 1 = 1 credit
               </div>
-            </div>
-
-            <div className="bg-gray-800/50 rounded-2xl border border-gray-700/50 p-6">
-              <h3 className="text-white font-bold mb-3 flex items-center gap-2">
-                <Zap className="w-5 h-5 text-yellow-500" /> Why buy credits?
-              </h3>
-              <ul className="space-y-3 text-sm text-gray-400">
-                <li className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5"></div>
-                  Offer trades for high-value items even if your items are worth less.
-                </li>
-                <li className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5"></div>
-                  Use credits to balance the gap in estimated value.
-                </li>
-                <li className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5"></div>
-                  Credits never expire and stay in your wallet forever.
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="lg:col-span-2">
-            <div className="bg-gray-800 rounded-3xl border border-gray-700 shadow-xl p-8">
-              <h2 className="text-2xl font-bold text-white mb-6">Add Credits</h2>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-                {packages.map((pkg) => (
-                  <div 
-                    key={pkg.id} 
-                    className={`relative p-6 rounded-2xl border-2 transition-all flex flex-col items-center justify-center cursor-pointer overflow-hidden group ${
-                      pkg.highlight 
-                        ? 'border-yellow-500 bg-yellow-500/5 shadow-lg shadow-yellow-500/10 hover:bg-yellow-500/10' 
-                        : 'border-gray-700 bg-gray-900/50 hover:border-emerald-500/50 hover:bg-gray-800'
-                    }`}
-                    onClick={() => handlePayment(pkg.price)}
-                  >
-                    {pkg.highlight && (
-                      <div className="absolute top-0 inset-x-0 bg-yellow-500 text-black text-[10px] font-black tracking-widest text-center py-1 uppercase">
-                        {pkg.tag}
-                      </div>
-                    )}
-                    {!pkg.highlight && (
-                      <div className="absolute top-2 right-2 text-[10px] font-bold text-gray-500 uppercase">
-                        {pkg.tag}
-                      </div>
-                    )}
+              {/* Decorative elements to mimic the 3D assets */}
+              <div className="absolute right-0 bottom-0 opacity-20 transform translate-x-4 translate-y-4">
+                <Package className="w-32 h-32" />
+              </div>
+            </div>
 
-                    <Coins className={`w-10 h-10 mb-3 transition-transform duration-300 group-hover:scale-110 ${pkg.highlight ? 'text-yellow-500 mt-4' : 'text-gray-400'}`} />
-                    <h3 className="text-2xl font-black text-white flex items-center gap-1">
-                      {pkg.credits}
-                    </h3>
-                    <p className="text-sm text-gray-400 font-medium mb-4">Credits</p>
-                    
-                    <button 
-                      className={`w-full py-2.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-1 ${
-                        pkg.highlight 
-                          ? 'bg-yellow-500 hover:bg-yellow-600 text-black shadow-md' 
-                          : 'bg-gray-700 hover:bg-emerald-500 text-white hover:shadow-lg hover:shadow-emerald-500/20'
-                      }`}
-                      disabled={processing}
-                    >
-                      Pay ₹{pkg.price} <ChevronRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
+            <div className="px-5 md:px-0 mt-6">
+              <h2 className="text-lg font-bold text-gray-900 mb-4">Ways to Earn Credits</h2>
+
+              {/* Card 1: List Items */}
+              <div className="bg-[#F8F6FF] rounded-3xl p-5 relative overflow-hidden mb-4 border border-[#EBE5F7]">
+                <h3 className="font-bold text-gray-900 mb-3">List Items to Earn Credits</h3>
+                <ul className="space-y-2 mb-5 w-2/3 relative z-10">
+                  <li className="flex items-start gap-2 text-xs text-gray-600 font-medium">
+                    <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                    List an item to earn instant credits.
+                  </li>
+                  <li className="flex items-start gap-2 text-xs text-gray-600 font-medium">
+                    <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                    If your item gets approved and goes live, receive extra credits!
+                  </li>
+                </ul>
+                <Link to="/add-item" className="bg-[#FFE28A] text-gray-900 px-5 py-2.5 rounded-full text-sm font-bold inline-flex items-center gap-1.5 shadow-sm hover:bg-[#FFD75E] transition relative z-10">
+                  <Plus className="w-4 h-4" /> List an Item
+                </Link>
+                
+                {/* Visual Graphic Placeholder */}
+                <div className="absolute right-[-10px] bottom-[-10px] w-28 h-28 bg-[#EBE5F7] rounded-full opacity-50 flex items-center justify-center">
+                  <Wallet className="w-12 h-12 text-[#A388E1]" />
+                </div>
               </div>
 
-              <div className="border-t border-gray-700 pt-8 mt-4">
-                <h3 className="text-lg font-bold text-white mb-4">Custom Amount</h3>
-                <form onSubmit={handleCustomSubmit} className="flex flex-col sm:flex-row gap-4">
-                  <div className="relative flex-1">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <span className="text-gray-400 font-bold">₹</span>
-                    </div>
-                    <input 
-                      type="number" 
-                      min="10"
-                      required
-                      value={customAmount}
-                      onChange={(e) => setCustomAmount(e.target.value)}
-                      placeholder="Enter amount (Min ₹10)"
-                      className="w-full bg-gray-900 border border-gray-700 rounded-xl pl-10 pr-4 py-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-bold"
-                      disabled={processing}
-                    />
-                    {customAmount && (
-                      <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
-                        <span className="text-emerald-400 font-medium text-sm flex items-center gap-1">
-                          = {customAmount} <Coins className="w-4 h-4 text-yellow-500" />
-                        </span>
-                      </div>
-                    )}
+              {/* Card 2: Buy Credits */}
+              <div className="bg-[#F8F6FF] rounded-3xl p-5 relative overflow-hidden mb-4 border border-[#EBE5F7]">
+                <div className="w-2/3 relative z-10">
+                  <h3 className="font-bold text-gray-900 mb-1">Buy Credits</h3>
+                  <p className="text-xs text-gray-500 font-medium mb-4">
+                    Get credits instantly by buying them with real money.
+                  </p>
+                  <div className="inline-block bg-white border border-[#EBE5F7] px-3 py-1.5 rounded-full text-xs font-bold text-gray-700 shadow-sm mb-4">
+                    ₹ 1 = 1 credit
                   </div>
+                  <br/>
                   <button 
-                    type="submit"
-                    disabled={!customAmount || customAmount < 10 || processing}
-                    className={`sm:w-auto w-full px-8 py-4 rounded-xl font-bold transition flex items-center justify-center gap-2 ${
-                      !customAmount || customAmount < 10 || processing
-                        ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                        : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20'
-                    }`}
+                    onClick={() => setShowPaymentForm(!showPaymentForm)}
+                    className="bg-[#A388E1] text-white px-5 py-2.5 rounded-full text-sm font-bold inline-flex items-center gap-1.5 shadow-sm hover:bg-[#8b70ca] transition"
                   >
-                    <CreditCard className="w-5 h-5" /> {processing ? 'Processing...' : 'Buy Now'}
+                    <Coins className="w-4 h-4" /> Add Credits
                   </button>
-                </form>
+                </div>
+
+                {/* Form expansion for Custom Amount Payment */}
+                {showPaymentForm && (
+                  <form onSubmit={handleCustomSubmit} className="mt-5 pt-5 border-t border-[#EBE5F7] relative z-10">
+                    <div className="flex gap-2 items-center">
+                      <div className="relative flex-1">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold">₹</span>
+                        <input 
+                          type="number" 
+                          min="10"
+                          required
+                          value={customAmount}
+                          onChange={(e) => setCustomAmount(e.target.value)}
+                          placeholder="Amount (Min 10)"
+                          className="w-full bg-white border border-gray-200 rounded-xl pl-8 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#A388E1]/50 font-bold"
+                          disabled={processing}
+                        />
+                      </div>
+                      <button 
+                        type="submit"
+                        disabled={!customAmount || customAmount < 10 || processing}
+                        className={`px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center justify-center gap-1 ${
+                          !customAmount || customAmount < 10 || processing
+                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            : 'bg-[#FFE28A] text-gray-900 hover:bg-[#FFD75E] shadow-sm'
+                        }`}
+                      >
+                        {processing ? '...' : 'Pay'} <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {/* Visual Graphic Placeholder */}
+                <div className="absolute right-[-10px] top-[10px] w-24 h-24 bg-[#EBE5F7] rounded-full opacity-50 flex items-center justify-center">
+                  <CreditCard className="w-10 h-10 text-[#A388E1]" />
+                </div>
+              </div>
+
+              {/* Card 3: Sell Items */}
+              <div className="bg-[#FFF9E5] rounded-3xl p-5 relative overflow-hidden border border-[#FFE28A]/50">
+                <h3 className="font-bold text-gray-900 mb-1">Got unused items?</h3>
+                <h4 className="font-bold text-gray-900 mb-1 text-sm">Sell them to earn credits now!</h4>
+                <p className="text-xs text-gray-600 font-medium mb-4 w-2/3 relative z-10 leading-relaxed">
+                  Get credits instantly by trading in items you no longer use.
+                </p>
+                <Link to="/add-item" className="bg-[#FFE28A] text-gray-900 px-5 py-2.5 rounded-full text-sm font-bold inline-flex items-center gap-1.5 shadow-sm hover:bg-[#FFD75E] transition relative z-10">
+                  <Plus className="w-4 h-4" /> List Item
+                </Link>
+
+                {/* Visual Graphic Placeholder */}
+                <div className="absolute right-[-10px] bottom-[-10px] w-24 h-24 bg-[#FFE28A]/30 rounded-full flex items-center justify-center">
+                  <Package className="w-10 h-10 text-yellow-600" />
+                </div>
               </div>
 
             </div>

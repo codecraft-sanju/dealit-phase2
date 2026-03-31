@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { LogOut, User, Wallet, Mail, Phone, MapPin, Calendar, Package, RefreshCw, Camera, Loader2 } from 'lucide-react';
+import { LogOut, User, Wallet, Mail, Phone, MapPin, Calendar, Package, RefreshCw, Camera, Loader2, Coins, ChevronRight } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
@@ -37,7 +37,6 @@ const ProfilePage = ({ user, onLogout }) => {
       const formData = new FormData();
       formData.append('file', file);
       
-      // Fallback strings added just in case env variables are missing
       const uploadPreset = import.meta.env.VITE_UPLOAD_PRESET || 'salon_preset';
       const cloudName = import.meta.env.VITE_CLOUD_NAME || 'dvoenforj';
       
@@ -58,7 +57,6 @@ const ProfilePage = ({ user, onLogout }) => {
       );
 
       if (response.data.success) {
-        // Update local state to show new image immediately
         setProfileData(prev => ({ ...prev, profilePic: uploadedUrl }));
       }
     } catch (error) {
@@ -72,130 +70,173 @@ const ProfilePage = ({ user, onLogout }) => {
   if (!user) return <Navigate to="/login" />;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 sm:py-10">
-      {/* Header Section */}
-      <div className="mb-8 flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
-        <div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">My Profile</h1>
-          <p className="text-gray-400 text-base sm:text-lg">Manage your account and items here.</p>
+    <div className="min-h-screen bg-[#f4f2f9] pb-24 md:py-10 flex justify-center font-sans">
+      <div className="w-full max-w-md md:max-w-5xl md:px-4">
+        
+        {/* Header Section */}
+        <div className="px-5 pt-6 pb-4 flex justify-between items-center md:px-0 mb-2">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 leading-tight">My Profile</h1>
+            <p className="text-sm text-gray-500 font-medium">Manage your account</p>
+          </div>
+          <button 
+            onClick={onLogout}
+            className="flex items-center gap-1.5 px-4 py-2 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white rounded-full text-sm font-bold transition-colors shadow-sm"
+          >
+            <LogOut className="w-4 h-4" /> <span className="hidden sm:inline">Logout</span>
+          </button>
         </div>
-        <button 
-          onClick={onLogout}
-          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white rounded-xl font-bold transition border border-red-500/20 w-full sm:w-auto"
-        >
-          <LogOut className="w-4 h-4" /> Logout
-        </button>
-      </div>
 
-      {loading ? (
-        <div className="text-center text-emerald-400 animate-pulse py-10 font-medium">Loading profile details...</div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          {/* Main Profile Card */}
-          <div className="lg:col-span-2 bg-gray-800 rounded-3xl border border-gray-700 shadow-xl overflow-hidden">
-            {/* Banner Background */}
-            <div className="bg-gradient-to-r from-emerald-600 to-cyan-600 h-28 sm:h-32"></div>
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <Loader2 className="w-10 h-10 text-[#A388E1] animate-spin mb-4" />
+            <div className="text-[#A388E1] font-bold animate-pulse">Loading profile...</div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 px-4 md:px-0">
             
-            <div className="px-6 sm:px-8 pb-8 relative">
+            {/* Main Profile Card */}
+            <div className="md:col-span-2 bg-white rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden border border-gray-100 flex flex-col">
               
-              {/* Profile Avatar with Upload Button */}
-              <div className="absolute -top-12 sm:-top-16 left-6 sm:left-8">
-                <div className="relative w-24 h-24 sm:w-32 sm:h-32 bg-gray-900 border-4 border-gray-800 rounded-full flex items-center justify-center shadow-xl group transition-all">
+              {/* Banner Background */}
+              <div className="bg-gradient-to-r from-[#A388E1] to-[#b7a3eb] h-32 relative">
+                <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
+              </div>
+              
+              <div className="px-6 pb-8 relative flex-1">
+                
+                {/* Profile Header Area (Avatar & Wallet Pill) */}
+                <div className="flex justify-between items-end -mt-12 mb-6">
                   
-                  {uploadingImage ? (
-                    <Loader2 className="w-8 h-8 sm:w-10 sm:h-10 text-emerald-400 animate-spin" />
-                  ) : profileData?.profilePic ? (
-                    <img src={profileData.profilePic} alt="Profile" className="w-full h-full object-cover rounded-full" />
-                  ) : (
-                    <User className="w-10 h-10 sm:w-14 sm:h-14 text-emerald-400" />
-                  )}
+                  {/* Avatar with Upload */}
+                  <div className="relative">
+                    <div className="w-24 h-24 bg-white rounded-[1.5rem] p-1.5 shadow-md">
+                      <div className="w-full h-full bg-[#f8f6ff] rounded-[1.2rem] flex items-center justify-center overflow-hidden relative">
+                        {uploadingImage ? (
+                          <Loader2 className="w-8 h-8 text-[#A388E1] animate-spin" />
+                        ) : profileData?.profilePic ? (
+                          <img src={profileData.profilePic} alt="Profile" className="w-full h-full object-cover" />
+                        ) : (
+                          <User className="w-10 h-10 text-[#A388E1]" />
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Camera Button */}
+                    <label className="absolute -bottom-2 -right-2 bg-[#A388E1] p-2.5 rounded-full text-white cursor-pointer hover:bg-[#8b70ca] hover:scale-105 transition-all shadow-md border-2 border-white" title="Upload Picture">
+                      <Camera className="w-4 h-4" />
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        onChange={handleImageUpload} 
+                        disabled={uploadingImage}
+                      />
+                    </label>
+                  </div>
 
-                  {/* Camera Icon - Positioned at bottom right */}
-                  <label className="absolute bottom-0 right-0 sm:bottom-1 sm:right-1 bg-emerald-500 p-2 rounded-full text-white cursor-pointer hover:bg-emerald-600 hover:scale-110 transition shadow-lg border-4 border-gray-800" title="Upload Profile Picture">
-                    <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      className="hidden" 
-                      onChange={handleImageUpload} 
-                      disabled={uploadingImage}
-                    />
-                  </label>
+                  {/* Wallet Pill */}
+                  <div className="bg-[#FFF4D2] border border-[#FFE28A]/50 px-4 py-2 rounded-full flex items-center gap-2 shadow-sm mb-2">
+                    <div className="bg-yellow-400 p-1 rounded-full">
+                      <Coins className="w-3.5 h-3.5 text-yellow-900" />
+                    </div>
+                    <span className="font-bold text-gray-900">{profileData?.account_credits || 0}</span>
+                  </div>
                 </div>
-              </div>
-              
-              {/* Wallet Info Container */}
-              <div className="absolute top-4 right-4 sm:right-8 bg-yellow-500/10 border border-yellow-500/20 px-3 sm:px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm">
-                 <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
-                 <div>
-                   <p className="text-[10px] text-yellow-500/80 font-bold uppercase tracking-wider hidden sm:block">My Wallet</p>
-                   <p className="text-base sm:text-lg font-bold text-yellow-500 leading-none">{profileData?.account_credits || 0} <span className="text-xs font-medium">Credits</span></p>
-                 </div>
-              </div>
 
-              {/* User Info */}
-              <div className="pt-16 sm:pt-20">
-                <h2 className="text-2xl sm:text-3xl font-bold text-white">{profileData?.full_name}</h2>
-                <span className="inline-block px-3 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-bold uppercase tracking-wider rounded-md mt-2 border border-emerald-500/20">
-                  {profileData?.role}
-                </span>
+                {/* User Info */}
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">{profileData?.full_name}</h2>
+                  <div className="inline-block bg-[#EBE5F7] text-[#805ad5] text-xs font-bold px-3 py-1 rounded-full mt-2">
+                    {profileData?.role?.toUpperCase() || 'USER'}
+                  </div>
+                </div>
 
-                <div className="mt-8 space-y-3 sm:space-y-4">
-                  <div className="flex items-center gap-3 text-gray-300 bg-gray-900/50 p-4 rounded-xl border border-gray-700">
-                    <Mail className="w-5 h-5 text-gray-500 flex-shrink-0" />
-                    <div className="truncate">
-                      <p className="text-xs text-gray-500 font-medium">Email Address</p>
-                      <p className="font-medium truncate">{profileData?.email}</p>
+                {/* Details List */}
+                <div className="mt-8 space-y-1">
+                  
+                  <div className="flex items-center gap-4 py-3.5 border-b border-gray-50 last:border-0 hover:bg-gray-50/50 rounded-2xl px-2 transition-colors">
+                    <div className="bg-[#F8F6FF] p-3 rounded-2xl text-[#A388E1]">
+                      <Mail className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 overflow-hidden">
+                      <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Email Address</p>
+                      <p className="font-semibold text-gray-900 truncate text-sm">{profileData?.email}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 text-gray-300 bg-gray-900/50 p-4 rounded-xl border border-gray-700">
-                    <Phone className="w-5 h-5 text-gray-500 flex-shrink-0" />
+
+                  <div className="flex items-center gap-4 py-3.5 border-b border-gray-50 last:border-0 hover:bg-gray-50/50 rounded-2xl px-2 transition-colors">
+                    <div className="bg-[#F8F6FF] p-3 rounded-2xl text-[#A388E1]">
+                      <Phone className="w-5 h-5" />
+                    </div>
                     <div>
-                      <p className="text-xs text-gray-500 font-medium">Phone Number</p>
-                      <p className="font-medium">{profileData?.phone || 'Not provided'}</p>
+                      <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Phone Number</p>
+                      <p className="font-semibold text-gray-900 text-sm">{profileData?.phone || 'Not provided'}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 text-gray-300 bg-gray-900/50 p-4 rounded-xl border border-gray-700">
-                    <MapPin className="w-5 h-5 text-gray-500 flex-shrink-0" />
+
+                  <div className="flex items-center gap-4 py-3.5 border-b border-gray-50 last:border-0 hover:bg-gray-50/50 rounded-2xl px-2 transition-colors">
+                    <div className="bg-[#F8F6FF] p-3 rounded-2xl text-[#A388E1]">
+                      <MapPin className="w-5 h-5" />
+                    </div>
                     <div>
-                      <p className="text-xs text-gray-500 font-medium">Location</p>
-                      <p className="font-medium capitalize">{profileData?.city || 'Not provided'}</p>
+                      <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Location</p>
+                      <p className="font-semibold text-gray-900 capitalize text-sm">{profileData?.city || 'Not provided'}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 text-gray-300 bg-gray-900/50 p-4 rounded-xl border border-gray-700">
-                    <Calendar className="w-5 h-5 text-gray-500 flex-shrink-0" />
+
+                  <div className="flex items-center gap-4 py-3.5 hover:bg-gray-50/50 rounded-2xl px-2 transition-colors">
+                    <div className="bg-[#F8F6FF] p-3 rounded-2xl text-[#A388E1]">
+                      <Calendar className="w-5 h-5" />
+                    </div>
                     <div>
-                      <p className="text-xs text-gray-500 font-medium">Member Since</p>
-                      <p className="font-medium">{new Date(profileData?.created_at).toLocaleDateString()}</p>
+                      <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Member Since</p>
+                      <p className="font-semibold text-gray-900 text-sm">{new Date(profileData?.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
                     </div>
                   </div>
+
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Action Cards (Items & Swaps) */}
-          <div className="flex flex-col gap-6">
-            <Link to="/dashboard" className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl border border-gray-700 p-8 shadow-xl hover:border-emerald-500/50 transition group flex flex-col items-center justify-center text-center h-full min-h-[220px]">
-              <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition border border-emerald-500/20">
-                <Package className="w-8 h-8 text-emerald-400" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-2 group-hover:text-emerald-400 transition">My Items</h3>
-              <p className="text-sm text-gray-400">View, edit, or check the status of your listed items.</p>
-            </Link>
-            
-            <Link to="/swaps" className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl border border-gray-700 p-8 shadow-xl hover:border-[#f97316]/50 transition group flex flex-col items-center justify-center text-center h-full min-h-[220px]">
-              <div className="w-16 h-16 bg-[#f97316]/10 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition border border-[#f97316]/20">
-                <RefreshCw className="w-8 h-8 text-[#f97316]" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-2 group-hover:text-[#f97316] transition">My Swaps</h3>
-              <p className="text-sm text-gray-400">Check incoming requests and track your ongoing trades.</p>
-            </Link>
-          </div>
+            {/* Action Cards Column */}
+            <div className="md:col-span-1 flex flex-col gap-4">
+              
+              <Link to="/dashboard" className="bg-[#F8F6FF] rounded-[2rem] border border-[#EBE5F7] p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all group relative overflow-hidden flex flex-col justify-center min-h-[160px]">
+                <div className="relative z-10">
+                  <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mb-4 shadow-sm text-[#A388E1]">
+                    <Package className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center justify-between">
+                    My Items
+                    <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-[#A388E1] transition-colors" />
+                  </h3>
+                  <p className="text-xs text-gray-500 font-medium">Manage your listed items</p>
+                </div>
+                {/* Decorative Icon */}
+                <Package className="absolute -right-4 -bottom-4 w-24 h-24 text-[#EBE5F7] opacity-50 group-hover:scale-110 transition-transform" />
+              </Link>
+              
+              <Link to="/swaps" className="bg-[#FFF9E5] rounded-[2rem] border border-[#FFE28A]/50 p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all group relative overflow-hidden flex flex-col justify-center min-h-[160px]">
+                <div className="relative z-10">
+                  <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mb-4 shadow-sm text-yellow-500">
+                    <RefreshCw className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center justify-between">
+                    My Swaps
+                    <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-yellow-500 transition-colors" />
+                  </h3>
+                  <p className="text-xs text-gray-600 font-medium">Track your trades</p>
+                </div>
+                {/* Decorative Icon */}
+                <RefreshCw className="absolute -right-4 -bottom-4 w-24 h-24 text-[#FFE28A] opacity-30 group-hover:scale-110 transition-transform group-hover:rotate-12" />
+              </Link>
 
-        </div>
-      )}
+            </div>
+
+          </div>
+        )}
+      </div>
     </div>
   );
 };
