@@ -370,14 +370,22 @@ function App() {
   return (
     <Router>
       <div className="min-h-screen bg-gray-900 font-sans selection:bg-emerald-500/30">
-        <Navbar user={user} onLogout={handleLogout} />
+        
+        {/* CHANGED: Navbar was removed from here */}
         
         {/* NAYA: Ye component globally check karega agar price 0 hai toh popup laayega */}
         <ZeroPriceAlert user={user} />
         
         <main>
           <Routes>
-            <Route path="/" element={<HomePage />} />
+            {/* CHANGED: Wrapped Navbar and HomePage inside a React fragment for the "/" route */}
+            <Route path="/" element={
+              <>
+                <Navbar user={user} onLogout={handleLogout} />
+                <HomePage />
+              </>
+            } />
+            
             <Route path="/login" element={<LoginPage setUser={setUser} />} />
             <Route path="/signup" element={<SignupPage setUser={setUser} />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage setUser={setUser} />} />
