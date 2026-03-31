@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Link, useNavigate, Navigate, us
 import { Package, X, AlertCircle, ArrowLeft, Edit2, Trash2 } from 'lucide-react';
 import axios from 'axios';
 
+import AuthPage from './components/AuthPage';
+
 import SearchPage from './components/SearchPage';
 import AdminPanel from './components/AdminPanel'; 
 import ItemDetailPage from './components/ItemDetailPage';
@@ -12,8 +14,7 @@ import HomePage from './components/HomePage';
 import ProfilePage from './components/ProfilePage'; 
 import SwapsPage from './components/SwapsPage'; 
 import ForgotPasswordPage from './components/ForgotPasswordPage';
-import LoginPage from './components/LoginPage';
-import SignupPage from './components/SignupPage';
+
 import Navbar from './components/Navbar'; // NAYA IMPORT
 import AddItemPage from './components/AddItemPage'; // NAYA IMPORT ADDITEMPAGE KE LIYE
 import ItemsPage from './components/ItemsPage';
@@ -257,8 +258,8 @@ function App() {
               </>
             } />
             
-            <Route path="/login" element={<LoginPage setUser={setUser} />} />
-            <Route path="/signup" element={<SignupPage setUser={setUser} />} />
+           <Route path="/login" element={<AuthPage defaultMode="login" setUser={setUser} />} />
+            <Route path="/signup" element={<AuthPage defaultMode="signup" setUser={setUser} />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage setUser={setUser} />} />
             
             <Route path="/profile" element={user ? <ProfilePage user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
