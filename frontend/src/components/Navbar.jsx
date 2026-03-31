@@ -11,7 +11,6 @@ const Navbar = ({ user }) => {
   const [credits, setCredits] = useState(user?.account_credits || 0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Close mobile menu whenever the route changes
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
@@ -48,9 +47,7 @@ const Navbar = ({ user }) => {
             
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2 text-2xl font-bold text-gray-900 tracking-tight z-10">
-              <div className="bg-[#A388E1] text-white p-1 rounded-lg">
-                <RefreshCw className="w-5 h-5" />
-              </div>
+              <img src="/logo.png" alt="Dealit Logo" className="w-8 h-8 object-contain" />
               <span className="text-[#A388E1]">Dealit</span>
             </Link>
             
@@ -111,8 +108,12 @@ const Navbar = ({ user }) => {
               )}
             </div>
 
-            {/* Mobile Top Right Icons (Bell & Profile) */}
+            {/* Mobile Top Right Icons (Search, Bell & Profile) */}
             <div className="md:hidden flex items-center gap-3">
+              <Link to="/search" className="text-gray-600 hover:text-[#A388E1] p-1">
+                <Search className="w-6 h-6" />
+              </Link>
+              
               {user && (
                 <>
                   <button className="text-gray-600 hover:text-[#A388E1] p-1">
@@ -124,22 +125,10 @@ const Navbar = ({ user }) => {
                 </>
               )}
               {!user && (
-                <Link to="/login" className="text-sm font-semibold text-[#A388E1]">
+                <Link to="/login" className="text-sm font-semibold text-[#A388E1] ml-1">
                   Login
                 </Link>
               )}
-            </div>
-          </div>
-
-          {/* Mobile Search Bar (Directly under top nav) */}
-          <div className="md:hidden mt-3 mb-1">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <input 
-                type="text" 
-                placeholder="Search items..." 
-                className="w-full bg-gray-50 text-gray-800 text-sm rounded-full pl-11 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#A388E1]/40 border border-transparent focus:bg-white transition-all"
-              />
             </div>
           </div>
         </div>
