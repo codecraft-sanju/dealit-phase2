@@ -15,6 +15,8 @@ const HomePage = ({ user }) => {
   
   // NAYA: Offers ke liye state
   const [offers, setOffers] = useState([]);
+  // CHANGED: Offers loading state add kiya gaya hai
+  const [loadingOffers, setLoadingOffers] = useState(true);
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -38,6 +40,9 @@ const HomePage = ({ user }) => {
         setOffers(activeOffers);
       } catch (error) {
         console.error('Error fetching offers:', error);
+      } finally {
+        // CHANGED: API call ke baad loading false kar diya
+        setLoadingOffers(false);
       }
     };
 
@@ -63,7 +68,16 @@ const HomePage = ({ user }) => {
         <p className="text-sm text-gray-500 mb-6">Now you don't need money to get things!</p>
 
         {/* NAYA: Offers/Banners Section - Perfect Rectangle & Swipeable */}
-        {offers.length > 0 && (
+        {/* CHANGED: Shimmer loading logic add kiya */}
+        {loadingOffers ? (
+          <div className="mb-6">
+            <div className="flex overflow-x-auto hide-scrollbar gap-4 pb-2">
+              <div className="w-full h-[173px] sm:h-[200px] md:h-[220px] flex-shrink-0 rounded-2xl bg-[#F8F6FF] border border-gray-50 animate-pulse flex items-center justify-center">
+                <div className="w-full h-full bg-[#EBE5F7] rounded-2xl"></div>
+              </div>
+            </div>
+          </div>
+        ) : offers.length > 0 ? (
           <div className="mb-6">
             <div className="flex overflow-x-auto hide-scrollbar gap-4 snap-x snap-mandatory pb-2">
               {offers.map((offer) => (
@@ -80,7 +94,7 @@ const HomePage = ({ user }) => {
               ))}
             </div>
           </div>
-        )}
+        ) : null}
 
         {/* Dynamic Top Banner: Login status ke hisaab se change hoga */}
         {user ? (
@@ -204,6 +218,6 @@ const HomePage = ({ user }) => {
       `}</style>
     </div>
   );
-};
+};                     
 
 export default HomePage;

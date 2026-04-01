@@ -20,10 +20,10 @@ const ProductCard = ({ item, isLoading, className = '' }) => {
     );
   }
 
-  // Fallback agar item null ho
+
   if (!item) return null;
 
-  // Actual Product Card
+
   return (
     <Link 
       to={`/item/${item._id}`} 
