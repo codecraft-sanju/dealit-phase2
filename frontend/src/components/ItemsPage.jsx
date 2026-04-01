@@ -47,7 +47,27 @@ const ItemsPage = () => {
 
       <div className="px-5 md:px-8 mt-6 relative z-10">
         {loading ? (
-          <div className="text-center text-[#A388E1] py-20 animate-pulse font-medium">Loading items...</div>
+          /* NAYA: Premium Skeleton Loader For All Items Grid */
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-2">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <div 
+                key={i} 
+                className="bg-white rounded-3xl border border-gray-100 overflow-hidden flex flex-col shadow-sm animate-pulse h-[240px]"
+              >
+                <div className="h-32 w-full bg-[#EBE5F7]"></div>
+                
+                <div className="p-4 flex-1 flex flex-col">
+                  <div className="h-4 w-3/4 bg-gray-200 rounded-md mb-2"></div>
+                  <div className="h-3 w-1/2 bg-gray-200 rounded-md mb-3"></div>
+
+                  <div className="mt-auto border-t border-gray-50 pt-3 flex items-center gap-2">
+                    <div className="w-5 h-5 rounded-full bg-[#FFE28A]"></div>
+                    <div className="h-4 w-12 bg-gray-200 rounded-md"></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         ) : items.length === 0 ? (
           <div className="text-center bg-[#F8F6FF] rounded-3xl py-16 px-6 border border-[#EBE5F7] shadow-sm">
             <Package className="w-16 h-16 text-[#A388E1]/40 mx-auto mb-4" />

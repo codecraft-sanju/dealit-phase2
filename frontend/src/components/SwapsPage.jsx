@@ -119,8 +119,51 @@ const SwapsPage = ({ user }) => {
       <div className="px-5 md:px-8 relative z-10">
         <div className="space-y-5">
           {loading ? (
-            <div className="text-center text-[#805ad5] py-12 animate-pulse font-bold bg-white rounded-[2rem] shadow-sm border border-gray-100">
-              Loading your trades...
+            <div className="space-y-5">
+              {[1, 2].map((i) => (
+                <div key={i} className="bg-white border border-gray-100 shadow-sm rounded-[2rem] p-5 md:p-7 animate-pulse">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 pb-5 border-b border-gray-100 gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-6 w-20 bg-gray-100 rounded-lg"></div>
+                      <div className="h-6 w-24 bg-gray-200 rounded-full"></div>
+                    </div>
+                    <div className="flex gap-2 w-full md:w-auto">
+                      <div className="h-10 w-full md:w-24 bg-gray-200 rounded-xl hidden md:block"></div>
+                      <div className="h-10 w-full md:w-24 bg-gray-200 rounded-xl"></div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 relative">
+                    <div className="flex-1 w-full bg-[#fcfbff] rounded-2xl p-4 md:p-5 border border-[#f0eaff]">
+                      <div className="h-3 w-24 bg-[#EBE5F7] rounded-md mb-3"></div>
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 md:w-20 md:h-20 bg-[#EBE5F7] rounded-xl shrink-0"></div>
+                        <div className="w-full">
+                          <div className="h-5 w-3/4 bg-gray-200 rounded-md mb-2"></div>
+                          <div className="h-4 w-1/2 bg-gray-200 rounded-md"></div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 md:relative md:translate-x-0 md:translate-y-0 z-10">
+                      <div className="flex items-center justify-center w-10 h-10 bg-white rounded-full border border-gray-100 shadow-sm">
+                        <div className="w-5 h-5 bg-gray-200 rounded-full"></div>
+                      </div>
+                    </div>
+
+                    <div className="flex-1 w-full bg-[#fcfbff] rounded-2xl p-4 md:p-5 border border-[#f0eaff]">
+                      <div className="h-3 w-24 bg-[#EBE5F7] rounded-md mb-3"></div>
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 md:w-20 md:h-20 bg-[#EBE5F7] rounded-xl shrink-0"></div>
+                        <div className="w-full">
+                          <div className="h-5 w-3/4 bg-gray-200 rounded-md mb-2"></div>
+                          <div className="h-4 w-1/2 bg-gray-200 rounded-md"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : displaySwaps.length === 0 ? (
             <div className="text-center bg-white border border-gray-100 rounded-[2rem] py-16 px-6 shadow-sm">

@@ -98,9 +98,37 @@ const SearchPage = () => {
         
         {/* State 1: Typing / Loading */}
         {loading && (
-          <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="w-10 h-10 text-[#A388E1] animate-spin mb-4" />
-            <p className="text-gray-500 font-medium animate-pulse">Searching for "{query}"...</p>
+          <div>
+             <h3 className="text-sm font-bold text-gray-400 mb-4 uppercase tracking-wider animate-pulse">
+              Searching for "{query}"...
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+               {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div 
+                    key={i} 
+                    className="bg-white rounded-3xl border border-gray-100 overflow-hidden flex flex-col shadow-sm animate-pulse h-[260px]"
+                  >
+                     <div className="h-36 w-full bg-[#EBE5F7] rounded-t-3xl"></div>
+                     <div className="p-4 flex-1 flex flex-col">
+                        <div className="h-4 w-3/4 bg-gray-200 rounded-md mb-2"></div>
+                        <div className="h-4 w-1/2 bg-gray-200 rounded-md mb-4"></div>
+                        
+                        <div className="flex items-center gap-2 mb-3">
+                           <div className="w-4 h-4 rounded-full bg-gray-200"></div>
+                           <div className="h-3 w-16 bg-gray-200 rounded-md"></div>
+                        </div>
+
+                        <div className="mt-auto border-t border-gray-50 pt-3 flex items-center justify-between">
+                           <div className="flex items-center gap-2">
+                              <div className="w-5 h-5 rounded-full bg-[#FFE28A]"></div>
+                              <div className="h-4 w-10 bg-gray-200 rounded-md"></div>
+                           </div>
+                           <div className="h-5 w-10 bg-gray-200 rounded-full"></div>
+                        </div>
+                     </div>
+                  </div>
+               ))}
+            </div>
           </div>
         )}
 
