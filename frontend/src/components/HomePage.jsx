@@ -59,11 +59,12 @@ const HomePage = ({ user }) => {
   ];
 
   return (
-    <div className="max-w-md mx-auto bg-white min-h-screen pb-24 md:max-w-7xl md:px-4">
-      <div className="px-5 pt-6 pb-2">
+    <div className="max-w-md mx-auto bg-white min-h-screen pb-24 md:max-w-7xl md:px-0">
+      {/* CHANGED: pt-6 ko pt-4 kiya aur px-5 ko px-4 kiya space bachane ke liye */}
+      <div className="px-4 pt-4 pb-0">
         
-        {/* CHANGED: Text aur Banner ko side-by-side square boxes me wrap kiya (Grid use karke) */}
-        <div className="grid grid-cols-2 gap-3 mb-6">
+        {/* CHANGED: mb-6 ko mb-4 kiya taki banner thoda paas aaye */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
           
           {/* Left Box: Text Section */}
           <div className="bg-[#F8F6FF] border border-[#EBE5F7] rounded-3xl p-4 flex flex-col justify-center h-full">
@@ -111,8 +112,9 @@ const HomePage = ({ user }) => {
 
         {/* NAYA: Offers/Banners Section - Perfect Rectangle & Swipeable */}
         {/* CHANGED: Shimmer loading logic add kiya */}
+        {/* CHANGED: mb-6 ko mb-3 kiya categories ko upar lane ke liye */}
         {loadingOffers ? (
-          <div className="mb-6">
+          <div className="mb-3">
             <div className="flex overflow-x-auto hide-scrollbar gap-4 pb-2">
               <div className="w-full h-[173px] sm:h-[200px] md:h-[220px] flex-shrink-0 rounded-2xl bg-[#F8F6FF] border border-gray-50 animate-pulse flex items-center justify-center">
                 <div className="w-full h-full bg-[#EBE5F7] rounded-2xl"></div>
@@ -120,7 +122,7 @@ const HomePage = ({ user }) => {
             </div>
           </div>
         ) : offers.length > 0 ? (
-          <div className="mb-6">
+          <div className="mb-3">
             <div className="flex overflow-x-auto hide-scrollbar gap-4 snap-x snap-mandatory pb-2">
               {offers.map((offer) => (
                 <div 
@@ -140,7 +142,8 @@ const HomePage = ({ user }) => {
 
       </div>
 
-      <div className="px-5 py-4">
+      {/* CHANGED: py-4 ko py-2 kiya vertical space kam karne ke liye */}
+      <div className="px-4 py-2">
         <div className="flex gap-4 overflow-x-auto hide-scrollbar items-center pb-2">
           {categories.map((cat, index) => (
             <div key={index} className={`flex flex-col items-center gap-2 min-w-max cursor-pointer`}>
@@ -162,8 +165,9 @@ const HomePage = ({ user }) => {
         </div>
       </div>
 
-      <div className="px-5 py-2">
-        <div className="flex justify-between items-center mb-4">
+      {/* CHANGED: px-5 ko px-4 kiya aur top padding thodi kam rakhi */}
+      <div className="px-4 py-2">
+        <div className="flex justify-between items-center mb-3">
           <h2 className="text-xl font-bold text-gray-900">Popular Items</h2>
           <Link to="/items" className="text-sm font-semibold text-gray-500 flex items-center gap-1 hover:text-[#A388E1]">
             See All <ChevronRight className="w-4 h-4" />
@@ -191,7 +195,8 @@ const HomePage = ({ user }) => {
         )}
       </div>
 
-      <div className="px-5 py-4">
+      {/* CHANGED: px-5 ko px-4 kiya bottom section ke liye */}
+      <div className="px-4 py-3">
         <div className="bg-[#EBE5F7] rounded-3xl p-5 relative overflow-hidden">
           <div className="w-2/3 relative z-10">
             <h3 className="text-lg font-bold text-gray-900 mb-2">Got unused items?</h3>
