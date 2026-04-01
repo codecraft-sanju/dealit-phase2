@@ -4,6 +4,7 @@ import { Package, X, AlertCircle, ArrowLeft, Edit2, Trash2 } from 'lucide-react'
 import axios from 'axios';
 
 import Navbar from './components/Navbar';
+import BottomNav from './components/BottomNav'; // <-- NAYA IMPORT
 
 const AuthPage = lazy(() => import('./components/AuthPage'));
 const SearchPage = lazy(() => import('./components/SearchPage'));
@@ -240,6 +241,65 @@ const PremiumLoader = () => (
   </div>
 );
 
+// NAYA WRAPPER: Jisme sirf BottomNav Global hai
+const MainAppContent = ({ user, handleLogout, setUser }) => {
+  const location = useLocation();
+  
+  // In pages par Bottom Navbar hide karna hai
+  const hideNavbarRoutes = ['/login', '/signup', '/forgot-password'];
+  const shouldShowBottomNav = !hideNavbarRoutes.includes(location.pathname);
+
+  return (
+    <div className="min-h-screen bg-gray-900 font-sans selection:bg-emerald-500/30 pb-16 md:pb-0"> 
+      <ZeroPriceAlert user={user} />
+      
+      <main>
+        <Suspense fallback={<PremiumLoader />}>
+          <Routes>
+            
+            {/* Top Navbar wapas wahi lag gaya jahan tha */}
+            <Route path="/" element={
+              <>
+                <Navbar user={user} onLogout={handleLogout} />
+                <HomePage user={user} />
+              </>
+            } />
+            
+            <Route path="/login" element={user ? <Navigate to="/profile" replace /> : <AuthPage defaultMode="login" setUser={setUser} />} />
+            <Route path="/signup" element={user ? <Navigate to="/profile" replace /> : <AuthPage defaultMode="signup" setUser={setUser} />} />
+            <Route path="/forgot-password" element={user ? <Navigate to="/profile" replace /> : <ForgotPasswordPage setUser={setUser} />} />
+          
+            <Route path="/profile" element={user ? <ProfilePage user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+            <Route path="/dashboard" element={user ? <DashboardPage user={user} /> : <Navigate to="/login" />} />
+            <Route path="/edit-item/:id" element={user ? <EditItemPage /> : <Navigate to="/login" />} />
+            
+            <Route path="/admin" element={<AdminPanel user={user} />} />
+            <Route path="/add-item" element={user ? <AddItemPage /> : <Navigate to="/login" />} />
+            
+        
+            <Route path="/item/:id" element={
+              <>
+                <Navbar user={user} onLogout={handleLogout} />
+                <ItemDetailPage user={user} />
+              </>
+            } />
+            
+            <Route path="/swaps" element={user ? <SwapsPage user={user} /> : <Navigate to="/login" />} />
+            <Route path="/chat/:barterId" element={user ? <ChatPage user={user} /> : <Navigate to="/login" />} />
+            <Route path="/wallet" element={user ? <WalletPage user={user} setUser={setUser} /> : <Navigate to="/login" />} />
+            <Route path="/search" element={<SearchPage />} />
+            <Route path="/items" element={<ItemsPage />} />
+            
+            <Route path="*" element={<div className="text-white text-center mt-20 text-xl">404 - Page Not Found</div>} />
+          </Routes>
+        </Suspense>
+      </main>
+      {shouldShowBottomNav && <BottomNav user={user} />}
+      
+    </div>
+  );
+};
+
 function App() {
   const [user, setUser] = useState(() => {
     const savedUser = localStorage.getItem('dealit_user');
@@ -258,52 +318,7 @@ function App() {
 
   return (
     <Router>
-      <div className="min-h-screen bg-gray-900 font-sans selection:bg-emerald-500/30">
-        <ZeroPriceAlert user={user} />
-        
-        <main>
-          <Suspense fallback={<PremiumLoader />}>
-            <Routes>
-              
-              <Route path="/" element={
-                <>
-                  <Navbar user={user} onLogout={handleLogout} />
-                  <HomePage user={user} />
-                </>
-              } />
-              
-  
-              <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <AuthPage defaultMode="login" setUser={setUser} />} />
-              <Route path="/signup" element={user ? <Navigate to="/dashboard" replace /> : <AuthPage defaultMode="signup" setUser={setUser} />} />
-              <Route path="/forgot-password" element={user ? <Navigate to="/dashboard" replace /> : <ForgotPasswordPage setUser={setUser} />} />
-            
-              
-              <Route path="/profile" element={user ? <ProfilePage user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-              <Route path="/dashboard" element={user ? <DashboardPage user={user} /> : <Navigate to="/login" />} />
-              <Route path="/edit-item/:id" element={user ? <EditItemPage /> : <Navigate to="/login" />} />
-              
-              <Route path="/admin" element={<AdminPanel user={user} />} />
-              <Route path="/add-item" element={user ? <AddItemPage /> : <Navigate to="/login" />} />
-              
-            
-              <Route path="/item/:id" element={
-                <>
-                  <Navbar user={user} onLogout={handleLogout} />
-                  <ItemDetailPage user={user} />
-                </>
-              } />
-              
-              <Route path="/swaps" element={user ? <SwapsPage user={user} /> : <Navigate to="/login" />} />
-              <Route path="/chat/:barterId" element={user ? <ChatPage user={user} /> : <Navigate to="/login" />} />
-              <Route path="/wallet" element={user ? <WalletPage user={user} setUser={setUser} /> : <Navigate to="/login" />} />
-              <Route path="/search" element={<SearchPage />} />
-              <Route path="/items" element={<ItemsPage />} />
-              
-              <Route path="*" element={<div className="text-white text-center mt-20 text-xl">404 - Page Not Found</div>} />
-            </Routes>
-          </Suspense>
-        </main>
-      </div>
+      <MainAppContent user={user} handleLogout={handleLogout} setUser={setUser} />
     </Router>
   );
 }
