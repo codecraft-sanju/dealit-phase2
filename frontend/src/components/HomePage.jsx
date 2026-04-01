@@ -61,11 +61,53 @@ const HomePage = ({ user }) => {
   return (
     <div className="max-w-md mx-auto bg-white min-h-screen pb-24 md:max-w-7xl md:px-4">
       <div className="px-5 pt-6 pb-2">
-        <h1 className="text-2xl font-bold text-gray-900 leading-tight mb-1">
-          Turn unused items into <br />
-          things you <span className="text-[#A388E1]">want</span>
-        </h1>
-        <p className="text-sm text-gray-500 mb-6">Now you don't need money to get things!</p>
+        
+        {/* CHANGED: Text aur Banner ko side-by-side square boxes me wrap kiya (Grid use karke) */}
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          
+          {/* Left Box: Text Section */}
+          <div className="bg-[#F8F6FF] border border-[#EBE5F7] rounded-3xl p-4 flex flex-col justify-center h-full">
+            <h1 className="text-lg md:text-xl font-bold text-gray-900 leading-tight mb-2">
+              Turn unused items into <br />
+              things you <span className="text-[#A388E1]">want</span>
+            </h1>
+            <p className="text-xs text-gray-500">No money needed!</p>
+          </div>
+
+          {/* Right Box: Dynamic Top Banner (Square Type) */}
+          {user ? (
+            <div className="bg-gradient-to-br from-[#A388E1] to-[#b7a3eb] rounded-3xl p-4 text-white shadow-lg shadow-[#A388E1]/30 flex flex-col justify-between h-full relative overflow-hidden">
+              <div>
+                <div className="bg-yellow-400 p-1.5 rounded-full inline-flex items-center justify-center mb-2">
+                  <Coins className="w-5 h-5 text-yellow-900" />
+                </div>
+                <div className="flex items-end gap-1">
+                  <span className="text-2xl font-bold leading-none">{user.account_credits || 0}</span>
+                  <span className="text-xs font-normal opacity-90 mb-0.5">credits</span>
+                </div>
+              </div>
+              <Link to="/wallet" className="bg-[#FFF4D2] text-[#8B70CA] text-xs font-bold px-3 py-2 mt-3 rounded-xl flex items-center justify-center gap-1 shadow-sm transition hover:bg-white">
+                Earn More <ChevronRight className="w-3 h-3" />
+              </Link>
+            </div>
+          ) : (
+            <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl p-4 text-white shadow-lg shadow-gray-900/30 flex flex-col justify-between h-full relative overflow-hidden">
+              <div>
+                <UserCircle className="w-8 h-8 text-gray-400 opacity-80 mb-2" />
+                <h3 className="text-sm font-bold leading-tight">Join Dealit</h3>
+                <p className="text-[10px] text-gray-300 mt-0.5">Earn & trade</p>
+              </div>
+              <div className="flex gap-2 mt-3">
+                <Link to="/login" className="flex-1 bg-white text-gray-900 text-center text-xs font-bold px-2 py-2 rounded-xl shadow-sm hover:bg-gray-100 transition">
+                  Login
+                </Link>
+                <Link to="/signup" className="flex-1 bg-[#A388E1] text-white text-center text-xs font-bold px-2 py-2 rounded-xl shadow-sm hover:bg-[#8b70ca] transition">
+                  Join
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* NAYA: Offers/Banners Section - Perfect Rectangle & Swipeable */}
         {/* CHANGED: Shimmer loading logic add kiya */}
@@ -96,44 +138,6 @@ const HomePage = ({ user }) => {
           </div>
         ) : null}
 
-        {/* Dynamic Top Banner: Login status ke hisaab se change hoga */}
-        {user ? (
-          <div className="bg-gradient-to-r from-[#A388E1] to-[#b7a3eb] rounded-3xl p-5 text-white shadow-lg shadow-[#A388E1]/30 relative overflow-hidden">
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center gap-2">
-                <div className="bg-yellow-400 p-1.5 rounded-full">
-                  <Coins className="w-5 h-5 text-yellow-900" />
-                </div>
-                <span className="text-2xl font-bold">{user.account_credits || 0} <span className="text-lg font-normal opacity-90">credits</span></span>
-              </div>
-              <Link to="/wallet" className="bg-[#FFF4D2] text-[#8B70CA] text-xs font-bold px-3 py-2 rounded-full flex items-center gap-1 shadow-sm">
-                Earn More <ChevronRight className="w-3 h-3" />
-              </Link>
-            </div>
-            <div className="flex justify-between items-center text-xs font-medium">
-              <span className="bg-white/20 px-3 py-1 rounded-full backdrop-blur-sm">₹ 1 = 1 credit</span>
-              <Link to="/wallet" className="text-white/80 cursor-pointer hover:text-white transition">Buy Credits</Link>
-            </div>
-          </div>
-        ) : (
-          <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-3xl p-5 text-white shadow-lg shadow-gray-900/30 relative overflow-hidden">
-            <div className="flex justify-between items-center mb-2">
-              <div>
-                <h3 className="text-lg font-bold">Join Dealit Today!</h3>
-                <p className="text-xs text-gray-300 mt-1">Sign in to earn credits and start trading.</p>
-              </div>
-              <UserCircle className="w-10 h-10 text-gray-400 opacity-50" />
-            </div>
-            <div className="mt-4 flex gap-3">
-              <Link to="/login" className="flex-1 bg-white text-gray-900 text-center text-sm font-bold px-4 py-2.5 rounded-xl shadow-sm hover:bg-gray-100 transition">
-                Login
-              </Link>
-              <Link to="/signup" className="flex-1 bg-[#A388E1] text-white text-center text-sm font-bold px-4 py-2.5 rounded-xl shadow-sm hover:bg-[#8b70ca] transition">
-                Sign Up
-              </Link>
-            </div>
-          </div>
-        )}
       </div>
 
       <div className="px-5 py-4">
