@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Package, RefreshCw, X, AlertCircle, Coins, CheckCircle2, ArrowRightLeft } from 'lucide-react';
+import { Package, RefreshCw, X, AlertCircle, Coins, CheckCircle2, ArrowRightLeft, TrendingUp, Info, ShieldCheck } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
@@ -105,7 +105,7 @@ const ItemDetailPage = ({ user }) => {
 
   if (loading) {
     return (
-      <div className="max-w-md mx-auto bg-white min-h-screen flex flex-col items-center justify-center md:max-w-7xl">
+      <div className="max-w-md mx-auto bg-white min-h-screen flex flex-col items-center justify-center lg:max-w-7xl">
         <div className="w-16 h-16 bg-[#f8f6ff] rounded-2xl flex items-center justify-center animate-bounce mb-4 border border-[#EBE5F7]">
           <Package className="w-8 h-8 text-[#6B46C1]" />
         </div>
@@ -116,7 +116,7 @@ const ItemDetailPage = ({ user }) => {
 
   if (!item) {
     return (
-      <div className="max-w-md mx-auto bg-white min-h-screen flex flex-col items-center justify-center md:max-w-7xl px-5">
+      <div className="max-w-md mx-auto bg-white min-h-screen flex flex-col items-center justify-center lg:max-w-7xl px-5">
         <div className="bg-slate-50 p-8 rounded-[2rem] text-center border border-slate-100 w-full shadow-sm">
           <AlertCircle className="w-12 h-12 text-slate-400 mx-auto mb-3" />
           <h2 className="text-xl font-bold text-slate-900 mb-1">Item Not Found</h2>
@@ -133,17 +133,19 @@ const ItemDetailPage = ({ user }) => {
   const selectedItemObj = myItems.find(i => i._id === selectedMyItem);
   const offeredValue = selectedItemObj?.estimated_value || 0;
   const requiredCredits = Math.max(0, targetValue - offeredValue);
+  const retailPrice = (targetValue * 1.6).toFixed(0); // Estimated real-world price
 
   return (
-    <div className="max-w-7xl mx-auto bg-white min-h-screen pb-24 md:pb-12 font-sans animate-in fade-in duration-500">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 md:gap-12 items-start md:pt-10 md:px-6">
+    <div className="max-w-7xl mx-auto bg-white min-h-screen pb-24 lg:pb-12 font-sans animate-in fade-in duration-500">
+      
+      {/* Grid Layout: Balances content on Desktop, stacks on Mobile */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-12 items-start lg:pt-10 lg:px-6">
         
-        {/* LEFT: Image Gallery (Interactive & Swipeable) */}
-        <div className="w-full max-w-xl mx-auto md:sticky md:top-24 space-y-4">
+        {/* ================= LEFT COLUMN: Gallery & Desktop Description ================= */}
+        <div className="lg:col-span-7 w-full mx-auto space-y-6">
           
           {/* Main Swipeable Container */}
-          <div className="relative w-full aspect-square md:aspect-auto md:h-[500px] bg-[#f8f9fb] md:rounded-[2rem] overflow-hidden border-b md:border border-slate-100 shadow-sm group">
-            
+          <div className="relative w-full aspect-square lg:aspect-auto lg:h-[500px] bg-[#f8f9fb] lg:rounded-[2rem] overflow-hidden border-b lg:border border-slate-100 shadow-sm group">
             <div 
               ref={scrollRef}
               onScroll={handleScroll}
@@ -151,7 +153,7 @@ const ItemDetailPage = ({ user }) => {
             >
               {item.images && item.images.length > 0 ? (
                 item.images.map((img, idx) => (
-                  <div key={idx} className="w-full h-full flex-shrink-0 snap-center flex items-center justify-center p-4 md:p-8">
+                  <div key={idx} className="w-full h-full flex-shrink-0 snap-center flex items-center justify-center p-4 lg:p-8">
                     <img 
                       src={img} 
                       alt={`${item.title} ${idx + 1}`} 
@@ -168,7 +170,7 @@ const ItemDetailPage = ({ user }) => {
 
             {/* Mobile Dots Indicator */}
             {item.images && item.images.length > 1 && (
-              <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 md:hidden">
+              <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 lg:hidden">
                 {item.images.map((_, idx) => (
                   <div 
                     key={idx} 
@@ -179,9 +181,9 @@ const ItemDetailPage = ({ user }) => {
             )}
           </div>
 
-          {/* Desktop/Mobile Thumbnails */}
+          {/* Thumbnails */}
           {item.images && item.images.length > 1 && (
-            <div className="flex gap-3 overflow-x-auto hide-scrollbar px-4 md:px-0">
+            <div className="flex gap-3 overflow-x-auto hide-scrollbar px-4 lg:px-0">
               {item.images.map((img, idx) => (
                 <button 
                   key={idx}
@@ -193,10 +195,21 @@ const ItemDetailPage = ({ user }) => {
               ))}
             </div>
           )}
+
+          {/* Desktop Description: Placed here to balance the right column */}
+          <div className="hidden lg:block bg-white rounded-3xl p-7 border border-slate-100 shadow-sm">
+            <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+              <Info className="w-5 h-5 text-[#6B46C1]" /> Item Description
+            </h3>
+            <p className="text-slate-600 text-[15px] leading-relaxed whitespace-pre-line">
+              {item.description}
+            </p>
+          </div>
         </div>
 
-        {/* RIGHT: Details Section */}
-        <div className="flex flex-col h-full px-5 md:px-0 pt-6 md:pt-0 pb-16 md:pb-0">
+
+        {/* ================= RIGHT COLUMN: Details, Compare Card & Actions ================= */}
+        <div className="lg:col-span-5 flex flex-col h-full px-5 lg:px-0 pt-6 lg:pt-0 pb-16 lg:pb-0 lg:sticky lg:top-24">
           
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-3">
@@ -208,7 +221,7 @@ const ItemDetailPage = ({ user }) => {
               </span>
             </div>
 
-            <h1 className="text-2xl md:text-4xl font-bold text-slate-900 leading-tight mb-4 tracking-tight">
+            <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 leading-tight mb-4 tracking-tight">
               {item.title}
             </h1>
 
@@ -217,37 +230,62 @@ const ItemDetailPage = ({ user }) => {
                 <Coins className="w-5 h-5 text-yellow-600" />
               </div>
               <div>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none">Estimated Value</p>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none">Dealit Value</p>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-2xl md:text-3xl font-black text-slate-900 tracking-tighter">{item.estimated_value || '0'}</span>
+                  <span className="text-2xl lg:text-3xl font-black text-slate-900 tracking-tighter">{targetValue}</span>
                   <span className="text-sm font-medium text-slate-500">Credits</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="prose prose-slate mb-8">
+          {/* NAYA: Value Analysis / Compare Card */}
+          <div className="bg-gradient-to-br from-[#f8f6ff] to-white border border-[#EBE5F7] rounded-2xl p-4 mb-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <TrendingUp className="w-4 h-4 text-[#6B46C1]" />
+              <span className="text-[11px] font-bold text-[#6B46C1] uppercase tracking-wider">Market Value Analysis</span>
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                <span className="text-xs text-slate-500 font-medium">Est. Retail Price</span>
+                <span className="text-sm font-bold text-slate-400 line-through">₹{retailPrice}</span>
+              </div>
+              <div className="flex justify-between items-center bg-[#EBE5F7]/40 p-3 rounded-xl border border-[#EBE5F7]">
+                <span className="text-xs text-[#6B46C1] font-bold">Trading Value</span>
+                <span className="text-sm font-black text-[#6B46C1]">{targetValue} Credits</span>
+              </div>
+            </div>
+            
+            <p className="text-[10px] text-slate-500 text-center mt-3 font-medium">
+              Trade items instead of buying to save money!
+            </p>
+          </div>
+
+          {/* Looking For Section */}
+          <div className="bg-[#f8f9fb] border border-slate-100 rounded-2xl p-5 mb-6 lg:mb-8">
+            <div className="flex items-center gap-2 mb-2">
+              <ArrowRightLeft className="w-4 h-4 text-slate-600" />
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Owner is looking for</p>
+            </div>
+            <p className="text-sm font-bold text-slate-900 flex items-start gap-2 leading-snug">
+              {item.preferred_item || 'Open to any fair offers'}
+            </p>
+          </div>
+
+          {/* Mobile Description (Hidden on Desktop) */}
+          <div className="block lg:hidden mb-10">
             <h3 className="text-sm font-bold text-slate-900 mb-2">Description</h3>
             <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-line">
               {item.description}
             </p>
           </div>
 
-          <div className="bg-[#f8f9fb] border border-slate-100 rounded-2xl p-5 mb-8">
-            <div className="flex items-center gap-2 mb-2">
-              <ArrowRightLeft className="w-4 h-4 text-[#6B46C1]" />
-              <p className="text-[10px] font-bold text-[#6B46C1] uppercase tracking-wider">Owner is looking for</p>
-            </div>
-            <p className="text-base font-bold text-slate-900 flex items-start gap-2 leading-snug">
-              {item.preferred_item || 'Open to any fair offers'}
-            </p>
-          </div>
-
-          {/* FIX: Changed bottom-0 to bottom-20 on mobile so it sits above the Navbar */}
-          <div className="fixed bottom-20 md:bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-lg border-t border-slate-100 z-40 md:static md:bg-transparent md:border-none md:p-0 md:mt-auto">
-            {user && item.owner?._id === user.id ? (
-              <button disabled className="w-full bg-slate-100 text-slate-400 py-4 rounded-xl font-bold text-sm cursor-not-allowed border border-slate-200">
-                This is your item
+          {/* Action Buttons */}
+          <div className="fixed bottom-20 lg:bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-lg border-t border-slate-100 z-40 lg:static lg:bg-transparent lg:border-none lg:p-0 lg:mt-auto">
+            {user && (item.owner?._id === user._id || item.owner?._id === user.id) ? (
+              <button disabled className="w-full bg-[#F8F9FA] text-slate-400 py-4 rounded-xl font-bold text-base cursor-not-allowed border border-slate-200 flex items-center justify-center gap-2">
+                <Package className="w-5 h-5 opacity-50" /> This is your item
               </button>
             ) : (
               <button 
@@ -257,14 +295,27 @@ const ItemDetailPage = ({ user }) => {
                 <RefreshCw className="w-5 h-5" /> Offer a Trade
               </button>
             )}
+            
+            {/* Trust Badges below button (Desktop Only) */}
+            <div className="hidden lg:flex items-center justify-center gap-4 mt-4 text-slate-400">
+              <div className="flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span className="text-[9px] font-bold uppercase tracking-wider">Secure</span>
+              </div>
+              <div className="w-1 h-1 bg-slate-200 rounded-full"></div>
+              <div className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span className="text-[9px] font-bold uppercase tracking-wider">Verified</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Modern Barter Modal */}
+      {/* ================= Modern Barter Modal ================= */}
       {showModal && (
-        <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center bg-slate-900/40 backdrop-blur-sm sm:px-4 transition-opacity">
-          <div className="bg-white w-full max-w-lg rounded-t-[2rem] md:rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] md:max-h-[85vh] animate-in slide-in-from-bottom-10 md:slide-in-from-bottom-0 md:zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-[100] flex items-end lg:items-center justify-center bg-slate-900/40 backdrop-blur-sm sm:px-4 transition-opacity">
+          <div className="bg-white w-full max-w-lg rounded-t-[2rem] lg:rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] lg:max-h-[85vh] animate-in slide-in-from-bottom-10 lg:slide-in-from-bottom-0 lg:zoom-in-95 duration-200">
             
             <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-white relative z-10">
               <div>

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Package, Coins, ChevronRight, Plus, Smartphone, Shirt, Watch, Home as HomeIcon, Gamepad2, UserCircle } from 'lucide-react';
 import axios from 'axios';
+// ProductCard import kiya gaya hai
+import ProductCard from './ProductCard'; 
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -113,28 +115,10 @@ const HomePage = ({ user }) => {
         </div>
 
         {loading ? (
-          /* NAYA: Premium Skeleton Loader For Home Items */
+          /* NAYA: Premium Skeleton Loader For Home Items replaced with ProductCard */
           <div className="flex overflow-x-auto hide-scrollbar gap-4 pb-4">
             {[1, 2, 3, 4].map((i) => (
-              <div 
-                key={i} 
-                className="bg-[#F8F6FF] rounded-3xl p-4 min-w-[150px] w-[150px] flex-shrink-0 relative block border border-gray-50 animate-pulse"
-              >
-                {/* Image Skeleton */}
-                <div className="h-24 w-full bg-[#EBE5F7] rounded-2xl mb-4"></div>
-                
-                {/* Text Skeleton */}
-                <div>
-                  <div className="h-3 w-full bg-[#EBE5F7] rounded-md mb-2"></div>
-                  <div className="h-3 w-2/3 bg-[#EBE5F7] rounded-md mb-3"></div>
-                  
-                  {/* Price Skeleton */}
-                  <div className="flex items-center gap-2 mt-2">
-                    <div className="w-4 h-4 rounded-full bg-[#EBE5F7]"></div>
-                    <div className="h-3 w-10 bg-[#EBE5F7] rounded-md"></div>
-                  </div>
-                </div>
-              </div>
+              <ProductCard key={i} isLoading={true} className="min-w-[150px] w-[150px] flex-shrink-0" />
             ))}
           </div>
         ) : items.length === 0 ? (
@@ -143,31 +127,9 @@ const HomePage = ({ user }) => {
           </div>
         ) : (
           <div className="flex overflow-x-auto hide-scrollbar gap-4 pb-4 snap-x">
+            {/* Purana item mapping hata kar ProductCard laga diya */}
             {items.map((item) => (
-              <Link 
-                to={`/item/${item._id}`} 
-                key={item._id} 
-                className="bg-[#F8F6FF] rounded-3xl p-4 min-w-[150px] w-[150px] flex-shrink-0 snap-start relative block hover:shadow-md transition-shadow"
-              >
-                <div className="h-24 w-full flex items-center justify-center mb-4">
-                  {item.images && item.images.length > 0 && item.images[0] ? (
-                    <img src={item.images[0]} alt={item.title} className="max-h-full max-w-full object-contain mix-blend-multiply drop-shadow-md" />
-                  ) : (
-                    <Package className="w-10 h-10 text-[#A388E1]/40" />
-                  )}
-                </div>
-                
-                <div>
-                  <h3 className="text-sm font-bold text-gray-900 leading-tight mb-1 line-clamp-2">{item.title}</h3>
-                  <div className="flex items-center gap-1 mt-2">
-                    <div className="bg-yellow-100 rounded-full p-0.5">
-                      <Coins className="w-3 h-3 text-yellow-600" />
-                    </div>
-                    <span className="font-bold text-gray-900 text-sm">{item.estimated_value || '0'}</span>
-                    <span className="text-xs text-gray-400 line-through ml-1">₹{((item.estimated_value || 0) * 1.6).toFixed(0)}</span>
-                  </div>
-                </div>
-              </Link>
+              <ProductCard key={item._id} item={item} className="min-w-[150px] w-[150px] flex-shrink-0 snap-start" />
             ))}
           </div>
         )}

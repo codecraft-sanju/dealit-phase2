@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Package, Coins, ChevronLeft } from 'lucide-react';
+import { Package, ChevronLeft } from 'lucide-react';
 import axios from 'axios';
+// ProductCard import kiya gaya hai
+import ProductCard from './ProductCard';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -47,25 +49,10 @@ const ItemsPage = () => {
 
       <div className="px-5 md:px-8 mt-6 relative z-10">
         {loading ? (
-          /* NAYA: Premium Skeleton Loader For All Items Grid */
+          /* NAYA: Premium Skeleton Loader For All Items Grid replaced with ProductCard */
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-2">
             {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-              <div 
-                key={i} 
-                className="bg-white rounded-3xl border border-gray-100 overflow-hidden flex flex-col shadow-sm animate-pulse h-[240px]"
-              >
-                <div className="h-32 w-full bg-[#EBE5F7]"></div>
-                
-                <div className="p-4 flex-1 flex flex-col">
-                  <div className="h-4 w-3/4 bg-gray-200 rounded-md mb-2"></div>
-                  <div className="h-3 w-1/2 bg-gray-200 rounded-md mb-3"></div>
-
-                  <div className="mt-auto border-t border-gray-50 pt-3 flex items-center gap-2">
-                    <div className="w-5 h-5 rounded-full bg-[#FFE28A]"></div>
-                    <div className="h-4 w-12 bg-gray-200 rounded-md"></div>
-                  </div>
-                </div>
-              </div>
+              <ProductCard key={i} isLoading={true} className="w-full" />
             ))}
           </div>
         ) : items.length === 0 ? (
@@ -76,33 +63,9 @@ const ItemsPage = () => {
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-2">
+            {/* Purana item mapping hata kar ProductCard laga diya */}
             {items.map(item => (
-              <Link 
-                to={`/item/${item._id}`} 
-                key={item._id} 
-                className="bg-white rounded-3xl border border-gray-100 overflow-hidden flex flex-col hover:shadow-md transition relative shadow-sm block"
-              >
-                <div className="h-32 bg-[#F8F9FA] relative flex items-center justify-center">
-                  {item.images && item.images.length > 0 && item.images[0] ? (
-                    <img src={item.images[0]} alt={item.title} className="max-h-full max-w-full object-contain mix-blend-multiply drop-shadow-sm p-2" />
-                  ) : (
-                    <Package className="w-10 h-10 text-gray-300" />
-                  )}
-                </div>
-                
-                <div className="p-4 flex-1 flex flex-col">
-                  <h3 className="text-sm font-bold text-gray-900 mb-1 line-clamp-2 leading-tight">{item.title}</h3>
-                  <p className="text-xs text-gray-500 mb-3">{item.category}</p>
-
-                  <div className="mt-auto border-t border-gray-50 pt-3 flex items-center gap-1.5">
-                    <div className="bg-yellow-100 rounded-full p-1">
-                      <Coins className="w-3 h-3 text-yellow-600" />
-                    </div>
-                    <span className="text-sm font-bold text-gray-900">{item.estimated_value || '0'}</span>
-                    <span className="text-xs text-gray-400">Credits</span>
-                  </div>
-                </div>
-              </Link>
+              <ProductCard key={item._id} item={item} className="w-full" />
             ))}
           </div>
         )}
