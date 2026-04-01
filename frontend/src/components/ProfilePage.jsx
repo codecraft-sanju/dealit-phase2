@@ -31,9 +31,10 @@ const ProfilePage = ({ user, onLogout }) => {
   // NAYA: Listen for scroll events to shrink the header
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 20) {
+      // MODIFIED: 50 aur 10 ka gap rakha hai taki shrink hone par height kam hone se vibration na ho
+      if (window.scrollY > 50) {
         setIsScrolled(true);
-      } else {
+      } else if (window.scrollY < 10) {
         setIsScrolled(false);
       }
     };
@@ -99,9 +100,9 @@ const ProfilePage = ({ user, onLogout }) => {
             }`}>
               My Profile
             </h1>
-            {/* Subtitle smoothly fades and shrinks out when scrolled */}
+            {/* MODIFIED: Subtitle height automatically kam hogi bina vibrate kiye */}
             <p className={`text-purple-200 font-medium transition-all duration-300 overflow-hidden ${
-              isScrolled ? 'max-h-0 opacity-0 text-[0px] mt-0' : 'max-h-10 opacity-100 text-sm mt-0.5'
+              isScrolled ? 'max-h-0 opacity-0 text-[0px] m-0 p-0' : 'max-h-10 opacity-100 text-sm mt-0.5'
             }`}>
               Manage your account
             </p>
