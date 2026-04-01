@@ -113,7 +113,30 @@ const HomePage = ({ user }) => {
         </div>
 
         {loading ? (
-          <div className="text-center text-[#A388E1] py-10 animate-pulse font-medium">Loading items...</div>
+          /* NAYA: Premium Skeleton Loader For Home Items */
+          <div className="flex overflow-x-auto hide-scrollbar gap-4 pb-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div 
+                key={i} 
+                className="bg-[#F8F6FF] rounded-3xl p-4 min-w-[150px] w-[150px] flex-shrink-0 relative block border border-gray-50 animate-pulse"
+              >
+                {/* Image Skeleton */}
+                <div className="h-24 w-full bg-[#EBE5F7] rounded-2xl mb-4"></div>
+                
+                {/* Text Skeleton */}
+                <div>
+                  <div className="h-3 w-full bg-[#EBE5F7] rounded-md mb-2"></div>
+                  <div className="h-3 w-2/3 bg-[#EBE5F7] rounded-md mb-3"></div>
+                  
+                  {/* Price Skeleton */}
+                  <div className="flex items-center gap-2 mt-2">
+                    <div className="w-4 h-4 rounded-full bg-[#EBE5F7]"></div>
+                    <div className="h-3 w-10 bg-[#EBE5F7] rounded-md"></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         ) : items.length === 0 ? (
           <div className="text-center text-gray-400 py-10 bg-gray-50 rounded-2xl border border-gray-100">
             No items available right now. Be the first to add one!

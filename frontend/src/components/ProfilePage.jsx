@@ -11,7 +11,7 @@ const ProfilePage = ({ user, onLogout }) => {
   const [loading, setLoading] = useState(true);
   const [uploadingImage, setUploadingImage] = useState(false);
   
-  // NAYA: State to track if the page is scrolled
+  // State to track if the page is scrolled
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
@@ -28,10 +28,9 @@ const ProfilePage = ({ user, onLogout }) => {
     fetchProfile();
   }, []);
 
-  // NAYA: Listen for scroll events to shrink the header
+  // Listen for scroll events to shrink the header
   useEffect(() => {
     const handleScroll = () => {
-      // MODIFIED: 50 aur 10 ka gap rakha hai taki shrink hone par height kam hone se vibration na ho
       if (window.scrollY > 50) {
         setIsScrolled(true);
       } else if (window.scrollY < 10) {
@@ -100,7 +99,6 @@ const ProfilePage = ({ user, onLogout }) => {
             }`}>
               My Profile
             </h1>
-            {/* MODIFIED: Subtitle height automatically kam hogi bina vibrate kiye */}
             <p className={`text-purple-200 font-medium transition-all duration-300 overflow-hidden ${
               isScrolled ? 'max-h-0 opacity-0 text-[0px] m-0 p-0' : 'max-h-10 opacity-100 text-sm mt-0.5'
             }`}>
@@ -124,9 +122,53 @@ const ProfilePage = ({ user, onLogout }) => {
 
       <div className="px-5 md:px-8 -mt-12 relative z-20">
         {loading ? (
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-10 flex flex-col items-center justify-center">
-            <Loader2 className="w-10 h-10 text-[#A388E1] animate-spin mb-4" />
-            <div className="text-[#A388E1] font-bold animate-pulse">Loading profile...</div>
+          /* NAYA: Premium Skeleton Loader for Profile Page */
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 animate-pulse">
+            
+            {/* Skeleton Profile Card */}
+            <div className="md:col-span-1 bg-white rounded-3xl shadow-sm border border-gray-100 p-5 flex flex-col items-center text-center">
+              <div className="w-24 h-24 bg-gray-200 rounded-[1.5rem] mb-4"></div>
+              <div className="h-6 w-3/4 bg-gray-200 rounded-lg mb-2"></div>
+              <div className="h-4 w-1/2 bg-gray-200 rounded-lg mb-4"></div>
+              <div className="flex gap-2 w-full justify-center mt-2">
+                <div className="h-6 w-16 bg-gray-200 rounded-full"></div>
+                <div className="h-6 w-20 bg-gray-200 rounded-full"></div>
+              </div>
+            </div>
+
+            {/* Skeleton Details & Actions Column */}
+            <div className="md:col-span-2 flex flex-col gap-4">
+              
+              {/* Skeleton Account Details */}
+              <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-5">
+                <div className="h-5 w-1/3 bg-gray-200 rounded-lg mb-6 px-2"></div>
+                <div className="space-y-6 px-2">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-gray-200 rounded-xl"></div>
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3 w-20 bg-gray-200 rounded-md"></div>
+                        <div className="h-4 w-32 bg-gray-200 rounded-md"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Skeleton Quick Actions Grid */}
+              <div className="grid grid-cols-2 gap-3 md:gap-4">
+                {[1, 2].map((i) => (
+                  <div key={i} className="bg-white rounded-3xl border border-gray-100 p-5 h-[116px] shadow-sm flex flex-col justify-between">
+                    <div className="w-10 h-10 bg-gray-200 rounded-xl mb-3"></div>
+                    <div>
+                      <div className="h-4 w-20 bg-gray-200 rounded-md mb-2"></div>
+                      <div className="h-3 w-16 bg-gray-200 rounded-md"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
