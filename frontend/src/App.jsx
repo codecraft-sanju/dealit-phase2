@@ -1,29 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate, Navigate, useLocation, useParams } from 'react-router-dom';
 import { Package, X, AlertCircle, ArrowLeft, Edit2, Trash2 } from 'lucide-react';
 import axios from 'axios';
 
-import AuthPage from './components/AuthPage';
+import Navbar from './components/Navbar';
 
-import SearchPage from './components/SearchPage';
-import AdminPanel from './components/AdminPanel'; 
-import ItemDetailPage from './components/ItemDetailPage';
-import ChatPage from './components/ChatPage';
-import WalletPage from './components/WalletPage';
-import HomePage from './components/HomePage';
-import ProfilePage from './components/ProfilePage'; 
-import SwapsPage from './components/SwapsPage'; 
-import ForgotPasswordPage from './components/ForgotPasswordPage';
-
-import Navbar from './components/Navbar'; // NAYA IMPORT
-import AddItemPage from './components/AddItemPage'; // NAYA IMPORT ADDITEMPAGE KE LIYE
-import ItemsPage from './components/ItemsPage';
-import DashboardPage from './components/DashboardPage';
+const AuthPage = lazy(() => import('./components/AuthPage'));
+const SearchPage = lazy(() => import('./components/SearchPage'));
+const AdminPanel = lazy(() => import('./components/AdminPanel'));
+const ItemDetailPage = lazy(() => import('./components/ItemDetailPage'));
+const ChatPage = lazy(() => import('./components/ChatPage'));
+const WalletPage = lazy(() => import('./components/WalletPage'));
+const HomePage = lazy(() => import('./components/HomePage'));
+const ProfilePage = lazy(() => import('./components/ProfilePage'));
+const SwapsPage = lazy(() => import('./components/SwapsPage'));
+const ForgotPasswordPage = lazy(() => import('./components/ForgotPasswordPage'));
+const AddItemPage = lazy(() => import('./components/AddItemPage'));
+const ItemsPage = lazy(() => import('./components/ItemsPage'));
+const DashboardPage = lazy(() => import('./components/DashboardPage'));
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
-// NAYA: ZeroPriceAlert Component - Jo popup dikhayega
 const ZeroPriceAlert = ({ user }) => {
   const [show, setShow] = useState(false);
   const navigate = useNavigate();
@@ -31,25 +29,22 @@ const ZeroPriceAlert = ({ user }) => {
   const [hasChecked, setHasChecked] = useState(false);
 
   useEffect(() => {
-    // Agar user logged in nahi hai ya humne pehle hi check kar liya hai, toh wapas jao
     if (!user || hasChecked) return;
 
     const checkItems = async () => {
       try {
         const res = await axios.get(`${API_URL}/items/me`, { withCredentials: true });
-        // Check if any item has 0 or missing estimated_value
         const needsUpdate = res.data.data.some(item => !item.estimated_value || item.estimated_value === 0);
         
         if (needsUpdate) {
           setShow(true);
         }
-        setHasChecked(true); // Ek session me ek hi baar check karega
+        setHasChecked(true); 
       } catch (error) {
         console.error('Error checking item prices:', error);
       }
     };
     
-    // Agar user already dashboard ya edit page par hai, toh waha popup mat dikhao
     if (!location.pathname.includes('/dashboard') && !location.pathname.includes('/edit-item')) {
        checkItems();
     }
@@ -227,6 +222,24 @@ const EditItemPage = () => {
   );
 };
 
+const PremiumLoader = () => (
+  <div className="flex flex-col items-center justify-center min-h-screen pb-20">
+    <div className="relative flex items-center justify-center w-24 h-24 mb-6">
+      <div className="absolute inset-0 border-4 border-[#A388E1]/20 rounded-full"></div>
+      <div className="absolute inset-0 border-4 border-transparent border-t-[#A388E1] border-r-[#FFE28A] rounded-full animate-spin"></div>
+      <div className="bg-gray-800 p-4 rounded-full shadow-[0_0_20px_rgba(163,136,225,0.3)] z-10">
+        <Package className="w-8 h-8 text-[#A388E1] animate-pulse" />
+      </div>
+    </div>
+    <h2 className="text-xl font-bold text-white tracking-wide mb-2">Dealit</h2>
+    <div className="flex items-center gap-1.5">
+      <div className="w-2 h-2 bg-[#A388E1] rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+      <div className="w-2 h-2 bg-[#FFE28A] rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+      <div className="w-2 h-2 bg-[#A388E1] rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+    </div>
+  </div>
+);
+
 function App() {
   const [user, setUser] = useState(() => {
     const savedUser = localStorage.getItem('dealit_user');
@@ -249,44 +262,46 @@ function App() {
         <ZeroPriceAlert user={user} />
         
         <main>
-          <Routes>
-            
-            <Route path="/" element={
-              <>
-                <Navbar user={user} onLogout={handleLogout} />
-                <HomePage user={user} />
-              </>
-            } />
-            
+          <Suspense fallback={<PremiumLoader />}>
+            <Routes>
+              
+              <Route path="/" element={
+                <>
+                  <Navbar user={user} onLogout={handleLogout} />
+                  <HomePage user={user} />
+                </>
+              } />
+              
   
-            <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <AuthPage defaultMode="login" setUser={setUser} />} />
-            <Route path="/signup" element={user ? <Navigate to="/dashboard" replace /> : <AuthPage defaultMode="signup" setUser={setUser} />} />
-            <Route path="/forgot-password" element={user ? <Navigate to="/dashboard" replace /> : <ForgotPasswordPage setUser={setUser} />} />
-          
+              <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <AuthPage defaultMode="login" setUser={setUser} />} />
+              <Route path="/signup" element={user ? <Navigate to="/dashboard" replace /> : <AuthPage defaultMode="signup" setUser={setUser} />} />
+              <Route path="/forgot-password" element={user ? <Navigate to="/dashboard" replace /> : <ForgotPasswordPage setUser={setUser} />} />
             
-            <Route path="/profile" element={user ? <ProfilePage user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-            <Route path="/dashboard" element={user ? <DashboardPage user={user} /> : <Navigate to="/login" />} />
-            <Route path="/edit-item/:id" element={user ? <EditItemPage /> : <Navigate to="/login" />} />
+              
+              <Route path="/profile" element={user ? <ProfilePage user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+              <Route path="/dashboard" element={user ? <DashboardPage user={user} /> : <Navigate to="/login" />} />
+              <Route path="/edit-item/:id" element={user ? <EditItemPage /> : <Navigate to="/login" />} />
+              
+              <Route path="/admin" element={<AdminPanel user={user} />} />
+              <Route path="/add-item" element={user ? <AddItemPage /> : <Navigate to="/login" />} />
+              
             
-            <Route path="/admin" element={<AdminPanel user={user} />} />
-            <Route path="/add-item" element={user ? <AddItemPage /> : <Navigate to="/login" />} />
-            
-            {/* YAHAN CHANGE KIYA HAI: Navbar ko ItemDetailPage ke upar add kar diya hai */}
-            <Route path="/item/:id" element={
-              <>
-                <Navbar user={user} onLogout={handleLogout} />
-                <ItemDetailPage user={user} />
-              </>
-            } />
-            
-            <Route path="/swaps" element={user ? <SwapsPage user={user} /> : <Navigate to="/login" />} />
-            <Route path="/chat/:barterId" element={user ? <ChatPage user={user} /> : <Navigate to="/login" />} />
-            <Route path="/wallet" element={user ? <WalletPage user={user} setUser={setUser} /> : <Navigate to="/login" />} />
-            <Route path="/search" element={<SearchPage />} />
-            <Route path="/items" element={<ItemsPage />} />
-            
-            <Route path="*" element={<div className="text-white text-center mt-20 text-xl">404 - Page Not Found</div>} />
-          </Routes>
+              <Route path="/item/:id" element={
+                <>
+                  <Navbar user={user} onLogout={handleLogout} />
+                  <ItemDetailPage user={user} />
+                </>
+              } />
+              
+              <Route path="/swaps" element={user ? <SwapsPage user={user} /> : <Navigate to="/login" />} />
+              <Route path="/chat/:barterId" element={user ? <ChatPage user={user} /> : <Navigate to="/login" />} />
+              <Route path="/wallet" element={user ? <WalletPage user={user} setUser={setUser} /> : <Navigate to="/login" />} />
+              <Route path="/search" element={<SearchPage />} />
+              <Route path="/items" element={<ItemsPage />} />
+              
+              <Route path="*" element={<div className="text-white text-center mt-20 text-xl">404 - Page Not Found</div>} />
+            </Routes>
+          </Suspense>
         </main>
       </div>
     </Router>
