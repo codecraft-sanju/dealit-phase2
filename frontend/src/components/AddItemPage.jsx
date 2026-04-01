@@ -93,11 +93,11 @@ const AddItemPage = () => {
 
   return (
     <div className="min-h-screen bg-[#f4f2f9] md:py-10 flex justify-center font-sans">
-      {/* Main Card Container */}
-      <div className="w-full max-w-lg bg-[#fcfbff] md:rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col relative">
+      {/* Main Card Container - CHANGED: Removed overflow-hidden so sticky works properly */}
+      <div className="w-full max-w-lg bg-[#fcfbff] md:rounded-[2.5rem] shadow-2xl flex flex-col relative">
         
-        {/* Header Section (Purple) */}
-        <div className="bg-[#6B46C1] px-4 py-5 flex items-center justify-between text-white shadow-md z-10">
+        {/* Header Section (Purple) - CHANGED: Added sticky top-0 z-50 and md:rounded-t-[2.5rem] */}
+        <div className="sticky top-0 z-50 bg-[#6B46C1] px-4 py-5 flex items-center justify-between text-white shadow-md md:rounded-t-[2.5rem]">
           <button 
             onClick={() => navigate('/dashboard')} 
             className="p-1 hover:bg-white/20 rounded-full transition-colors"
