@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Shield, Users, Package, Trash2, X, CheckCircle, Edit, List, AlertTriangle, Eye, Coins, User, ShieldAlert, ShieldCheck, Mail, Phone, MapPin, Calendar, Wallet } from 'lucide-react';
+import { Shield, Users, Package, Trash2, X, CheckCircle, Edit, List, AlertTriangle, Eye, Coins, User, ShieldAlert, ShieldCheck, Mail, Phone, MapPin, Calendar, Wallet, Image as ImageIcon, Plus, UploadCloud, Check, ToggleLeft, ToggleRight } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
+// Cloudinary Credentials
+const UPLOAD_PRESET = import.meta.env.VITE_UPLOAD_PRESET || 'salon_preset';
+const CLOUD_NAME = import.meta.env.VITE_CLOUD_NAME || 'dvoenforj';
+
 const AdminPanel = ({ user }) => {
-  const [activeTab, setActiveTab] = useState('pending');
+  const [activeTab, setActiveTab] = useState('pending'); // 'pending', 'items', 'users', 'offers'
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Edit Modal States
+  // Edit Item Modal States
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingItemId, setEditingItemId] = useState(null);
   const [updating, setUpdating] = useState(false);
@@ -32,10 +36,17 @@ const AdminPanel = ({ user }) => {
   const [isViewUserModalOpen, setIsViewUserModalOpen] = useState(false);
   const [viewingUser, setViewingUser] = useState(null);
 
+  // --- NEW: Offer Modal States ---
+  const [isOfferModalOpen, setIsOfferModalOpen] = useState(false);
+  const [editingOfferId, setEditingOfferId] = useState(null);
+  const [offerForm, setOfferForm] = useState({ imageUrl: '', isActive: true });
+  const [uploadingImage, setUploadingImage] = useState(false);
+
   if (!user || user.role !== 'admin') {
     return <Navigate to="/" />;
   }
 
+  // Fetch Data based on Active Tab
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -44,6 +55,7 @@ const AdminPanel = ({ user }) => {
         if (activeTab === 'pending') endpoint = `${API_URL}/admin/pending-items`;
         else if (activeTab === 'users') endpoint = `${API_URL}/admin/users`;
         else if (activeTab === 'items') endpoint = `${API_URL}/admin/all-items`;
+        else if (activeTab === 'offers') endpoint = `${API_URL}/admin/offers`; // New Offers endpoint
 
         const response = await axios.get(endpoint, { withCredentials: true });
         setData(response.data.data || []);
@@ -56,6 +68,7 @@ const AdminPanel = ({ user }) => {
     fetchData();
   }, [activeTab]);
 
+  // --- ITEM FUNCTIONS ---
   const handleApprove = async (id) => {
     try {
       await axios.put(`${API_URL}/admin/item-status/${id}`, { status: 'active' }, { withCredentials: true });
@@ -85,45 +98,6 @@ const AdminPanel = ({ user }) => {
     } catch (error) {
       console.error('Error rejecting item:', error);
       alert('Failed to reject item.');
-    }
-  };
-
-  const handleDeleteUser = async (id) => {
-    if (!window.confirm(`Are you sure you want to delete this user?`)) return;
-    try {
-      await axios.delete(`${API_URL}/admin/users/${id}`, { withCredentials: true });
-      setData(data.filter(u => u._id !== id));
-      if (isViewUserModalOpen && viewingUser?._id === id) {
-        setIsViewUserModalOpen(false);
-      }
-    } catch (error) {
-      console.error(`Error deleting user:`, error);
-      alert(error.response?.data?.message || 'Failed to delete user.');
-    }
-  };
-
-  const handleUpdateRole = async (id, currentRole) => {
-    const newRole = currentRole === 'admin' ? 'user' : 'admin';
-    const actionText = newRole === 'admin' ? 'make this user an admin' : 'remove admin rights from this user';
-    
-    if (!window.confirm(`Are you sure you want to ${actionText}?`)) return;
-
-    try {
-      const response = await axios.put(
-        `${API_URL}/admin/users/role/${id}`, 
-        { role: newRole }, 
-        { withCredentials: true }
-      );
-      
-      if (response.data.success) {
-        setData(data.map(u => u._id === id ? { ...u, role: newRole } : u));
-        if (isViewUserModalOpen && viewingUser?._id === id) {
-          setViewingUser({ ...viewingUser, role: newRole });
-        }
-      }
-    } catch (error) {
-      console.error('Error updating user role:', error);
-      alert(error.response?.data?.message || 'Failed to update user role.');
     }
   };
 
@@ -177,9 +151,115 @@ const AdminPanel = ({ user }) => {
     setIsViewModalOpen(true);
   };
 
+  // --- USER FUNCTIONS ---
+  const handleDeleteUser = async (id) => {
+    if (!window.confirm(`Are you sure you want to delete this user?`)) return;
+    try {
+      await axios.delete(`${API_URL}/admin/users/${id}`, { withCredentials: true });
+      setData(data.filter(u => u._id !== id));
+      if (isViewUserModalOpen && viewingUser?._id === id) {
+        setIsViewUserModalOpen(false);
+      }
+    } catch (error) {
+      console.error(`Error deleting user:`, error);
+      alert(error.response?.data?.message || 'Failed to delete user.');
+    }
+  };
+
+  const handleUpdateRole = async (id, currentRole) => {
+    const newRole = currentRole === 'admin' ? 'user' : 'admin';
+    const actionText = newRole === 'admin' ? 'make this user an admin' : 'remove admin rights from this user';
+    
+    if (!window.confirm(`Are you sure you want to ${actionText}?`)) return;
+
+    try {
+      const response = await axios.put(
+        `${API_URL}/admin/users/role/${id}`, 
+        { role: newRole }, 
+        { withCredentials: true }
+      );
+      
+      if (response.data.success) {
+        setData(data.map(u => u._id === id ? { ...u, role: newRole } : u));
+        if (isViewUserModalOpen && viewingUser?._id === id) {
+          setViewingUser({ ...viewingUser, role: newRole });
+        }
+      }
+    } catch (error) {
+      console.error('Error updating user role:', error);
+      alert(error.response?.data?.message || 'Failed to update user role.');
+    }
+  };
+
   const handleViewUserClick = (userData) => {
     setViewingUser(userData);
     setIsViewUserModalOpen(true);
+  };
+
+  // --- NEW: OFFER FUNCTIONS ---
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', UPLOAD_PRESET);
+
+    try {
+      const res = await axios.post(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, formData);
+      setOfferForm(prev => ({ ...prev, imageUrl: res.data.secure_url }));
+    } catch (error) {
+      console.error('Error uploading image to Cloudinary:', error);
+      alert('Failed to upload image. Please check your credentials or network.');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleAddOfferClick = () => {
+    setEditingOfferId(null);
+    setOfferForm({ imageUrl: '', isActive: true });
+    setIsOfferModalOpen(true);
+  };
+
+  const handleEditOfferClick = (offer) => {
+    setEditingOfferId(offer._id);
+    setOfferForm({ imageUrl: offer.imageUrl, isActive: offer.isActive });
+    setIsOfferModalOpen(true);
+  };
+
+  const handleOfferSubmit = async (e) => {
+    e.preventDefault();
+    if (!offerForm.imageUrl) return alert('Please upload or provide an image URL');
+    setUpdating(true);
+
+    try {
+      if (editingOfferId) {
+        const res = await axios.put(`${API_URL}/admin/offers/${editingOfferId}`, offerForm, { withCredentials: true });
+        setData(data.map(o => o._id === editingOfferId ? res.data.data : o));
+      } else {
+        const res = await axios.post(`${API_URL}/admin/offers`, offerForm, { withCredentials: true });
+        setData([res.data.data, ...data]);
+      }
+      setIsOfferModalOpen(false);
+    } catch (error) {
+      console.error('Error saving offer:', error);
+      alert('Failed to save offer.');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleDeleteOffer = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this banner permanently?')) return;
+    try {
+      await axios.delete(`${API_URL}/admin/offers/${id}`, { withCredentials: true });
+      setData(data.filter(offer => offer._id !== id));
+    } catch (error) {
+      console.error('Error deleting offer:', error);
+      alert('Failed to delete offer.');
+    }
   };
 
   return (
@@ -206,6 +286,16 @@ const AdminPanel = ({ user }) => {
               <p className="text-sm text-gray-400 font-medium">Manage your platform resources efficiently</p>
             </div>
           </div>
+          
+          {/* Add New Offer Button - Only visible on Offers Tab */}
+          {activeTab === 'offers' && (
+            <button 
+              onClick={handleAddOfferClick}
+              className="bg-[#A388E1] hover:bg-[#8b70ca] text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 shadow-lg shadow-[#A388E1]/20 flex items-center gap-2 border border-[#A388E1]/50"
+            >
+              <Plus className="w-5 h-5" /> Add New Banner
+            </button>
+          )}
         </div>
 
         {/* Navigation Tabs */}
@@ -231,10 +321,17 @@ const AdminPanel = ({ user }) => {
           >
             <Users className="w-4 h-4" /> Manage Users
           </button>
+          {/* New Offers Tab */}
+          <button 
+            onClick={() => setActiveTab('offers')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${activeTab === 'offers' ? 'bg-[#A388E1] text-white shadow-lg shadow-[#A388E1]/20 scale-100' : 'text-gray-400 hover:text-white hover:bg-gray-700/50 scale-95'}`}
+          >
+            <ImageIcon className="w-4 h-4" /> Offers / Banners
+          </button>
         </div>
       </div>
 
-      {/* Main Table Container (Flexible height, scrollable body) */}
+      {/* Main Table Container */}
       <div className="max-w-7xl mx-auto w-full flex-1 min-h-0 bg-gray-800/40 backdrop-blur-xl border border-gray-700/60 rounded-3xl shadow-2xl flex flex-col overflow-hidden relative">
         {loading ? (
           <div className="flex-1 flex flex-col items-center justify-center space-y-4">
@@ -244,10 +341,13 @@ const AdminPanel = ({ user }) => {
         ) : data.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
             <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mb-4 border border-gray-700">
-              {activeTab === 'pending' ? <Package className="w-10 h-10 text-gray-500" /> : activeTab === 'users' ? <Users className="w-10 h-10 text-gray-500" /> : <List className="w-10 h-10 text-gray-500" />}
+              {activeTab === 'pending' ? <Package className="w-10 h-10 text-gray-500" /> : 
+               activeTab === 'users' ? <Users className="w-10 h-10 text-gray-500" /> : 
+               activeTab === 'offers' ? <ImageIcon className="w-10 h-10 text-gray-500" /> : 
+               <List className="w-10 h-10 text-gray-500" />}
             </div>
             <h3 className="text-xl font-bold text-white mb-1">No Data Found</h3>
-            <p className="text-gray-500">There are currently no {activeTab === 'pending' ? 'pending approvals' : 'records to display'}.</p>
+            <p className="text-gray-500">There are currently no {activeTab === 'pending' ? 'pending approvals' : activeTab === 'offers' ? 'banners available' : 'records to display'}.</p>
           </div>
         ) : (
           <div className="flex-1 overflow-auto admin-scroll rounded-3xl">
@@ -263,6 +363,11 @@ const AdminPanel = ({ user }) => {
                       <th className="px-6 py-5 font-bold uppercase tracking-wider text-xs">Contact</th>
                       <th className="px-6 py-5 font-bold uppercase tracking-wider text-xs">Location</th>
                       <th className="px-6 py-5 font-bold uppercase tracking-wider text-xs">Role</th>
+                    </>
+                  ) : activeTab === 'offers' ? (
+                    <>
+                      <th className="px-6 py-5 font-bold uppercase tracking-wider text-xs">Banner Preview</th>
+                      <th className="px-6 py-5 font-bold uppercase tracking-wider text-xs">Status</th>
                     </>
                   ) : (
                     <>
@@ -281,6 +386,7 @@ const AdminPanel = ({ user }) => {
                   <tr key={row._id} className="hover:bg-gray-700/30 transition-colors duration-200 group">
                     <td className="px-6 py-4 font-mono text-xs text-gray-500">#{row._id.substring(0,6)}</td>
                     
+                    {/* USERS TAB CONTENT */}
                     {activeTab === 'users' ? (
                       <>
                         <td className="px-6 py-4">
@@ -311,7 +417,27 @@ const AdminPanel = ({ user }) => {
                           </span>
                         </td>
                       </>
+                    ) : activeTab === 'offers' ? (
+                      /* OFFERS TAB CONTENT */
+                      <>
+                        <td className="px-6 py-4">
+                          <div className="w-48 h-20 bg-gray-800 rounded-xl overflow-hidden border border-gray-700 shadow-sm">
+                            <img src={row.imageUrl} alt="Banner" className={`w-full h-full object-cover ${!row.isActive ? 'grayscale opacity-50' : ''}`} />
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest flex items-center gap-1.5 w-fit ${
+                            row.isActive 
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' 
+                              : 'bg-gray-800 text-gray-400 border border-gray-700'
+                          }`}>
+                            {row.isActive ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
+                            {row.isActive ? 'Live' : 'Hidden'}
+                          </span>
+                        </td>
+                      </>
                     ) : (
+                      /* ITEMS / PENDING TAB CONTENT */
                       <>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-4">
@@ -354,6 +480,7 @@ const AdminPanel = ({ user }) => {
                       </>
                     )}
 
+                    {/* ACTIONS COLUMN */}
                     <td className="px-6 py-4 text-right">
                       {activeTab === 'pending' ? (
                         <div className="flex justify-end gap-2">
@@ -377,6 +504,15 @@ const AdminPanel = ({ user }) => {
                             title="Reject Fast"
                           >
                             <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : activeTab === 'offers' ? (
+                        <div className="flex justify-end gap-1.5">
+                          <button onClick={() => handleEditOfferClick(row)} className="text-gray-400 hover:text-blue-400 hover:bg-blue-400/10 transition-all p-2 rounded-xl" title="Edit/Hide Banner">
+                            <Edit className="w-5 h-5" />
+                          </button>
+                          <button onClick={() => handleDeleteOffer(row._id)} className="text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all p-2 rounded-xl" title="Delete Banner permanently">
+                            <Trash2 className="w-5 h-5" />
                           </button>
                         </div>
                       ) : activeTab === 'items' ? (
@@ -422,6 +558,7 @@ const AdminPanel = ({ user }) => {
       </div>
 
       {/* --- ALL MODALS BELOW --- */}
+      
       {/* View User Modal */}
       {isViewUserModalOpen && viewingUser && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 py-8 bg-black/60 backdrop-blur-md transition-opacity">
@@ -612,7 +749,7 @@ const AdminPanel = ({ user }) => {
                 <>
                   <button 
                     onClick={() => { setIsViewModalOpen(false); handleRejectClick(viewingItem._id); }} 
-                    className="px-6 py-2.5 rounded-xl font-bold bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white transition-all flex items-center gap-2 shadow-sm"
+                    className="px-6 py-2.5 rounded-xl font-bold bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-50 hover:text-white transition-all flex items-center gap-2 shadow-sm"
                   >
                     <X className="w-4 h-4" /> Reject Listing
                   </button>
@@ -629,7 +766,7 @@ const AdminPanel = ({ user }) => {
         </div>
       )}
 
-      {/* Reject Modal */}
+      {/* Reject Item Modal */}
       {isRejectModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/60 backdrop-blur-md transition-opacity">
           <div className="bg-gray-800 w-full max-w-md rounded-3xl border border-gray-700 shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
@@ -662,7 +799,7 @@ const AdminPanel = ({ user }) => {
         </div>
       )}
 
-      {/* Edit Modal */}
+      {/* Edit Item Modal */}
       {isEditModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 py-8 bg-black/60 backdrop-blur-md transition-opacity">
           <div className="bg-gray-800 w-full max-w-2xl rounded-3xl border border-gray-700 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
@@ -729,6 +866,102 @@ const AdminPanel = ({ user }) => {
           </div>
         </div>
       )}
+
+      {/* NEW: Add/Edit Offer Modal */}
+      {isOfferModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/60 backdrop-blur-md transition-opacity">
+          <div className="bg-gray-800 w-full max-w-lg rounded-3xl border border-gray-700 shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="p-5 border-b border-gray-700 flex justify-between items-center bg-gray-900/80 backdrop-blur-md">
+              <h2 className="text-xl font-black text-white flex items-center gap-2">
+                {editingOfferId ? <Edit className="w-6 h-6 text-[#A388E1]" /> : <ImageIcon className="w-6 h-6 text-[#A388E1]" />} 
+                {editingOfferId ? 'Update Banner' : 'Upload New Banner'}
+              </h2>
+              <button onClick={() => setIsOfferModalOpen(false)} className="text-gray-400 hover:text-white transition-all p-2 bg-gray-800 hover:bg-gray-700 rounded-full">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <form id="offerForm" onSubmit={handleOfferSubmit} className="space-y-6">
+                
+                {/* Image Upload Area */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-wide">Banner Image</label>
+                  
+                  {offerForm.imageUrl ? (
+                    <div className="relative w-full h-40 bg-gray-900 rounded-2xl border-2 border-gray-700 overflow-hidden group">
+                      <img src={offerForm.imageUrl} alt="Banner Preview" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+                        <label className="cursor-pointer bg-white text-gray-900 px-4 py-2 rounded-xl font-bold text-sm hover:bg-gray-200 transition-all">
+                          Change Image
+                          <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingImage} />
+                        </label>
+                      </div>
+                    </div>
+                  ) : (
+                    <label className="w-full h-40 border-2 border-dashed border-gray-600 hover:border-[#A388E1] bg-gray-900 rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-colors group">
+                      {uploadingImage ? (
+                        <>
+                          <div className="w-8 h-8 border-4 border-[#A388E1]/30 border-t-[#A388E1] rounded-full animate-spin mb-2"></div>
+                          <span className="text-sm font-medium text-[#A388E1]">Uploading to Cloudinary...</span>
+                        </>
+                      ) : (
+                        <>
+                          <div className="p-3 bg-gray-800 rounded-full group-hover:bg-[#A388E1]/20 transition-colors mb-2">
+                            <UploadCloud className="w-8 h-8 text-gray-400 group-hover:text-[#A388E1] transition-colors" />
+                          </div>
+                          <span className="text-sm font-medium text-gray-400 group-hover:text-[#A388E1] transition-colors">Click to upload banner image</span>
+                          <span className="text-xs text-gray-500 mt-1">Recommended size: 800x400 (Landscape)</span>
+                        </>
+                      )}
+                      <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingImage} />
+                    </label>
+                  )}
+                  
+                  {/* Option to paste URL manually just in case */}
+                  <div className="mt-4">
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Or paste image URL directly</label>
+                    <input 
+                      type="text" 
+                      value={offerForm.imageUrl} 
+                      onChange={(e) => setOfferForm({ ...offerForm, imageUrl: e.target.value })} 
+                      className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-[#A388E1] transition-all"
+                      placeholder="https://example.com/image.jpg"
+                    />
+                  </div>
+                </div>
+
+                {/* Active Toggle */}
+                <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-700 flex items-center justify-between cursor-pointer" onClick={() => setOfferForm({ ...offerForm, isActive: !offerForm.isActive })}>
+                  <div>
+                    <p className="font-bold text-white text-sm">Make Banner Active</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Active banners are shown on the user homepage.</p>
+                  </div>
+                  {offerForm.isActive ? (
+                    <ToggleRight className="w-10 h-10 text-emerald-500" />
+                  ) : (
+                    <ToggleLeft className="w-10 h-10 text-gray-500" />
+                  )}
+                </div>
+
+              </form>
+            </div>
+            
+            <div className="p-5 border-t border-gray-700 bg-gray-900/80 backdrop-blur-md flex justify-end gap-3">
+              <button type="button" onClick={() => setIsOfferModalOpen(false)} className="px-6 py-2.5 rounded-xl font-bold text-gray-400 hover:text-white transition-all">Cancel</button>
+              <button 
+                type="submit" 
+                form="offerForm" 
+                disabled={updating || uploadingImage} 
+                className={`px-8 py-2.5 rounded-xl font-bold transition-all flex items-center gap-2 ${updating || uploadingImage ? 'bg-[#A388E1]/50 text-white/50 cursor-not-allowed' : 'bg-[#A388E1] hover:bg-[#8b70ca] text-white shadow-[0_0_15px_rgba(163,136,225,0.4)]'}`}
+              >
+                {updating ? 'Saving...' : editingOfferId ? 'Update Banner' : 'Publish Banner'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

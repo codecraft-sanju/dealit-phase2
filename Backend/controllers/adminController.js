@@ -64,6 +64,7 @@ const getAllUsers = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
+
 const updateUserRole = async (req, res) => {
   try {
     const { role } = req.body;
@@ -119,5 +120,5 @@ module.exports = {
   getAllItems, 
   getAllUsers, 
   updateUserRole, 
-  deleteUser   
+  deleteUser
 };

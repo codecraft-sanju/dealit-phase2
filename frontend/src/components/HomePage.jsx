@@ -12,6 +12,9 @@ const API_URL = `${API_BASE}/api`;
 const HomePage = ({ user }) => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // NAYA: Offers ke liye state
+  const [offers, setOffers] = useState([]);
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -24,7 +27,22 @@ const HomePage = ({ user }) => {
         setLoading(false);
       }
     };
+
+    // NAYA: Offers fetch karne ka function
+    const fetchOffers = async () => {
+      try {
+        // Dhyaan rakhna ki backend me GET /api/offers ek public route ho
+        const response = await axios.get(`${API_URL}/offers`);
+        // Sirf active offers filter karke set karenge
+        const activeOffers = response.data.data.filter(offer => offer.isActive);
+        setOffers(activeOffers);
+      } catch (error) {
+        console.error('Error fetching offers:', error);
+      }
+    };
+
     fetchItems();
+    fetchOffers(); // NAYA: Call the fetch function
   }, []);
 
   const categories = [
@@ -43,6 +61,26 @@ const HomePage = ({ user }) => {
           things you <span className="text-[#A388E1]">want</span>
         </h1>
         <p className="text-sm text-gray-500 mb-6">Now you don't need money to get things!</p>
+
+        {/* NAYA: Offers/Banners Section - Perfect Rectangle & Swipeable */}
+        {offers.length > 0 && (
+          <div className="mb-6">
+            <div className="flex overflow-x-auto hide-scrollbar gap-4 snap-x snap-mandatory pb-2">
+              {offers.map((offer) => (
+                <div 
+                  key={offer._id} 
+                  className="w-full h-[150px] sm:h-[180px] md:h-[220px] flex-shrink-0 snap-center rounded-2xl overflow-hidden shadow-md border border-gray-100 relative bg-gray-50"
+                >
+                  <img 
+                    src={offer.imageUrl} 
+                    alt="Special Offer" 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Dynamic Top Banner: Login status ke hisaab se change hoga */}
         {user ? (

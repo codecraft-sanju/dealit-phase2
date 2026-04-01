@@ -1,13 +1,22 @@
 const express = require('express');
 const router = express.Router();
+
 const { 
   getPendingItems, 
   updateItemStatus, 
   getAllUsers, 
   deleteUser, 
   getAllItems,
-  updateUserRole // NAYA: Import the new controller function
+  updateUserRole
 } = require('../controllers/adminController');
+
+const {
+  addOffer,
+  getAdminOffers,
+  deleteOffer,
+  updateOffer
+} = require('../controllers/offerController');
+
 const { protect, admin } = require('../middleware/authMiddleware');
 
 router.route('/pending-items')
@@ -27,5 +36,13 @@ router.route('/users/:id')
 
 router.route('/users/role/:id')
   .put(protect, admin, updateUserRole);
+
+router.route('/offers')
+  .get(protect, admin, getAdminOffers)
+  .post(protect, admin, addOffer);
+
+router.route('/offers/:id')
+  .put(protect, admin, updateOffer)
+  .delete(protect, admin, deleteOffer);
 
 module.exports = router;

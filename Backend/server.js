@@ -9,6 +9,7 @@ const barterRoutes = require('./routes/barterRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
+const offerRoutes = require('./routes/offerRoutes');
 
 const app = express();
 
@@ -35,6 +36,7 @@ app.use('/api/barter', barterRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/payment', paymentRoutes);
+app.use('/api/offers', offerRoutes);
 
 const PORT = process.env.PORT || 5000;
 
