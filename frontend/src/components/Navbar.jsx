@@ -46,9 +46,9 @@ const Navbar = ({ user }) => {
           <div className="flex justify-between items-center">
             
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-2 text-2xl font-bold text-gray-900 tracking-tight z-10">
+            <Link to="/" className="flex items-center gap-2 z-10">
               <img src="/logo.png" alt="Dealit Logo" className="w-8 h-8 object-contain" />
-              <span className="text-[#A388E1]">Dealit</span>
+              <img src="/img.jpeg" alt="Dealit Text Logo" className="h-6 object-contain" />
             </Link>
             
             {/* Desktop Search Bar */}
