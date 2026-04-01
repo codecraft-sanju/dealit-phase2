@@ -69,7 +69,7 @@ const HomePage = ({ user }) => {
               {offers.map((offer) => (
                 <div 
                   key={offer._id} 
-                  className="w-full h-[150px] sm:h-[180px] md:h-[220px] flex-shrink-0 snap-center rounded-2xl overflow-hidden shadow-md border border-gray-100 relative bg-gray-50"
+                  className="w-full h-[173px] sm:h-[200px] md:h-[220px] flex-shrink-0 snap-center rounded-2xl overflow-hidden shadow-md border border-gray-100 relative bg-gray-50"
                 >
                   <img 
                     src={offer.imageUrl} 
