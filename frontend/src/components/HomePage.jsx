@@ -100,13 +100,13 @@ const HomePage = ({ user }) => {
   }, [activeCategory]);
 
   return (
-    <div className="max-w-md mx-auto bg-white min-h-screen pb-2 md:max-w-7xl md:px-0">
-      <div className="px-4 pt-4 pb-0">
+    <div className="max-w-md mx-auto bg-white min-h-screen pb-1 md:max-w-7xl md:px-0">
+      <div className="px-4 pt-3 pb-0">
         
         {/* Hero Cards */}
-        <div className="grid grid-cols-5 gap-3 mb-4">
+        <div className="grid grid-cols-5 gap-2 mb-3">
           <div className="col-span-3 bg-[#F8F6FF] border border-[#EBE5F7] rounded-2xl p-3 flex flex-col justify-center h-full">
-            <h1 className="text-base md:text-lg font-bold text-gray-900 leading-tight mb-1">
+            <h1 className="text-sm md:text-base font-bold text-gray-900 leading-tight mb-1">
               Turn unused items into <br />
               things you <span className="text-[#A388E1]">want</span>
             </h1>
@@ -114,13 +114,13 @@ const HomePage = ({ user }) => {
           </div>
 
           {user ? (
-            <div className="col-span-2 bg-gradient-to-br from-[#A388E1] to-[#b7a3eb] rounded-2xl p-3 text-white shadow-lg shadow-[#A388E1]/30 flex flex-col justify-between h-full relative overflow-hidden">
+            <div className="col-span-2 bg-gradient-to-br from-[#A388E1] to-[#b7a3eb] rounded-2xl p-2.5 text-white shadow-lg shadow-[#A388E1]/30 flex flex-col justify-between h-full relative overflow-hidden">
               <div>
                 <div className="bg-yellow-400 p-1 rounded-full inline-flex items-center justify-center mb-1.5">
-                  <Coins className="w-4 h-4 text-yellow-900" />
+                  <Coins className="w-3.5 h-3.5 text-yellow-900" />
                 </div>
                 <div className="flex items-end gap-1">
-                  <span className="text-xl font-bold leading-none">{user.account_credits || 0}</span>
+                  <span className="text-lg font-bold leading-none">{user.account_credits || 0}</span>
                   <span className="text-[10px] font-normal opacity-90 mb-0.5">credits</span>
                 </div>
               </div>
@@ -129,17 +129,17 @@ const HomePage = ({ user }) => {
               </Link>
             </div>
           ) : (
-            <div className="col-span-2 bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-3 text-white shadow-lg shadow-gray-900/30 flex flex-col justify-between h-full relative overflow-hidden">
+            <div className="col-span-2 bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-2.5 text-white shadow-lg shadow-gray-900/30 flex flex-col justify-between h-full relative overflow-hidden">
               <div>
-                <UserCircle className="w-6 h-6 text-gray-400 opacity-80 mb-1" />
-                <h3 className="text-xs font-bold leading-tight">Join Dealit</h3>
+                <UserCircle className="w-5 h-5 text-gray-400 opacity-80 mb-1" />
+                <h3 className="text-[11px] font-bold leading-tight">Join Dealit</h3>
                 <p className="text-[9px] text-gray-300 mt-0.5">Earn & trade</p>
               </div>
               <div className="flex gap-1.5 mt-2">
-                <Link to="/login" className="flex-1 bg-white text-gray-900 text-center text-[10px] font-bold px-1.5 py-1.5 rounded-xl shadow-sm hover:bg-gray-100 transition">
+                <Link to="/login" className="flex-1 bg-white text-gray-900 text-center text-[10px] font-bold px-1.5 py-1.5 rounded-lg shadow-sm hover:bg-gray-100 transition">
                   Login
                 </Link>
-                <Link to="/signup" className="flex-1 bg-[#A388E1] text-white text-center text-[10px] font-bold px-1.5 py-1.5 rounded-xl shadow-sm hover:bg-[#8b70ca] transition">
+                <Link to="/signup" className="flex-1 bg-[#A388E1] text-white text-center text-[10px] font-bold px-1.5 py-1.5 rounded-lg shadow-sm hover:bg-[#8b70ca] transition">
                   Join
                 </Link>
               </div>
@@ -147,22 +147,22 @@ const HomePage = ({ user }) => {
           )}
         </div>
 
-        {/* Offers Banner */}
+        {/* Offers Banner - Height restored to original to protect image */}
         {loadingOffers ? (
-          <div className="mb-3">
-            <div className="flex overflow-x-auto hide-scrollbar gap-4 pb-2">
+          <div className="mb-2">
+            <div className="flex overflow-x-auto hide-scrollbar gap-3 pb-1">
               <div className="w-full h-[173px] sm:h-[200px] md:h-[220px] flex-shrink-0 rounded-2xl bg-[#F8F6FF] border border-gray-50 animate-pulse flex items-center justify-center">
                 <div className="w-full h-full bg-[#EBE5F7] rounded-2xl"></div>
               </div>
             </div>
           </div>
         ) : offers.length > 0 ? (
-          <div className="mb-3">
-            <div className="flex overflow-x-auto hide-scrollbar gap-4 snap-x snap-mandatory pb-2">
+          <div className="mb-2">
+            <div className="flex overflow-x-auto hide-scrollbar gap-3 snap-x snap-mandatory pb-1">
               {offers.map((offer) => (
                 <div 
                   key={offer._id} 
-                  className="w-full h-[173px] sm:h-[200px] md:h-[220px] flex-shrink-0 snap-center rounded-2xl overflow-hidden shadow-md border border-gray-100 relative bg-gray-50"
+                  className="w-full h-[173px] sm:h-[200px] md:h-[220px] flex-shrink-0 snap-center rounded-2xl overflow-hidden shadow-sm border border-gray-100 relative bg-gray-50"
                 >
                   <img 
                     src={offer.imageUrl} 
@@ -178,33 +178,33 @@ const HomePage = ({ user }) => {
       </div>
 
       {/* Categories */}
-      <div className="px-4 py-2">
-        <div className="flex gap-4 overflow-x-auto hide-scrollbar items-center pb-2">
+      <div className="px-4 py-1.5">
+        <div className="flex gap-3 overflow-x-auto hide-scrollbar items-center pb-1">
           
           <div 
             onClick={() => setActiveCategory('All')}
-            className="flex flex-col items-center gap-2 min-w-max cursor-pointer transition-transform hover:scale-105"
+            className="flex flex-col items-center gap-1.5 min-w-max cursor-pointer transition-transform hover:scale-105"
           >
             {activeCategory === 'All' ? (
-              <div className="bg-[#EBE5F7] text-[#A388E1] px-4 py-2.5 rounded-full flex items-center gap-2 border border-[#A388E1]/20 shadow-sm">
-                <Package className="w-5 h-5" />
-                <span className="text-sm font-bold">All</span>
+              <div className="bg-[#EBE5F7] text-[#A388E1] px-3 py-2 rounded-full flex items-center gap-1.5 border border-[#A388E1]/20 shadow-sm">
+                <Package className="w-4 h-4" />
+                <span className="text-xs font-bold">All</span>
               </div>
             ) : (
               <>
-                <div className="bg-[#F8F9FA] text-gray-500 p-3 rounded-2xl w-14 h-14 flex items-center justify-center border border-gray-100 shadow-sm">
-                  <Package className="w-6 h-6" />
+                <div className="bg-[#F8F9FA] text-gray-500 p-2.5 rounded-xl w-12 h-12 flex items-center justify-center border border-gray-100 shadow-sm">
+                  <Package className="w-5 h-5" />
                 </div>
-                <span className="text-xs text-gray-500 font-medium">All</span>
+                <span className="text-[11px] text-gray-500 font-medium">All</span>
               </>
             )}
           </div>
 
           {loadingCategories ? (
             [1, 2, 3, 4].map((i) => (
-              <div key={i} className="flex flex-col items-center gap-2 min-w-max">
-                <div className="bg-gray-100 animate-pulse p-3 rounded-2xl w-14 h-14"></div>
-                <div className="bg-gray-100 animate-pulse h-3 w-10 rounded"></div>
+              <div key={i} className="flex flex-col items-center gap-1.5 min-w-max">
+                <div className="bg-gray-100 animate-pulse p-2.5 rounded-xl w-12 h-12"></div>
+                <div className="bg-gray-100 animate-pulse h-2 w-8 rounded"></div>
               </div>
             ))
           ) : (
@@ -217,19 +217,19 @@ const HomePage = ({ user }) => {
                   <div 
                     key={cat._id} 
                     onClick={() => setActiveCategory(cat.name)}
-                    className="flex flex-col items-center gap-2 min-w-max cursor-pointer transition-transform hover:scale-105"
+                    className="flex flex-col items-center gap-1.5 min-w-max cursor-pointer transition-transform hover:scale-105"
                   >
                     {isActive ? (
-                      <div className="bg-[#EBE5F7] text-[#A388E1] px-4 py-2.5 rounded-full flex items-center gap-2 border border-[#A388E1]/20 shadow-sm">
-                        <IconComponent className="w-5 h-5" />
-                        <span className="text-sm font-bold">{cat.name}</span>
+                      <div className="bg-[#EBE5F7] text-[#A388E1] px-3 py-2 rounded-full flex items-center gap-1.5 border border-[#A388E1]/20 shadow-sm">
+                        <IconComponent className="w-4 h-4" />
+                        <span className="text-xs font-bold">{cat.name}</span>
                       </div>
                     ) : (
                       <>
-                        <div className="bg-[#F8F9FA] text-gray-500 p-3 rounded-2xl w-14 h-14 flex items-center justify-center border border-gray-100 shadow-sm">
-                          <IconComponent className="w-6 h-6" />
+                        <div className="bg-[#F8F9FA] text-gray-500 p-2.5 rounded-xl w-12 h-12 flex items-center justify-center border border-gray-100 shadow-sm">
+                          <IconComponent className="w-5 h-5" />
                         </div>
-                        <span className="text-xs text-gray-500 font-medium">{cat.name}</span>
+                        <span className="text-[11px] text-gray-500 font-medium">{cat.name}</span>
                       </>
                     )}
                   </div>
@@ -238,19 +238,19 @@ const HomePage = ({ user }) => {
 
               <div 
                 onClick={() => setActiveCategory('Other')}
-                className="flex flex-col items-center gap-2 min-w-max cursor-pointer transition-transform hover:scale-105"
+                className="flex flex-col items-center gap-1.5 min-w-max cursor-pointer transition-transform hover:scale-105"
               >
                 {activeCategory === 'Other' ? (
-                  <div className="bg-[#EBE5F7] text-[#A388E1] px-4 py-2.5 rounded-full flex items-center gap-2 border border-[#A388E1]/20 shadow-sm">
-                    <Plus className="w-5 h-5" />
-                    <span className="text-sm font-bold">Other</span>
+                  <div className="bg-[#EBE5F7] text-[#A388E1] px-3 py-2 rounded-full flex items-center gap-1.5 border border-[#A388E1]/20 shadow-sm">
+                    <Plus className="w-4 h-4" />
+                    <span className="text-xs font-bold">Other</span>
                   </div>
                 ) : (
                   <>
-                    <div className="bg-[#F8F9FA] text-gray-500 p-3 rounded-2xl w-14 h-14 flex items-center justify-center border border-gray-100 shadow-sm">
-                      <Plus className="w-6 h-6" />
+                    <div className="bg-[#F8F9FA] text-gray-500 p-2.5 rounded-xl w-12 h-12 flex items-center justify-center border border-gray-100 shadow-sm">
+                      <Plus className="w-5 h-5" />
                     </div>
-                    <span className="text-xs text-gray-500 font-medium">Other</span>
+                    <span className="text-[11px] text-gray-500 font-medium">Other</span>
                   </>
                 )}
               </div>
@@ -260,88 +260,85 @@ const HomePage = ({ user }) => {
       </div>
 
       {/* Items Section */}
-      <div className="px-4 py-2">
-        <div className="flex justify-between items-center mb-3">
-          <h2 className="text-xl font-bold text-gray-900">
+      <div className="px-4 py-1.5">
+        <div className="flex justify-between items-center mb-2">
+          <h2 className="text-lg font-bold text-gray-900">
             {activeCategory === 'All' ? 'Popular Items' : `Top in ${activeCategory}`}
           </h2>
           <Link 
             to={activeCategory === 'All' ? '/items' : `/items?category=${activeCategory}`} 
-            className="text-sm font-semibold text-[#A388E1] bg-[#F8F6FF] px-3 py-1 rounded-full flex items-center gap-1 hover:bg-[#EBE5F7] transition-colors"
+            className="text-xs font-semibold text-[#A388E1] bg-[#F8F6FF] px-2.5 py-1 rounded-full flex items-center gap-0.5 hover:bg-[#EBE5F7] transition-colors"
           >
-            See All <ChevronRight className="w-4 h-4" />
+            See All <ChevronRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 
         {loading ? (
-          <div className="flex overflow-x-auto hide-scrollbar gap-4 pb-4">
+          <div className="flex overflow-x-auto hide-scrollbar gap-3 pb-2">
             {[1, 2, 3, 4].map((i) => (
-              <ProductCard key={i} isLoading={true} className="min-w-[150px] w-[150px] flex-shrink-0" />
+              <ProductCard key={i} isLoading={true} className="min-w-[140px] w-[140px] flex-shrink-0" />
             ))}
           </div>
         ) : items.length === 0 ? (
-          <div className="text-center text-gray-400 py-10 bg-gray-50 rounded-2xl border border-gray-100 flex flex-col items-center justify-center">
-            <Package className="w-8 h-8 text-gray-300 mb-2" />
-            No items in this category right now.
+          <div className="text-center text-gray-400 py-6 bg-gray-50 rounded-2xl border border-gray-100 flex flex-col items-center justify-center">
+            <Package className="w-6 h-6 text-gray-300 mb-1.5" />
+            <span className="text-xs">No items right now.</span>
           </div>
         ) : (
-          <div className="flex overflow-x-auto hide-scrollbar gap-4 pb-4 snap-x">
+          <div className="flex overflow-x-auto hide-scrollbar gap-3 pb-2 snap-x">
             {items.map((item) => (
-              <ProductCard key={item._id} item={item} className="min-w-[150px] w-[150px] flex-shrink-0 snap-start" />
+              <ProductCard key={item._id} item={item} className="min-w-[140px] w-[140px] flex-shrink-0 snap-start" />
             ))}
           </div>
         )}
       </div>
 
       {/* Got Unused Items Banner */}
-      <div className="px-4 py-3">
-        <div className="bg-[#EBE5F7] rounded-3xl p-5 relative overflow-hidden">
-          <div className="w-2/3 relative z-10">
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Got unused items?</h3>
-            <p className="text-sm text-gray-700 font-bold mb-1">List them to earn credits now!</p>
-            <p className="text-xs text-gray-500 mb-4 leading-relaxed">
+      <div className="px-4 py-1.5">
+        <div className="bg-[#EBE5F7] rounded-2xl p-4 relative overflow-hidden">
+          <div className="w-3/4 relative z-10">
+            <h3 className="text-base font-bold text-gray-900 mb-1">Got unused items?</h3>
+            <p className="text-[11px] text-gray-600 mb-3 leading-snug">
               List items you no longer need and earn instant credits to exchange for products you want!
             </p>
             <Link 
               to={user ? "/add-item" : "/login"} 
-              className="bg-[#FFE28A] text-gray-900 px-4 py-2 rounded-full text-sm font-bold inline-flex items-center gap-1 shadow-sm hover:bg-[#FFD75E] transition"
+              className="bg-[#FFE28A] text-gray-900 px-3 py-1.5 rounded-lg text-xs font-bold inline-flex items-center gap-1 shadow-sm hover:bg-[#FFD75E] transition"
             >
-              <Plus className="w-4 h-4" /> List an Item
+              <Plus className="w-3.5 h-3.5" /> List an Item
             </Link>
           </div>
-          <div className="absolute -right-4 -bottom-4 w-32 h-32 opacity-20">
+          <div className="absolute -right-4 -bottom-4 w-28 h-28 opacity-20">
             <Package className="w-full h-full text-[#A388E1]" />
           </div>
         </div>
       </div>
 
       {/* Social Proof Section */}
-      <div className="px-4 pb-4">
-        <div className="flex items-center gap-3 px-1 py-2">
+      <div className="px-4 pb-2 pt-1">
+        <div className="flex items-center gap-2.5 px-1">
           
           {/* Trending Icon */}
           <div className="flex-shrink-0">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
               <path d="M3 17L9 11L13 15L21 7" stroke="#A388E1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
               <path d="M15 7H21V13" stroke="#A388E1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            {/* Heading */}
-            <p className="text-xs font-bold text-gray-800 leading-tight">
+          <div className="flex flex-col gap-1">
+            <p className="text-[11px] font-bold text-gray-800 leading-tight">
               Start earning by selling what you don't use anymore!
             </p>
 
-            {/* Avatars + text row */}
-            <div className="flex items-center gap-2">
-              <div className="flex -space-x-2">
+            <div className="flex items-center gap-1.5">
+              <div className="flex -space-x-1.5">
                 {DUMMY_AVATARS.map((src, i) => (
                   <img
                     key={i}
                     src={src}
                     alt={`user-${i}`}
-                    className="w-6 h-6 rounded-full border-2 border-white object-cover shadow-sm"
+                    className="w-5 h-5 rounded-full border-2 border-white object-cover shadow-sm"
                     onError={(e) => {
                       e.target.onerror = null;
                       e.target.src = `https://ui-avatars.com/api/?name=U${i}&background=A388E1&color=fff&size=40`;
@@ -349,7 +346,7 @@ const HomePage = ({ user }) => {
                   />
                 ))}
               </div>
-              <p className="text-[10px] text-gray-500 font-medium">
+              <p className="text-[9px] text-gray-500 font-medium">
                 people are already trading
               </p>
             </div>
