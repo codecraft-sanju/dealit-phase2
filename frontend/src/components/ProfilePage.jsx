@@ -17,10 +17,19 @@ const ProfilePage = ({ user, onLogout }) => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
+        // DEBUG ADDED: Log API URL
+        console.log("Fetching profile from:", `${API_URL}/users/profile`);
+        
         const response = await axios.get(`${API_URL}/users/profile`, { withCredentials: true });
+        
+        // DEBUG ADDED: Log response data
+        console.log("Profile Data received:", response.data);
+        
         setProfileData(response.data.data);
       } catch (error) {
         console.error('Error fetching profile:', error);
+        // DEBUG ADDED: Alert to show exact error on iOS screen
+        alert(`Profile Fetch Error: ${error.message} | Status: ${error.response?.status}`);
       } finally {
         setLoading(false);
       }
@@ -44,7 +53,14 @@ const ProfilePage = ({ user, onLogout }) => {
 
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
-    if (!file) return;
+    
+    // DEBUG ADDED: Log selected file
+    console.log("Selected file:", file);
+    
+    if (!file) {
+      alert("No file selected!"); // DEBUG ADDED
+      return;
+    }
 
     setUploadingImage(true);
 
@@ -57,12 +73,21 @@ const ProfilePage = ({ user, onLogout }) => {
       
       formData.append('upload_preset', uploadPreset);
 
+      // DEBUG ADDED: Alert before Cloudinary upload
+      console.log("Uploading to Cloudinary...");
+
       const cloudinaryRes = await axios.post(
         `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
         formData
       );
       
+      // DEBUG ADDED: Log Cloudinary response
+      console.log("Cloudinary response:", cloudinaryRes.data);
+      
       const uploadedUrl = cloudinaryRes.data.secure_url;
+
+      // DEBUG ADDED: Check before sending to backend
+      console.log("Sending URL to backend:", uploadedUrl);
 
       const response = await axios.put(
         `${API_URL}/users/profile-pic`,
@@ -70,12 +95,17 @@ const ProfilePage = ({ user, onLogout }) => {
         { withCredentials: true }
       );
 
+      // DEBUG ADDED: Log backend response
+      console.log("Backend response:", response.data);
+
       if (response.data.success) {
         setProfileData(prev => ({ ...prev, profilePic: uploadedUrl }));
+        alert("Image uploaded successfully!"); // DEBUG ADDED
       }
     } catch (error) {
       console.error('Error uploading image:', error);
-      alert('Failed to upload image. Please try again.');
+      // DEBUG ADDED: Detailed alert for iOS
+      alert(`Upload Failed: ${error.message}\nDetails: ${JSON.stringify(error.response?.data || 'No extra data')}`);
     } finally {
       setUploadingImage(false);
     }
