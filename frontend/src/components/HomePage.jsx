@@ -104,42 +104,42 @@ const HomePage = ({ user }) => {
       <div className="px-4 pt-4 pb-0">
         
         {/* Hero Cards */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="bg-[#F8F6FF] border border-[#EBE5F7] rounded-3xl p-4 flex flex-col justify-center h-full">
-            <h1 className="text-lg md:text-xl font-bold text-gray-900 leading-tight mb-2">
+        <div className="grid grid-cols-5 gap-3 mb-4">
+          <div className="col-span-3 bg-[#F8F6FF] border border-[#EBE5F7] rounded-2xl p-3 flex flex-col justify-center h-full">
+            <h1 className="text-base md:text-lg font-bold text-gray-900 leading-tight mb-1">
               Turn unused items into <br />
               things you <span className="text-[#A388E1]">want</span>
             </h1>
-            <p className="text-xs text-gray-500">No money needed!</p>
+            <p className="text-[10px] md:text-xs text-gray-500">No money needed!</p>
           </div>
 
           {user ? (
-            <div className="bg-gradient-to-br from-[#A388E1] to-[#b7a3eb] rounded-3xl p-4 text-white shadow-lg shadow-[#A388E1]/30 flex flex-col justify-between h-full relative overflow-hidden">
+            <div className="col-span-2 bg-gradient-to-br from-[#A388E1] to-[#b7a3eb] rounded-2xl p-3 text-white shadow-lg shadow-[#A388E1]/30 flex flex-col justify-between h-full relative overflow-hidden">
               <div>
-                <div className="bg-yellow-400 p-1.5 rounded-full inline-flex items-center justify-center mb-2">
-                  <Coins className="w-5 h-5 text-yellow-900" />
+                <div className="bg-yellow-400 p-1 rounded-full inline-flex items-center justify-center mb-1.5">
+                  <Coins className="w-4 h-4 text-yellow-900" />
                 </div>
                 <div className="flex items-end gap-1">
-                  <span className="text-2xl font-bold leading-none">{user.account_credits || 0}</span>
-                  <span className="text-xs font-normal opacity-90 mb-0.5">credits</span>
+                  <span className="text-xl font-bold leading-none">{user.account_credits || 0}</span>
+                  <span className="text-[10px] font-normal opacity-90 mb-0.5">credits</span>
                 </div>
               </div>
-              <Link to="/wallet" className="bg-[#FFF4D2] text-[#8B70CA] text-xs font-bold px-3 py-2 mt-3 rounded-xl flex items-center justify-center gap-1 shadow-sm transition hover:bg-white">
+              <Link to="/wallet" className="bg-[#FFF4D2] text-[#8B70CA] text-[10px] font-bold px-2 py-1.5 mt-2 rounded-xl flex items-center justify-center gap-1 shadow-sm transition hover:bg-white">
                 Earn More <ChevronRight className="w-3 h-3" />
               </Link>
             </div>
           ) : (
-            <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl p-4 text-white shadow-lg shadow-gray-900/30 flex flex-col justify-between h-full relative overflow-hidden">
+            <div className="col-span-2 bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-3 text-white shadow-lg shadow-gray-900/30 flex flex-col justify-between h-full relative overflow-hidden">
               <div>
-                <UserCircle className="w-8 h-8 text-gray-400 opacity-80 mb-2" />
-                <h3 className="text-sm font-bold leading-tight">Join Dealit</h3>
-                <p className="text-[10px] text-gray-300 mt-0.5">Earn & trade</p>
+                <UserCircle className="w-6 h-6 text-gray-400 opacity-80 mb-1" />
+                <h3 className="text-xs font-bold leading-tight">Join Dealit</h3>
+                <p className="text-[9px] text-gray-300 mt-0.5">Earn & trade</p>
               </div>
-              <div className="flex gap-2 mt-3">
-                <Link to="/login" className="flex-1 bg-white text-gray-900 text-center text-xs font-bold px-2 py-2 rounded-xl shadow-sm hover:bg-gray-100 transition">
+              <div className="flex gap-1.5 mt-2">
+                <Link to="/login" className="flex-1 bg-white text-gray-900 text-center text-[10px] font-bold px-1.5 py-1.5 rounded-xl shadow-sm hover:bg-gray-100 transition">
                   Login
                 </Link>
-                <Link to="/signup" className="flex-1 bg-[#A388E1] text-white text-center text-xs font-bold px-2 py-2 rounded-xl shadow-sm hover:bg-[#8b70ca] transition">
+                <Link to="/signup" className="flex-1 bg-[#A388E1] text-white text-center text-[10px] font-bold px-1.5 py-1.5 rounded-xl shadow-sm hover:bg-[#8b70ca] transition">
                   Join
                 </Link>
               </div>
