@@ -2,7 +2,8 @@ const Item = require('../models/Item');
 
 const createItem = async (req, res) => {
   try {
-    const { title, description, category, condition, images, preferred_item, estimated_value } = req.body;
+    // CHANGED: suggested_category ko bhi destructure kiya
+    const { title, description, category, suggested_category, condition, images, preferred_item, estimated_value } = req.body;
 
     const newItem = new Item({
       supabaseId: `mongo-${Date.now()}`,
@@ -10,11 +11,15 @@ const createItem = async (req, res) => {
       title,
       description,
       category,
+      
+      // NAYA: Agar category 'Other' hai toh suggested save karo, nahi toh blank chhod do
+      suggested_category: category === 'Other' ? suggested_category : '', 
+      
       condition,
       images: images || [],
       preferred_item,
-      status: 'pending', // Naya item humesha pending rahega
-      estimated_value: estimated_value || 0, // Yeh ab directly credits ka kaam karega
+      status: 'pending', 
+      estimated_value: estimated_value || 0, 
       created_at: Date.now(),
       updated_at: Date.now()
     });
@@ -84,6 +89,11 @@ const updateItem = async (req, res) => {
 
     req.body.updated_at = Date.now();
 
+    // NAYA: Agar update karte time category non-Other select ki hai, toh purana suggestion hata do
+    if (req.body.category && req.body.category !== 'Other') {
+      req.body.suggested_category = '';
+    }
+
     item = await Item.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true
@@ -95,7 +105,6 @@ const updateItem = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
-
 const deleteItem = async (req, res) => {
   try {
     const item = await Item.findById(req.params.id);

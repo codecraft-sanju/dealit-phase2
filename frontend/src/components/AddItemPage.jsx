@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Plus, ChevronLeft } from 'lucide-react';
 import axios from 'axios';
@@ -12,6 +12,7 @@ const AddItemPage = () => {
     title: '',
     description: '',
     category: '',
+    suggested_category: '', 
     condition: '',
     preferred_item: '',
     estimated_value: ''
@@ -20,6 +21,25 @@ const AddItemPage = () => {
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  const [categories, setCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/categories`);
+        if (response.data.success) {
+          setCategories(response.data.data);
+        }
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -72,6 +92,11 @@ const AddItemPage = () => {
       return;
     }
 
+    if (formData.category === 'Other' && !formData.suggested_category.trim()) {
+      setError('Please specify your category.');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -93,10 +118,8 @@ const AddItemPage = () => {
 
   return (
     <div className="min-h-screen bg-[#f4f2f9] md:py-10 flex justify-center font-sans">
-      {/* Main Card Container - CHANGED: Removed overflow-hidden so sticky works properly */}
       <div className="w-full max-w-lg bg-[#fcfbff] md:rounded-[2.5rem] shadow-2xl flex flex-col relative">
         
-        {/* Header Section (Purple) - CHANGED: Added sticky top-0 z-50 and md:rounded-t-[2.5rem] */}
         <div className="sticky top-0 z-50 bg-[#6B46C1] px-4 py-5 flex items-center justify-between text-white shadow-md md:rounded-t-[2.5rem]">
           <button 
             onClick={() => navigate('/dashboard')} 
@@ -113,7 +136,6 @@ const AddItemPage = () => {
           </button>
         </div>
 
-        {/* Form Content */}
         <div className="p-6 md:p-8 overflow-y-auto custom-scrollbar">
           
           {error && (
@@ -124,7 +146,6 @@ const AddItemPage = () => {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             
-            {/* Image Upload Section */}
             <div className="pb-4 border-b border-purple-100 border-dashed">
               <label className="block text-sm font-bold text-[#553c9a] mb-4">
                 Add at least 3 images*
@@ -155,10 +176,8 @@ const AddItemPage = () => {
               {uploading && <p className="text-[#805ad5] font-medium text-sm mt-3 animate-pulse">Uploading images...</p>}
             </div>
 
-            {/* Inputs Section */}
             <div className="space-y-5">
               
-              {/* Title */}
               <div>
                 <label className="block text-sm font-bold text-[#553c9a] mb-2">Title of Your Item</label>
                 <input 
@@ -172,7 +191,6 @@ const AddItemPage = () => {
                 />
               </div>
 
-              {/* Price */}
               <div className="pb-4 border-b border-purple-100 border-dashed">
                 <label className="block text-sm font-bold text-[#553c9a] mb-2">Set Your Price</label>
                 <input 
@@ -190,7 +208,6 @@ const AddItemPage = () => {
                 </div>
               </div>
 
-              {/* Category */}
               <div>
                 <label className="block text-sm font-bold text-[#553c9a] mb-2">Choose Category</label>
                 <select 
@@ -199,17 +216,34 @@ const AddItemPage = () => {
                   value={formData.category} 
                   onChange={handleInputChange} 
                   className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-4 py-3.5 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#805ad5] focus:border-transparent transition-all appearance-none"
+                  disabled={loadingCategories}
                 >
-                  <option value="" disabled className="text-gray-400">Select category</option>
-                  <option value="Electronics">Electronics</option>
-                  <option value="Fashion">Fashion</option>
-                  <option value="Home">Home & Garden</option>
-                  <option value="Vehicles">Vehicles</option>
-                  <option value="Other">Other</option>
+                  <option value="" disabled className="text-gray-400">
+                    {loadingCategories ? 'Loading categories...' : 'Select category'}
+                  </option>
+                  
+                  {categories.map((cat) => (
+                    <option key={cat._id} value={cat.name}>{cat.name}</option>
+                  ))}
+                  
+                  <option value="Other">Other (Specify below)</option>
                 </select>
+
+                {formData.category === 'Other' && (
+                  <div className="mt-3 animate-fade-in-down">
+                    <input 
+                      type="text" 
+                      name="suggested_category" 
+                      required 
+                      value={formData.suggested_category} 
+                      onChange={handleInputChange} 
+                      className="w-full bg-purple-50 border border-purple-200 shadow-sm rounded-xl px-4 py-3.5 text-gray-800 placeholder-purple-400 focus:outline-none focus:ring-2 focus:ring-[#805ad5] focus:border-transparent transition-all" 
+                      placeholder="Type your custom category..." 
+                    />
+                  </div>
+                )}
               </div>
 
-              {/* Condition */}
               <div>
                 <label className="block text-sm font-bold text-[#553c9a] mb-2">Item Condition</label>
                 <select 
@@ -227,7 +261,6 @@ const AddItemPage = () => {
                 </select>
               </div>
 
-              {/* Description */}
               <div>
                 <label className="block text-sm font-bold text-[#553c9a] mb-2">Description</label>
                 <textarea 
@@ -241,7 +274,6 @@ const AddItemPage = () => {
                 ></textarea>
               </div>
 
-              {/* Preferred Item */}
               <div>
                 <label className="block text-sm font-bold text-[#553c9a] mb-2">Preferred Item in Return (Optional)</label>
                 <input 
@@ -256,7 +288,6 @@ const AddItemPage = () => {
 
             </div>
 
-            {/* Submit Button */}
             <div className="pt-4">
               <button 
                 type="submit" 

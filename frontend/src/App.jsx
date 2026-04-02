@@ -23,11 +23,9 @@ const DashboardPage = lazy(() => import('./components/DashboardPage'));
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
-// --- NAYA: AXIOS INTERCEPTOR ---
-// Yah automatically har request me Token attach kar dega, baar-baar likhne ki jarurat nahi padegi.
+// AXIOS INTERCEPTOR
 axios.interceptors.request.use(
   (config) => {
-    // Sirf apne backend par token bhejenge, Cloudinary wagera par nahi
     if (config.url && config.url.includes(API_BASE)) {
       const token = localStorage.getItem('dealit_token');
       if (token) {
@@ -40,8 +38,8 @@ axios.interceptors.request.use(
     return Promise.reject(error);
   }
 );
-// -------------------------------
 
+// CHANGED: Premium ZeroPriceAlert Component
 const ZeroPriceAlert = ({ user }) => {
   const [show, setShow] = useState(false);
   const navigate = useNavigate();
@@ -53,7 +51,6 @@ const ZeroPriceAlert = ({ user }) => {
 
     const checkItems = async () => {
       try {
-        // Interceptor ab automatic token bhej dega, withCredentials rakhne se koi nuksan nahi
         const res = await axios.get(`${API_URL}/items/me`, { withCredentials: true });
         const needsUpdate = res.data.data.some(item => !item.estimated_value || item.estimated_value === 0);
         
@@ -74,30 +71,51 @@ const ZeroPriceAlert = ({ user }) => {
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center px-4 transition-opacity duration-300">
-      <div className="bg-gray-800 border border-yellow-500/50 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl relative transform scale-100 transition-transform">
-        <button onClick={() => setShow(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white transition p-1 bg-gray-900 rounded-full">
+    <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-md flex items-center justify-center px-4 animate-in fade-in duration-300">
+      <div className="bg-gray-900 border border-gray-700/80 rounded-[2rem] p-8 max-w-sm w-full text-center shadow-[0_20px_60px_rgba(0,0,0,0.6)] relative overflow-hidden transform animate-in zoom-in-95 slide-in-from-bottom-8 duration-500">
+        
+        {/* Background Premium Glow Effects */}
+        <div className="absolute -top-24 -left-24 w-48 h-48 bg-purple-500/20 rounded-full blur-[3rem] pointer-events-none"></div>
+        <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-emerald-500/10 rounded-full blur-[3rem] pointer-events-none"></div>
+
+        <button 
+          onClick={() => setShow(false)} 
+          className="absolute top-5 right-5 text-gray-400 hover:text-white transition-colors p-1.5 bg-gray-800 hover:bg-gray-700 rounded-full z-10"
+        >
           <X className="w-5 h-5" />
         </button>
         
-        <div className="w-16 h-16 bg-yellow-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-yellow-500/20">
-          <AlertCircle className="w-8 h-8 text-yellow-500" />
+        <div className="relative z-10">
+          <div className="w-20 h-20 bg-yellow-500/10 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-purple-500/50 shadow-[0_0_30px_rgba(234,179,8,0.15)] transform rotate-3 hover:rotate-0 transition-transform duration-300">
+            <AlertCircle className="w-10 h-10 text-yellow-500" />
+          </div>
+          
+          <h3 className="text-2xl font-black text-white mb-3 tracking-tight">Action Required!</h3>
+          
+          <div className="text-gray-400 text-sm mb-8 space-y-4">
+            <p>
+              Some of your listed items have a value of <strong className="text-yellow-500">0 Credits</strong>. Please update their prices so others can make fair trade offers.
+            </p>
+            
+            {/* Category Reminder Box */}
+            <div className="bg-gray-800/60 p-4 rounded-2xl border border-gray-700 text-left flex gap-3">
+              <Package className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-gray-300 leading-relaxed">
+                <span className="text-emerald-400 font-bold tracking-wide uppercase">Tip:</span> Please also check your item <strong className="text-white">Categories</strong>. Selecting the correct category helps your item sell faster!
+              </p>
+            </div>
+          </div>
+          
+          <button 
+            onClick={() => {
+              setShow(false);
+              navigate('/dashboard');
+            }}
+            className="w-full bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-gray-900 font-black text-lg py-4 px-4 rounded-2xl transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-yellow-500/25 flex items-center justify-center gap-2"
+          >
+            <Edit2 className="w-5 h-5" /> Update My Items
+          </button>
         </div>
-        
-        <h3 className="text-2xl font-bold text-white mb-2">Update Missing Prices!</h3>
-        <p className="text-gray-400 text-sm mb-6">
-          Some of your listed items have a value of <strong className="text-yellow-500">0 Credits</strong>. Please update them so others can make fair trade offers!
-        </p>
-        
-        <button 
-          onClick={() => {
-            setShow(false);
-            navigate('/dashboard');
-          }}
-          className="w-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-3 px-4 rounded-xl transition shadow-lg shadow-yellow-500/20 flex items-center justify-center gap-2"
-        >
-          <Edit2 className="w-4 h-4" /> Go to Dashboard
-        </button>
       </div>
     </div>
   );
@@ -261,11 +279,9 @@ const PremiumLoader = () => (
   </div>
 );
 
-// NAYA WRAPPER: Jisme sirf BottomNav Global hai
 const MainAppContent = ({ user, handleLogout, setUser }) => {
   const location = useLocation();
   
-  // In pages par Bottom Navbar hide karna hai
   const hideNavbarRoutes = ['/login', '/signup', '/forgot-password'];
   const shouldShowBottomNav = !hideNavbarRoutes.includes(location.pathname);
 
@@ -329,7 +345,7 @@ function App() {
     try {
       await axios.post(`${API_URL}/users/logout`, {}, { withCredentials: true });
       setUser(null);
-      // NAYA: Logout ke time user data ke sath token bhi delete karenge
+    
       localStorage.removeItem('dealit_user');
       localStorage.removeItem('dealit_token'); 
     } catch (error) {

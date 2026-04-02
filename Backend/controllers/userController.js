@@ -99,7 +99,7 @@ const registerUser = async (req, res) => {
         email: user.email
       });
     } else {
-      // OTP Disabled hai -> Direct save karke Token bhej do
+   
       user.otp = undefined;
       user.otpExpiry = undefined;
       await user.save();

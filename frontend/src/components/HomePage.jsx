@@ -1,27 +1,54 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, Coins, ChevronRight, Plus, Smartphone, Shirt, Watch, Home as HomeIcon, Gamepad2, UserCircle } from 'lucide-react';
+import { 
+  Package, Coins, ChevronRight, Plus, UserCircle,
+  Smartphone, Shirt, Watch, Home as HomeIcon, Gamepad2, 
+  Car, Monitor, Book, Sofa, Music, Utensils, Heart, Briefcase, Camera, Dumbbell
+} from 'lucide-react';
 import axios from 'axios';
-// ProductCard import kiya gaya hai
 import ProductCard from './ProductCard'; 
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
-// Yahan user prop ko add kiya gaya hai
+const ICON_DICTIONARY = {
+  'Package': Package,
+  'Smartphone': Smartphone,
+  'Shirt': Shirt,
+  'Watch': Watch,
+  'Home': HomeIcon,
+  'Gamepad2': Gamepad2,
+  'Car': Car,
+  'Monitor': Monitor,
+  'Book': Book,
+  'Sofa': Sofa,
+  'Music': Music,
+  'Utensils': Utensils,
+  'Heart': Heart,
+  'Briefcase': Briefcase,
+  'Camera': Camera,
+  'Dumbbell': Dumbbell
+};
+
 const HomePage = ({ user }) => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // NAYA: Offers ke liye state
   const [offers, setOffers] = useState([]);
-  // CHANGED: Offers loading state add kiya gaya hai
   const [loadingOffers, setLoadingOffers] = useState(true);
+
+  const [categories, setCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+  const [activeCategory, setActiveCategory] = useState('All');
 
   useEffect(() => {
     const fetchItems = async () => {
       try {
-        const response = await axios.get(`${API_URL}/items`);
+        const url = activeCategory === 'All' 
+          ? `${API_URL}/items` 
+          : `${API_URL}/items?category=${activeCategory}`;
+          
+        const response = await axios.get(url);
         setItems(response.data.data);
       } catch (error) {
         console.error('Error fetching items:', error);
@@ -30,43 +57,41 @@ const HomePage = ({ user }) => {
       }
     };
 
-    // NAYA: Offers fetch karne ka function
     const fetchOffers = async () => {
       try {
-        // Dhyaan rakhna ki backend me GET /api/offers ek public route ho
         const response = await axios.get(`${API_URL}/offers`);
-        // Sirf active offers filter karke set karenge
         const activeOffers = response.data.data.filter(offer => offer.isActive);
         setOffers(activeOffers);
       } catch (error) {
         console.error('Error fetching offers:', error);
       } finally {
-        // CHANGED: API call ke baad loading false kar diya
         setLoadingOffers(false);
       }
     };
 
-    fetchItems();
-    fetchOffers(); // NAYA: Call the fetch function
-  }, []);
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/categories`);
+        if (response.data.success) {
+          setCategories(response.data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
 
-  const categories = [
-    { name: 'Electronics', icon: Smartphone, active: true },
-    { name: 'Fashion', icon: Shirt, active: false },
-    { name: 'Gear', icon: Watch, active: false },
-    { name: 'Home', icon: HomeIcon, active: false },
-    { name: 'Toys', icon: Gamepad2, active: false },
-  ];
+    fetchOffers();
+    fetchCategories(); 
+    fetchItems(); 
+  }, [activeCategory]); 
 
   return (
     <div className="max-w-md mx-auto bg-white min-h-screen pb-24 md:max-w-7xl md:px-0">
-      {/* CHANGED: pt-6 ko pt-4 kiya aur px-5 ko px-4 kiya space bachane ke liye */}
       <div className="px-4 pt-4 pb-0">
         
-        {/* CHANGED: mb-6 ko mb-4 kiya taki banner thoda paas aaye */}
         <div className="grid grid-cols-2 gap-3 mb-4">
-          
-          {/* Left Box: Text Section */}
           <div className="bg-[#F8F6FF] border border-[#EBE5F7] rounded-3xl p-4 flex flex-col justify-center h-full">
             <h1 className="text-lg md:text-xl font-bold text-gray-900 leading-tight mb-2">
               Turn unused items into <br />
@@ -75,7 +100,6 @@ const HomePage = ({ user }) => {
             <p className="text-xs text-gray-500">No money needed!</p>
           </div>
 
-          {/* Right Box: Dynamic Top Banner (Square Type) */}
           {user ? (
             <div className="bg-gradient-to-br from-[#A388E1] to-[#b7a3eb] rounded-3xl p-4 text-white shadow-lg shadow-[#A388E1]/30 flex flex-col justify-between h-full relative overflow-hidden">
               <div>
@@ -110,9 +134,6 @@ const HomePage = ({ user }) => {
           )}
         </div>
 
-        {/* NAYA: Offers/Banners Section - Perfect Rectangle & Swipeable */}
-        {/* CHANGED: Shimmer loading logic add kiya */}
-        {/* CHANGED: mb-6 ko mb-3 kiya categories ko upar lane ke liye */}
         {loadingOffers ? (
           <div className="mb-3">
             <div className="flex overflow-x-auto hide-scrollbar gap-4 pb-2">
@@ -142,52 +163,111 @@ const HomePage = ({ user }) => {
 
       </div>
 
-      {/* CHANGED: py-4 ko py-2 kiya vertical space kam karne ke liye */}
       <div className="px-4 py-2">
         <div className="flex gap-4 overflow-x-auto hide-scrollbar items-center pb-2">
-          {categories.map((cat, index) => (
-            <div key={index} className={`flex flex-col items-center gap-2 min-w-max cursor-pointer`}>
-              {cat.active ? (
-                <div className="bg-[#EBE5F7] text-[#A388E1] px-4 py-2.5 rounded-full flex items-center gap-2 border border-[#A388E1]/20">
-                  <cat.icon className="w-5 h-5" />
-                  <span className="text-sm font-bold">{cat.name}</span>
+          
+          <div 
+            onClick={() => setActiveCategory('All')}
+            className={`flex flex-col items-center gap-2 min-w-max cursor-pointer transition-transform hover:scale-105`}
+          >
+            {activeCategory === 'All' ? (
+              <div className="bg-[#EBE5F7] text-[#A388E1] px-4 py-2.5 rounded-full flex items-center gap-2 border border-[#A388E1]/20 shadow-sm">
+                <Package className="w-5 h-5" />
+                <span className="text-sm font-bold">All</span>
+              </div>
+            ) : (
+              <>
+                <div className="bg-[#F8F9FA] text-gray-500 p-3 rounded-2xl w-14 h-14 flex items-center justify-center border border-gray-100 shadow-sm">
+                  <Package className="w-6 h-6" />
                 </div>
-              ) : (
-                <>
-                  <div className="bg-[#F8F9FA] text-gray-500 p-3 rounded-2xl w-14 h-14 flex items-center justify-center border border-gray-100 shadow-sm">
-                    <cat.icon className="w-6 h-6" />
+                <span className="text-xs text-gray-500 font-medium">All</span>
+              </>
+            )}
+          </div>
+
+          {loadingCategories ? (
+             [1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex flex-col items-center gap-2 min-w-max">
+                <div className="bg-gray-100 animate-pulse p-3 rounded-2xl w-14 h-14"></div>
+                <div className="bg-gray-100 animate-pulse h-3 w-10 rounded"></div>
+              </div>
+            ))
+          ) : (
+            <>
+              {categories.map((cat) => {
+                const IconComponent = ICON_DICTIONARY[cat.icon] || Package;
+                const isActive = activeCategory === cat.name;
+
+                return (
+                  <div 
+                    key={cat._id} 
+                    onClick={() => setActiveCategory(cat.name)}
+                    className={`flex flex-col items-center gap-2 min-w-max cursor-pointer transition-transform hover:scale-105`}
+                  >
+                    {isActive ? (
+                      <div className="bg-[#EBE5F7] text-[#A388E1] px-4 py-2.5 rounded-full flex items-center gap-2 border border-[#A388E1]/20 shadow-sm">
+                        <IconComponent className="w-5 h-5" />
+                        <span className="text-sm font-bold">{cat.name}</span>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="bg-[#F8F9FA] text-gray-500 p-3 rounded-2xl w-14 h-14 flex items-center justify-center border border-gray-100 shadow-sm">
+                          <IconComponent className="w-6 h-6" />
+                        </div>
+                        <span className="text-xs text-gray-500 font-medium">{cat.name}</span>
+                      </>
+                    )}
                   </div>
-                  <span className="text-xs text-gray-500 font-medium">{cat.name}</span>
-                </>
-              )}
-            </div>
-          ))}
+                );
+              })}
+
+              <div 
+                onClick={() => setActiveCategory('Other')}
+                className={`flex flex-col items-center gap-2 min-w-max cursor-pointer transition-transform hover:scale-105`}
+              >
+                {activeCategory === 'Other' ? (
+                  <div className="bg-[#EBE5F7] text-[#A388E1] px-4 py-2.5 rounded-full flex items-center gap-2 border border-[#A388E1]/20 shadow-sm">
+                    <Plus className="w-5 h-5" />
+                    <span className="text-sm font-bold">Other</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="bg-[#F8F9FA] text-gray-500 p-3 rounded-2xl w-14 h-14 flex items-center justify-center border border-gray-100 shadow-sm">
+                      <Plus className="w-6 h-6" />
+                    </div>
+                    <span className="text-xs text-gray-500 font-medium">Other</span>
+                  </>
+                )}
+              </div>
+            </>
+          )}
+
         </div>
       </div>
 
-      {/* CHANGED: px-5 ko px-4 kiya aur top padding thodi kam rakhi */}
       <div className="px-4 py-2">
         <div className="flex justify-between items-center mb-3">
-          <h2 className="text-xl font-bold text-gray-900">Popular Items</h2>
+          <h2 className="text-xl font-bold text-gray-900">
+            {activeCategory === 'All' ? 'Popular Items' : `${activeCategory} Items`}
+          </h2>
           <Link to="/items" className="text-sm font-semibold text-gray-500 flex items-center gap-1 hover:text-[#A388E1]">
             See All <ChevronRight className="w-4 h-4" />
           </Link>
         </div>
 
         {loading ? (
-          /* NAYA: Premium Skeleton Loader For Home Items replaced with ProductCard */
           <div className="flex overflow-x-auto hide-scrollbar gap-4 pb-4">
             {[1, 2, 3, 4].map((i) => (
               <ProductCard key={i} isLoading={true} className="min-w-[150px] w-[150px] flex-shrink-0" />
             ))}
           </div>
         ) : items.length === 0 ? (
-          <div className="text-center text-gray-400 py-10 bg-gray-50 rounded-2xl border border-gray-100">
-            No items available right now. Be the first to add one!
+          <div className="text-center text-gray-400 py-10 bg-gray-50 rounded-2xl border border-gray-100 flex flex-col items-center justify-center">
+            <Package className="w-8 h-8 text-gray-300 mb-2" />
+            No items in this category right now.
           </div>
         ) : (
           <div className="flex overflow-x-auto hide-scrollbar gap-4 pb-4 snap-x">
-            {/* Purana item mapping hata kar ProductCard laga diya */}
             {items.map((item) => (
               <ProductCard key={item._id} item={item} className="min-w-[150px] w-[150px] flex-shrink-0 snap-start" />
             ))}
@@ -195,7 +275,6 @@ const HomePage = ({ user }) => {
         )}
       </div>
 
-      {/* CHANGED: px-5 ko px-4 kiya bottom section ke liye */}
       <div className="px-4 py-3">
         <div className="bg-[#EBE5F7] rounded-3xl p-5 relative overflow-hidden">
           <div className="w-2/3 relative z-10">
@@ -204,7 +283,6 @@ const HomePage = ({ user }) => {
             <p className="text-xs text-gray-500 mb-4 leading-relaxed">
               List items you no longer need and earn instant credits to exchange for products you want!
             </p>
-            {/* Dynamic Link: Agar login nahi hai, toh add-item ki jagah login pe bhejega */}
             <Link to={user ? "/add-item" : "/login"} className="bg-[#FFE28A] text-gray-900 px-4 py-2 rounded-full text-sm font-bold inline-flex items-center gap-1 shadow-sm hover:bg-[#FFD75E] transition">
               <Plus className="w-4 h-4" /> List an Item
             </Link>
@@ -227,6 +305,6 @@ const HomePage = ({ user }) => {
       `}</style>
     </div>
   );
-};                     
+}; 
 
 export default HomePage;

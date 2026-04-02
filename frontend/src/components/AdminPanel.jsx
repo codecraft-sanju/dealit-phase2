@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Shield, Users, Package, Trash2, X, CheckCircle, Edit, List, AlertTriangle, Eye, Coins, User, ShieldAlert, ShieldCheck, Mail, Phone, MapPin, Calendar, Wallet, Image as ImageIcon, Plus, UploadCloud, Check, ToggleLeft, ToggleRight } from 'lucide-react';
+import { 
+  Shield, Users, Package, Trash2, X, CheckCircle, Edit, List, AlertTriangle, Eye, Coins, User, 
+  ShieldAlert, ShieldCheck, Mail, Phone, MapPin, Calendar, Wallet, Image as ImageIcon, Plus, 
+  UploadCloud, Check, ToggleLeft, ToggleRight, Layers,
+  // NAYE ICONS FOR CATEGORY:
+  Car, Monitor, Book, Shirt, Gamepad2, Watch, Home as HomeIcon, Sofa, Music, Utensils, Heart, Briefcase, Camera, Dumbbell, Smartphone
+} from 'lucide-react'; 
 import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
@@ -11,7 +17,7 @@ const UPLOAD_PRESET = import.meta.env.VITE_UPLOAD_PRESET || 'salon_preset';
 const CLOUD_NAME = import.meta.env.VITE_CLOUD_NAME || 'dvoenforj';
 
 const AdminPanel = ({ user }) => {
-  const [activeTab, setActiveTab] = useState('pending'); // 'pending', 'items', 'users', 'offers'
+  const [activeTab, setActiveTab] = useState('pending'); // 'pending', 'items', 'users', 'offers', 'categories'
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -36,11 +42,28 @@ const AdminPanel = ({ user }) => {
   const [isViewUserModalOpen, setIsViewUserModalOpen] = useState(false);
   const [viewingUser, setViewingUser] = useState(null);
 
-  // --- NEW: Offer Modal States ---
+  // Offer Modal States
   const [isOfferModalOpen, setIsOfferModalOpen] = useState(false);
   const [editingOfferId, setEditingOfferId] = useState(null);
   const [offerForm, setOfferForm] = useState({ imageUrl: '', isActive: true });
   const [uploadingImage, setUploadingImage] = useState(false);
+
+  // Category Modal States
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [editingCategoryId, setEditingCategoryId] = useState(null);
+  const [categoryForm, setCategoryForm] = useState({ name: '', icon: 'Package', isActive: true });
+
+  // List of available icons for the category builder
+  const AVAILABLE_ICONS = [
+    { name: 'Package', icon: Package }, { name: 'Smartphone', icon: Smartphone },
+    { name: 'Car', icon: Car }, { name: 'Monitor', icon: Monitor },
+    { name: 'Book', icon: Book }, { name: 'Shirt', icon: Shirt },
+    { name: 'Gamepad2', icon: Gamepad2 }, { name: 'Watch', icon: Watch },
+    { name: 'Home', icon: HomeIcon }, { name: 'Sofa', icon: Sofa },
+    { name: 'Music', icon: Music }, { name: 'Utensils', icon: Utensils },
+    { name: 'Heart', icon: Heart }, { name: 'Briefcase', icon: Briefcase },
+    { name: 'Camera', icon: Camera }, { name: 'Dumbbell', icon: Dumbbell }
+  ];
 
   if (!user || user.role !== 'admin') {
     return <Navigate to="/" />;
@@ -55,7 +78,8 @@ const AdminPanel = ({ user }) => {
         if (activeTab === 'pending') endpoint = `${API_URL}/admin/pending-items`;
         else if (activeTab === 'users') endpoint = `${API_URL}/admin/users`;
         else if (activeTab === 'items') endpoint = `${API_URL}/admin/all-items`;
-        else if (activeTab === 'offers') endpoint = `${API_URL}/admin/offers`; // New Offers endpoint
+        else if (activeTab === 'offers') endpoint = `${API_URL}/admin/offers`; 
+        else if (activeTab === 'categories') endpoint = `${API_URL}/categories`;
 
         const response = await axios.get(endpoint, { withCredentials: true });
         setData(response.data.data || []);
@@ -196,7 +220,7 @@ const AdminPanel = ({ user }) => {
     setIsViewUserModalOpen(true);
   };
 
-  // --- NEW: OFFER FUNCTIONS ---
+  // --- OFFER FUNCTIONS ---
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -262,11 +286,55 @@ const AdminPanel = ({ user }) => {
     }
   };
 
+  // --- CATEGORY FUNCTIONS ---
+  const handleAddCategoryClick = () => {
+    setEditingCategoryId(null);
+    setCategoryForm({ name: '', icon: 'Package', isActive: true });
+    setIsCategoryModalOpen(true);
+  };
+
+  const handleEditCategoryClick = (cat) => {
+    setEditingCategoryId(cat._id);
+    setCategoryForm({ name: cat.name, icon: cat.icon || 'Package', isActive: cat.isActive });
+    setIsCategoryModalOpen(true);
+  };
+
+  const handleCategorySubmit = async (e) => {
+    e.preventDefault();
+    if (!categoryForm.name.trim()) return alert('Category name is required');
+    setUpdating(true);
+
+    try {
+      if (editingCategoryId) {
+        const res = await axios.put(`${API_URL}/categories/${editingCategoryId}`, categoryForm, { withCredentials: true });
+        setData(data.map(c => c._id === editingCategoryId ? res.data.data : c));
+      } else {
+        const res = await axios.post(`${API_URL}/categories`, categoryForm, { withCredentials: true });
+        setData([...data, res.data.data].sort((a,b) => a.name.localeCompare(b.name)));
+      }
+      setIsCategoryModalOpen(false);
+    } catch (error) {
+      console.error('Error saving category:', error);
+      alert(error.response?.data?.message || 'Failed to save category.');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleDeleteCategory = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this category permanently? This might affect items using it.')) return;
+    try {
+      await axios.delete(`${API_URL}/categories/${id}`, { withCredentials: true });
+      setData(data.filter(c => c._id !== id));
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      alert('Failed to delete category.');
+    }
+  };
+
   return (
-    // Outer container fixed to viewport height to prevent page scrolling
     <div className="h-[calc(100vh-80px)] min-h-[600px] w-full bg-gray-900 flex flex-col pt-6 pb-6 px-4 sm:px-6 lg:px-8">
       
-      {/* Custom Scrollbar Styles for the App-like feel */}
       <style dangerouslySetInnerHTML={{__html: `
         .admin-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
         .admin-scroll::-webkit-scrollbar-track { background: rgba(31, 41, 55, 0.5); border-radius: 10px; }
@@ -274,7 +342,6 @@ const AdminPanel = ({ user }) => {
         .admin-scroll::-webkit-scrollbar-thumb:hover { background: rgba(107, 114, 128, 1); }
       `}} />
 
-      {/* Header Section (Fixed at top) */}
       <div className="max-w-7xl mx-auto w-full flex-shrink-0">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">
@@ -287,13 +354,22 @@ const AdminPanel = ({ user }) => {
             </div>
           </div>
           
-          {/* Add New Offer Button - Only visible on Offers Tab */}
+          {/* Dynamic Top Action Buttons based on Active Tab */}
           {activeTab === 'offers' && (
             <button 
               onClick={handleAddOfferClick}
               className="bg-[#A388E1] hover:bg-[#8b70ca] text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 shadow-lg shadow-[#A388E1]/20 flex items-center gap-2 border border-[#A388E1]/50"
             >
               <Plus className="w-5 h-5" /> Add New Banner
+            </button>
+          )}
+
+          {activeTab === 'categories' && (
+            <button 
+              onClick={handleAddCategoryClick}
+              className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 shadow-lg shadow-blue-500/20 flex items-center gap-2 border border-blue-500/50"
+            >
+              <Plus className="w-5 h-5" /> Add Category
             </button>
           )}
         </div>
@@ -321,12 +397,17 @@ const AdminPanel = ({ user }) => {
           >
             <Users className="w-4 h-4" /> Manage Users
           </button>
-          {/* New Offers Tab */}
           <button 
             onClick={() => setActiveTab('offers')}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${activeTab === 'offers' ? 'bg-[#A388E1] text-white shadow-lg shadow-[#A388E1]/20 scale-100' : 'text-gray-400 hover:text-white hover:bg-gray-700/50 scale-95'}`}
           >
-            <ImageIcon className="w-4 h-4" /> Offers / Banners
+            <ImageIcon className="w-4 h-4" /> Offers
+          </button>
+          <button 
+            onClick={() => setActiveTab('categories')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${activeTab === 'categories' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20 scale-100' : 'text-gray-400 hover:text-white hover:bg-gray-700/50 scale-95'}`}
+          >
+            <Layers className="w-4 h-4" /> Categories
           </button>
         </div>
       </div>
@@ -344,16 +425,16 @@ const AdminPanel = ({ user }) => {
               {activeTab === 'pending' ? <Package className="w-10 h-10 text-gray-500" /> : 
                activeTab === 'users' ? <Users className="w-10 h-10 text-gray-500" /> : 
                activeTab === 'offers' ? <ImageIcon className="w-10 h-10 text-gray-500" /> : 
+               activeTab === 'categories' ? <Layers className="w-10 h-10 text-gray-500" /> : 
                <List className="w-10 h-10 text-gray-500" />}
             </div>
             <h3 className="text-xl font-bold text-white mb-1">No Data Found</h3>
-            <p className="text-gray-500">There are currently no {activeTab === 'pending' ? 'pending approvals' : activeTab === 'offers' ? 'banners available' : 'records to display'}.</p>
+            <p className="text-gray-500">There are currently no {activeTab === 'pending' ? 'pending approvals' : activeTab === 'offers' ? 'banners available' : activeTab === 'categories' ? 'categories available' : 'records to display'}.</p>
           </div>
         ) : (
           <div className="flex-1 overflow-auto admin-scroll rounded-3xl">
             <table className="w-full text-left text-sm text-gray-300 whitespace-nowrap sm:whitespace-normal">
               
-              {/* STICKY HEADER */}
               <thead className="sticky top-0 z-20 bg-gray-900/95 backdrop-blur-md text-gray-400 border-b border-gray-700/80 shadow-sm">
                 <tr>
                   <th className="px-6 py-5 font-bold uppercase tracking-wider text-xs">ID</th>
@@ -369,6 +450,12 @@ const AdminPanel = ({ user }) => {
                       <th className="px-6 py-5 font-bold uppercase tracking-wider text-xs">Banner Preview</th>
                       <th className="px-6 py-5 font-bold uppercase tracking-wider text-xs">Status</th>
                     </>
+                  ) : activeTab === 'categories' ? (
+                    <>
+                      <th className="px-6 py-5 font-bold uppercase tracking-wider text-xs">Category Name</th>
+                      <th className="px-6 py-5 font-bold uppercase tracking-wider text-xs">Date Created</th>
+                      <th className="px-6 py-5 font-bold uppercase tracking-wider text-xs">Status</th>
+                    </>
                   ) : (
                     <>
                       <th className="px-6 py-5 font-bold uppercase tracking-wider text-xs">Item Details</th>
@@ -380,13 +467,11 @@ const AdminPanel = ({ user }) => {
                 </tr>
               </thead>
               
-              {/* SCROLLABLE BODY */}
               <tbody className="divide-y divide-gray-700/50">
                 {data.map((row) => (
                   <tr key={row._id} className="hover:bg-gray-700/30 transition-colors duration-200 group">
                     <td className="px-6 py-4 font-mono text-xs text-gray-500">#{row._id.substring(0,6)}</td>
                     
-                    {/* USERS TAB CONTENT */}
                     {activeTab === 'users' ? (
                       <>
                         <td className="px-6 py-4">
@@ -418,7 +503,6 @@ const AdminPanel = ({ user }) => {
                         </td>
                       </>
                     ) : activeTab === 'offers' ? (
-                      /* OFFERS TAB CONTENT */
                       <>
                         <td className="px-6 py-4">
                           <div className="w-48 h-20 bg-gray-800 rounded-xl overflow-hidden border border-gray-700 shadow-sm">
@@ -436,8 +520,37 @@ const AdminPanel = ({ user }) => {
                           </span>
                         </td>
                       </>
+                    ) : activeTab === 'categories' ? (
+                      <>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            {/* Render dynamic icon from the map */}
+                            {(() => {
+                              const match = AVAILABLE_ICONS.find(i => i.name === row.icon);
+                              const IconComp = match ? match.icon : Package;
+                              return (
+                                <div className="p-2 bg-gray-800 rounded-lg border border-gray-700">
+                                  <IconComp className="w-5 h-5 text-blue-400" />
+                                </div>
+                              );
+                            })()}
+                            <span className="font-bold text-white text-base">{row.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-gray-400">
+                          {new Date(row.created_at).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest flex items-center gap-1.5 w-fit ${
+                            row.isActive 
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' 
+                              : 'bg-gray-800 text-gray-400 border border-gray-700'
+                          }`}>
+                            {row.isActive ? 'Active' : 'Disabled'}
+                          </span>
+                        </td>
+                      </>
                     ) : (
-                      /* ITEMS / PENDING TAB CONTENT */
                       <>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-4">
@@ -480,70 +593,67 @@ const AdminPanel = ({ user }) => {
                       </>
                     )}
 
-                    {/* ACTIONS COLUMN */}
                     <td className="px-6 py-4 text-right">
                       {activeTab === 'pending' ? (
                         <div className="flex justify-end gap-2">
                           <button 
                             onClick={() => handleViewClick(row)}
                             className="bg-blue-500/10 hover:bg-blue-500 hover:text-white text-blue-400 border border-blue-500/30 transition-all px-3 py-2 rounded-xl font-bold flex items-center gap-1.5 hover:shadow-[0_0_15px_rgba(59,130,246,0.4)]"
-                            title="Review Details"
                           >
                             <Eye className="w-4 h-4" /> <span className="hidden sm:inline">Review</span>
                           </button>
                           <button 
                             onClick={() => handleApprove(row._id)}
                             className="bg-emerald-500/10 hover:bg-emerald-500 hover:text-white text-emerald-400 border border-emerald-500/30 transition-all p-2.5 rounded-xl hover:shadow-[0_0_15px_rgba(16,185,129,0.4)]"
-                            title="Approve Fast"
                           >
                             <CheckCircle className="w-4 h-4" />
                           </button>
                           <button 
                             onClick={() => handleRejectClick(row._id)}
                             className="bg-red-500/10 hover:bg-red-500 hover:text-white text-red-400 border border-red-500/30 transition-all p-2.5 rounded-xl hover:shadow-[0_0_15px_rgba(239,68,68,0.4)]"
-                            title="Reject Fast"
                           >
                             <X className="w-4 h-4" />
                           </button>
                         </div>
                       ) : activeTab === 'offers' ? (
                         <div className="flex justify-end gap-1.5">
-                          <button onClick={() => handleEditOfferClick(row)} className="text-gray-400 hover:text-blue-400 hover:bg-blue-400/10 transition-all p-2 rounded-xl" title="Edit/Hide Banner">
+                          <button onClick={() => handleEditOfferClick(row)} className="text-gray-400 hover:text-blue-400 hover:bg-blue-400/10 transition-all p-2 rounded-xl">
                             <Edit className="w-5 h-5" />
                           </button>
-                          <button onClick={() => handleDeleteOffer(row._id)} className="text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all p-2 rounded-xl" title="Delete Banner permanently">
+                          <button onClick={() => handleDeleteOffer(row._id)} className="text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all p-2 rounded-xl">
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                      ) : activeTab === 'categories' ? (
+                        <div className="flex justify-end gap-1.5">
+                          <button onClick={() => handleEditCategoryClick(row)} className="text-gray-400 hover:text-blue-400 hover:bg-blue-400/10 transition-all p-2 rounded-xl" title="Edit Category">
+                            <Edit className="w-5 h-5" />
+                          </button>
+                          <button onClick={() => handleDeleteCategory(row._id)} className="text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all p-2 rounded-xl" title="Delete Category">
                             <Trash2 className="w-5 h-5" />
                           </button>
                         </div>
                       ) : activeTab === 'items' ? (
                         <div className="flex justify-end gap-1.5">
-                          <button onClick={() => handleViewClick(row)} className="text-gray-400 hover:text-blue-400 hover:bg-blue-400/10 transition-all p-2 rounded-xl" title="View">
+                          <button onClick={() => handleViewClick(row)} className="text-gray-400 hover:text-blue-400 hover:bg-blue-400/10 transition-all p-2 rounded-xl">
                             <Eye className="w-5 h-5" />
                           </button>
-                          <button onClick={() => handleEditClick(row)} className="text-gray-400 hover:text-emerald-400 hover:bg-emerald-400/10 transition-all p-2 rounded-xl" title="Edit">
+                          <button onClick={() => handleEditClick(row)} className="text-gray-400 hover:text-emerald-400 hover:bg-emerald-400/10 transition-all p-2 rounded-xl">
                             <Edit className="w-5 h-5" />
                           </button>
-                          <button onClick={() => handleDeleteItem(row._id)} className="text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all p-2 rounded-xl" title="Delete">
+                          <button onClick={() => handleDeleteItem(row._id)} className="text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all p-2 rounded-xl">
                             <Trash2 className="w-5 h-5" />
                           </button>
                         </div>
                       ) : (
                         <div className="flex justify-end gap-1.5">
-                          <button onClick={() => handleViewUserClick(row)} className="text-gray-400 hover:text-blue-400 hover:bg-blue-400/10 transition-all p-2 rounded-xl" title="View Profile">
+                          <button onClick={() => handleViewUserClick(row)} className="text-gray-400 hover:text-blue-400 hover:bg-blue-400/10 transition-all p-2 rounded-xl">
                             <Eye className="w-5 h-5" />
                           </button>
-                          <button 
-                            onClick={() => handleUpdateRole(row._id, row.role)}
-                            className={`transition-all p-2 rounded-xl flex items-center justify-center ${
-                              row.role === 'admin' 
-                                ? 'text-purple-400 hover:text-white hover:bg-purple-500/80 hover:shadow-[0_0_10px_rgba(168,85,247,0.5)]' 
-                                : 'text-gray-400 hover:text-emerald-400 hover:bg-emerald-400/10'
-                            }`}
-                            title={row.role === 'admin' ? "Demote from Admin" : "Promote to Admin"}
-                          >
+                          <button onClick={() => handleUpdateRole(row._id, row.role)} className={`transition-all p-2 rounded-xl flex items-center justify-center ${row.role === 'admin' ? 'text-purple-400 hover:text-white hover:bg-purple-500/80' : 'text-gray-400 hover:text-emerald-400 hover:bg-emerald-400/10'}`}>
                             {row.role === 'admin' ? <ShieldAlert className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5" />}
                           </button>
-                          <button onClick={() => handleDeleteUser(row._id)} className="text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all p-2 rounded-xl" title="Delete User">
+                          <button onClick={() => handleDeleteUser(row._id)} className="text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all p-2 rounded-xl">
                             <Trash2 className="w-5 h-5" />
                           </button>
                         </div>
@@ -867,7 +977,89 @@ const AdminPanel = ({ user }) => {
         </div>
       )}
 
-      {/* NEW: Add/Edit Offer Modal */}
+      {/* Add/Edit Category Modal */}
+      {isCategoryModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/60 backdrop-blur-md transition-opacity">
+          <div className="bg-gray-800 w-full max-w-sm rounded-3xl border border-gray-700 shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="p-5 border-b border-gray-700 flex justify-between items-center bg-gray-900/80 backdrop-blur-md">
+              <h2 className="text-xl font-black text-white flex items-center gap-2">
+                {editingCategoryId ? <Edit className="w-6 h-6 text-blue-400" /> : <Layers className="w-6 h-6 text-blue-400" />} 
+                {editingCategoryId ? 'Edit Category' : 'New Category'}
+              </h2>
+              <button onClick={() => setIsCategoryModalOpen(false)} className="text-gray-400 hover:text-white transition-all p-2 bg-gray-800 hover:bg-gray-700 rounded-full">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <form id="categoryForm" onSubmit={handleCategorySubmit} className="space-y-6">
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-wide">Category Name</label>
+                  <input 
+                    type="text" 
+                    value={categoryForm.name} 
+                    onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })} 
+                    className="w-full bg-gray-900 border-2 border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-all"
+                    placeholder="e.g., Electronics, Books..."
+                    required
+                  />
+                </div>
+
+                {/* NAYA: Icon Selection UI */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-wide">Select Icon</label>
+                  <div className="flex gap-3 overflow-x-auto admin-scroll pb-2">
+                    {AVAILABLE_ICONS.map((iconObj) => {
+                      const IconComp = iconObj.icon;
+                      const isSelected = categoryForm.icon === iconObj.name;
+                      return (
+                        <div 
+                          key={iconObj.name}
+                          onClick={() => setCategoryForm({ ...categoryForm, icon: iconObj.name })}
+                          className={`flex-shrink-0 flex flex-col items-center justify-center p-3 rounded-xl cursor-pointer transition-all border-2 ${
+                            isSelected 
+                              ? 'bg-blue-600/20 border-blue-500 text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.3)]' 
+                              : 'bg-gray-900 border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-300'
+                          }`}
+                          title={iconObj.name}
+                        >
+                          <IconComp className="w-6 h-6" />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-700 flex items-center justify-between cursor-pointer" onClick={() => setCategoryForm({ ...categoryForm, isActive: !categoryForm.isActive })}>
+                  <div>
+                    <p className="font-bold text-white text-sm">Active Status</p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">Hidden categories won't show to users.</p>
+                  </div>
+                  {categoryForm.isActive ? (
+                    <ToggleRight className="w-10 h-10 text-emerald-500" />
+                  ) : (
+                    <ToggleLeft className="w-10 h-10 text-gray-500" />
+                  )}
+                </div>
+              </form>
+            </div>
+            
+            <div className="p-5 border-t border-gray-700 bg-gray-900/80 backdrop-blur-md flex justify-end gap-3">
+              <button type="button" onClick={() => setIsCategoryModalOpen(false)} className="px-6 py-2.5 rounded-xl font-bold text-gray-400 hover:text-white transition-all">Cancel</button>
+              <button 
+                type="submit" 
+                form="categoryForm" 
+                disabled={updating} 
+                className={`px-8 py-2.5 rounded-xl font-bold transition-all flex items-center gap-2 ${updating ? 'bg-blue-600/50 text-white/50 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)]'}`}
+              >
+                {updating ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Offers Modal */}
       {isOfferModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/60 backdrop-blur-md transition-opacity">
           <div className="bg-gray-800 w-full max-w-lg rounded-3xl border border-gray-700 shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
