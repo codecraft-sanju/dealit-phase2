@@ -100,7 +100,8 @@ const HomePage = ({ user }) => {
   }, [activeCategory]);
 
   return (
-    <div className="max-w-md mx-auto bg-white pb-1 md:max-w-7xl md:px-0">
+    // ✨ YAHAN CHANGE KIYA HAI: min-h-[calc(100vh-64px)] taaki yeh App.jsx ki pb-16 (64px) ke saath milkar exact screen height le. Aur extra padding hata di hai. ✨
+    <div className="max-w-md mx-auto bg-white min-h-[calc(100vh-64px)] pb-4 md:min-h-screen md:pb-0 md:max-w-7xl md:px-0">
       <div className="px-4 pt-3 pb-0">
         
         {/* Hero Cards */}
