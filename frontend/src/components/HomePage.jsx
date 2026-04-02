@@ -30,6 +30,15 @@ const ICON_DICTIONARY = {
   'Dumbbell': Dumbbell
 };
 
+// Dummy avatars from pravatar.cc (real human face photos)
+const DUMMY_AVATARS = [
+  'https://i.pravatar.cc/40?img=11',
+  'https://i.pravatar.cc/40?img=32',
+  'https://i.pravatar.cc/40?img=45',
+  'https://i.pravatar.cc/40?img=16',
+  'https://i.pravatar.cc/40?img=57',
+];
+
 const HomePage = ({ user }) => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -42,22 +51,6 @@ const HomePage = ({ user }) => {
   const [activeCategory, setActiveCategory] = useState('All');
 
   useEffect(() => {
-    const fetchItems = async () => {
-      setLoading(true); // Jab bhi category change ho, loading true karo
-      try {
-        const url = activeCategory === 'All' 
-          ? `${API_URL}/items` 
-          : `${API_URL}/items?category=${activeCategory}`;
-          
-        const response = await axios.get(url);
-        setItems(response.data.data);
-      } catch (error) {
-        console.error('Error fetching items:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     const fetchOffers = async () => {
       try {
         const response = await axios.get(`${API_URL}/offers`);
@@ -85,9 +78,8 @@ const HomePage = ({ user }) => {
 
     fetchOffers();
     fetchCategories(); 
-  }, []); // Yeh dono sirf pehli baar fetch honge
+  }, []);
 
-  // Jab activeCategory badle, tab items wapas fetch karo
   useEffect(() => {
     const fetchItems = async () => {
       setLoading(true);
@@ -108,9 +100,10 @@ const HomePage = ({ user }) => {
   }, [activeCategory]);
 
   return (
-    <div className="max-w-md mx-auto bg-white min-h-screen pb-24 md:max-w-7xl md:px-0">
+    <div className="max-w-md mx-auto bg-white min-h-screen pb-2 md:max-w-7xl md:px-0">
       <div className="px-4 pt-4 pb-0">
         
+        {/* Hero Cards */}
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div className="bg-[#F8F6FF] border border-[#EBE5F7] rounded-3xl p-4 flex flex-col justify-center h-full">
             <h1 className="text-lg md:text-xl font-bold text-gray-900 leading-tight mb-2">
@@ -154,6 +147,7 @@ const HomePage = ({ user }) => {
           )}
         </div>
 
+        {/* Offers Banner */}
         {loadingOffers ? (
           <div className="mb-3">
             <div className="flex overflow-x-auto hide-scrollbar gap-4 pb-2">
@@ -183,13 +177,13 @@ const HomePage = ({ user }) => {
 
       </div>
 
+      {/* Categories */}
       <div className="px-4 py-2">
         <div className="flex gap-4 overflow-x-auto hide-scrollbar items-center pb-2">
           
-          {/* Always show "All" option first */}
           <div 
             onClick={() => setActiveCategory('All')}
-            className={`flex flex-col items-center gap-2 min-w-max cursor-pointer transition-transform hover:scale-105`}
+            className="flex flex-col items-center gap-2 min-w-max cursor-pointer transition-transform hover:scale-105"
           >
             {activeCategory === 'All' ? (
               <div className="bg-[#EBE5F7] text-[#A388E1] px-4 py-2.5 rounded-full flex items-center gap-2 border border-[#A388E1]/20 shadow-sm">
@@ -207,7 +201,7 @@ const HomePage = ({ user }) => {
           </div>
 
           {loadingCategories ? (
-             [1, 2, 3, 4].map((i) => (
+            [1, 2, 3, 4].map((i) => (
               <div key={i} className="flex flex-col items-center gap-2 min-w-max">
                 <div className="bg-gray-100 animate-pulse p-3 rounded-2xl w-14 h-14"></div>
                 <div className="bg-gray-100 animate-pulse h-3 w-10 rounded"></div>
@@ -215,7 +209,6 @@ const HomePage = ({ user }) => {
             ))
           ) : (
             <>
-              {/* Dynamic Categories from Backend */}
               {categories.map((cat) => {
                 const IconComponent = ICON_DICTIONARY[cat.icon] || Package;
                 const isActive = activeCategory === cat.name;
@@ -224,7 +217,7 @@ const HomePage = ({ user }) => {
                   <div 
                     key={cat._id} 
                     onClick={() => setActiveCategory(cat.name)}
-                    className={`flex flex-col items-center gap-2 min-w-max cursor-pointer transition-transform hover:scale-105`}
+                    className="flex flex-col items-center gap-2 min-w-max cursor-pointer transition-transform hover:scale-105"
                   >
                     {isActive ? (
                       <div className="bg-[#EBE5F7] text-[#A388E1] px-4 py-2.5 rounded-full flex items-center gap-2 border border-[#A388E1]/20 shadow-sm">
@@ -243,10 +236,9 @@ const HomePage = ({ user }) => {
                 );
               })}
 
-              {/* Always show "Other" at the end */}
               <div 
                 onClick={() => setActiveCategory('Other')}
-                className={`flex flex-col items-center gap-2 min-w-max cursor-pointer transition-transform hover:scale-105`}
+                className="flex flex-col items-center gap-2 min-w-max cursor-pointer transition-transform hover:scale-105"
               >
                 {activeCategory === 'Other' ? (
                   <div className="bg-[#EBE5F7] text-[#A388E1] px-4 py-2.5 rounded-full flex items-center gap-2 border border-[#A388E1]/20 shadow-sm">
@@ -264,17 +256,15 @@ const HomePage = ({ user }) => {
               </div>
             </>
           )}
-
         </div>
       </div>
 
+      {/* Items Section */}
       <div className="px-4 py-2">
         <div className="flex justify-between items-center mb-3">
           <h2 className="text-xl font-bold text-gray-900">
             {activeCategory === 'All' ? 'Popular Items' : `Top in ${activeCategory}`}
           </h2>
-          
-          {/* Smart Link: Forwards active category to Items Page */}
           <Link 
             to={activeCategory === 'All' ? '/items' : `/items?category=${activeCategory}`} 
             className="text-sm font-semibold text-[#A388E1] bg-[#F8F6FF] px-3 py-1 rounded-full flex items-center gap-1 hover:bg-[#EBE5F7] transition-colors"
@@ -303,6 +293,7 @@ const HomePage = ({ user }) => {
         )}
       </div>
 
+      {/* Got Unused Items Banner */}
       <div className="px-4 py-3">
         <div className="bg-[#EBE5F7] rounded-3xl p-5 relative overflow-hidden">
           <div className="w-2/3 relative z-10">
@@ -311,14 +302,59 @@ const HomePage = ({ user }) => {
             <p className="text-xs text-gray-500 mb-4 leading-relaxed">
               List items you no longer need and earn instant credits to exchange for products you want!
             </p>
-            <Link to={user ? "/add-item" : "/login"} className="bg-[#FFE28A] text-gray-900 px-4 py-2 rounded-full text-sm font-bold inline-flex items-center gap-1 shadow-sm hover:bg-[#FFD75E] transition">
+            <Link 
+              to={user ? "/add-item" : "/login"} 
+              className="bg-[#FFE28A] text-gray-900 px-4 py-2 rounded-full text-sm font-bold inline-flex items-center gap-1 shadow-sm hover:bg-[#FFD75E] transition"
+            >
               <Plus className="w-4 h-4" /> List an Item
             </Link>
           </div>
-          
           <div className="absolute -right-4 -bottom-4 w-32 h-32 opacity-20">
             <Package className="w-full h-full text-[#A388E1]" />
           </div>
+        </div>
+      </div>
+
+      {/* Social Proof Section */}
+      <div className="px-4 pb-4">
+        <div className="flex items-center gap-3 px-1 py-2">
+          
+          {/* Trending Icon */}
+          <div className="flex-shrink-0">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+              <path d="M3 17L9 11L13 15L21 7" stroke="#A388E1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M15 7H21V13" stroke="#A388E1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            {/* Heading */}
+            <p className="text-xs font-bold text-gray-800 leading-tight">
+              Start earning by selling what you don't use anymore!
+            </p>
+
+            {/* Avatars + text row */}
+            <div className="flex items-center gap-2">
+              <div className="flex -space-x-2">
+                {DUMMY_AVATARS.map((src, i) => (
+                  <img
+                    key={i}
+                    src={src}
+                    alt={`user-${i}`}
+                    className="w-6 h-6 rounded-full border-2 border-white object-cover shadow-sm"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = `https://ui-avatars.com/api/?name=U${i}&background=A388E1&color=fff&size=40`;
+                    }}
+                  />
+                ))}
+              </div>
+              <p className="text-[10px] text-gray-500 font-medium">
+                people are already trading
+              </p>
+            </div>
+          </div>
+
         </div>
       </div>
 

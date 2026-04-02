@@ -154,7 +154,7 @@ const WalletPage = ({ user, setUser }) => {
   ];
 
   return (
-    <div className="max-w-md mx-auto bg-white min-h-screen pb-24 md:max-w-7xl relative">
+    <div className="max-w-md mx-auto bg-white min-h-screen pb-2 md:max-w-7xl relative">
       
       {/* Header */}
       <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm flex justify-between items-center px-5 py-4 md:px-8 transition-all">
