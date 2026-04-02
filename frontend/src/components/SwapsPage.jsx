@@ -68,7 +68,7 @@ const SwapsPage = ({ user }) => {
   const displaySwaps = activeTab === 'received' ? receivedSwaps : sentSwaps;
 
   return (
-    <div className="max-w-md mx-auto bg-[#f4f2f9] min-h-screen pb-24 md:max-w-7xl relative font-sans">
+    <div className="max-w-md mx-auto bg-[#f4f2f9] min-h-screen pb-2 md:max-w-7xl relative font-sans">
       
       <div className="sticky top-0 z-50 bg-[#f4f2f9]">
         {/* CHANGE 1 & 2: 

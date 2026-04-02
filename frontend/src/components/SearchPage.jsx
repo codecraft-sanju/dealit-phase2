@@ -57,7 +57,7 @@ const SearchPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 md:bg-white pb-24 font-sans">
+    <div className="min-h-screen bg-gray-50 md:bg-white pb-2 font-sans">
       
       {/* Sticky Header with Search Input */}
       <div className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm px-4 py-3 md:py-4 md:px-8">

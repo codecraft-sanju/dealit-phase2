@@ -40,7 +40,7 @@ const DashboardPage = ({ user }) => {
   };
 
   return (
-    <div className="max-w-md mx-auto bg-white min-h-screen pb-24 md:max-w-7xl relative font-sans">
+    <div className="max-w-md mx-auto bg-white min-h-screen pb-2 md:max-w-7xl relative font-sans">
       
       <div className="sticky top-0 z-50 bg-white">
         <div className="bg-[#6B46C1] pt-6 pb-8 px-5 md:px-8 rounded-b-[2rem] shadow-md relative z-10">

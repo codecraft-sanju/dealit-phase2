@@ -6,14 +6,46 @@ import axios from 'axios';
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
+// Animated Dealit Logo Text Component
+const DealitText = () => (
+  <>
+    <span className="dealit-logo-text">Dealit</span>
+    <style>{`
+      .dealit-logo-text {
+        font-size: 1.35rem;
+        font-weight: 900;
+        letter-spacing: -0.5px;
+        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        background: linear-gradient(
+          90deg,
+          #A388E1 0%,
+          #c4b0f0 25%,
+          #ffffff 45%,
+          #FFE28A 55%,
+          #c4b0f0 75%,
+          #A388E1 100%
+        );
+        background-size: 250% auto;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        animation: dealit-shimmer 3s linear infinite;
+        display: inline-block;
+      }
+
+      @keyframes dealit-shimmer {
+        0%   { background-position: 0% center; }
+        100% { background-position: 250% center; }
+      }
+    `}</style>
+  </>
+);
+
 const Navbar = ({ user }) => {
   const location = useLocation();
   const [credits, setCredits] = useState(user?.account_credits || 0);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  useEffect(() => {
-    setIsMobileMenuOpen(false);
-  }, [location.pathname]);
+  useEffect(() => {}, [location.pathname]);
 
   useEffect(() => {
     const fetchFreshCredits = async () => {
@@ -40,7 +72,6 @@ const Navbar = ({ user }) => {
 
   return (
     <>
-      {/* Desktop & Mobile Top Navbar */}
       <nav className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex justify-between items-center">
@@ -48,7 +79,7 @@ const Navbar = ({ user }) => {
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2 z-10">
               <img src="/logo.png" alt="Dealit Logo" className="w-8 h-8 object-contain" />
-              <img src="/img.jpeg" alt="Dealit Text Logo" className="h-6 object-contain" />
+              <DealitText />
             </Link>
             
             {/* Desktop Search Bar */}
@@ -108,7 +139,7 @@ const Navbar = ({ user }) => {
               )}
             </div>
 
-            {/* Mobile Top Right Icons (Search, Bell & Profile) */}
+            {/* Mobile Top Right Icons */}
             <div className="md:hidden flex items-center gap-3">
               <Link to="/search" className="text-gray-600 hover:text-[#A388E1] p-1">
                 <Search className="w-6 h-6" />
@@ -135,6 +166,7 @@ const Navbar = ({ user }) => {
                 </Link>
               )}
             </div>
+
           </div>
         </div>
       </nav>

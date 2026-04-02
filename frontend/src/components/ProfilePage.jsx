@@ -114,7 +114,7 @@ const ProfilePage = ({ user, onLogout }) => {
   if (!user) return <Navigate to="/login" />;
 
   return (
-    <div className="max-w-md mx-auto bg-gray-50 min-h-screen pb-24 md:max-w-7xl md:bg-white md:px-4">
+    <div className="max-w-md mx-auto bg-gray-50 min-h-screen pb-2 md:max-w-7xl md:bg-white md:px-4">
       
       {/* Sticky Header Nav with Smooth Shrink Effect */}
       <div 
