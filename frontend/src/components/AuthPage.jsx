@@ -57,6 +57,10 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
       if (response.data.success) {
         setUser(response.data.user);
         localStorage.setItem('dealit_user', JSON.stringify(response.data.user));
+        // NAYA: Token save kar rahe hain iOS ke liye
+        if(response.data.token) {
+          localStorage.setItem('dealit_token', response.data.token);
+        }
         navigate('/');
       }
     } catch (err) {
@@ -80,6 +84,10 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
         } else {
           setUser(response.data.user);
           localStorage.setItem('dealit_user', JSON.stringify(response.data.user));
+          // NAYA: Token save kar rahe hain iOS ke liye (agar OTP disabled hai)
+          if(response.data.token) {
+            localStorage.setItem('dealit_token', response.data.token);
+          }
           navigate('/'); 
         }
       }
@@ -104,6 +112,10 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
       if (response.data.success) {
         setUser(response.data.user);
         localStorage.setItem('dealit_user', JSON.stringify(response.data.user));
+        // NAYA: Token save kar rahe hain iOS ke liye
+        if(response.data.token) {
+          localStorage.setItem('dealit_token', response.data.token);
+        }
         navigate('/');
       }
     } catch (err) {

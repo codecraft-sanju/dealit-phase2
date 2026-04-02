@@ -4,7 +4,7 @@ import { Package, X, AlertCircle, ArrowLeft, Edit2, Trash2 } from 'lucide-react'
 import axios from 'axios';
 
 import Navbar from './components/Navbar';
-import BottomNav from './components/BottomNav'; // <-- NAYA IMPORT
+import BottomNav from './components/BottomNav'; 
 
 const AuthPage = lazy(() => import('./components/AuthPage'));
 const SearchPage = lazy(() => import('./components/SearchPage'));
@@ -23,6 +23,25 @@ const DashboardPage = lazy(() => import('./components/DashboardPage'));
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
+// --- NAYA: AXIOS INTERCEPTOR ---
+// Yah automatically har request me Token attach kar dega, baar-baar likhne ki jarurat nahi padegi.
+axios.interceptors.request.use(
+  (config) => {
+    // Sirf apne backend par token bhejenge, Cloudinary wagera par nahi
+    if (config.url && config.url.includes(API_BASE)) {
+      const token = localStorage.getItem('dealit_token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+// -------------------------------
+
 const ZeroPriceAlert = ({ user }) => {
   const [show, setShow] = useState(false);
   const navigate = useNavigate();
@@ -34,6 +53,7 @@ const ZeroPriceAlert = ({ user }) => {
 
     const checkItems = async () => {
       try {
+        // Interceptor ab automatic token bhej dega, withCredentials rakhne se koi nuksan nahi
         const res = await axios.get(`${API_URL}/items/me`, { withCredentials: true });
         const needsUpdate = res.data.data.some(item => !item.estimated_value || item.estimated_value === 0);
         
@@ -257,7 +277,6 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
         <Suspense fallback={<PremiumLoader />}>
           <Routes>
             
-            {/* Top Navbar wapas wahi lag gaya jahan tha */}
             <Route path="/" element={
               <>
                 <Navbar user={user} onLogout={handleLogout} />
@@ -310,7 +329,9 @@ function App() {
     try {
       await axios.post(`${API_URL}/users/logout`, {}, { withCredentials: true });
       setUser(null);
+      // NAYA: Logout ke time user data ke sath token bhi delete karenge
       localStorage.removeItem('dealit_user');
+      localStorage.removeItem('dealit_token'); 
     } catch (error) {
       console.error('Error logging out:', error);
     }
