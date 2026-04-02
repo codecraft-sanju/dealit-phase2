@@ -15,20 +15,19 @@ const getCategories = async (req, res) => {
   }
 };
 
-
 const createCategory = async (req, res) => {
   try {
-    const { name } = req.body;
+    const { name, icon, isActive } = req.body;
 
     if (!name) {
       return res.status(400).json({ success: false, message: 'Category name is required' });
     }
 
-    // NAYA: Text ko format karna (e.g. "  hAmPeR " -> "Hamper")
+    // Text ko format karna (e.g. "  hAmPeR " -> "Hamper")
     const trimmedName = name.trim();
     const formattedName = trimmedName.charAt(0).toUpperCase() + trimmedName.slice(1).toLowerCase();
 
-    // NAYA: Case-insensitive check (regex use karke)
+    // Case-insensitive check (regex use karke)
     const categoryExists = await Category.findOne({ 
       name: { $regex: new RegExp(`^${formattedName}$`, 'i') } 
     });
@@ -37,8 +36,11 @@ const createCategory = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Category already exists' });
     }
 
-  
-    const category = await Category.create({ name: formattedName });
+    const category = await Category.create({ 
+      name: formattedName,
+      icon: icon || 'Package',
+      isActive: isActive !== undefined ? isActive : true
+    });
 
     res.status(201).json({ 
       success: true, 
@@ -49,18 +51,25 @@ const createCategory = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server Error while creating category' });
   }
 };
+
 const updateCategory = async (req, res) => {
   try {
     const updated = await Category.findByIdAndUpdate(req.params.id, req.body, { new: true });
     res.status(200).json({ success: true, data: updated });
-  } catch (error) { res.status(500).json({ success: false }); }
+  } catch (error) { 
+    console.error('Error updating category:', error);
+    res.status(500).json({ success: false, message: 'Server Error while updating category' }); 
+  }
 };
 
 const deleteCategory = async (req, res) => {
   try {
     await Category.findByIdAndDelete(req.params.id);
     res.status(200).json({ success: true });
-  } catch (error) { res.status(500).json({ success: false }); }
+  } catch (error) { 
+    console.error('Error deleting category:', error);
+    res.status(500).json({ success: false, message: 'Server Error while deleting category' }); 
+  }
 };
 
 module.exports = {

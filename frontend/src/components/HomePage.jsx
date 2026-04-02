@@ -43,6 +43,7 @@ const HomePage = ({ user }) => {
 
   useEffect(() => {
     const fetchItems = async () => {
+      setLoading(true); // Jab bhi category change ho, loading true karo
       try {
         const url = activeCategory === 'All' 
           ? `${API_URL}/items` 
@@ -84,8 +85,27 @@ const HomePage = ({ user }) => {
 
     fetchOffers();
     fetchCategories(); 
+  }, []); // Yeh dono sirf pehli baar fetch honge
+
+  // Jab activeCategory badle, tab items wapas fetch karo
+  useEffect(() => {
+    const fetchItems = async () => {
+      setLoading(true);
+      try {
+        const url = activeCategory === 'All' 
+          ? `${API_URL}/items` 
+          : `${API_URL}/items?category=${activeCategory}`;
+          
+        const response = await axios.get(url);
+        setItems(response.data.data);
+      } catch (error) {
+        console.error('Error fetching items:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchItems(); 
-  }, [activeCategory]); 
+  }, [activeCategory]);
 
   return (
     <div className="max-w-md mx-auto bg-white min-h-screen pb-24 md:max-w-7xl md:px-0">
@@ -166,6 +186,7 @@ const HomePage = ({ user }) => {
       <div className="px-4 py-2">
         <div className="flex gap-4 overflow-x-auto hide-scrollbar items-center pb-2">
           
+          {/* Always show "All" option first */}
           <div 
             onClick={() => setActiveCategory('All')}
             className={`flex flex-col items-center gap-2 min-w-max cursor-pointer transition-transform hover:scale-105`}
@@ -194,6 +215,7 @@ const HomePage = ({ user }) => {
             ))
           ) : (
             <>
+              {/* Dynamic Categories from Backend */}
               {categories.map((cat) => {
                 const IconComponent = ICON_DICTIONARY[cat.icon] || Package;
                 const isActive = activeCategory === cat.name;
@@ -221,6 +243,7 @@ const HomePage = ({ user }) => {
                 );
               })}
 
+              {/* Always show "Other" at the end */}
               <div 
                 onClick={() => setActiveCategory('Other')}
                 className={`flex flex-col items-center gap-2 min-w-max cursor-pointer transition-transform hover:scale-105`}
@@ -248,9 +271,14 @@ const HomePage = ({ user }) => {
       <div className="px-4 py-2">
         <div className="flex justify-between items-center mb-3">
           <h2 className="text-xl font-bold text-gray-900">
-            {activeCategory === 'All' ? 'Popular Items' : `${activeCategory} Items`}
+            {activeCategory === 'All' ? 'Popular Items' : `Top in ${activeCategory}`}
           </h2>
-          <Link to="/items" className="text-sm font-semibold text-gray-500 flex items-center gap-1 hover:text-[#A388E1]">
+          
+          {/* Smart Link: Forwards active category to Items Page */}
+          <Link 
+            to={activeCategory === 'All' ? '/items' : `/items?category=${activeCategory}`} 
+            className="text-sm font-semibold text-[#A388E1] bg-[#F8F6FF] px-3 py-1 rounded-full flex items-center gap-1 hover:bg-[#EBE5F7] transition-colors"
+          >
             See All <ChevronRight className="w-4 h-4" />
           </Link>
         </div>

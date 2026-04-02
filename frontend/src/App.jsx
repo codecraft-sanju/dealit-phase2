@@ -39,7 +39,7 @@ axios.interceptors.request.use(
   }
 );
 
-// CHANGED: Premium ZeroPriceAlert Component
+// CHANGED: Premium ZeroPriceAlert Component with Purple Theme
 const ZeroPriceAlert = ({ user }) => {
   const [show, setShow] = useState(false);
   const navigate = useNavigate();
@@ -72,7 +72,7 @@ const ZeroPriceAlert = ({ user }) => {
 
   return (
     <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-md flex items-center justify-center px-4 animate-in fade-in duration-300">
-      <div className="bg-gray-900 border border-gray-700/80 rounded-[2rem] p-8 max-w-sm w-full text-center shadow-[0_20px_60px_rgba(0,0,0,0.6)] relative overflow-hidden transform animate-in zoom-in-95 slide-in-from-bottom-8 duration-500">
+      <div className="bg-gray-900 border border-purple-500/50 rounded-[2rem] p-8 max-w-sm w-full text-center shadow-[0_20px_60px_rgba(163,136,225,0.2)] relative overflow-hidden transform animate-in zoom-in-95 slide-in-from-bottom-8 duration-500">
         
         {/* Background Premium Glow Effects */}
         <div className="absolute -top-24 -left-24 w-48 h-48 bg-purple-500/20 rounded-full blur-[3rem] pointer-events-none"></div>
@@ -86,15 +86,15 @@ const ZeroPriceAlert = ({ user }) => {
         </button>
         
         <div className="relative z-10">
-          <div className="w-20 h-20 bg-yellow-500/10 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-purple-500/50 shadow-[0_0_30px_rgba(234,179,8,0.15)] transform rotate-3 hover:rotate-0 transition-transform duration-300">
-            <AlertCircle className="w-10 h-10 text-yellow-500" />
+          <div className="w-20 h-20 bg-purple-500/10 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-purple-500/20 shadow-[0_0_30px_rgba(163,136,225,0.3)] transform rotate-3 hover:rotate-0 transition-transform duration-300">
+            <AlertCircle className="w-10 h-10 text-purple-500" />
           </div>
           
           <h3 className="text-2xl font-black text-white mb-3 tracking-tight">Action Required!</h3>
           
           <div className="text-gray-400 text-sm mb-8 space-y-4">
             <p>
-              Some of your listed items have a value of <strong className="text-yellow-500">0 Credits</strong>. Please update their prices so others can make fair trade offers.
+              Some of your listed items have a value of <strong className="text-purple-400">0 Credits</strong>. Please update their prices so others can make fair trade offers.
             </p>
             
             {/* Category Reminder Box */}
@@ -111,7 +111,7 @@ const ZeroPriceAlert = ({ user }) => {
               setShow(false);
               navigate('/dashboard');
             }}
-            className="w-full bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-gray-900 font-black text-lg py-4 px-4 rounded-2xl transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-yellow-500/25 flex items-center justify-center gap-2"
+            className="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-400 hover:to-purple-500 text-white font-black text-lg py-4 px-4 rounded-2xl transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-purple-500/30 flex items-center justify-center gap-2"
           >
             <Edit2 className="w-5 h-5" /> Update My Items
           </button>
