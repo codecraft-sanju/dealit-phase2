@@ -100,7 +100,7 @@ const HomePage = ({ user }) => {
   }, [activeCategory]);
 
   return (
-    <div className="max-w-md mx-auto bg-white min-h-screen pb-1 md:max-w-7xl md:px-0">
+    <div className="max-w-md mx-auto bg-white pb-1 md:max-w-7xl md:px-0">
       <div className="px-4 pt-3 pb-0">
         
         {/* Hero Cards */}
@@ -147,22 +147,22 @@ const HomePage = ({ user }) => {
           )}
         </div>
 
-        {/* Offers Banner - Height restored to original to protect image */}
+        {/* Offers Banner */}
         {loadingOffers ? (
-          <div className="mb-2">
-            <div className="flex overflow-x-auto hide-scrollbar gap-3 pb-1">
-              <div className="w-full h-[173px] sm:h-[200px] md:h-[220px] flex-shrink-0 rounded-2xl bg-[#F8F6FF] border border-gray-50 animate-pulse flex items-center justify-center">
+          <div className="mb-0">
+            <div className="flex overflow-x-auto hide-scrollbar gap-3 pb-0">
+              <div className="w-full h-[140px] sm:h-[160px] md:h-[180px] flex-shrink-0 rounded-2xl bg-[#F8F6FF] border border-gray-50 animate-pulse flex items-center justify-center">
                 <div className="w-full h-full bg-[#EBE5F7] rounded-2xl"></div>
               </div>
             </div>
           </div>
         ) : offers.length > 0 ? (
-          <div className="mb-2">
-            <div className="flex overflow-x-auto hide-scrollbar gap-3 snap-x snap-mandatory pb-1">
+          <div className="mb-0">
+            <div className="flex overflow-x-auto hide-scrollbar gap-3 snap-x snap-mandatory pb-0">
               {offers.map((offer) => (
                 <div 
                   key={offer._id} 
-                  className="w-full h-[173px] sm:h-[200px] md:h-[220px] flex-shrink-0 snap-center rounded-2xl overflow-hidden shadow-sm border border-gray-100 relative bg-gray-50"
+                  className="w-full h-[140px] sm:h-[160px] md:h-[180px] flex-shrink-0 snap-center rounded-2xl overflow-hidden shadow-sm border border-gray-100 relative bg-gray-50"
                 >
                   <img 
                     src={offer.imageUrl} 
@@ -178,8 +178,8 @@ const HomePage = ({ user }) => {
       </div>
 
       {/* Categories */}
-      <div className="px-4 py-1.5">
-        <div className="flex gap-3 overflow-x-auto hide-scrollbar items-center pb-1">
+      <div className="px-4 pt-1.5 pb-0">
+        <div className="flex gap-3 overflow-x-auto hide-scrollbar items-center pb-0">
           
           <div 
             onClick={() => setActiveCategory('All')}
@@ -260,8 +260,8 @@ const HomePage = ({ user }) => {
       </div>
 
       {/* Items Section */}
-      <div className="px-4 py-1.5">
-        <div className="flex justify-between items-center mb-2">
+      <div className="px-4 pt-1.5 pb-0">
+        <div className="flex justify-between items-center mb-1">
           <h2 className="text-lg font-bold text-gray-900">
             {activeCategory === 'All' ? 'Popular Items' : `Top in ${activeCategory}`}
           </h2>
@@ -274,9 +274,9 @@ const HomePage = ({ user }) => {
         </div>
 
         {loading ? (
-          <div className="flex overflow-x-auto hide-scrollbar gap-3 pb-2">
+          <div className="flex overflow-x-auto hide-scrollbar gap-3 pb-0">
             {[1, 2, 3, 4].map((i) => (
-              <ProductCard key={i} isLoading={true} className="min-w-[140px] w-[140px] flex-shrink-0" />
+              <ProductCard key={i} isLoading={true} className="min-w-[120px] w-[120px] flex-shrink-0" />
             ))}
           </div>
         ) : items.length === 0 ? (
@@ -285,16 +285,16 @@ const HomePage = ({ user }) => {
             <span className="text-xs">No items right now.</span>
           </div>
         ) : (
-          <div className="flex overflow-x-auto hide-scrollbar gap-3 pb-2 snap-x">
+          <div className="flex overflow-x-auto hide-scrollbar gap-3 pb-0 snap-x">
             {items.map((item) => (
-              <ProductCard key={item._id} item={item} className="min-w-[140px] w-[140px] flex-shrink-0 snap-start" />
+              <ProductCard key={item._id} item={item} className="min-w-[120px] w-[120px] flex-shrink-0 snap-start" />
             ))}
           </div>
         )}
       </div>
 
       {/* Got Unused Items Banner */}
-      <div className="px-4 py-1.5">
+      <div className="px-4 pt-1.5 pb-1">
         <div className="bg-[#EBE5F7] rounded-2xl p-4 relative overflow-hidden">
           <div className="w-3/4 relative z-10">
             <h3 className="text-base font-bold text-gray-900 mb-1">Got unused items?</h3>

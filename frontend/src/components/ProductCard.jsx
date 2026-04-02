@@ -6,45 +6,43 @@ const ProductCard = ({ item, isLoading, className = '' }) => {
   // Skeleton Loader State
   if (isLoading) {
     return (
-      <div className={`bg-[#F8F6FF] rounded-3xl p-4 relative block border border-gray-50 animate-pulse ${className}`}>
-        <div className="h-24 w-full bg-[#EBE5F7] rounded-2xl mb-4"></div>
+      <div className={`bg-[#F8F6FF] rounded-2xl p-2.5 relative block border border-gray-50 animate-pulse ${className}`}>
+        <div className="h-20 w-full bg-[#EBE5F7] rounded-xl mb-2"></div>
         <div>
-          <div className="h-3 w-full bg-[#EBE5F7] rounded-md mb-2"></div>
-          <div className="h-3 w-2/3 bg-[#EBE5F7] rounded-md mb-3"></div>
-          <div className="flex items-center gap-2 mt-2">
-            <div className="w-4 h-4 rounded-full bg-[#EBE5F7]"></div>
-            <div className="h-3 w-10 bg-[#EBE5F7] rounded-md"></div>
+          <div className="h-2.5 w-full bg-[#EBE5F7] rounded-md mb-1.5"></div>
+          <div className="h-2.5 w-2/3 bg-[#EBE5F7] rounded-md mb-2"></div>
+          <div className="flex items-center gap-1.5 mt-1.5">
+            <div className="w-3.5 h-3.5 rounded-full bg-[#EBE5F7]"></div>
+            <div className="h-2.5 w-8 bg-[#EBE5F7] rounded-md"></div>
           </div>
         </div>
       </div>
     );
   }
 
-
   if (!item) return null;
-
 
   return (
     <Link 
       to={`/item/${item._id}`} 
-      className={`bg-[#F8F6FF] rounded-3xl p-4 relative block hover:shadow-md transition-shadow ${className}`}
+      className={`bg-[#F8F6FF] rounded-2xl p-2.5 relative block hover:shadow-md transition-shadow ${className}`}
     >
-      <div className="h-24 w-full flex items-center justify-center mb-4">
+      <div className="h-20 w-full flex items-center justify-center mb-2">
         {item.images && item.images.length > 0 && item.images[0] ? (
           <img src={item.images[0]} alt={item.title} className="max-h-full max-w-full object-contain mix-blend-multiply drop-shadow-md" />
         ) : (
-          <Package className="w-10 h-10 text-[#A388E1]/40" />
+          <Package className="w-8 h-8 text-[#A388E1]/40" />
         )}
       </div>
       
       <div>
-        <h3 className="text-sm font-bold text-gray-900 leading-tight mb-1 line-clamp-2">{item.title}</h3>
-        <div className="flex items-center gap-1 mt-2">
+        <h3 className="text-xs font-bold text-gray-900 leading-tight mb-1 line-clamp-2">{item.title}</h3>
+        <div className="flex items-center gap-1 mt-1.5">
           <div className="bg-yellow-100 rounded-full p-0.5">
-            <Coins className="w-3 h-3 text-yellow-600" />
+            <Coins className="w-2.5 h-2.5 text-yellow-600" />
           </div>
-          <span className="font-bold text-gray-900 text-sm">{item.estimated_value || '0'}</span>
-          <span className="text-xs text-gray-400 line-through ml-1">₹{((item.estimated_value || 0) * 1.6).toFixed(0)}</span>
+          <span className="font-bold text-gray-900 text-xs">{item.estimated_value || '0'}</span>
+          <span className="text-[10px] text-gray-400 line-through ml-1">₹{((item.estimated_value || 0) * 1.6).toFixed(0)}</span>
         </div>
       </div>
     </Link>
