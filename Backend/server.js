@@ -14,9 +14,12 @@ const offerRoutes = require('./routes/offerRoutes');
 const app = express();
 
 connectDB();
+
 app.use(cors({
   origin: process.env.FRONTEND_URL, 
-  credentials: true
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization'], 
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 }));
 
 app.use(express.json());
