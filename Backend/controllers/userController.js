@@ -14,8 +14,8 @@ const sendTokenResponse = (user, statusCode, res, message) => {
   const options = {
     expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     httpOnly: true, 
-    secure: isProduction, // Production me true, localhost me false
-    sameSite: isProduction ? 'none' : 'lax' // Production me none, localhost me lax
+    secure: isProduction, 
+    sameSite: isProduction ? 'none' : 'lax' 
   };
 
   // NAYA DEBUG: Cookie options check karne ke liye ki production me sahi set ho raha hai ya nahi
@@ -26,6 +26,7 @@ const sendTokenResponse = (user, statusCode, res, message) => {
   res.status(statusCode).cookie('token', token, options).json({
     success: true,
     message,
+    token: token, // <--- YE LINE ADD KARNA BAHUT ZARURI THA! Iske bina frontend header auth nahi kar sakta.
     user: { 
       id: user._id, 
       full_name: user.full_name, 
@@ -193,10 +194,10 @@ const loginUser = async (req, res) => {
 };
 
 const logoutUser = (req, res) => {
-  // CHANGED: Logout ke time bhi production flag chahiye cookie theek se clear karne ke liye
+ 
   const isProduction = process.env.NODE_ENV === 'production';
 
-  // NAYA DEBUG
+
   console.log('[DEBUG] Logging out user, clearing cookie');
 
   res.cookie('token', 'none', {
