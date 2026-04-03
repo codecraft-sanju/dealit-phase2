@@ -300,9 +300,9 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
               </>
             } />
             
-            <Route path="/login" element={user ? <Navigate to="/profile" replace /> : <AuthPage defaultMode="login" setUser={setUser} />} />
-            <Route path="/signup" element={user ? <Navigate to="/profile" replace /> : <AuthPage defaultMode="signup" setUser={setUser} />} />
-            <Route path="/forgot-password" element={user ? <Navigate to="/profile" replace /> : <ForgotPasswordPage setUser={setUser} />} />
+            <Route path="/login" element={user ? <Navigate to="/" replace /> : <AuthPage defaultMode="login" setUser={setUser} />} />
+            <Route path="/signup" element={user ? <Navigate to="/" replace /> : <AuthPage defaultMode="signup" setUser={setUser} />} />
+            <Route path="/forgot-password" element={user ? <Navigate to="/" replace /> : <ForgotPasswordPage setUser={setUser} />} />
           
             <Route path="/profile" element={user ? <ProfilePage user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/dashboard" element={user ? <DashboardPage user={user} /> : <Navigate to="/login" />} />

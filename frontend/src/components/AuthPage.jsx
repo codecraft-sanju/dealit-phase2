@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { User, Lock, Mail, Phone, MapPin, CheckCircle } from 'lucide-react';
-import './AuthPage.css'; // Make sure this CSS file is in the same folder
+import './AuthPage.css'; 
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -82,9 +82,11 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
           setRegisteredEmail(response.data.email || formData.email);
           setShowOtp(true); 
         } else {
+          // NAYA: Direct signup bypass hua toh welcome bonus trigger set karo
+          localStorage.setItem('showWelcomeBonus', 'true');
+          
           setUser(response.data.user);
           localStorage.setItem('dealit_user', JSON.stringify(response.data.user));
-          // NAYA: Token save kar rahe hain iOS ke liye (agar OTP disabled hai)
           if(response.data.token) {
             localStorage.setItem('dealit_token', response.data.token);
           }
@@ -110,9 +112,11 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
       );
       
       if (response.data.success) {
+        // NAYA: OTP verify hote hi welcome bonus trigger set karo
+        localStorage.setItem('showWelcomeBonus', 'true');
+        
         setUser(response.data.user);
         localStorage.setItem('dealit_user', JSON.stringify(response.data.user));
-        // NAYA: Token save kar rahe hain iOS ke liye
         if(response.data.token) {
           localStorage.setItem('dealit_token', response.data.token);
         }
@@ -178,7 +182,6 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                     <input type="password" name="password" placeholder="Password" required value={formData.password} onChange={handleChange} />
                   </div>
 
-                  {/* Half-width inputs mapped to full width for consistency with theme */}
                   <div className="form__input-field">
                     <Phone />
                     <input type="text" name="phone" placeholder="Phone Number" value={formData.phone} onChange={handleChange} />
@@ -229,7 +232,6 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
         {/* Sliding Panels Container */}
         <div className="auth-container__panels">
           
-          {/* Left Panel (Shows when Login is active) */}
           <div className="panel panel__left">
             <div className="panel__content">
               <h3 className="panel__title">New to Dealit?</h3>
@@ -243,7 +245,6 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
             <img className="panel__image" src="https://stories.freepiklabs.com/storage/11588/market-launch-amico-2628.png" alt="Sign up illustration" />
           </div>
           
-          {/* Right Panel (Shows when Signup is active) */}
           <div className="panel panel__right">
             <div className="panel__content">
               <h3 className="panel__title">One of us?</h3>
