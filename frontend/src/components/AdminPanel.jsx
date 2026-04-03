@@ -3,11 +3,11 @@ import { Navigate } from 'react-router-dom';
 import { 
   Shield, Users, Package, Trash2, X, CheckCircle, Edit, List, AlertTriangle, Eye, Coins, User, 
   ShieldAlert, ShieldCheck, Mail, Phone, MapPin, Calendar, Wallet, Image as ImageIcon, Plus, 
-  UploadCloud, Check, ToggleLeft, ToggleRight, Layers,
-  // NAYE ICONS FOR CATEGORY:
+  Check, ToggleLeft, ToggleRight, Layers,
   Car, Monitor, Book, Shirt, Gamepad2, Watch, Home as HomeIcon, Sofa, Music, Utensils, Heart, Briefcase, Camera, Dumbbell, Smartphone
 } from 'lucide-react'; 
 import axios from 'axios';
+import Cropper from 'react-easy-crop';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -15,6 +15,59 @@ const API_URL = `${API_BASE}/api`;
 // Cloudinary Credentials
 const UPLOAD_PRESET = import.meta.env.VITE_UPLOAD_PRESET || 'salon_preset';
 const CLOUD_NAME = import.meta.env.VITE_CLOUD_NAME || 'dvoenforj';
+
+// --- Image Cropping Helper Functions ---
+const createImage = (url) =>
+  new Promise((resolve, reject) => {
+    const image = new Image();
+    image.addEventListener('load', () => resolve(image));
+    image.addEventListener('error', (error) => reject(error));
+    image.setAttribute('crossOrigin', 'anonymous');
+    image.src = url;
+  });
+
+const getCroppedImg = async (imageSrc, pixelCrop) => {
+  const image = await createImage(imageSrc);
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+
+  if (!ctx) return null;
+
+  canvas.width = image.width;
+  canvas.height = image.height;
+  ctx.drawImage(image, 0, 0);
+
+  const croppedCanvas = document.createElement('canvas');
+  const croppedCtx = croppedCanvas.getContext('2d');
+
+  if (!croppedCtx) return null;
+
+  croppedCanvas.width = pixelCrop.width;
+  croppedCanvas.height = pixelCrop.height;
+
+  croppedCtx.drawImage(
+    canvas,
+    pixelCrop.x,
+    pixelCrop.y,
+    pixelCrop.width,
+    pixelCrop.height,
+    0,
+    0,
+    pixelCrop.width,
+    pixelCrop.height
+  );
+
+  return new Promise((resolve, reject) => {
+    croppedCanvas.toBlob((file) => {
+      if (file) {
+        file.name = 'cropped.jpeg';
+        resolve(file);
+      } else {
+        reject(new Error('Canvas is empty'));
+      }
+    }, 'image/jpeg');
+  });
+};
 
 const AdminPanel = ({ user }) => {
   const [activeTab, setActiveTab] = useState('pending'); // 'pending', 'items', 'users', 'offers', 'categories'
@@ -45,15 +98,24 @@ const AdminPanel = ({ user }) => {
   // Offer Modal States
   const [isOfferModalOpen, setIsOfferModalOpen] = useState(false);
   const [editingOfferId, setEditingOfferId] = useState(null);
-  const [offerForm, setOfferForm] = useState({ imageUrl: '', isActive: true });
-  const [uploadingImage, setUploadingImage] = useState(false);
+  const [offerForm, setOfferForm] = useState({ mobileImage: '', desktopImage: '', isActive: true });
+  const [isUploadingMobile, setIsUploadingMobile] = useState(false);
+  const [isUploadingDesktop, setIsUploadingDesktop] = useState(false);
+
+  // Image Cropper States
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState(null);
+  const [cropType, setCropType] = useState('desktop'); // 'desktop' or 'mobile'
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+  const [isProcessingCrop, setIsProcessingCrop] = useState(false);
 
   // Category Modal States
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [editingCategoryId, setEditingCategoryId] = useState(null);
   const [categoryForm, setCategoryForm] = useState({ name: '', icon: 'Package', isActive: true });
 
-  // List of available icons for the category builder
   const AVAILABLE_ICONS = [
     { name: 'Package', icon: Package }, { name: 'Smartphone', icon: Smartphone },
     { name: 'Car', icon: Car }, { name: 'Monitor', icon: Monitor },
@@ -69,7 +131,6 @@ const AdminPanel = ({ user }) => {
     return <Navigate to="/" />;
   }
 
-  // Fetch Data based on Active Tab
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -220,42 +281,79 @@ const AdminPanel = ({ user }) => {
     setIsViewUserModalOpen(true);
   };
 
-  // --- OFFER FUNCTIONS ---
-  const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  // --- OFFER / BANNER FUNCTIONS ---
+  const handleImageSelect = (e, imageType) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.addEventListener('load', () => {
+        setImageToCrop(reader.result);
+        setCropType(imageType);
+        setCrop({ x: 0, y: 0 });
+        setZoom(1);
+        setCropModalOpen(true);
+      });
+      reader.readAsDataURL(file);
+    }
+    e.target.value = null; // Reset input so same file can be selected again if needed
+  };
 
-    setUploadingImage(true);
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', UPLOAD_PRESET);
+  const onCropComplete = (croppedArea, croppedAreaPixels) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  };
 
+  const handleCropAndUpload = async () => {
+    setIsProcessingCrop(true);
     try {
+      const croppedImageBlob = await getCroppedImg(imageToCrop, croppedAreaPixels);
+
+      if (cropType === 'mobile') setIsUploadingMobile(true);
+      else setIsUploadingDesktop(true);
+
+      const formData = new FormData();
+      formData.append('file', croppedImageBlob);
+      formData.append('upload_preset', UPLOAD_PRESET);
+
       const res = await axios.post(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, formData);
-      setOfferForm(prev => ({ ...prev, imageUrl: res.data.secure_url }));
+      
+      if (cropType === 'mobile') {
+        setOfferForm(prev => ({ ...prev, mobileImage: res.data.secure_url }));
+      } else {
+        setOfferForm(prev => ({ ...prev, desktopImage: res.data.secure_url }));
+      }
+      
+      setCropModalOpen(false);
     } catch (error) {
-      console.error('Error uploading image to Cloudinary:', error);
-      alert('Failed to upload image. Please check your credentials or network.');
+      console.error('Error cropping or uploading image:', error);
+      alert('Failed to process and upload image. Please try again.');
     } finally {
-      setUploadingImage(false);
+      setIsProcessingCrop(false);
+      if (cropType === 'mobile') setIsUploadingMobile(false);
+      else setIsUploadingDesktop(false);
     }
   };
 
   const handleAddOfferClick = () => {
     setEditingOfferId(null);
-    setOfferForm({ imageUrl: '', isActive: true });
+    setOfferForm({ mobileImage: '', desktopImage: '', isActive: true });
     setIsOfferModalOpen(true);
   };
 
   const handleEditOfferClick = (offer) => {
     setEditingOfferId(offer._id);
-    setOfferForm({ imageUrl: offer.imageUrl, isActive: offer.isActive });
+    setOfferForm({ 
+      mobileImage: offer.mobileImage || '', 
+      desktopImage: offer.desktopImage || '', 
+      isActive: offer.isActive 
+    });
     setIsOfferModalOpen(true);
   };
 
   const handleOfferSubmit = async (e) => {
     e.preventDefault();
-    if (!offerForm.imageUrl) return alert('Please upload or provide an image URL');
+    if (!offerForm.mobileImage || !offerForm.desktopImage) {
+      return alert('Please provide both Mobile and Desktop images for the banner.');
+    }
     setUpdating(true);
 
     try {
@@ -505,8 +603,22 @@ const AdminPanel = ({ user }) => {
                     ) : activeTab === 'offers' ? (
                       <>
                         <td className="px-6 py-4">
-                          <div className="w-48 h-20 bg-gray-800 rounded-xl overflow-hidden border border-gray-700 shadow-sm">
-                            <img src={row.imageUrl} alt="Banner" className={`w-full h-full object-cover ${!row.isActive ? 'grayscale opacity-50' : ''}`} />
+                          <div className="flex items-center gap-4">
+                            {/* Desktop Preview */}
+                            <div className="relative group/img">
+                              <div className="w-32 h-14 bg-gray-800 rounded-lg overflow-hidden border border-gray-700 shadow-sm">
+                                <img src={row.desktopImage} alt="Desktop" className={`w-full h-full object-cover ${!row.isActive ? 'grayscale opacity-50' : ''}`} />
+                              </div>
+                              <span className="absolute -top-2 -right-2 bg-gray-700 text-[9px] font-bold px-1.5 py-0.5 rounded text-white border border-gray-600">Desktop</span>
+                            </div>
+                            
+                            {/* Mobile Preview */}
+                            <div className="relative group/img">
+                              <div className="w-14 h-14 bg-gray-800 rounded-lg overflow-hidden border border-gray-700 shadow-sm">
+                                <img src={row.mobileImage} alt="Mobile" className={`w-full h-full object-cover ${!row.isActive ? 'grayscale opacity-50' : ''}`} />
+                              </div>
+                              <span className="absolute -top-2 -right-2 bg-gray-700 text-[9px] font-bold px-1.5 py-0.5 rounded text-white border border-gray-600">Mobile</span>
+                            </div>
                           </div>
                         </td>
                         <td className="px-6 py-4">
@@ -1005,7 +1117,6 @@ const AdminPanel = ({ user }) => {
                   />
                 </div>
 
-                {/* NAYA: Icon Selection UI */}
                 <div>
                   <label className="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-wide">Select Icon</label>
                   <div className="flex gap-3 overflow-x-auto admin-scroll pb-2">
@@ -1059,12 +1170,13 @@ const AdminPanel = ({ user }) => {
         </div>
       )}
 
-      {/* Offers Modal */}
+      {/* Offers Modal - Banner Form */}
       {isOfferModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/60 backdrop-blur-md transition-opacity">
-          <div className="bg-gray-800 w-full max-w-lg rounded-3xl border border-gray-700 shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
-            <div className="p-5 border-b border-gray-700 flex justify-between items-center bg-gray-900/80 backdrop-blur-md">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 py-4 bg-black/60 backdrop-blur-md transition-opacity">
+          <div className="bg-gray-800 w-full max-w-2xl rounded-3xl border border-gray-700 shadow-2xl overflow-hidden flex flex-col max-h-full animate-in zoom-in-95 duration-200">
+            <div className="p-5 border-b border-gray-700 flex justify-between items-center bg-gray-900/80 backdrop-blur-md shrink-0">
               <h2 className="text-xl font-black text-white flex items-center gap-2">
+                {/* CHANGED: Icon color and title to match the exact ratio context */}
                 {editingOfferId ? <Edit className="w-6 h-6 text-[#A388E1]" /> : <ImageIcon className="w-6 h-6 text-[#A388E1]" />} 
                 {editingOfferId ? 'Update Banner' : 'Upload New Banner'}
               </h2>
@@ -1073,53 +1185,84 @@ const AdminPanel = ({ user }) => {
               </button>
             </div>
             
-            <div className="p-6">
-              <form id="offerForm" onSubmit={handleOfferSubmit} className="space-y-6">
+            <div className="p-6 overflow-y-auto admin-scroll">
+              <form id="offerForm" onSubmit={handleOfferSubmit} className="space-y-8">
                 
-                {/* Image Upload Area */}
-                <div>
-                  <label className="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-wide">Banner Image</label>
-                  
-                  {offerForm.imageUrl ? (
-                    <div className="relative w-full h-40 bg-gray-900 rounded-2xl border-2 border-gray-700 overflow-hidden group">
-                      <img src={offerForm.imageUrl} alt="Banner Preview" className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
-                        <label className="cursor-pointer bg-white text-gray-900 px-4 py-2 rounded-xl font-bold text-sm hover:bg-gray-200 transition-all">
-                          Change Image
-                          <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingImage} />
-                        </label>
-                      </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Desktop Image Area */}
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-300 uppercase tracking-wide">Desktop Banner</label>
+                      {/* CHANGED: Text recommendation to 5:1 */}
+                      <span className="text-[10px] text-gray-500 font-medium">Recommended: 1200x240 (Landscape 5:1)</span>
                     </div>
-                  ) : (
-                    <label className="w-full h-40 border-2 border-dashed border-gray-600 hover:border-[#A388E1] bg-gray-900 rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-colors group">
-                      {uploadingImage ? (
-                        <>
-                          <div className="w-8 h-8 border-4 border-[#A388E1]/30 border-t-[#A388E1] rounded-full animate-spin mb-2"></div>
-                          <span className="text-sm font-medium text-[#A388E1]">Uploading to Cloudinary...</span>
-                        </>
-                      ) : (
-                        <>
-                          <div className="p-3 bg-gray-800 rounded-full group-hover:bg-[#A388E1]/20 transition-colors mb-2">
-                            <UploadCloud className="w-8 h-8 text-gray-400 group-hover:text-[#A388E1] transition-colors" />
-                          </div>
-                          <span className="text-sm font-medium text-gray-400 group-hover:text-[#A388E1] transition-colors">Click to upload banner image</span>
-                          <span className="text-xs text-gray-500 mt-1">Recommended size: 800x400 (Landscape)</span>
-                        </>
-                      )}
-                      <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingImage} />
-                    </label>
-                  )}
-                  
-                  {/* Option to paste URL manually just in case */}
-                  <div className="mt-4">
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Or paste image URL directly</label>
-                    <input 
-                      type="text" 
-                      value={offerForm.imageUrl} 
-                      onChange={(e) => setOfferForm({ ...offerForm, imageUrl: e.target.value })} 
-                      className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-[#A388E1] transition-all"
-                      placeholder="https://example.com/image.jpg"
-                    />
+                    
+                    {offerForm.desktopImage ? (
+                      <div className="relative w-full h-36 bg-gray-900 rounded-2xl border-2 border-gray-700 overflow-hidden group">
+                        <img src={offerForm.desktopImage} alt="Desktop Preview" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+                          <label className="cursor-pointer bg-white text-gray-900 px-3 py-1.5 rounded-xl font-bold text-xs hover:bg-gray-200 transition-all">
+                            Crop & Change
+                            <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageSelect(e, 'desktop')} disabled={isUploadingDesktop || isProcessingCrop} />
+                          </label>
+                        </div>
+                      </div>
+                    ) : (
+                      <label className="w-full h-36 border-2 border-dashed border-gray-600 hover:border-[#A388E1] bg-gray-900 rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-colors group">
+                        {isUploadingDesktop ? (
+                          <>
+                            <div className="w-6 h-6 border-4 border-[#A388E1]/30 border-t-[#A388E1] rounded-full animate-spin mb-2"></div>
+                            <span className="text-xs font-medium text-[#A388E1]">Uploading...</span>
+                          </>
+                        ) : (
+                          <>
+                            <div className="p-2 bg-gray-800 rounded-full group-hover:bg-[#A388E1]/20 transition-colors mb-2">
+                              <Monitor className="w-6 h-6 text-gray-400 group-hover:text-[#A388E1] transition-colors" />
+                            </div>
+                            <span className="text-xs font-medium text-gray-400 group-hover:text-[#A388E1] transition-colors">Upload Desktop Image</span>
+                          </>
+                        )}
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageSelect(e, 'desktop')} disabled={isUploadingDesktop || isProcessingCrop} />
+                      </label>
+                    )}
+                  </div>
+
+                  {/* Mobile Image Area */}
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-300 uppercase tracking-wide">Mobile Banner</label>
+                      {/* CHANGED: Text recommendation to 2.5:1 */}
+                      <span className="text-[10px] text-gray-500 font-medium">Recommended: 800x320 (Landscape 2.5:1)</span>
+                    </div>
+                    
+                    {offerForm.mobileImage ? (
+                      <div className="relative w-full h-36 bg-gray-900 rounded-2xl border-2 border-gray-700 overflow-hidden group flex justify-center">
+                        <img src={offerForm.mobileImage} alt="Mobile Preview" className="w-auto h-full object-contain" />
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+                          <label className="cursor-pointer bg-white text-gray-900 px-3 py-1.5 rounded-xl font-bold text-xs hover:bg-gray-200 transition-all">
+                            Crop & Change
+                            <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageSelect(e, 'mobile')} disabled={isUploadingMobile || isProcessingCrop} />
+                          </label>
+                        </div>
+                      </div>
+                    ) : (
+                      <label className="w-full h-36 border-2 border-dashed border-gray-600 hover:border-[#A388E1] bg-gray-900 rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-colors group">
+                        {isUploadingMobile ? (
+                          <>
+                            <div className="w-6 h-6 border-4 border-[#A388E1]/30 border-t-[#A388E1] rounded-full animate-spin mb-2"></div>
+                            <span className="text-xs font-medium text-[#A388E1]">Uploading...</span>
+                          </>
+                        ) : (
+                          <>
+                            <div className="p-2 bg-gray-800 rounded-full group-hover:bg-[#A388E1]/20 transition-colors mb-2">
+                              <Smartphone className="w-6 h-6 text-gray-400 group-hover:text-[#A388E1] transition-colors" />
+                            </div>
+                            <span className="text-xs font-medium text-gray-400 group-hover:text-[#A388E1] transition-colors">Upload Mobile Image</span>
+                          </>
+                        )}
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageSelect(e, 'mobile')} disabled={isUploadingMobile || isProcessingCrop} />
+                      </label>
+                    )}
                   </div>
                 </div>
 
@@ -1139,16 +1282,75 @@ const AdminPanel = ({ user }) => {
               </form>
             </div>
             
-            <div className="p-5 border-t border-gray-700 bg-gray-900/80 backdrop-blur-md flex justify-end gap-3">
+            <div className="p-5 border-t border-gray-700 bg-gray-900/80 backdrop-blur-md flex justify-end gap-3 shrink-0">
               <button type="button" onClick={() => setIsOfferModalOpen(false)} className="px-6 py-2.5 rounded-xl font-bold text-gray-400 hover:text-white transition-all">Cancel</button>
               <button 
                 type="submit" 
                 form="offerForm" 
-                disabled={updating || uploadingImage} 
-                className={`px-8 py-2.5 rounded-xl font-bold transition-all flex items-center gap-2 ${updating || uploadingImage ? 'bg-[#A388E1]/50 text-white/50 cursor-not-allowed' : 'bg-[#A388E1] hover:bg-[#8b70ca] text-white shadow-[0_0_15px_rgba(163,136,225,0.4)]'}`}
+                disabled={updating || isUploadingMobile || isUploadingDesktop || isProcessingCrop} 
+                className={`px-8 py-2.5 rounded-xl font-bold transition-all flex items-center gap-2 ${updating || isUploadingMobile || isUploadingDesktop || isProcessingCrop ? 'bg-[#A388E1]/50 text-white/50 cursor-not-allowed' : 'bg-[#A388E1] hover:bg-[#8b70ca] text-white shadow-[0_0_15px_rgba(163,136,225,0.4)]'}`}
               >
                 {updating ? 'Saving...' : editingOfferId ? 'Update Banner' : 'Publish Banner'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Interactive Crop Modal */}
+      {cropModalOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center px-4 py-4 bg-black/80 backdrop-blur-sm transition-opacity">
+          <div className="bg-gray-800 w-full max-w-3xl rounded-3xl border border-gray-700 shadow-2xl overflow-hidden flex flex-col h-[80vh] animate-in zoom-in-95 duration-200">
+            <div className="p-5 border-b border-gray-700 flex justify-between items-center bg-gray-900/80 backdrop-blur-md shrink-0">
+              <h2 className="text-xl font-black text-white flex items-center gap-2">
+                <ImageIcon className="w-6 h-6 text-[#A388E1]" /> 
+                {/* CHANGED: Dynamic title to reflect correct ratios */}
+                Crop {cropType === 'desktop' ? 'Desktop (5:1)' : 'Mobile (2.5:1)'} Banner
+              </h2>
+              <button onClick={() => setCropModalOpen(false)} className="text-gray-400 hover:text-white transition-all p-2 bg-gray-800 hover:bg-gray-700 rounded-full">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="relative flex-1 bg-black w-full h-full">
+              {imageToCrop && (
+                <Cropper
+                  image={imageToCrop}
+                  crop={crop}
+                  zoom={zoom}
+               
+                  aspect={cropType === 'desktop' ? 5 / 1 : 2.5 / 1}
+                  onCropChange={setCrop}
+                  onCropComplete={onCropComplete}
+                  onZoomChange={setZoom}
+                />
+              )}
+            </div>
+
+            <div className="p-5 border-t border-gray-700 bg-gray-900/80 backdrop-blur-md flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0">
+              <div className="flex items-center gap-3 w-full sm:w-1/2">
+                <span className="text-gray-400 text-sm font-bold">Zoom</span>
+                <input
+                  type="range"
+                  value={zoom}
+                  min={1}
+                  max={3}
+                  step={0.1}
+                  aria-labelledby="Zoom"
+                  onChange={(e) => setZoom(e.target.value)}
+                  className="w-full accent-[#A388E1]"
+                />
+              </div>
+              <div className="flex gap-3 w-full sm:w-auto justify-end">
+                <button type="button" onClick={() => setCropModalOpen(false)} className="px-6 py-2.5 rounded-xl font-bold text-gray-400 hover:text-white transition-all">Cancel</button>
+                <button
+                  onClick={handleCropAndUpload}
+                  disabled={isProcessingCrop}
+                  className={`px-8 py-2.5 rounded-xl font-bold transition-all flex items-center gap-2 ${isProcessingCrop ? 'bg-[#A388E1]/50 text-white/50 cursor-not-allowed' : 'bg-[#A388E1] hover:bg-[#8b70ca] text-white shadow-[0_0_15px_rgba(163,136,225,0.4)]'}`}
+                >
+                  {isProcessingCrop ? 'Processing...' : 'Crop & Upload'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -1,9 +1,12 @@
-
 const mongoose = require('mongoose');
 
 const offerSchema = new mongoose.Schema(
   {
-    imageUrl: {
+    mobileImage: {
+      type: String,
+      required: true,
+    },
+    desktopImage: {
       type: String,
       required: true,
     },

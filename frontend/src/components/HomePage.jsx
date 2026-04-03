@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Package, Coins, ChevronRight, Plus, UserCircle,
@@ -49,19 +49,21 @@ const HomePage = ({ user }) => {
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [activeCategory, setActiveCategory] = useState('All');
 
-  // Celebration States for Welcome Bonus
   const [showCelebration, setShowCelebration] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
-  // Check for Welcome Bonus flag on mount
+  const scrollRef = useRef(null);
+  const isDown = useRef(false);
+  const startX = useRef(0);
+  const scrollLeftPos = useRef(0);
+
   useEffect(() => {
     if (user) {
       const checkWelcomeBonus = localStorage.getItem('showWelcomeBonus');
       if (checkWelcomeBonus === 'true') {
         setShowCelebration(true);
-        // Flag remove kar do taaki dobara refresh karne pe na dikhe
         localStorage.removeItem('showWelcomeBonus');
         
-        // Auto hide celebration after 5.5 seconds (same as wallet)
         setTimeout(() => {
           setShowCelebration(false);
         }, 5500);
@@ -100,6 +102,24 @@ const HomePage = ({ user }) => {
   }, []);
 
   useEffect(() => {
+    if (offers.length <= 1 || isHovered) return;
+
+    const interval = setInterval(() => {
+      if (scrollRef.current) {
+        const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+        
+        if (scrollLeft + clientWidth >= scrollWidth - 10) {
+          scrollRef.current.scrollTo({ left: 0, behavior: 'smooth' });
+        } else {
+          scrollRef.current.scrollBy({ left: clientWidth, behavior: 'smooth' });
+        }
+      }
+    }, 3500);
+
+    return () => clearInterval(interval);
+  }, [offers, isHovered]);
+
+  useEffect(() => {
     const fetchItems = async () => {
       setLoading(true);
       try {
@@ -118,7 +138,43 @@ const HomePage = ({ user }) => {
     fetchItems(); 
   }, [activeCategory]);
 
-  // Golden gradients to mimic shiny coins
+  const handleMouseDown = (e) => {
+    isDown.current = true;
+    if (scrollRef.current) {
+      scrollRef.current.style.scrollBehavior = 'auto';
+      scrollRef.current.classList.remove('snap-x', 'snap-mandatory');
+    }
+    startX.current = e.pageX - scrollRef.current.offsetLeft;
+    scrollLeftPos.current = scrollRef.current.scrollLeft;
+  };
+
+  const handleMouseLeave = () => {
+    isDown.current = false;
+    setIsHovered(false);
+    if (scrollRef.current) {
+      scrollRef.current.style.scrollBehavior = 'smooth';
+      scrollRef.current.classList.add('snap-x', 'snap-mandatory');
+    }
+  };
+
+  const handleMouseUp = () => {
+    isDown.current = false;
+    if (scrollRef.current) {
+      scrollRef.current.style.scrollBehavior = 'smooth';
+      scrollRef.current.classList.add('snap-x', 'snap-mandatory');
+    }
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDown.current) return;
+    e.preventDefault();
+    const x = e.pageX - scrollRef.current.offsetLeft;
+    const walk = (x - startX.current) * 2;
+    if (scrollRef.current) {
+      scrollRef.current.scrollLeft = scrollLeftPos.current - walk;
+    }
+  };
+
   const coinGradients = [
     'radial-gradient(circle, #FFF099 20%, #FBBF24 80%, #D97706 100%)',
     'radial-gradient(circle, #FEF08A 20%, #F59E0B 80%, #B45309 100%)',
@@ -130,7 +186,6 @@ const HomePage = ({ user }) => {
     <div className="max-w-md mx-auto bg-white min-h-screen pb-24 md:pb-0 md:max-w-7xl md:px-0 relative overflow-hidden">
       <div className="px-4 pt-3 pb-0">
         
-        {/* Hero Cards */}
         <div className="grid grid-cols-5 gap-2 mb-3">
           <div className="col-span-3 bg-white border border-[#EBE5F7] rounded-2xl p-3 flex flex-col justify-center h-full">
             <h1 className="text-sm md:text-base font-bold text-gray-900 leading-tight mb-1">
@@ -143,7 +198,6 @@ const HomePage = ({ user }) => {
           {user ? (
             <div className={`col-span-2 bg-gradient-to-br from-[#A388E1] to-[#b7a3eb] rounded-2xl p-2.5 text-white shadow-lg shadow-[#A388E1]/30 flex flex-col justify-between h-full relative overflow-hidden transition-all duration-1000 ${showCelebration ? 'shadow-yellow-400/50 scale-[1.02]' : ''}`}>
               
-              {/* 1 RS = 1 Credit Badge */}
               <div className="absolute top-2 right-2 bg-white/20 px-1.5 py-[2px] rounded text-[8px] font-semibold border border-white/20 backdrop-blur-sm tracking-wide z-10">
                 ₹1 = 1 Credit
               </div>
@@ -155,7 +209,6 @@ const HomePage = ({ user }) => {
                 <div className="flex items-end gap-1">
                   <span className="text-lg font-bold leading-none relative">
                     {user.account_credits || 0}
-                    {/* Magical floating addition text on Home page */}
                     {showCelebration && (
                       <span className="absolute -top-5 -right-12 text-sm text-yellow-300 font-black floating-up drop-shadow-[0_0_8px_rgba(253,224,71,0.8)] flex items-center z-10">
                         +50 <Sparkles className="w-3 h-3 ml-0.5 animate-spin" />
@@ -188,28 +241,40 @@ const HomePage = ({ user }) => {
           )}
         </div>
 
-        {/* Offers Banner */}
         {loadingOffers ? (
           <div className="mb-0">
             <div className="flex overflow-x-auto hide-scrollbar gap-3 pb-0">
-              <div className="w-full h-[140px] sm:h-[160px] md:h-[180px] flex-shrink-0 rounded-2xl bg-[#F8F6FF] border border-gray-50 animate-pulse flex items-center justify-center">
+              <div className="w-full h-[140px] sm:h-[160px] md:h-[220px] flex-shrink-0 rounded-2xl bg-[#F8F6FF] border border-gray-50 animate-pulse flex items-center justify-center">
                 <div className="w-full h-full bg-[#EBE5F7] rounded-2xl"></div>
               </div>
             </div>
           </div>
         ) : offers.length > 0 ? (
           <div className="mb-0">
-            <div className="flex overflow-x-auto hide-scrollbar gap-3 snap-x snap-mandatory pb-0">
+            <div 
+              ref={scrollRef}
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={handleMouseLeave}
+              onMouseDown={handleMouseDown}
+              onMouseUp={handleMouseUp}
+              onMouseMove={handleMouseMove}
+              onTouchStart={() => setIsHovered(true)}
+              onTouchEnd={() => setIsHovered(false)}
+              className="flex overflow-x-auto hide-scrollbar gap-3 snap-x snap-mandatory pb-0 scroll-smooth cursor-grab active:cursor-grabbing"
+            >
               {offers.map((offer) => (
                 <div 
                   key={offer._id} 
-                  className="w-full h-[140px] sm:h-[160px] md:h-[180px] flex-shrink-0 snap-center rounded-2xl overflow-hidden shadow-sm border border-gray-100 relative bg-gray-50"
+                  className="w-full h-[140px] sm:h-[160px] md:h-[220px] flex-shrink-0 snap-center rounded-2xl overflow-hidden shadow-sm border border-gray-100 relative bg-gray-50"
                 >
-                  <img 
-                    src={offer.imageUrl} 
-                    alt="Special Offer" 
-                    className="w-full h-full object-cover"
-                  />
+                  <picture className="w-full h-full block pointer-events-none">
+                    <source media="(min-width: 768px)" srcSet={offer.desktopImage} />
+                    <img 
+                      src={offer.mobileImage} 
+                      alt="Special Offer" 
+                      className="w-full h-full object-cover"
+                    />
+                  </picture>
                 </div>
               ))}
             </div>
@@ -218,7 +283,6 @@ const HomePage = ({ user }) => {
 
       </div>
 
-      {/* Categories */}
       <div className="px-4 pt-1.5 pb-0">
         <div className="flex gap-3 overflow-x-auto hide-scrollbar items-center pb-0">
           
@@ -300,7 +364,6 @@ const HomePage = ({ user }) => {
         </div>
       </div>
 
-      {/* Items Section */}
       <div className="px-4 pt-1.5 pb-0">
         <div className="flex justify-between items-center mb-1">
           <h2 className="text-lg font-bold text-gray-900">
@@ -334,7 +397,6 @@ const HomePage = ({ user }) => {
         )}
       </div>
 
-      {/* Got Unused Items Banner */}
       <div className="px-4 pt-1.5 pb-1">
         <div className="bg-[#EBE5F7] rounded-2xl p-4 relative overflow-hidden">
           <div className="w-3/4 relative z-10">
@@ -355,7 +417,6 @@ const HomePage = ({ user }) => {
         </div>
       </div>
 
-      {/* Social Proof Section */}
       <div className="px-4 pb-2 pt-1">
         <div className="flex items-center gap-2.5 px-1">
           
@@ -395,10 +456,8 @@ const HomePage = ({ user }) => {
         </div>
       </div>
 
-      {/* --- PREMIUM COIN SHOWER OVERLAY --- */}
       {showCelebration && (
         <div className="fixed inset-0 z-[100] pointer-events-none overflow-hidden">
-          {/* Coin Generator */}
           {[...Array(30)].map((_, i) => {
             const size = Math.random() * 16 + 12; 
             const isSparkle = i % 5 === 0; 

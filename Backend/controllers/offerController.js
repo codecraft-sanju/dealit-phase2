@@ -2,11 +2,11 @@ const Offer = require('../models/Offer');
 
 const addOffer = async (req, res) => {
   try {
-    const { imageUrl } = req.body;
-    if (!imageUrl) {
-      return res.status(400).json({ success: false, message: 'Image URL is required' });
+    const { mobileImage, desktopImage } = req.body;
+    if (!mobileImage || !desktopImage) {
+      return res.status(400).json({ success: false, message: 'Both mobile and desktop image URLs are required' });
     }
-    const offer = await Offer.create({ imageUrl });
+    const offer = await Offer.create({ mobileImage, desktopImage });
     res.status(201).json({ success: true, data: offer });
   } catch (error) {
     console.error(error);
@@ -40,12 +40,13 @@ const deleteOffer = async (req, res) => {
 
 const updateOffer = async (req, res) => {
   try {
-    const { imageUrl, isActive } = req.body;
+    const { mobileImage, desktopImage, isActive } = req.body;
     
     const offer = await Offer.findByIdAndUpdate(
       req.params.id,
       { 
-        ...(imageUrl && { imageUrl }), 
+        ...(mobileImage && { mobileImage }), 
+        ...(desktopImage && { desktopImage }),
         ...(isActive !== undefined && { isActive }) 
       },
       { new: true, runValidators: true }
