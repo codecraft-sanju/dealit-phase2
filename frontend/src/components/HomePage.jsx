@@ -49,10 +49,10 @@ const HomePage = ({ user }) => {
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [activeCategory, setActiveCategory] = useState('All');
 
-  // NAYA: Celebration States for Welcome Bonus
+  // Celebration States for Welcome Bonus
   const [showCelebration, setShowCelebration] = useState(false);
 
-  // NAYA: Check for Welcome Bonus flag on mount
+  // Check for Welcome Bonus flag on mount
   useEffect(() => {
     if (user) {
       const checkWelcomeBonus = localStorage.getItem('showWelcomeBonus');
@@ -126,12 +126,13 @@ const HomePage = ({ user }) => {
   ];
 
   return (
-    <div className="max-w-md mx-auto bg-white min-h-[calc(100vh-64px)] pb-4 md:min-h-screen md:pb-0 md:max-w-7xl md:px-0 relative overflow-hidden">
+  
+    <div className="max-w-md mx-auto bg-white min-h-screen pb-24 md:pb-0 md:max-w-7xl md:px-0 relative overflow-hidden">
       <div className="px-4 pt-3 pb-0">
         
         {/* Hero Cards */}
         <div className="grid grid-cols-5 gap-2 mb-3">
-          <div className="col-span-3 bg-[#F8F6FF] border border-[#EBE5F7] rounded-2xl p-3 flex flex-col justify-center h-full">
+          <div className="col-span-3 bg-white border border-[#EBE5F7] rounded-2xl p-3 flex flex-col justify-center h-full">
             <h1 className="text-sm md:text-base font-bold text-gray-900 leading-tight mb-1">
               Turn unused items into <br />
               things you <span className="text-[#A388E1]">want</span>
@@ -141,6 +142,12 @@ const HomePage = ({ user }) => {
 
           {user ? (
             <div className={`col-span-2 bg-gradient-to-br from-[#A388E1] to-[#b7a3eb] rounded-2xl p-2.5 text-white shadow-lg shadow-[#A388E1]/30 flex flex-col justify-between h-full relative overflow-hidden transition-all duration-1000 ${showCelebration ? 'shadow-yellow-400/50 scale-[1.02]' : ''}`}>
+              
+              {/* 1 RS = 1 Credit Badge */}
+              <div className="absolute top-2 right-2 bg-white/20 px-1.5 py-[2px] rounded text-[8px] font-semibold border border-white/20 backdrop-blur-sm tracking-wide z-10">
+                ₹1 = 1 Credit
+              </div>
+
               <div>
                 <div className={`bg-yellow-400 p-1 rounded-full inline-flex items-center justify-center mb-1.5 transition-transform duration-700 ${showCelebration ? 'rotate-180 scale-110' : ''}`}>
                   <Coins className="w-3.5 h-3.5 text-yellow-900" />
