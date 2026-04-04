@@ -244,7 +244,7 @@ const HomePage = ({ user }) => {
         {loadingOffers ? (
           <div className="mb-0">
             <div className="flex overflow-x-auto hide-scrollbar gap-3 pb-0">
-              <div className="w-full h-[140px] sm:h-[160px] md:h-[220px] flex-shrink-0 rounded-2xl bg-[#F8F6FF] border border-gray-50 animate-pulse flex items-center justify-center">
+              <div className="w-full aspect-[5/2] md:aspect-[5/1] flex-shrink-0 rounded-2xl bg-[#F8F6FF] border border-gray-50 animate-pulse flex items-center justify-center">
                 <div className="w-full h-full bg-[#EBE5F7] rounded-2xl"></div>
               </div>
             </div>
@@ -265,7 +265,7 @@ const HomePage = ({ user }) => {
               {offers.map((offer) => (
                 <div 
                   key={offer._id} 
-                  className="w-full h-[140px] sm:h-[160px] md:h-[220px] flex-shrink-0 snap-center rounded-2xl overflow-hidden shadow-sm border border-gray-100 relative bg-gray-50"
+                  className="w-full aspect-[5/2] md:aspect-[5/1] flex-shrink-0 snap-center rounded-2xl overflow-hidden shadow-sm border border-gray-100 relative bg-gray-50"
                 >
                   <picture className="w-full h-full block pointer-events-none">
                     <source media="(min-width: 768px)" srcSet={offer.desktopImage} />
