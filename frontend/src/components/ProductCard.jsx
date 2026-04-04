@@ -11,9 +11,12 @@ const ProductCard = ({ item, isLoading, className = '' }) => {
         <div>
           <div className="h-2.5 w-full bg-[#EBE5F7] rounded-md mb-1.5"></div>
           <div className="h-2.5 w-2/3 bg-[#EBE5F7] rounded-md mb-2"></div>
-          <div className="flex items-center gap-1.5 mt-1.5">
-            <div className="w-3.5 h-3.5 rounded-full bg-[#EBE5F7]"></div>
-            <div className="h-2.5 w-8 bg-[#EBE5F7] rounded-md"></div>
+          <div className="flex items-center justify-between mt-1.5">
+            <div className="flex items-center gap-1.5">
+              <div className="w-3.5 h-3.5 rounded-full bg-[#EBE5F7]"></div>
+              <div className="h-2.5 w-8 bg-[#EBE5F7] rounded-md"></div>
+            </div>
+            <div className="h-3 w-12 bg-[#EBE5F7] rounded-md"></div>
           </div>
         </div>
       </div>
@@ -37,12 +40,19 @@ const ProductCard = ({ item, isLoading, className = '' }) => {
       
       <div>
         <h3 className="text-xs font-bold text-gray-900 leading-tight mb-1 line-clamp-2">{item.title}</h3>
-        <div className="flex items-center gap-1 mt-1.5">
-          <div className="bg-yellow-100 rounded-full p-0.5">
-            <Coins className="w-2.5 h-2.5 text-yellow-600" />
+        <div className="flex items-center justify-between mt-1.5">
+          <div className="flex items-center gap-1">
+            <div className="bg-yellow-100 rounded-full p-0.5">
+              <Coins className="w-2.5 h-2.5 text-yellow-600" />
+            </div>
+            <span className="font-bold text-gray-900 text-xs">{item.estimated_value || '0'}</span>
           </div>
-          <span className="font-bold text-gray-900 text-xs">{item.estimated_value || '0'}</span>
-          <span className="text-[10px] text-gray-400 line-through ml-1">₹{((item.estimated_value || 0) * 1.6).toFixed(0)}</span>
+          
+          {item.category && (
+            <span className="text-[9px] font-medium text-[#A388E1] bg-[#EBE5F7] px-1.5 py-0.5 rounded-md truncate max-w-[65px]">
+              {item.category}
+            </span>
+          )}
         </div>
       </div>
     </Link>

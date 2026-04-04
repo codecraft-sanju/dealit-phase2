@@ -28,34 +28,41 @@ const createItem = async (req, res) => {
 };
 
 const getItems = async (req, res) => {
-  try {
-    // 1. Frontend se aayi hui category ko URL (query) se nikalte hain
-    const { category } = req.query;
+  try {
+ 
+    const { category, limit } = req.query;
 
-    // 2. Base condition banate hain (sirf active aur 0 se zyada value wale)
-    let queryCondition = { 
-      status: 'active',
-      estimated_value: { $gt: 0 } 
-    };
+    let queryCondition = { 
+      status: 'active',
+      estimated_value: { $gt: 0 } 
+    };
 
-    // 3. Agar frontend ne koi specific category bheji hai (aur wo 'All' nahi hai), toh condition me add kar do
-    if (category && category !== 'All') {
-      queryCondition.category = category;
-    }
 
-    // 4. Ab is updated condition ke sath database me search karo
-    const items = await Item.find(queryCondition)
-      .populate('owner', 'full_name city email')
-      .sort({ created_at: -1 }); // Latest pehle
-    
-    res.status(200).json({ success: true, count: items.length, data: items });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: 'Server Error' });
-  }
+    if (category && category !== 'All') {
+      queryCondition.category = category;
+    }
+
+ 
+    let itemsQuery = Item.find(queryCondition)
+      .populate('owner', 'full_name city email')
+      .sort({ created_at: -1 }); // Latest pehle
+
+  
+    if (limit) {
+      itemsQuery = itemsQuery.limit(parseInt(limit, 10));
+    }
+
+   
+    const items = await itemsQuery;
+    
+    res.status(200).json({ success: true, count: items.length, data: items });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
 };
 
-// Sirf logged-in user ke khud ke items laane ke liye
+
 const getMyItems = async (req, res) => {
   try {
     const items = await Item.find({ owner: req.user._id }).sort({ created_at: -1 });
@@ -128,7 +135,7 @@ const deleteItem = async (req, res) => {
   }
 };
 
-// NAYA: Search items functionality added here
+
 const searchItems = async (req, res) => {
   try {
     const { q } = req.query;

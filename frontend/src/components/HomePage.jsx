@@ -86,7 +86,6 @@ const HomePage = ({ user }) => {
 
     const fetchCategories = async () => {
       try {
-        // CHANGE: Added ?activeOnly=true to the categories API call
         const response = await axios.get(`${API_URL}/categories?activeOnly=true`);
         if (response.data.success) {
           setCategories(response.data.data);
@@ -125,8 +124,8 @@ const HomePage = ({ user }) => {
       setLoading(true);
       try {
         const url = activeCategory === 'All' 
-          ? `${API_URL}/items` 
-          : `${API_URL}/items?category=${activeCategory}`;
+          ? `${API_URL}/items?limit=20` 
+          : `${API_URL}/items?category=${activeCategory}&limit=20`;
           
         const response = await axios.get(url);
         setItems(response.data.data);
@@ -183,17 +182,18 @@ const HomePage = ({ user }) => {
   ];
 
   return (
-  
- <div className="max-w-md mx-auto bg-white min-h-[calc(100vh-130px)] md:max-w-7xl md:px-0 relative overflow-hidden">
+    <div className="max-w-md mx-auto bg-white min-h-[calc(100vh-130px)] md:max-w-7xl md:px-0 relative overflow-hidden">
       <div className="px-4 pt-3 pb-0">
         
         <div className="grid grid-cols-5 gap-2 mb-3">
           <div className="col-span-3 bg-white border border-[#EBE5F7] rounded-2xl p-3 flex flex-col justify-center h-full">
-            <h1 className="text-sm md:text-base font-bold text-gray-900 leading-tight mb-1">
-              Turn unused items into <br />
-              things you <span className="text-[#A388E1]">want</span>
+            {/* UPDATED TEXT: Removed <br/>, added responsive sizes, updated content to match image */}
+            <h1 className="text-[14px] sm:text-base md:text-xl font-extrabold text-gray-900 leading-tight mb-1 tracking-tight">
+              Turn unused items into things you <span className="text-[#A388E1]">want</span>
             </h1>
-            <p className="text-[10px] md:text-xs text-gray-500">No money needed!</p>
+            <p className="text-[9px] sm:text-[11px] md:text-sm text-gray-500 font-medium leading-snug">
+              Use your credits to get products instantly
+            </p>
           </div>
 
           {user ? (
