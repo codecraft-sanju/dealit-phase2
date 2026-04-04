@@ -183,7 +183,7 @@ const HomePage = ({ user }) => {
 
   return (
   
-    <div className="max-w-md mx-auto bg-white min-h-screen pb-24 md:pb-0 md:max-w-7xl md:px-0 relative overflow-hidden">
+ <div className="max-w-md mx-auto bg-white min-h-[calc(100vh-130px)] md:max-w-7xl md:px-0 relative overflow-hidden">
       <div className="px-4 pt-3 pb-0">
         
         <div className="grid grid-cols-5 gap-2 mb-3">
