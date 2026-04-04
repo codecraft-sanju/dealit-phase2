@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend:/app          # Yeh tumhare PC ke backend folder ko Docker se link karta hai
+      - /app/node_modules       # Isse local aur docker ke modules mix nahi hote
+    command: npm run dev        # Development me live reload ke liye (nodemon use karna best hai)
+    restart: always
+
+  frontend:
+    build: 
+      context: ./frontend
+      target: build             # Nginx wale stage ko ignore karke sirf Node stage use karega
+    ports:
+      - "5173:5173"             # Vite development me 5173 par hi chalta hai
+    volumes:
+      - ./frontend:/app         # Frontend code ki live linking
+      - /app/node_modules
+    command: npm run dev -- --host  # '--host' zaroori hai taki Docker ke bahar browser me app dikhe
+    depends_on:
+      - backend
+    restart: always
