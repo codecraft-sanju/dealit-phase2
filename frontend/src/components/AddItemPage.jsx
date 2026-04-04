@@ -12,7 +12,6 @@ const AddItemPage = () => {
     title: '',
     description: '',
     category: '',
-    suggested_category: '', 
     condition: '',
     preferred_item: '',
     estimated_value: ''
@@ -89,11 +88,6 @@ const AddItemPage = () => {
 
     if (images.length < 3) {
       setError('Please upload at least 3 images of your item.');
-      return;
-    }
-
-    if (formData.category === 'Other' && !formData.suggested_category.trim()) {
-      setError('Please specify your category.');
       return;
     }
 
@@ -226,22 +220,8 @@ const AddItemPage = () => {
                     <option key={cat._id} value={cat.name}>{cat.name}</option>
                   ))}
                   
-                  <option value="Other">Other (Specify below)</option>
+                  <option value="Other">Other</option>
                 </select>
-
-                {formData.category === 'Other' && (
-                  <div className="mt-3 animate-fade-in-down">
-                    <input 
-                      type="text" 
-                      name="suggested_category" 
-                      required 
-                      value={formData.suggested_category} 
-                      onChange={handleInputChange} 
-                      className="w-full bg-purple-50 border border-purple-200 shadow-sm rounded-xl px-4 py-3.5 text-gray-800 placeholder-purple-400 focus:outline-none focus:ring-2 focus:ring-[#805ad5] focus:border-transparent transition-all" 
-                      placeholder="Type your custom category..." 
-                    />
-                  </div>
-                )}
               </div>
 
               <div>

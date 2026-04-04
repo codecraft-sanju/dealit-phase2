@@ -86,7 +86,8 @@ const HomePage = ({ user }) => {
 
     const fetchCategories = async () => {
       try {
-        const response = await axios.get(`${API_URL}/categories`);
+        // CHANGE: Added ?activeOnly=true to the categories API call
+        const response = await axios.get(`${API_URL}/categories?activeOnly=true`);
         if (response.data.success) {
           setCategories(response.data.data);
         }

@@ -2,8 +2,7 @@ const Item = require('../models/Item');
 
 const createItem = async (req, res) => {
   try {
-    // CHANGED: suggested_category ko bhi destructure kiya
-    const { title, description, category, suggested_category, condition, images, preferred_item, estimated_value } = req.body;
+    const { title, description, category, condition, images, preferred_item, estimated_value } = req.body;
 
     const newItem = new Item({
       supabaseId: `mongo-${Date.now()}`,
@@ -11,10 +10,6 @@ const createItem = async (req, res) => {
       title,
       description,
       category,
-      
-      // NAYA: Agar category 'Other' hai toh suggested save karo, nahi toh blank chhod do
-      suggested_category: category === 'Other' ? suggested_category : '', 
-      
       condition,
       images: images || [],
       preferred_item,
@@ -99,11 +94,6 @@ const updateItem = async (req, res) => {
     }
 
     req.body.updated_at = Date.now();
-
-    // NAYA: Agar update karte time category non-Other select ki hai, toh purana suggestion hata do
-    if (req.body.category && req.body.category !== 'Other') {
-      req.body.suggested_category = '';
-    }
 
     item = await Item.findByIdAndUpdate(req.params.id, req.body, {
       new: true,

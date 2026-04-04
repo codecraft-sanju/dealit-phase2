@@ -1,8 +1,25 @@
 const Category = require('../models/Category');
+const Item = require('../models/Item'); // NAYA: Item model import kiya taaki distinct categories nikal sakein
 
 const getCategories = async (req, res) => {
   try {
-    const categories = await Category.find({ isActive: true }).sort({ name: 1 }); // name ke hisaab se A-Z sort
+    const { activeOnly } = req.query; // Frontend se aane wala query parameter check kar rahe hain
+    
+    let queryCondition = { isActive: true };
+
+    // Agar Home page ne activeOnly=true bheja hai
+    if (activeOnly === 'true') {
+      // Sirf unhi items ki categories nikalo jo active hain aur jinki value 0 se zyada hai
+      const activeCategoryNames = await Item.distinct('category', {
+        status: 'active',
+        estimated_value: { $gt: 0 }
+      });
+      
+      // Query me condition add kar do ki category ka naam in active names me hona chahiye
+      queryCondition.name = { $in: activeCategoryNames };
+    }
+
+    const categories = await Category.find(queryCondition).sort({ name: 1 }); // name ke hisaab se A-Z sort
     
     res.status(200).json({ 
       success: true, 

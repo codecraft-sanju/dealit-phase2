@@ -7,8 +7,6 @@ const itemSchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: { type: String },
   category: { type: String },
-  suggested_category: { type: String }, 
-
   condition: { type: String },
   images: [{ type: String }],
   preferred_item: { type: String },
