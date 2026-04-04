@@ -3,10 +3,11 @@ import { Link } from 'react-router-dom';
 import { Package, Coins } from 'lucide-react';
 
 const ProductCard = ({ item, isLoading, className = '' }) => {
+  // Skeleton Loader State
   if (isLoading) {
     return (
-      <div className={`bg-[#F8F6FF] rounded-2xl p-[max(0.625rem,1.5vh)] relative block border border-gray-50 animate-pulse ${className}`}>
-        <div className="h-[max(5rem,13vh)] w-full bg-[#EBE5F7] rounded-xl mb-2"></div>
+      <div className={`bg-[#F8F6FF] rounded-2xl p-2.5 relative block border border-gray-50 animate-pulse ${className}`}>
+        <div className="h-20 w-full bg-[#EBE5F7] rounded-xl mb-2"></div>
         <div>
           <div className="h-2.5 w-full bg-[#EBE5F7] rounded-md mb-1.5"></div>
           <div className="h-2.5 w-2/3 bg-[#EBE5F7] rounded-md mb-2"></div>
@@ -24,13 +25,13 @@ const ProductCard = ({ item, isLoading, className = '' }) => {
   return (
     <Link 
       to={`/item/${item._id}`} 
-      className={`bg-[#F8F6FF] rounded-2xl p-[max(0.625rem,1.5vh)] relative block hover:shadow-md transition-shadow ${className}`}
+      className={`bg-[#F8F6FF] rounded-2xl p-2.5 relative block hover:shadow-md transition-shadow ${className}`}
     >
-      <div className="h-[max(5rem,13vh)] w-full flex items-center justify-center mb-[max(0.5rem,1vh)]">
+      <div className="h-20 w-full flex items-center justify-center mb-2">
         {item.images && item.images.length > 0 && item.images[0] ? (
           <img src={item.images[0]} alt={item.title} className="max-h-full max-w-full object-contain mix-blend-multiply drop-shadow-md" />
         ) : (
-          <Package className="w-[max(2rem,5vh)] h-[max(2rem,5vh)] text-[#A388E1]/40" />
+          <Package className="w-8 h-8 text-[#A388E1]/40" />
         )}
       </div>
       
