@@ -2,15 +2,15 @@ version: '3.8'
 
 services:
   backend:
-    build: ./backend
+    build: ./Backend  # Yahan 'B' capital kar do kyunki tumhare folder ka naam 'Backend' hai
     ports:
-      - "5000:5000" 
-    restart: always 
+      - "5000:5000"
+    restart: always
 
   frontend:
-    build: ./frontend
+    build: ./frontend # Isko 'frontend' hi rehne do agar folder small 'f' se hai
     ports:
-      - "5173:80"  # Bas yahan maine 80:80 ko hata kar 5173:80 kar diya hai
+      - "5173:80"     # Yeh sahi hai, container ke andar Nginx port 80 par hoga aur bahar 5173 par
     depends_on:
-      - backend 
+      - backend
     restart: always
