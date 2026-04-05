@@ -4,7 +4,8 @@ import { Package, X, AlertCircle, ArrowLeft, Edit2, Trash2 } from 'lucide-react'
 import axios from 'axios';
 
 import Navbar from './components/Navbar';
-import BottomNav from './components/BottomNav'; 
+import BottomNav from './components/BottomNav';
+import IosInstallPopup from './components/IosInstallPopup';
 
 const AuthPage = lazy(() => import('./components/AuthPage'));
 const SearchPage = lazy(() => import('./components/SearchPage'));
@@ -42,6 +43,7 @@ axios.interceptors.request.use(
 // CHANGED: Premium ZeroPriceAlert Component with Purple Theme
 const ZeroPriceAlert = ({ user }) => {
   const [show, setShow] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const [hasChecked, setHasChecked] = useState(false);
@@ -68,21 +70,36 @@ const ZeroPriceAlert = ({ user }) => {
     }
   }, [user, hasChecked, location.pathname]);
 
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setShow(false);
+      setIsClosing(false);
+    }, 300);
+  };
+
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-md flex items-center justify-center px-4 animate-in fade-in duration-300">
-      <div className="bg-gray-900 border border-purple-500/50 rounded-[2rem] p-8 max-w-sm w-full text-center shadow-[0_20px_60px_rgba(163,136,225,0.2)] relative overflow-hidden transform animate-in zoom-in-95 slide-in-from-bottom-8 duration-500">
+    // CHANGED YAHAN KIYA HAI: bg-black/60 aur backdrop-blur-md hata diya gaya hai for transparent fast background
+    <div 
+      onClick={handleClose}
+      className={`fixed inset-0 z-[100] flex items-center justify-center px-4 ${isClosing ? 'animate-out fade-out' : 'animate-in fade-in'} duration-300`}
+    >
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        className={`bg-gray-900 border border-purple-500/50 rounded-[2rem] p-8 max-w-sm w-full text-center shadow-[0_20px_60px_rgba(163,136,225,0.2)] relative overflow-hidden transform ${isClosing ? 'animate-out zoom-out-95 slide-out-to-bottom-8' : 'animate-in zoom-in-95 slide-in-from-bottom-8'} duration-300`}
+      >
         
         {/* Background Premium Glow Effects */}
         <div className="absolute -top-24 -left-24 w-48 h-48 bg-purple-500/20 rounded-full blur-[3rem] pointer-events-none"></div>
         <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-emerald-500/10 rounded-full blur-[3rem] pointer-events-none"></div>
 
         <button 
-          onClick={() => setShow(false)} 
-          className="absolute top-5 right-5 text-gray-400 hover:text-white transition-colors p-1.5 bg-gray-800 hover:bg-gray-700 rounded-full z-10"
+          onClick={handleClose} 
+          className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors p-2.5 bg-gray-800 hover:bg-gray-700 rounded-full z-20"
         >
-          <X className="w-5 h-5" />
+          <X className="w-6 h-6" />
         </button>
         
         <div className="relative z-10">
@@ -108,8 +125,8 @@ const ZeroPriceAlert = ({ user }) => {
           
           <button 
             onClick={() => {
-              setShow(false);
-              navigate('/dashboard');
+              handleClose();
+              setTimeout(() => navigate('/dashboard'), 300);
             }}
             className="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-400 hover:to-purple-500 text-white font-black text-lg py-4 px-4 rounded-2xl transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-purple-500/30 flex items-center justify-center gap-2"
           >
@@ -288,6 +305,7 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
   return (
     <div className="min-h-screen bg-gray-900 font-sans selection:bg-emerald-500/30 pb-16 md:pb-0"> 
       <ZeroPriceAlert user={user} />
+      <IosInstallPopup />
       
       <main>
         <Suspense fallback={<PremiumLoader />}>
