@@ -2,15 +2,13 @@ const mongoose = require('mongoose');
 
 const creditSettingSchema = new mongoose.Schema({
   isCreditSystemEnabled: { type: Boolean, default: true }, 
- 
   creditsPerListing: { type: Number, default: 50 }, 
-  
   maxListingsRewarded: { type: Number, default: 3 }, 
   maxAllowedListings: { type: Number, default: 5 },
-  
   isReferralSystemEnabled: { type: Boolean, default: true },
-  referralRewardCredits: { type: Number, default: 40 },
-
+  referralRewardCredits: { type: Number, default: 40 }, 
+  maxReferralLimit: { type: Number, default: 5 },    
+  milestoneReferralReward: { type: Number, default: 100 }, 
   updated_at: { type: Date, default: Date.now }
 });
 

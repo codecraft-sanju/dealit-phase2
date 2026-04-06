@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
-import { ArrowLeft, Wallet, Coins, CreditCard, ChevronRight, Check, MoreHorizontal, Plus, Package, Sparkles, Copy, Users } from 'lucide-react';
+import { ArrowLeft, Wallet, Coins, CreditCard, ChevronRight, Check, MoreHorizontal, Plus, Package, Sparkles, Copy, Users, Target } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
@@ -24,7 +24,14 @@ const WalletPage = ({ user, setUser }) => {
   const [processing, setProcessing] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
 
-  const [appSettings, setAppSettings] = useState({ isReferralSystemEnabled: true, referralRewardCredits: 40 });
+  // NAYA: Updated default settings with milestone fields just in case backend takes time to load
+  const [appSettings, setAppSettings] = useState({ 
+    isReferralSystemEnabled: true, 
+    referralRewardCredits: 40,
+    maxReferralLimit: 5,
+    milestoneReferralReward: 100 
+  });
+  
   const [copied, setCopied] = useState(false);
 
   const [showCelebration, setShowCelebration] = useState(false);
@@ -170,6 +177,12 @@ const WalletPage = ({ user, setUser }) => {
     'radial-gradient(circle, #FDE047 20%, #EAB308 80%, #92400E 100%)'
   ];
 
+  // Progress Calculations
+  const currentReferrals = profileData?.totalReferrals || 0;
+  const maxReferrals = appSettings.maxReferralLimit || 5;
+  const progressPercent = Math.min((currentReferrals / maxReferrals) * 100, 100);
+  const isLimitReached = currentReferrals >= maxReferrals;
+
   return (
     <div className="max-w-md mx-auto bg-white min-h-screen pb-2 md:max-w-7xl relative">
       
@@ -224,14 +237,56 @@ const WalletPage = ({ user, setUser }) => {
           <div className="px-5 md:px-0 mt-6">
             <h2 className="text-lg font-bold text-gray-900 mb-4">Ways to Earn Credits</h2>
 
+            {/* NAYA: Milestone Referral Card */}
             {appSettings.isReferralSystemEnabled && (
               <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-3xl p-5 relative overflow-hidden mb-4 border border-emerald-100 hover:shadow-md transition-shadow">
-                <h3 className="font-bold text-gray-900 mb-2">Refer a Friend</h3>
-                <p className="text-xs text-gray-600 font-medium mb-4 w-2/3 relative z-10">
-                  Invite your friends to Dealit and get <strong className="text-emerald-600">{appSettings.referralRewardCredits} credits</strong> when they sign up!
-                </p>
+                <div className="flex justify-between items-start relative z-10 mb-4">
+                  <div>
+                    <h3 className="font-black text-gray-900 flex items-center gap-1.5">
+                      <Target className="w-4 h-4 text-emerald-600" /> Refer & Earn Milestone
+                    </h3>
+                    <p className="text-xs text-gray-600 font-medium mt-1">
+                      Invite friends to Dealit and unlock rewards!
+                    </p>
+                  </div>
+                </div>
+
+                {/* Tracking Progress Bar */}
+                <div className="mb-5 relative z-10 bg-white/60 p-3.5 rounded-2xl border border-emerald-100 shadow-sm">
+                  <div className="flex justify-between items-center text-xs font-bold text-gray-700 mb-2">
+                    <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> {currentReferrals} / {maxReferrals} Friends Joined</span>
+                    <span className="text-emerald-600">{Math.round(progressPercent)}%</span>
+                  </div>
+                  
+                  <div className="h-2.5 w-full bg-emerald-200/50 rounded-full overflow-hidden shadow-inner">
+                    <div 
+                      className="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full transition-all duration-700 relative"
+                      style={{ width: `${progressPercent}%` }}
+                    >
+                      {/* Shine effect on progress bar */}
+                      <div className="absolute top-0 left-0 bottom-0 w-full bg-white/20 animate-pulse"></div>
+                    </div>
+                  </div>
+
+                  <ul className="mt-3 space-y-1.5 text-xs font-medium text-gray-600">
+                    <li className="flex items-center gap-1.5">
+                      <Check className={`w-3.5 h-3.5 ${currentReferrals >= 1 ? 'text-emerald-500' : 'text-gray-400'}`} />
+                      <span className={currentReferrals >= 1 ? 'text-gray-800' : ''}>1st Friend: <strong className="text-emerald-600">+{appSettings.referralRewardCredits} Credits</strong></span>
+                    </li>
+                    <li className="flex items-center gap-1.5">
+                      <Check className={`w-3.5 h-3.5 ${isLimitReached ? 'text-emerald-500' : 'text-gray-400'}`} />
+                      <span className={isLimitReached ? 'text-gray-800' : ''}>Reach {maxReferrals} Friends: <strong className="text-emerald-600">+{appSettings.milestoneReferralReward} Bonus Credits!</strong></span>
+                    </li>
+                  </ul>
+                </div>
                 
-                {profileData?.referralCode ? (
+                {/* Code Copy Section or Completed Message */}
+                {isLimitReached ? (
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 py-3 px-4 rounded-xl text-center relative z-10 flex items-center justify-center gap-2">
+                    <Sparkles className="w-5 h-5 text-emerald-600" />
+                    <span className="text-sm font-bold text-emerald-700">Milestone Completed! Awesome Job.</span>
+                  </div>
+                ) : profileData?.referralCode ? (
                   <div className="flex items-center gap-2 relative z-10">
                     <div className="bg-white border border-emerald-200 px-4 py-2.5 rounded-xl font-black text-gray-800 tracking-wider flex-1 text-center shadow-inner">
                       {profileData.referralCode}
@@ -245,13 +300,13 @@ const WalletPage = ({ user, setUser }) => {
                     </button>
                   </div>
                 ) : (
-                  <div className="text-xs text-gray-500 italic bg-white/50 p-2 rounded-lg border border-emerald-100">
-                    You don't have a referral code yet.
+                  <div className="text-xs text-gray-500 italic bg-white/50 p-2 rounded-lg border border-emerald-100 relative z-10">
+                    Generating your code...
                   </div>
                 )}
 
-                <div className="absolute right-[-10px] bottom-[-10px] w-24 h-24 bg-emerald-100 rounded-full opacity-50 flex items-center justify-center">
-                  <Users className="w-10 h-10 text-emerald-500" />
+                <div className="absolute right-[-15px] bottom-[-15px] w-32 h-32 bg-emerald-200/40 rounded-full opacity-50 flex items-center justify-center pointer-events-none">
+                  <Target className="w-16 h-16 text-emerald-500/20" />
                 </div>
               </div>
             )}

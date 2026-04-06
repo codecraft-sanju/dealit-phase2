@@ -158,7 +158,9 @@ const updateCreditSettings = async (req, res) => {
       maxListingsRewarded, 
       maxAllowedListings,
       isReferralSystemEnabled,
-      referralRewardCredits 
+      referralRewardCredits,
+      maxReferralLimit,
+      milestoneReferralReward
     } = req.body;
     
     let setting = await CreditSetting.findOne();
@@ -176,6 +178,9 @@ const updateCreditSettings = async (req, res) => {
     if (isReferralSystemEnabled !== undefined) setting.isReferralSystemEnabled = isReferralSystemEnabled;
     if (referralRewardCredits !== undefined) setting.referralRewardCredits = referralRewardCredits;
     
+    if (maxReferralLimit !== undefined) setting.maxReferralLimit = maxReferralLimit;
+    if (milestoneReferralReward !== undefined) setting.milestoneReferralReward = milestoneReferralReward;
+    
     setting.updated_at = Date.now();
 
     await setting.save();
@@ -191,13 +196,22 @@ const updateCreditSettings = async (req, res) => {
   }
 };
 
-// NAYA FUNCTION: Frontend ko data dene ke liye bina admin login ke
+
 const getPublicCreditSettings = async (req, res) => {
   try {
-    let setting = await CreditSetting.findOne().select('isReferralSystemEnabled referralRewardCredits maxAllowedListings');
+   
+    let setting = await CreditSetting.findOne().select(
+      'isReferralSystemEnabled referralRewardCredits maxAllowedListings maxReferralLimit milestoneReferralReward'
+    );
+    
     if (!setting) {
-      // Default settings agar DB empty ho
-      setting = { isReferralSystemEnabled: true, referralRewardCredits: 40, maxAllowedListings: 5 };
+      setting = { 
+        isReferralSystemEnabled: true, 
+        referralRewardCredits: 40, 
+        maxAllowedListings: 5,
+        maxReferralLimit: 5,
+        milestoneReferralReward: 100
+      };
     }
     res.status(200).json({ success: true, data: setting });
   } catch (error) {

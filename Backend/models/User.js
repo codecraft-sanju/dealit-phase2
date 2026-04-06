@@ -20,6 +20,7 @@ const userSchema = new mongoose.Schema({
 
   referralCode: { type: String, unique: true, sparse: true },
   referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  totalReferrals: { type: Number, default: 0 }, 
 
   isVerified: { type: Boolean, default: false },
   otp: { type: String },

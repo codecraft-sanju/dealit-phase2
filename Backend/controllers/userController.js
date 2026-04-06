@@ -32,7 +32,8 @@ const sendTokenResponse = (user, statusCode, res, message) => {
       email: user.email, 
       role: user.role,
       account_credits: user.account_credits,
-      referralCode: user.referralCode 
+      referralCode: user.referralCode,
+      totalReferrals: user.totalReferrals 
     }
   });
 };
@@ -91,21 +92,41 @@ const registerUser = async (req, res) => {
         referralCode: newReferralCode 
       });
 
+
       if (referralCode) {
         const cleanReferralCode = referralCode.toUpperCase().trim();
         const referrer = await User.findOne({ referralCode: cleanReferralCode });
         
         if (referrer) {
-          user.referredBy = referrer._id;
-          
           let setting = await CreditSetting.findOne();
           if (!setting) {
-            setting = { isReferralSystemEnabled: true, referralRewardCredits: 40 };
+            setting = { 
+              isReferralSystemEnabled: true, 
+              referralRewardCredits: 40,
+              maxReferralLimit: 5,
+              milestoneReferralReward: 100
+            };
           }
 
           if (setting.isReferralSystemEnabled) {
-            referrer.account_credits += setting.referralRewardCredits;
-            await referrer.save();
+          
+            if (referrer.totalReferrals < setting.maxReferralLimit) {
+              user.referredBy = referrer._id; 
+              referrer.totalReferrals += 1;   
+
+              // Reward Logic
+              if (referrer.totalReferrals === 1) {
+                // FIRST Refer: Basic reward (e.g. 40)
+                referrer.account_credits += setting.referralRewardCredits;
+              } else if (referrer.totalReferrals === setting.maxReferralLimit) {
+        
+                referrer.account_credits += setting.milestoneReferralReward;
+              }
+           
+
+              await referrer.save();
+            }
+          
           }
         }
       }
@@ -322,7 +343,6 @@ const getUserProfile = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // NAYA LOGIC: Agar purane user ke paas code nahi hai, toh abhi bana do!
     if (!user.referralCode) {
       console.log(`[DEBUG] Generating missing referral code for old user: ${user.email}`);
       const newCode = await generateUniqueReferralCode(user.full_name);

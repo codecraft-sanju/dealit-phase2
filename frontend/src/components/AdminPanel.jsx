@@ -4,7 +4,7 @@ import {
   Shield, Users, Package, Trash2, X, CheckCircle, Edit, List, AlertTriangle, Eye, Coins, User, 
   ShieldAlert, ShieldCheck, Mail, Phone, MapPin, Calendar, Wallet, Image as ImageIcon, Plus, 
   Check, ToggleLeft, ToggleRight, Layers, Settings,
-  Car, Monitor, Book, Shirt, Gamepad2, Watch, Home as HomeIcon, Sofa, Music, Utensils, Heart, Briefcase, Camera, Dumbbell, Smartphone, Gift
+  Car, Monitor, Book, Shirt, Gamepad2, Watch, Home as HomeIcon, Sofa, Music, Utensils, Heart, Briefcase, Camera, Dumbbell, Smartphone, Gift, Target
 } from 'lucide-react'; 
 import axios from 'axios';
 import Cropper from 'react-easy-crop';
@@ -71,14 +71,16 @@ const AdminPanel = ({ user }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // NAYA: Referral settings added to state
+  // Dynamic Settings Initial State
   const [creditSettings, setCreditSettings] = useState({
     isCreditSystemEnabled: true,
     creditsPerListing: 50,
     maxListingsRewarded: 3,
     maxAllowedListings: 5,
     isReferralSystemEnabled: true, 
-    referralRewardCredits: 40      
+    referralRewardCredits: 40,
+    maxReferralLimit: 5,
+    milestoneReferralReward: 100
   });
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -646,7 +648,7 @@ const AdminPanel = ({ user }) => {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                    <div className="space-y-3">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">Referral Reward (Credits)</label>
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">First Reward</label>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                           <Gift className="w-5 h-5 text-blue-400" />
@@ -661,7 +663,45 @@ const AdminPanel = ({ user }) => {
                           className="w-full bg-gray-900 border-2 border-gray-700 rounded-xl pl-12 pr-4 py-3.5 text-white font-bold focus:outline-none focus:border-blue-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed" 
                         />
                       </div>
-                      <p className="text-xs text-gray-500">Credits given to the referrer.</p>
+                      <p className="text-xs text-gray-500">Credits given on 1st successful refer.</p>
+                   </div>
+
+                   <div className="space-y-3">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">Max Referral Limit</label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                          <Users className="w-5 h-5 text-emerald-400" />
+                        </div>
+                        <input 
+                          type="number" 
+                          required 
+                          min="1" 
+                          value={creditSettings.maxReferralLimit || 5} 
+                          onChange={(e) => setCreditSettings({...creditSettings, maxReferralLimit: Number(e.target.value)})} 
+                          disabled={!creditSettings.isReferralSystemEnabled} 
+                          className="w-full bg-gray-900 border-2 border-gray-700 rounded-xl pl-12 pr-4 py-3.5 text-white font-bold focus:outline-none focus:border-emerald-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed" 
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500">Max friends a user can invite for rewards.</p>
+                   </div>
+
+                   <div className="space-y-3">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">Milestone Reward</label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                          <Target className="w-5 h-5 text-yellow-400" />
+                        </div>
+                        <input 
+                          type="number" 
+                          required 
+                          min="0" 
+                          value={creditSettings.milestoneReferralReward || 100} 
+                          onChange={(e) => setCreditSettings({...creditSettings, milestoneReferralReward: Number(e.target.value)})} 
+                          disabled={!creditSettings.isReferralSystemEnabled} 
+                          className="w-full bg-gray-900 border-2 border-gray-700 rounded-xl pl-12 pr-4 py-3.5 text-white font-bold focus:outline-none focus:border-yellow-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed" 
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500">Bumper prize when max limit is reached.</p>
                    </div>
                 </div>
 
@@ -1006,6 +1046,15 @@ const AdminPanel = ({ user }) => {
                     <div>
                       <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-0.5">Joined Platform</p>
                       <p className="font-semibold text-white">{new Date(viewingUser.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                    </div>
+                  </div>
+                  
+                  {/* NAYA: Admin view me user ka refer status dikhao */}
+                  <div className="flex items-center gap-4 text-gray-300 bg-gray-900/50 p-4 rounded-2xl border border-gray-700/50 hover:border-gray-600 transition-colors">
+                    <div className="p-3 bg-gray-800 rounded-xl"><Target className="w-5 h-5 text-yellow-400" /></div>
+                    <div>
+                      <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-0.5">Total Referrals Done</p>
+                      <p className="font-semibold text-white">{viewingUser.totalReferrals || 0}</p>
                     </div>
                   </div>
                 </div>
