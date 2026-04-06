@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Package, RefreshCw, X, AlertCircle, Coins, CheckCircle2, ArrowRightLeft, TrendingUp, Info, ShieldCheck } from 'lucide-react';
+import { Package, RefreshCw, X, AlertCircle, Coins, CheckCircle2, Info, ShieldCheck, User, Share2, ArrowLeft, Calendar, Grid } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
@@ -38,7 +38,6 @@ const ItemDetailPage = ({ user }) => {
     fetchItemDetails();
   }, [id]);
 
-  // Handle Swipe/Scroll for Images
   const handleScroll = (e) => {
     if (!e.target) return;
     const width = e.target.offsetWidth;
@@ -49,7 +48,6 @@ const ItemDetailPage = ({ user }) => {
     }
   };
 
-  // Handle Thumbnail Click
   const handleThumbnailClick = (index) => {
     setActiveIndex(index);
     if (scrollRef.current) {
@@ -57,6 +55,23 @@ const ItemDetailPage = ({ user }) => {
         left: scrollRef.current.offsetWidth * index,
         behavior: 'smooth'
       });
+    }
+  };
+
+  const handleShare = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: item.title,
+          text: `Check out this ${item.title} on Dealit!`,
+          url: window.location.href,
+        });
+      } else {
+        navigator.clipboard.writeText(window.location.href);
+        alert('Link copied to clipboard!');
+      }
+    } catch (error) {
+      console.log('Error sharing:', error);
     }
   };
 
@@ -133,31 +148,49 @@ const ItemDetailPage = ({ user }) => {
   const selectedItemObj = myItems.find(i => i._id === selectedMyItem);
   const offeredValue = selectedItemObj?.estimated_value || 0;
   const requiredCredits = Math.max(0, targetValue - offeredValue);
-  const retailPrice = (targetValue * 1.6).toFixed(0); // Estimated real-world price
+
+  const postDate = item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recently';
 
   return (
-    <div className="max-w-7xl mx-auto bg-white min-h-screen pb-24 lg:pb-12 font-sans animate-in fade-in duration-500">
+    <div className="max-w-7xl mx-auto bg-white min-h-screen pb-32 lg:pb-12 font-sans animate-in fade-in duration-500 relative">
       
-      {/* Grid Layout: Balances content on Desktop, stacks on Mobile */}
+      {/* Mobile Floating Header (Back & Share) */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 p-4 flex justify-between items-center z-50 pointer-events-none">
+        <button onClick={() => navigate(-1)} className="pointer-events-auto w-10 h-10 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center shadow-sm border border-slate-200/50 text-slate-700 hover:bg-white transition-colors">
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <button onClick={handleShare} className="pointer-events-auto w-10 h-10 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center shadow-sm border border-slate-200/50 text-slate-700 hover:bg-white transition-colors">
+          <Share2 className="w-4 h-4" />
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-12 items-start lg:pt-10 lg:px-6">
         
-        {/* ================= LEFT COLUMN: Gallery & Desktop Description ================= */}
+        {/* LEFT COLUMN: Gallery & Desktop Description */}
         <div className="lg:col-span-7 w-full mx-auto space-y-6">
           
           {/* Main Swipeable Container */}
           <div className="relative w-full aspect-square lg:aspect-auto lg:h-[500px] bg-[#f8f9fb] lg:rounded-[2rem] overflow-hidden border-b lg:border border-slate-100 shadow-sm group">
+            
+            {/* NAYA: Mobile Image Counter Badge */}
+            {item.images && item.images.length > 1 && (
+              <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-3 py-1.5 rounded-full lg:hidden z-10 tracking-widest shadow-sm">
+                {activeIndex + 1} / {item.images.length}
+              </div>
+            )}
+
             <div 
               ref={scrollRef}
               onScroll={handleScroll}
-              className="flex w-full h-full overflow-x-auto snap-x snap-mandatory hide-scrollbar scroll-smooth"
+              className="flex w-full h-full overflow-x-auto snap-x snap-mandatory hide-scrollbar scroll-smooth relative"
             >
               {item.images && item.images.length > 0 ? (
                 item.images.map((img, idx) => (
-                  <div key={idx} className="w-full h-full flex-shrink-0 snap-center flex items-center justify-center p-4 lg:p-8">
+                  <div key={idx} className="w-full h-full flex-shrink-0 snap-center flex items-center justify-center p-4 lg:p-8 relative">
                     <img 
                       src={img} 
                       alt={`${item.title} ${idx + 1}`} 
-                      className="max-w-full max-h-full object-contain" 
+                      className="max-w-full max-h-full object-contain drop-shadow-sm" 
                     />
                   </div>
                 ))
@@ -170,11 +203,11 @@ const ItemDetailPage = ({ user }) => {
 
             {/* Mobile Dots Indicator */}
             {item.images && item.images.length > 1 && (
-              <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 lg:hidden">
+              <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 lg:hidden z-10">
                 {item.images.map((_, idx) => (
                   <div 
                     key={idx} 
-                    className={`h-1.5 rounded-full transition-all duration-300 ${activeIndex === idx ? 'w-5 bg-[#6B46C1]' : 'w-1.5 bg-slate-300/80'}`} 
+                    className={`h-1.5 rounded-full transition-all duration-300 shadow-sm ${activeIndex === idx ? 'w-5 bg-[#6B46C1]' : 'w-1.5 bg-slate-300/80'}`} 
                   />
                 ))}
               </div>
@@ -183,12 +216,12 @@ const ItemDetailPage = ({ user }) => {
 
           {/* Thumbnails */}
           {item.images && item.images.length > 1 && (
-            <div className="flex gap-3 overflow-x-auto hide-scrollbar px-4 lg:px-0">
+            <div className="flex gap-3 overflow-x-auto hide-scrollbar px-4 lg:px-0 mt-4 lg:mt-0 pb-2">
               {item.images.map((img, idx) => (
                 <button 
                   key={idx}
                   onClick={() => handleThumbnailClick(idx)}
-                  className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all p-1 bg-[#f8f9fb] ${activeIndex === idx ? 'border-[#6B46C1] shadow-sm' : 'border-slate-100 hover:border-slate-300'}`}
+                  className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all p-1 bg-[#f8f9fb] ${activeIndex === idx ? 'border-[#6B46C1] shadow-sm scale-[0.98]' : 'border-slate-100 hover:border-slate-300'}`}
                 >
                   <img src={img} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-contain mix-blend-multiply" />
                 </button>
@@ -196,116 +229,118 @@ const ItemDetailPage = ({ user }) => {
             </div>
           )}
 
-          {/* Desktop Description: Placed here to balance the right column */}
+          {/* Desktop Description */}
           <div className="hidden lg:block bg-white rounded-3xl p-7 border border-slate-100 shadow-sm">
             <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
               <Info className="w-5 h-5 text-[#6B46C1]" /> Item Description
             </h3>
             <p className="text-slate-600 text-[15px] leading-relaxed whitespace-pre-line">
-              {item.description}
+              {item.description || 'No description provided by the owner.'}
             </p>
           </div>
         </div>
 
-
-        {/* ================= RIGHT COLUMN: Details, Compare Card & Actions ================= */}
+        {/* RIGHT COLUMN: Details & Actions */}
         <div className="lg:col-span-5 flex flex-col h-full px-5 lg:px-0 pt-6 lg:pt-0 pb-16 lg:pb-0 lg:sticky lg:top-24">
           
           <div className="mb-6">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="bg-[#f8f6ff] text-[#6B46C1] px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-[#EBE5F7]">
-                {item.category || 'Item'}
-              </span>
-              <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">
-                {item.condition || 'Used'}
-              </span>
+            <div className="flex justify-between items-start mb-4">
+              <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 leading-tight tracking-tight pr-4">
+                {item.title}
+              </h1>
+              {/* Desktop Share Button */}
+              <button onClick={handleShare} className="hidden lg:flex w-10 h-10 bg-slate-50 hover:bg-slate-100 rounded-full items-center justify-center text-slate-500 transition-colors shrink-0">
+                <Share2 className="w-4 h-4" />
+              </button>
             </div>
 
-            <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 leading-tight mb-4 tracking-tight">
-              {item.title}
-            </h1>
-
-            <div className="flex items-center gap-2 pb-5 border-b border-slate-100">
-              <div className="w-10 h-10 bg-[#FFF4D2] rounded-full flex items-center justify-center border border-[#FFE28A]/50">
-                <Coins className="w-5 h-5 text-yellow-600" />
+            <div className="flex items-center gap-2 pb-6 border-b border-slate-100">
+              <div className="w-12 h-12 bg-[#FFF4D2] rounded-full flex items-center justify-center border border-[#FFE28A]/50">
+                <Coins className="w-6 h-6 text-yellow-600" />
               </div>
               <div>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none">Dealit Value</p>
+                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest leading-none mb-1">Dealit Value</p>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-2xl lg:text-3xl font-black text-slate-900 tracking-tighter">{targetValue}</span>
+                  <span className="text-3xl font-black text-slate-900 tracking-tighter">{targetValue}</span>
                   <span className="text-sm font-medium text-slate-500">Credits</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* NAYA: Value Analysis / Compare Card */}
-          <div className="bg-gradient-to-br from-[#f8f6ff] to-white border border-[#EBE5F7] rounded-2xl p-4 mb-6 shadow-sm">
-            <div className="flex items-center gap-2 mb-3">
-              <TrendingUp className="w-4 h-4 text-[#6B46C1]" />
-              <span className="text-[11px] font-bold text-[#6B46C1] uppercase tracking-wider">Market Value Analysis</span>
+          {/* Item Stats Grid */}
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex flex-col">
+              <CheckCircle2 className="w-4 h-4 text-[#6B46C1] mb-2" />
+              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Condition</span>
+              <span className="text-sm font-bold text-slate-800">{item.condition || 'Used'}</span>
             </div>
-            
-            <div className="space-y-2">
-              <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
-                <span className="text-xs text-slate-500 font-medium">Est. Retail Price</span>
-                <span className="text-sm font-bold text-slate-400 line-through">₹{retailPrice}</span>
-              </div>
-              <div className="flex justify-between items-center bg-[#EBE5F7]/40 p-3 rounded-xl border border-[#EBE5F7]">
-                <span className="text-xs text-[#6B46C1] font-bold">Trading Value</span>
-                <span className="text-sm font-black text-[#6B46C1]">{targetValue} Credits</span>
-              </div>
+            <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex flex-col">
+              <Grid className="w-4 h-4 text-[#6B46C1] mb-2" />
+              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Category</span>
+              <span className="text-sm font-bold text-slate-800">{item.category || 'General'}</span>
             </div>
-            
-            <p className="text-[10px] text-slate-500 text-center mt-3 font-medium">
-              Trade items instead of buying to save money!
-            </p>
+            <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex flex-col col-span-2">
+              <Calendar className="w-4 h-4 text-[#6B46C1] mb-2" />
+              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Listed On</span>
+              <span className="text-sm font-bold text-slate-800">{postDate}</span>
+            </div>
           </div>
 
-          {/* Looking For Section */}
-          <div className="bg-[#f8f9fb] border border-slate-100 rounded-2xl p-5 mb-6 lg:mb-8">
-            <div className="flex items-center gap-2 mb-2">
-              <ArrowRightLeft className="w-4 h-4 text-slate-600" />
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Owner is looking for</p>
+          {/* Owner Profile Card */}
+          <div className="bg-white border border-slate-100 rounded-2xl p-4 flex items-center gap-4 shadow-sm mb-6 lg:mb-8 hover:border-[#EBE5F7] hover:shadow-md transition-all cursor-default">
+            <div className="w-12 h-12 bg-[#F8F6FF] rounded-full flex items-center justify-center overflow-hidden border border-[#EBE5F7] shrink-0">
+              {item.owner?.profilePic ? (
+                <img src={item.owner.profilePic} alt="Owner" className="w-full h-full object-cover" />
+              ) : (
+                <User className="w-6 h-6 text-[#A388E1]" />
+              )}
             </div>
-            <p className="text-sm font-bold text-slate-900 flex items-start gap-2 leading-snug">
-              {item.preferred_item || 'Open to any fair offers'}
-            </p>
+            <div>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Owned By</p>
+              <p className="text-sm font-bold text-slate-900 line-clamp-1">{item.owner?.full_name || 'Dealit User'}</p>
+            </div>
           </div>
 
-          {/* Mobile Description (Hidden on Desktop) */}
-          <div className="block lg:hidden mb-10">
+          {/* Mobile Description */}
+          <div className="block lg:hidden mb-4 relative">
             <h3 className="text-sm font-bold text-slate-900 mb-2">Description</h3>
-            <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-line">
-              {item.description}
+            <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-line pb-4">
+              {item.description || 'No description provided by the owner.'}
             </p>
           </div>
 
-          {/* Action Buttons */}
-          <div className="fixed bottom-20 lg:bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-lg border-t border-slate-100 z-40 lg:static lg:bg-transparent lg:border-none lg:p-0 lg:mt-auto">
-            {user && (item.owner?._id === user._id || item.owner?._id === user.id) ? (
-              <button disabled className="w-full bg-[#F8F9FA] text-slate-400 py-4 rounded-xl font-bold text-base cursor-not-allowed border border-slate-200 flex items-center justify-center gap-2">
-                <Package className="w-5 h-5 opacity-50" /> This is your item
-              </button>
-            ) : (
-              <button 
-                onClick={handleOpenBarterModal}
-                className="w-full bg-[#6B46C1] hover:bg-[#5a3aa8] text-white py-4 rounded-xl font-bold text-base transition-all hover:-translate-y-0.5 flex items-center justify-center gap-2 shadow-lg shadow-[#6B46C1]/20"
-              >
-                <RefreshCw className="w-5 h-5" /> Offer a Trade
-              </button>
-            )}
+          {/* Fixed Bottom Action Container */}
+          <div className="fixed bottom-20 lg:bottom-0 left-0 right-0 z-40 pointer-events-none lg:static lg:mt-auto">
             
-            {/* Trust Badges below button (Desktop Only) */}
-            <div className="hidden lg:flex items-center justify-center gap-4 mt-4 text-slate-400">
-              <div className="flex items-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span className="text-[9px] font-bold uppercase tracking-wider">Secure</span>
-              </div>
-              <div className="w-1 h-1 bg-slate-200 rounded-full"></div>
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span className="text-[9px] font-bold uppercase tracking-wider">Verified</span>
+            {/* NAYA: Gradient Fade for scrolling text beneath the button */}
+            <div className="h-10 bg-gradient-to-t from-white to-transparent lg:hidden w-full"></div>
+            
+            <div className="p-4 bg-white/95 backdrop-blur-xl border-t border-slate-100 lg:bg-transparent lg:border-none lg:p-0 pointer-events-auto">
+              {user && (item.owner?._id === user._id || item.owner?._id === user.id) ? (
+                <button disabled className="w-full bg-[#F8F9FA] text-slate-400 py-4 rounded-xl font-bold text-base cursor-not-allowed border border-slate-200 flex items-center justify-center gap-2">
+                  <Package className="w-5 h-5 opacity-50" /> This is your item
+                </button>
+              ) : (
+                <button 
+                  onClick={handleOpenBarterModal}
+                  className="w-full bg-[#6B46C1] hover:bg-[#5a3aa8] text-white py-4 rounded-xl font-bold text-base transition-all hover:-translate-y-0.5 flex items-center justify-center gap-2 shadow-lg shadow-[#6B46C1]/20 active:scale-[0.98]"
+                >
+                  <RefreshCw className="w-5 h-5" /> Offer a Trade
+                </button>
+              )}
+              
+              {/* Trust Badges */}
+              <div className="hidden lg:flex items-center justify-center gap-4 mt-4 text-slate-400">
+                <div className="flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span className="text-[9px] font-bold uppercase tracking-wider">Secure</span>
+                </div>
+                <div className="w-1 h-1 bg-slate-200 rounded-full"></div>
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span className="text-[9px] font-bold uppercase tracking-wider">Verified</span>
+                </div>
               </div>
             </div>
           </div>
@@ -314,7 +349,7 @@ const ItemDetailPage = ({ user }) => {
 
       {/* ================= Modern Barter Modal ================= */}
       {showModal && (
-        <div className="fixed inset-0 z-[100] flex items-end lg:items-center justify-center bg-slate-900/40 backdrop-blur-sm sm:px-4 transition-opacity">
+        <div className="fixed inset-0 z-[100] flex items-end lg:items-center justify-center bg-slate-900/50 backdrop-blur-sm sm:px-4 transition-opacity">
           <div className="bg-white w-full max-w-lg rounded-t-[2rem] lg:rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] lg:max-h-[85vh] animate-in slide-in-from-bottom-10 lg:slide-in-from-bottom-0 lg:zoom-in-95 duration-200">
             
             <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-white relative z-10">
@@ -329,7 +364,7 @@ const ItemDetailPage = ({ user }) => {
             
             <div className="p-6 overflow-y-auto flex-1 bg-[#f8f9fb]">
               {balanceError && (
-                <div className="mb-5 bg-red-50 border border-red-100 p-4 rounded-2xl flex items-start gap-3 shadow-sm">
+                <div className="mb-5 bg-red-50 border border-red-100 p-4 rounded-2xl flex items-start gap-3 shadow-sm animate-in fade-in slide-in-from-top-2">
                   <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="text-sm font-bold text-red-700 mb-0.5">Trade Cannot Proceed</p>
@@ -386,7 +421,7 @@ const ItemDetailPage = ({ user }) => {
                   </div>
 
                   {selectedMyItem && selectedItemObj && (
-                    <div className="mt-5 animate-in fade-in duration-300">
+                    <div className="mt-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
                       {requiredCredits > 0 ? (
                         <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm text-sm">
                           <div className="flex items-center gap-2 mb-2">
@@ -426,7 +461,7 @@ const ItemDetailPage = ({ user }) => {
                 className={`flex-[2] px-4 py-3.5 rounded-xl font-bold text-sm transition flex items-center justify-center gap-2 ${
                   !selectedMyItem || submitting 
                     ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
-                    : 'bg-[#6B46C1] hover:bg-[#5a3aa8] text-white shadow-lg shadow-[#6B46C1]/20'
+                    : 'bg-[#6B46C1] hover:bg-[#5a3aa8] text-white shadow-lg shadow-[#6B46C1]/20 active:scale-[0.98]'
                 }`}
               >
                 {submitting ? (

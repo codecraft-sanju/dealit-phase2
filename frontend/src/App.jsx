@@ -20,6 +20,7 @@ const ForgotPasswordPage = lazy(() => import('./components/ForgotPasswordPage'))
 const AddItemPage = lazy(() => import('./components/AddItemPage'));
 const ItemsPage = lazy(() => import('./components/ItemsPage'));
 const DashboardPage = lazy(() => import('./components/DashboardPage'));
+const DealDetailsPage = lazy(() => import('./components/DealDetailsPage'));
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -342,6 +343,7 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
             <Route path="/wallet" element={user ? <WalletPage user={user} setUser={setUser} /> : <Navigate to="/login" />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/items" element={<ItemsPage />} />
+            <Route path="/deal/:id" element={user ? <DealDetailsPage user={user} /> : <Navigate to="/login" />} />
             
             <Route path="*" element={<div className="text-white text-center mt-20 text-xl">404 - Page Not Found</div>} />
           </Routes>

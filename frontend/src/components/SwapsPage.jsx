@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { RefreshCw, Check, X, MessageSquare, Package, Eye, AlertCircle, ArrowRightLeft, ChevronLeft } from 'lucide-react';
+import { RefreshCw, Check, X, MessageSquare, Package, Eye, AlertCircle, ArrowRightLeft, ChevronLeft, ExternalLink } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
@@ -16,6 +16,8 @@ const SwapsPage = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState(null);
   const [actionError, setActionError] = useState({ id: null, message: '' });
+
+  // Popup logic hataya kyunki ab hum direct Deal Page par jayenge
 
   useEffect(() => {
     if (!user) return;
@@ -53,6 +55,11 @@ const SwapsPage = ({ user }) => {
       if (response.data.success) {
         setReceivedSwaps(receivedSwaps.map(s => s._id === swapId ? { ...s, status: newStatus } : s));
         setSentSwaps(sentSwaps.map(s => s._id === swapId ? { ...s, status: newStatus } : s));
+        
+        // NAYA LOGIC: Deal accept hone par naye Deal Details page par bhej do
+        if (newStatus === 'ACCEPTED') {
+          navigate(`/deal/${swapId}`);
+        }
       }
     } catch (error) {
       console.error('Error updating status:', error);
@@ -71,10 +78,6 @@ const SwapsPage = ({ user }) => {
     <div className="max-w-md mx-auto bg-[#f4f2f9] min-h-screen pb-2 md:max-w-7xl relative font-sans">
       
       <div className="sticky top-0 z-50 bg-[#f4f2f9]">
-        {/* CHANGE 1 & 2: 
-          - Added 'sticky top-0 z-50' to keep the header fixed while scrolling.
-          - Added the Back Button with ChevronLeft.
-        */}
         <div className="bg-[#6B46C1] pt-6 pb-12 px-5 md:px-8 rounded-b-[2rem] shadow-md relative z-10">
           <div className="flex items-center gap-3">
             <button 
@@ -211,9 +214,16 @@ const SwapsPage = ({ user }) => {
                         </button>
                       </>
                     )}
-                    <Link to={`/chat/${swap._id}`} className="flex-1 md:flex-none bg-[#F8F9FA] hover:bg-[#EBE5F7] hover:text-[#6B46C1] text-gray-600 px-5 py-2.5 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 border border-gray-200 hover:border-[#d6bcfa]">
-                      <MessageSquare className="w-4 h-4" /> Chat
-                    </Link>
+                    
+                    {/* NAYA LOGIC: ACCEPTED deals par "View Details" ka button hoga */}
+                    {swap.status === 'ACCEPTED' && (
+                      <Link
+                        to={`/deal/${swap._id}`}
+                        className="flex-1 md:flex-none bg-[#F8F9FA] hover:bg-[#EBE5F7] text-[#6B46C1] px-5 py-2.5 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 border border-[#d6bcfa]"
+                      >
+                        <ExternalLink className="w-4 h-4" /> View Deal Details
+                      </Link>
+                    )}
                   </div>
                 </div>
 

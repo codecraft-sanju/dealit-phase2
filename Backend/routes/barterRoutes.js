@@ -7,7 +7,7 @@ const {
   getBarterRequestById, 
   updateBarterRequest, 
   deleteBarterRequest,
-  updateSwapStatus // Naya function import kiya
+  updateSwapStatus 
 } = require('../controllers/barterController');
 const { protect } = require('../middleware/authMiddleware');
 

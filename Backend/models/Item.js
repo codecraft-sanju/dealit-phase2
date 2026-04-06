@@ -13,7 +13,7 @@ const itemSchema = new mongoose.Schema({
   
   status: { 
     type: String, 
-    enum: ['pending', 'active', 'rejected', 'swapped'], 
+    enum: ['pending', 'active', 'rejected','reserved', 'swapped'], 
     default: 'pending' 
   },
   

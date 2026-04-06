@@ -85,7 +85,7 @@ const formatRequestsForFrontend = (requests) => {
 const getReceivedRequests = async (req, res) => {
   try {
     const requests = await BarterRequest.find({ owner: req.user._id })
-      .populate('requester', 'full_name email')
+      .populate('requester', 'full_name email phone') // UPDATE: Phone number add kiya
       .populate('item')
       .populate('offered_item')
       .sort({ created_at: -1 });
@@ -100,7 +100,7 @@ const getReceivedRequests = async (req, res) => {
 const getSentRequests = async (req, res) => {
   try {
     const requests = await BarterRequest.find({ requester: req.user._id })
-      .populate('owner', 'full_name email')
+      .populate('owner', 'full_name email phone') // UPDATE: Phone number add kiya
       .populate('item')
       .populate('offered_item')
       .sort({ created_at: -1 });
@@ -187,13 +187,18 @@ const updateSwapStatus = async (req, res) => {
     const { status } = req.body; 
     const userId = req.user._id;
 
-    const barter = await BarterRequest.findById(id).populate('item offered_item');
+    // 1. item aur offered_item ke sath requester aur owner ka name aur phone bhi populate karo
+    const barter = await BarterRequest.findById(id)
+      .populate('item offered_item')
+      .populate('requester', 'full_name phone')
+      .populate('owner', 'full_name phone');
 
     if (!barter) {
       return res.status(404).json({ success: false, message: 'Swap request not found' });
     }
 
-    if (barter.owner.toString() !== userId.toString()) {
+    // Kyunki ab owner populate ho chuka hai, toh owner._id check karna hoga
+    if (barter.owner._id.toString() !== userId.toString()) {
       return res.status(403).json({ success: false, message: 'Not authorized to respond to this request' });
     }
 
@@ -201,27 +206,45 @@ const updateSwapStatus = async (req, res) => {
       return res.status(400).json({ success: false, message: 'This request has already been processed' });
     }
 
-    const targetValue = barter.item.estimated_value || 0;
-    const offeredValue = barter.offered_item.estimated_value || 0;
-    const requiredCredits = Math.max(0, targetValue - offeredValue);
+    let matchData = null;
 
     if (status === 'ACCEPTED') {
-      const requester = await User.findById(barter.requester);
+      const targetValue = barter.item.estimated_value || 0;
+      const offeredValue = barter.offered_item.estimated_value || 0;
+      const requiredCredits = Math.max(0, targetValue - offeredValue);
+
+      // Credits deduct karne ke liye requester ka pura document nikalna hoga
+      const requesterDoc = await User.findById(barter.requester._id);
       
       if (requiredCredits > 0) {
-        if (requester.account_credits < requiredCredits) {
+        if (requesterDoc.account_credits < requiredCredits) {
           return res.status(400).json({ 
             success: false, 
             message: 'Cannot accept swap. The requester no longer has enough credits.' 
           });
         }
         
-        requester.account_credits -= requiredCredits;
-        await requester.save();
+        requesterDoc.account_credits -= requiredCredits;
+        await requesterDoc.save();
       }
 
-      await Item.findByIdAndUpdate(barter.item._id, { status: 'swapped' });
-      await Item.findByIdAndUpdate(barter.offered_item._id, { status: 'swapped' });
+      // 2. 'swapped' ki jagah 'reserved' status set karo taaki deal process me dikhe
+      await Item.findByIdAndUpdate(barter.item._id, { status: 'reserved' });
+      await Item.findByIdAndUpdate(barter.offered_item._id, { status: 'reserved' });
+
+      // 3. Frontend ke liye WhatsApp contact data taiyar karo
+      matchData = {
+        owner: {
+          name: barter.owner.full_name,
+          phone: barter.owner.phone,
+          item: barter.item.title
+        },
+        requester: {
+          name: barter.requester.full_name,
+          phone: barter.requester.phone,
+          offered_item: barter.offered_item.title
+        }
+      };
     }
 
     barter.status = status;
@@ -230,8 +253,9 @@ const updateSwapStatus = async (req, res) => {
 
     res.status(200).json({ 
       success: true, 
-      message: `Swap ${status.toLowerCase()} successfully`, 
-      data: barter 
+      message: status === 'ACCEPTED' ? 'Deal Locked Successfully! You can now chat on WhatsApp.' : `Swap ${status.toLowerCase()} successfully`, 
+      data: barter,
+      matchData: matchData // Yeh frontend par bhej diya
     });
 
   } catch (error) {

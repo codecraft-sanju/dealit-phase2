@@ -114,15 +114,15 @@ const ProfilePage = ({ user, onLogout }) => {
   if (!user) return <Navigate to="/login" />;
 
   return (
-    <div className="max-w-md mx-auto bg-gray-50 min-h-screen pb-2 md:max-w-7xl md:bg-white md:px-4">
+    <div className="min-h-screen bg-[#f4f2f9] pb-10 font-sans relative">
       
-      {/* Sticky Header Nav with Smooth Shrink Effect */}
-      <div 
-        className={`sticky top-0 z-50 bg-[#6B46C1] px-5 md:px-8 transition-all duration-300 ease-in-out ${
-          isScrolled ? 'pt-3 pb-3 shadow-md' : 'pt-6 pb-4'
+      {/* CHANGE START: Fixed Sticky Header Mirroring DealDetailsPage */}
+      <header 
+        className={`fixed top-0 left-0 right-0 z-50 bg-[#6B46C1] transition-all duration-300 ease-in-out shadow-md ${
+          isScrolled ? 'py-3' : 'py-5'
         }`}
       >
-        <div className="flex justify-between items-center text-white">
+        <div className="max-w-md mx-auto md:max-w-7xl px-5 md:px-8 flex justify-between items-center text-white">
           <div className="flex flex-col justify-center">
             <h1 className={`font-bold tracking-wide leading-tight transition-all duration-300 ${
               isScrolled ? 'text-xl' : 'text-2xl'
@@ -145,14 +145,15 @@ const ProfilePage = ({ user, onLogout }) => {
             <span className="hidden sm:inline">Logout</span>
           </button>
         </div>
-      </div>
+      </header>
+      {/* CHANGE END */}
 
-      {/* Purple Backdrop for the overlap effect (Scrolls with page) */}
-      <div className="bg-[#6B46C1] h-16 md:rounded-b-[2rem] shadow-md relative z-10 w-full"></div>
+      {/* Decorative curved background (behind the main card) */}
+      <div className="absolute top-0 left-0 right-0 bg-[#6B46C1] h-48 rounded-b-[2rem] z-0"></div>
 
-      <div className="px-5 md:px-8 -mt-12 relative z-20">
+      {/* Main Content Container with top padding to offset the fixed header */}
+      <div className="max-w-md mx-auto md:max-w-7xl px-5 md:px-8 pt-28 relative z-20">
         {loading ? (
-          /* NAYA: Premium Skeleton Loader for Profile Page */
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 animate-pulse">
             
             {/* Skeleton Profile Card */}
