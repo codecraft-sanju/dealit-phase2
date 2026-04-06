@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
-import { ArrowLeft, Wallet, Coins, CreditCard, ChevronRight, Check, MoreHorizontal, Plus, Package, Sparkles, Copy, Users, Target } from 'lucide-react';
+import { ArrowLeft, Wallet, Coins, CreditCard, ChevronRight, Check, MoreHorizontal, Plus, Package, Sparkles, Copy, Users, Target, Share2 } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
@@ -33,6 +33,7 @@ const WalletPage = ({ user, setUser }) => {
   });
   
   const [copied, setCopied] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
 
   const [showCelebration, setShowCelebration] = useState(false);
   const [addedAmount, setAddedAmount] = useState(0);
@@ -71,6 +72,29 @@ const WalletPage = ({ user, setUser }) => {
       navigator.clipboard.writeText(profileData.referralCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleShare = async () => {
+    if (!profileData?.referralCode) return;
+
+    const referralLink = `${window.location.origin}/register?ref=${profileData.referralCode}`;
+    const shareData = {
+      title: 'Join me on Dealit!',
+      text: `Hey! I use Dealit to exchange unused items. Sign up using my link and we both get bonus credits!`,
+      url: referralLink
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        console.log('Error sharing:', err);
+      }
+    } else {
+      navigator.clipboard.writeText(referralLink);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
     }
   };
 
@@ -287,16 +311,25 @@ const WalletPage = ({ user, setUser }) => {
                     <span className="text-sm font-bold text-emerald-700">Milestone Completed! Awesome Job.</span>
                   </div>
                 ) : profileData?.referralCode ? (
-                  <div className="flex items-center gap-2 relative z-10">
-                    <div className="bg-white border border-emerald-200 px-4 py-2.5 rounded-xl font-black text-gray-800 tracking-wider flex-1 text-center shadow-inner">
-                      {profileData.referralCode}
+                  <div className="flex flex-col gap-2 relative z-10">
+                    <div className="flex items-center gap-2">
+                      <div className="bg-white border border-emerald-200 px-4 py-2.5 rounded-xl font-black text-gray-800 tracking-wider flex-1 text-center shadow-inner">
+                        {profileData.referralCode}
+                      </div>
+                      <button 
+                        onClick={handleCopyCode}
+                        className={`p-2.5 rounded-xl transition flex items-center justify-center shadow-sm ${copied ? 'bg-emerald-500 text-white' : 'bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50'}`}
+                        title="Copy Code"
+                      >
+                        {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                      </button>
                     </div>
                     <button 
-                      onClick={handleCopyCode}
-                      className={`px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-1.5 shadow-sm ${copied ? 'bg-emerald-500 text-white' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'}`}
+                      onClick={handleShare}
+                      className={`w-full py-2.5 rounded-xl font-bold text-sm transition flex items-center justify-center gap-2 shadow-sm ${shareCopied ? 'bg-emerald-500 text-white' : 'bg-emerald-500 text-white hover:bg-emerald-600'}`}
                     >
-                      {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                      {copied ? 'Copied' : 'Copy'}
+                      {shareCopied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+                      {shareCopied ? 'Link Copied' : 'Share Invite Link'}
                     </button>
                   </div>
                 ) : (

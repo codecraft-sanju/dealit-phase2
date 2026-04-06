@@ -185,57 +185,60 @@ const HomePage = ({ user }) => {
     <div className="max-w-md mx-auto bg-white min-h-[calc(100vh-130px)] md:max-w-7xl md:px-0 relative overflow-hidden">
       <div className="px-4 pt-3 pb-0">
         
-        <div className="grid grid-cols-5 gap-2 mb-3">
-          <div className="col-span-3 bg-white border border-[#EBE5F7] rounded-2xl p-3 flex flex-col justify-center h-full">
-            
-            <h1 className="text-[13px] sm:text-[15px] md:text-[20px] font-extrabold text-gray-900 leading-tight mb-1.5 tracking-tight">
+        {/* NAYA: grid-cols-7 use kiya hai granular control ke liye */}
+        <div className="grid grid-cols-7 gap-2 mb-3">
+          
+          {/* Left Side: col-span-5 (Width increased) */}
+          <div className="col-span-5 bg-white border border-[#EBE5F7] rounded-2xl p-3 flex flex-col justify-center h-full">
+            <h1 className="text-[16px] sm:text-[15px] md:text-[20px] font-extrabold text-gray-900 leading-tight mb-1.5 tracking-tight">
               Sell what you don't use<br/>
               Get what you <span className="text-[#A388E1]">actually want</span>
             </h1>
-            <p className="text-[9px] sm:text-[11px] md:text-xs text-gray-500 font-medium leading-snug">
+            <p className="text-[10px] sm:text-[11px] md:text-xs text-gray-500 font-medium leading-snug">
               Sell your stuff &rarr; Earn credits &rarr; Buy anything.
             </p>
           </div>
 
           {user ? (
-            <div className={`col-span-2 bg-gradient-to-br from-[#A388E1] to-[#b7a3eb] rounded-2xl p-2.5 text-white shadow-lg shadow-[#A388E1]/30 flex flex-col justify-between h-full relative overflow-hidden transition-all duration-1000 ${showCelebration ? 'shadow-yellow-400/50 scale-[1.02]' : ''}`}>
+            /* Right Side: col-span-2 (Width decreased) */
+            <div className={`col-span-2 bg-gradient-to-br from-[#A388E1] to-[#b7a3eb] rounded-2xl p-2 text-white shadow-lg shadow-[#A388E1]/30 flex flex-col justify-between h-full relative overflow-hidden transition-all duration-1000 ${showCelebration ? 'shadow-yellow-400/50 scale-[1.02]' : ''}`}>
               
-              <div className="absolute top-2 right-2 bg-white/20 px-1.5 py-[2px] rounded text-[8px] font-semibold border border-white/20 backdrop-blur-sm tracking-wide z-10">
-                ₹1 = 1 Credit
+              <div className="absolute top-1.5 right-1.5 bg-white/20 px-1 py-[1px] rounded text-[7px] font-semibold border border-white/10 backdrop-blur-sm tracking-wide z-10 whitespace-nowrap">
+                ₹1 = 1 Cr
               </div>
 
               <div>
-                <div className={`bg-yellow-400 p-1 rounded-full inline-flex items-center justify-center mb-1.5 transition-transform duration-700 ${showCelebration ? 'rotate-180 scale-110' : ''}`}>
-                  <Coins className="w-3.5 h-3.5 text-yellow-900" />
+                <div className={`bg-yellow-400 p-1 rounded-full inline-flex items-center justify-center mb-1 transition-transform duration-700 ${showCelebration ? 'rotate-180 scale-110' : ''}`}>
+                  <Coins className="w-3 h-3 text-yellow-900" />
                 </div>
-                <div className="flex items-end gap-1">
-                  <span className="text-lg font-bold leading-none relative">
+                <div className="flex items-end gap-0.5">
+                  <span className="text-base font-bold leading-none relative">
                     {user.account_credits || 0}
                     {showCelebration && (
-                      <span className="absolute -top-5 -right-12 text-sm text-yellow-300 font-black floating-up drop-shadow-[0_0_8px_rgba(253,224,71,0.8)] flex items-center z-10">
-                        +50 <Sparkles className="w-3 h-3 ml-0.5 animate-spin" />
+                      <span className="absolute -top-5 -right-8 text-xs text-yellow-300 font-black floating-up drop-shadow-[0_0_8px_rgba(253,224,71,0.8)] flex items-center z-10">
+                        +50 <Sparkles className="w-2.5 h-2.5 ml-0.5 animate-spin" />
                       </span>
                     )}
                   </span>
-                  <span className="text-[10px] font-normal opacity-90 mb-0.5">credits</span>
+                  <span className="text-[8px] font-normal opacity-90 mb-0.5">credits</span>
                 </div>
               </div>
-              <Link to="/wallet" className="bg-[#FFF4D2] text-[#8B70CA] text-[10px] font-bold px-2 py-1.5 mt-2 rounded-xl flex items-center justify-center gap-1 shadow-sm transition hover:bg-white z-10">
-                Earn More <ChevronRight className="w-3 h-3" />
+              <Link to="/wallet" className="bg-[#FFF4D2] text-[#8B70CA] text-[9px] font-bold px-1 py-1.5 mt-1.5 rounded-lg flex items-center justify-center gap-0.5 shadow-sm transition hover:bg-white z-10 whitespace-nowrap">
+                Earn More <ChevronRight className="w-2.5 h-2.5" />
               </Link>
             </div>
           ) : (
-            <div className="col-span-2 bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-2.5 text-white shadow-lg shadow-gray-900/30 flex flex-col justify-between h-full relative overflow-hidden">
+            /* Guest view right side: col-span-2 */
+            <div className="col-span-2 bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-2 text-white shadow-lg shadow-gray-900/30 flex flex-col justify-between h-full relative overflow-hidden">
               <div>
-                <UserCircle className="w-5 h-5 text-gray-400 opacity-80 mb-1" />
-                <h3 className="text-[11px] font-bold leading-tight">Join Dealit</h3>
-                <p className="text-[9px] text-gray-300 mt-0.5">Earn & trade</p>
+                <UserCircle className="w-4 h-4 text-gray-400 opacity-80 mb-0.5" />
+                <h3 className="text-[10px] font-bold leading-tight">Join</h3>
               </div>
-              <div className="flex gap-1.5 mt-2">
-                <Link to="/login" className="flex-1 bg-white text-gray-900 text-center text-[10px] font-bold px-1.5 py-1.5 rounded-lg shadow-sm hover:bg-gray-100 transition">
+              <div className="flex flex-col gap-1 mt-1">
+                <Link to="/login" className="bg-white text-gray-900 text-center text-[9px] font-bold py-1 rounded-md shadow-sm transition">
                   Login
                 </Link>
-                <Link to="/signup" className="flex-1 bg-[#A388E1] text-white text-center text-[10px] font-bold px-1.5 py-1.5 rounded-lg shadow-sm hover:bg-[#8b70ca] transition">
+                <Link to="/signup" className="bg-[#A388E1] text-white text-center text-[9px] font-bold py-1 rounded-md shadow-sm transition">
                   Join
                 </Link>
               </div>
@@ -287,7 +290,6 @@ const HomePage = ({ user }) => {
 
       <div className="px-4 pt-1.5 pb-0">
         <div className="flex gap-3 overflow-x-auto hide-scrollbar items-center pb-0">
-          
           <div 
             onClick={() => setActiveCategory('All')}
             className="flex flex-col items-center gap-1.5 min-w-max cursor-pointer transition-transform hover:scale-105"
@@ -421,7 +423,6 @@ const HomePage = ({ user }) => {
 
       <div className="px-4 pb-2 pt-1">
         <div className="flex items-center gap-2.5 px-1">
-          
           <div className="flex-shrink-0">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
               <path d="M3 17L9 11L13 15L21 7" stroke="#A388E1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -454,7 +455,6 @@ const HomePage = ({ user }) => {
               </p>
             </div>
           </div>
-
         </div>
       </div>
 
