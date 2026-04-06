@@ -319,7 +319,7 @@ const ProfilePage = ({ user, onLogout }) => {
 
                   {[
                     { to: "/dashboard", icon: ClipboardList, title: "My Listings", subtitle: "", badge: "2 Active" },
-                    { to: "#", icon: Archive, title: "My Orders", subtitle: "View your past transactions" },
+                    { to: "/orders", icon: Archive, title: "My Orders", subtitle: "View your past transactions" },
                     { to: "/swaps", icon: RefreshCw, title: "My Swaps", subtitle: "Your Trade Offers & Barters" },
                     { to: "#", icon: Tag, title: "My Offers", subtitle: "Items You've Bid On", iconClass: "fill-[#6B46C1]/20" },
                     

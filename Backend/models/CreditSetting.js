@@ -7,7 +7,7 @@ const creditSettingSchema = new mongoose.Schema({
   maxAllowedListings: { type: Number, default: 5 },
   isWelcomeBonusEnabled: { type: Boolean, default: true },
   welcomeBonusAmount: { type: Number, default: 50 },
-
+flatShippingCost: { type: Number, default: 60 },
   isReferralSystemEnabled: { type: Boolean, default: true },
   referralRewardCredits: { type: Number, default: 40 }, 
   maxReferralLimit: { type: Number, default: 5 },    

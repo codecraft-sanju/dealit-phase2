@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Package, RefreshCw, X, AlertCircle, Coins, CheckCircle2, Info, ShieldCheck, User, Share2, ArrowLeft, Calendar, Grid, TrendingUp, Heart } from 'lucide-react';
+import { 
+  Package, RefreshCw, X, AlertCircle, Coins, CheckCircle2, Info, 
+  ShieldCheck, User, Share2, ArrowLeft, Calendar, Grid, 
+  TrendingUp, Heart, ShoppingBag 
+} from 'lucide-react';
 import axios from 'axios';
 import ProductCard from './ProductCard'; 
 
@@ -174,6 +178,15 @@ const ItemDetailPage = ({ user }) => {
     }
   };
 
+  // NAYA: Buy Now Handler
+  const handleBuyNow = () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    navigate(`/checkout/${item._id}`);
+  };
+
   if (loading) {
     return (
       <div className="max-w-md mx-auto bg-white min-h-screen flex flex-col items-center justify-center lg:max-w-7xl">
@@ -213,7 +226,6 @@ const ItemDetailPage = ({ user }) => {
         
         <div className="lg:col-span-7 w-full mx-auto space-y-6">
           
-          {/* NAYA CHANGE: Main image viewer aspect-square on desktop and mobile */}
           <div className="relative w-full aspect-square bg-[#f8f9fb] lg:rounded-[2rem] overflow-hidden border-b lg:border border-slate-100 shadow-sm group">
             
             {item.images && item.images.length > 1 && (
@@ -229,7 +241,6 @@ const ItemDetailPage = ({ user }) => {
             >
               {item.images && item.images.length > 0 ? (
                 item.images.map((img, idx) => (
-                  // NAYA CHANGE: p-4 removed and object-cover added for full-width perfect square look
                   <div key={idx} className="w-full h-full flex-shrink-0 snap-center relative">
                     <img 
                       src={img} 
@@ -263,7 +274,6 @@ const ItemDetailPage = ({ user }) => {
                 <button 
                   key={idx}
                   onClick={() => handleThumbnailClick(idx)}
-                  // NAYA CHANGE: object-cover added for thumbnails
                   className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all bg-[#f8f9fb] ${activeIndex === idx ? 'border-[#6B46C1] shadow-sm scale-[0.98]' : 'border-slate-100 hover:border-slate-300'}`}
                 >
                   <img src={img} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover mix-blend-multiply" />
@@ -387,19 +397,29 @@ const ItemDetailPage = ({ user }) => {
         </div>
       )}
 
+      {/* --- MODIFIED ACTION BAR: Added Buy Now Button --- */}
       <div className="fixed bottom-[calc(60px+env(safe-area-inset-bottom))] md:bottom-0 left-0 right-0 z-40 pointer-events-none lg:static lg:mt-auto px-4 lg:px-0">
-        <div className="pointer-events-auto">
+        <div className="pointer-events-auto max-w-lg mx-auto lg:max-w-full">
           {user && (item.owner?._id === user._id || item.owner?._id === user.id) ? (
             <button disabled className="w-full bg-[#F8F9FA]/95 backdrop-blur-md text-slate-500 py-4 rounded-2xl font-bold text-base cursor-not-allowed border border-slate-200 shadow-sm flex items-center justify-center gap-2">
               <Package className="w-5 h-5 opacity-50" /> This is your item
             </button>
           ) : (
-            <button 
-              onClick={handleOpenBarterModal}
-              className="w-full bg-[#6B46C1] hover:bg-[#5a3aa8] text-white py-4 rounded-2xl font-bold text-base transition-all hover:-translate-y-1 flex items-center justify-center gap-2 shadow-[0_10px_25px_-5px_rgba(107,70,193,0.6)] active:scale-[0.98]"
-            >
-              <RefreshCw className="w-5 h-5" /> Offer a Trade
-            </button>
+            <div className="flex gap-3 bg-white/80 backdrop-blur-xl p-2 rounded-[2.5rem] shadow-2xl border border-slate-100 lg:bg-transparent lg:border-none lg:p-0 lg:shadow-none lg:flex-row">
+              <button 
+                onClick={handleOpenBarterModal}
+                className="flex-1 bg-white hover:bg-slate-50 text-[#6B46C1] py-4 rounded-2xl font-bold text-sm sm:text-base transition-all border-2 border-[#6B46C1]/20 flex items-center justify-center gap-2 active:scale-[0.98]"
+              >
+                <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5" /> Trade
+              </button>
+              
+              <button 
+                onClick={handleBuyNow}
+                className="flex-[1.5] bg-[#6B46C1] hover:bg-[#5a3aa8] text-white py-4 rounded-2xl font-bold text-sm sm:text-base transition-all flex items-center justify-center gap-2 shadow-[0_10px_25px_-5px_rgba(107,70,193,0.4)] active:scale-[0.98]"
+              >
+                <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" /> Buy Now
+              </button>
+            </div>
           )}
           
           <div className="hidden lg:flex items-center justify-center gap-4 mt-4 text-slate-400">
@@ -472,7 +492,6 @@ const ItemDetailPage = ({ user }) => {
                             : 'border-transparent shadow-sm hover:border-slate-200'
                         }`}
                       >
-                        {/* NAYA CHANGE: aspect-square and object-cover added for consistent 1:1 image boxes */}
                         <div className="aspect-square bg-[#f8f9fb] flex items-center justify-center overflow-hidden">
                           {myItem.images && myItem.images.length > 0 && myItem.images[0] ? (
                             <img src={myItem.images[0]} alt={myItem.title} className="w-full h-full object-cover mix-blend-multiply" />
