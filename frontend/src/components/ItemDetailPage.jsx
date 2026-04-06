@@ -176,9 +176,6 @@ const ItemDetailPage = ({ user }) => {
 
   return (
     <div className="max-w-7xl mx-auto bg-white min-h-screen pb-[150px] md:pb-32 lg:pb-12 font-sans animate-in fade-in duration-500 relative">
-      
-     
-
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-12 items-start lg:pt-10 lg:px-6">
         
         <div className="lg:col-span-7 w-full mx-auto space-y-6">
