@@ -11,11 +11,11 @@ const {
   getUserProfile,
   updateProfilePic,
   toggleWishlist,
-  getWishlist
+  getWishlist,
+  claimWelcomeBonus 
 } = require('../controllers/userController');
 
 const { protect } = require('../middleware/authMiddleware');
-
 
 router.post('/register', registerUser);
 router.post('/verify-otp', verifyOtp);
@@ -29,5 +29,6 @@ router.put('/profile-pic', protect, updateProfilePic);
 
 router.post('/wishlist/:itemId', protect, toggleWishlist);
 router.get('/wishlist', protect, getWishlist);
+router.post('/claim-bonus', protect, claimWelcomeBonus);
 
 module.exports = router;

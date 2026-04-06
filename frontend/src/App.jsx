@@ -41,7 +41,6 @@ axios.interceptors.request.use(
   }
 );
 
-// CHANGED: Added onCheckComplete prop to communicate with MainAppContent
 const ZeroPriceAlert = ({ user, onCheckComplete }) => {
   const [show, setShow] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -59,9 +58,9 @@ const ZeroPriceAlert = ({ user, onCheckComplete }) => {
         
         if (needsUpdate) {
           setShow(true);
-          onCheckComplete(true); // Found issue
+          onCheckComplete(true);
         } else {
-          onCheckComplete(false); // No issue
+          onCheckComplete(false);
         }
         setHasChecked(true); 
       } catch (error) {
@@ -142,7 +141,6 @@ const ZeroPriceAlert = ({ user, onCheckComplete }) => {
   );
 };
 
-// NAYA COMPONENT: Beautiful Promo Alert for Free Credits
 const PromoAlert = ({ user, hasZeroPriceIssue }) => {
   const [show, setShow] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -152,38 +150,56 @@ const PromoAlert = ({ user, hasZeroPriceIssue }) => {
 
   useEffect(() => {
     const checkPromoEligibility = async () => {
-      // Basic checks
       if (!user) return;
-      if (hasZeroPriceIssue !== false) return; // Wait until ZeroPriceAlert clears them
+      if (hasZeroPriceIssue !== false) return; 
       if (location.pathname.includes('/login') || location.pathname.includes('/signup')) return;
 
-      // Agar is session me pehle dikh chuka hai, toh dobara mat dikhao
       const promoShown = sessionStorage.getItem('promo_shown');
       if (promoShown === 'true') return;
 
-      // Rule: Agar user ne kam se kam 2 products list kar diye hain, toh usko popup nahi dikhega
       if ((user.listedProductsCount || 0) >= 2) return;
 
       try {
         const res = await axios.get(`${API_URL}/admin/public-settings`);
-        if (res.data.success) {
-          const fetchedSettings = res.data.data;
-          
-          // NAYA LOGIC: Agar dono schemes band hain, toh popup mat dikhao
-          if (!fetchedSettings.isCreditSystemEnabled && !fetchedSettings.isReferralSystemEnabled) {
-            return;
-          }
+        
+        // Setup robust defaults
+        let finalSettings = {
+          isCreditSystemEnabled: true,
+          creditsPerListing: 50,
+          isReferralSystemEnabled: true,
+          referralRewardCredits: 40
+        };
 
-          setSettings(fetchedSettings);
-          setShow(true);
-          sessionStorage.setItem('promo_shown', 'true'); // Mark as shown for this session
+        if (res.data.success && res.data.data) {
+          const fetchedSettings = res.data.data;
+          finalSettings = {
+            isCreditSystemEnabled: fetchedSettings.isCreditSystemEnabled ?? true,
+            creditsPerListing: fetchedSettings.creditsPerListing || 50,
+            isReferralSystemEnabled: fetchedSettings.isReferralSystemEnabled ?? true,
+            referralRewardCredits: fetchedSettings.referralRewardCredits || 40
+          };
         }
+
+        if (!finalSettings.isCreditSystemEnabled && !finalSettings.isReferralSystemEnabled) {
+          return;
+        }
+
+        setSettings(finalSettings);
+        setShow(true);
+        sessionStorage.setItem('promo_shown', 'true'); 
       } catch (err) {
-        console.error("Failed to load promo settings");
+        console.error("Failed to load promo settings, using defaults");
+        setSettings({
+          isCreditSystemEnabled: true,
+          creditsPerListing: 50,
+          isReferralSystemEnabled: true,
+          referralRewardCredits: 40
+        });
+        setShow(true);
+        sessionStorage.setItem('promo_shown', 'true');
       }
     };
 
-    // Thoda delay dete hain taaki direct muh pe na aaye (better UX)
     if (hasZeroPriceIssue === false) {
       const timer = setTimeout(checkPromoEligibility, 1000);
       return () => clearTimeout(timer);
@@ -199,8 +215,6 @@ const PromoAlert = ({ user, hasZeroPriceIssue }) => {
   };
 
   if (!show || !settings) return null;
-
-  // Double check, incase settings load and both are false
   if (!settings.isCreditSystemEnabled && !settings.isReferralSystemEnabled) return null;
 
   return (
@@ -233,7 +247,6 @@ const PromoAlert = ({ user, hasZeroPriceIssue }) => {
 
           <div className="space-y-3 mb-8">
             
-            {/* NAYA LOGIC: Admin ne listing credits enabled kiya hai tabhi dikhega */}
             {settings.isCreditSystemEnabled && (
               <div className="bg-gray-800/80 p-4 rounded-2xl border border-gray-700 flex items-center gap-4 text-left shadow-inner">
                 <div className="bg-blue-500/20 p-2.5 rounded-xl border border-blue-500/30 shrink-0">
@@ -241,12 +254,11 @@ const PromoAlert = ({ user, hasZeroPriceIssue }) => {
                 </div>
                 <div>
                   <p className="text-white font-bold text-sm">List an Item</p>
-                  <p className="text-gray-400 text-xs mt-0.5">Get <strong className="text-blue-400">{settings.creditsPerListing || 50} credits</strong> when approved</p>
+                  <p className="text-gray-400 text-xs mt-0.5">Get <strong className="text-blue-400">{settings.creditsPerListing} credits</strong> when approved</p>
                 </div>
               </div>
             )}
 
-            {/* Refer friends wala dabha */}
             {settings.isReferralSystemEnabled && (
               <div className="bg-gray-800/80 p-4 rounded-2xl border border-gray-700 flex items-center gap-4 text-left shadow-inner">
                 <div className="bg-yellow-500/20 p-2.5 rounded-xl border border-yellow-500/30 shrink-0">
@@ -254,7 +266,7 @@ const PromoAlert = ({ user, hasZeroPriceIssue }) => {
                 </div>
                 <div>
                   <p className="text-white font-bold text-sm">Refer Friends</p>
-                  <p className="text-gray-400 text-xs mt-0.5">Earn <strong className="text-yellow-400">{settings.referralRewardCredits || 40} credits</strong> per referral</p>
+                  <p className="text-gray-400 text-xs mt-0.5">Earn <strong className="text-yellow-400">{settings.referralRewardCredits} credits</strong> per referral</p>
                 </div>
               </div>
             )}
@@ -435,7 +447,6 @@ const PremiumLoader = () => (
 
 const MainAppContent = ({ user, handleLogout, setUser }) => {
   const location = useLocation();
-  // State to track if the user has 0 price items
   const [hasZeroPriceIssue, setHasZeroPriceIssue] = useState(null);
   
   const hideNavbarRoutes = ['/login', '/signup', '/forgot-password'];
@@ -443,7 +454,6 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
 
   return (
     <div className="min-h-screen bg-gray-900 font-sans selection:bg-emerald-500/30 pb-16 md:pb-0"> 
-      {/* Both Alerts are mounted but they coordinate using hasZeroPriceIssue */}
       <ZeroPriceAlert user={user} onCheckComplete={setHasZeroPriceIssue} />
       <PromoAlert user={user} hasZeroPriceIssue={hasZeroPriceIssue} />
       <IosInstallPopup />
@@ -455,7 +465,7 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
             <Route path="/" element={
               <>
                 <Navbar user={user} onLogout={handleLogout} />
-                <HomePage user={user} />
+                <HomePage user={user} setUser={setUser}/>
               </>
             } />
             

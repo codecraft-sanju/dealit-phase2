@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  Package, Coins, ChevronRight, Plus, UserCircle,
+  Package, Coins, ChevronRight, Plus, UserCircle, Gift,
   Smartphone, Shirt, Watch, Home as HomeIcon, Gamepad2, 
   Car, Monitor, Book, Sofa, Music, Utensils, Heart, Briefcase, Camera, Dumbbell, Sparkles
 } from 'lucide-react';
@@ -38,7 +38,7 @@ const DUMMY_AVATARS = [
   'https://i.pravatar.cc/40?img=57',
 ];
 
-const HomePage = ({ user }) => {
+const HomePage = ({ user, setUser }) => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -52,24 +52,32 @@ const HomePage = ({ user }) => {
   const [showCelebration, setShowCelebration] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
+  // NAYE STATES FOR CLAIM BONUS
+  const [isClaiming, setIsClaiming] = useState(false);
+  const [bonusSettings, setBonusSettings] = useState({ enabled: true, amount: 50 });
+
   const scrollRef = useRef(null);
   const isDown = useRef(false);
   const startX = useRef(0);
   const scrollLeftPos = useRef(0);
 
+  // Fetch Public Settings to get Welcome Bonus status
   useEffect(() => {
-    if (user) {
-      const checkWelcomeBonus = localStorage.getItem('showWelcomeBonus');
-      if (checkWelcomeBonus === 'true') {
-        setShowCelebration(true);
-        localStorage.removeItem('showWelcomeBonus');
-        
-        setTimeout(() => {
-          setShowCelebration(false);
-        }, 5500);
+    const fetchSettings = async () => {
+      try {
+        const res = await axios.get(`${API_URL}/admin/public-settings`);
+        if (res.data.success && res.data.data) {
+          setBonusSettings({
+            enabled: res.data.data.isWelcomeBonusEnabled ?? true,
+            amount: res.data.data.welcomeBonusAmount ?? 50
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching settings:', error);
       }
-    }
-  }, [user]);
+    };
+    fetchSettings();
+  }, []);
 
   useEffect(() => {
     const fetchOffers = async () => {
@@ -138,6 +146,45 @@ const HomePage = ({ user }) => {
     fetchItems(); 
   }, [activeCategory]);
 
+  // NAYA FUNCTION: Handle Claim Button Click
+  const handleClaimBonus = async () => {
+    if (isClaiming) return;
+    setIsClaiming(true);
+
+    try {
+      const response = await axios.post(`${API_URL}/users/claim-bonus`, {}, { withCredentials: true });
+      
+      if (response.data.success) {
+        // Run Celebration Animation
+        setShowCelebration(true);
+        
+        // Update user state globally to reflect new credits and hide the claim button
+   // Is code se replace kar do:
+setUser(prevUser => {
+  const updatedUser = {
+    ...prevUser,
+    account_credits: response.data.data.account_credits,
+    hasClaimedWelcomeBonus: response.data.data.hasClaimedWelcomeBonus
+  };
+  
+  // YEH LINE ADD KARNA ZARURI HAI
+  localStorage.setItem('dealit_user', JSON.stringify(updatedUser));
+  
+  return updatedUser;
+});
+
+        setTimeout(() => {
+          setShowCelebration(false);
+        }, 5500);
+      }
+    } catch (error) {
+      console.error('Error claiming bonus:', error);
+      // Optional: Handle error message showing to user here
+    } finally {
+      setIsClaiming(false);
+    }
+  };
+
   const handleMouseDown = (e) => {
     isDown.current = true;
     if (scrollRef.current) {
@@ -181,14 +228,15 @@ const HomePage = ({ user }) => {
     'radial-gradient(circle, #FDE047 20%, #EAB308 80%, #92400E 100%)'
   ];
 
+  // Helper condition to show claim button
+  const shouldShowClaimButton = user && !user.hasClaimedWelcomeBonus && bonusSettings.enabled;
+
   return (
     <div className="max-w-md mx-auto bg-white min-h-[calc(100vh-130px)] md:max-w-7xl md:px-0 relative overflow-hidden">
       <div className="px-4 pt-3 pb-0">
         
-        {/* NAYA: grid-cols-7 use kiya hai granular control ke liye */}
         <div className="grid grid-cols-7 gap-2 mb-3">
           
-          {/* Left Side: col-span-5 (Width increased) */}
           <div className="col-span-5 bg-white border border-[#EBE5F7] rounded-2xl p-3 flex flex-col justify-center h-full">
             <h1 className="text-[16px] sm:text-[15px] md:text-[20px] font-extrabold text-gray-900 leading-tight mb-1.5 tracking-tight">
               Sell what you don't use<br/>
@@ -200,7 +248,6 @@ const HomePage = ({ user }) => {
           </div>
 
           {user ? (
-            /* Right Side: col-span-2 (Width decreased) */
             <div className={`col-span-2 bg-gradient-to-br from-[#A388E1] to-[#b7a3eb] rounded-2xl p-2 text-white shadow-lg shadow-[#A388E1]/30 flex flex-col justify-between h-full relative overflow-hidden transition-all duration-1000 ${showCelebration ? 'shadow-yellow-400/50 scale-[1.02]' : ''}`}>
               
               <div className="absolute top-1.5 right-1.5 bg-white/20 px-1 py-[1px] rounded text-[7px] font-semibold border border-white/10 backdrop-blur-sm tracking-wide z-10 whitespace-nowrap">
@@ -216,19 +263,31 @@ const HomePage = ({ user }) => {
                     {user.account_credits || 0}
                     {showCelebration && (
                       <span className="absolute -top-5 -right-8 text-xs text-yellow-300 font-black floating-up drop-shadow-[0_0_8px_rgba(253,224,71,0.8)] flex items-center z-10">
-                        +50 <Sparkles className="w-2.5 h-2.5 ml-0.5 animate-spin" />
+                        +{bonusSettings.amount} <Sparkles className="w-2.5 h-2.5 ml-0.5 animate-spin" />
                       </span>
                     )}
                   </span>
                   <span className="text-[8px] font-normal opacity-90 mb-0.5">credits</span>
                 </div>
               </div>
-              <Link to="/wallet" className="bg-[#FFF4D2] text-[#8B70CA] text-[9px] font-bold px-1 py-1.5 mt-1.5 rounded-lg flex items-center justify-center gap-0.5 shadow-sm transition hover:bg-white z-10 whitespace-nowrap">
-                Earn More <ChevronRight className="w-2.5 h-2.5" />
-              </Link>
+
+              {/* NAYA LOGIC: Conditional Button Rendering */}
+              {shouldShowClaimButton ? (
+                <button 
+                  onClick={handleClaimBonus}
+                  disabled={isClaiming}
+                  className="bg-[#FFE28A] text-yellow-900 text-[9px] font-extrabold px-1 py-1.5 mt-1.5 rounded-lg flex items-center justify-center gap-0.5 shadow-sm transition hover:bg-yellow-300 z-10 whitespace-nowrap animate-pulse disabled:opacity-80 disabled:animate-none"
+                >
+                  {isClaiming ? 'Claiming...' : `Claim ${bonusSettings.amount}`} <Gift className="w-2.5 h-2.5" />
+                </button>
+              ) : (
+                <Link to="/wallet" className="bg-[#FFF4D2] text-[#8B70CA] text-[9px] font-bold px-1 py-1.5 mt-1.5 rounded-lg flex items-center justify-center gap-0.5 shadow-sm transition hover:bg-white z-10 whitespace-nowrap">
+                  Earn More <ChevronRight className="w-2.5 h-2.5" />
+                </Link>
+              )}
+
             </div>
           ) : (
-            /* Guest view right side: col-span-2 */
             <div className="col-span-2 bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-2 text-white shadow-lg shadow-gray-900/30 flex flex-col justify-between h-full relative overflow-hidden">
               <div>
                 <UserCircle className="w-4 h-4 text-gray-400 opacity-80 mb-0.5" />

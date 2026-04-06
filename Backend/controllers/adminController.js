@@ -151,12 +151,13 @@ const getCreditSettings = async (req, res) => {
 
 const updateCreditSettings = async (req, res) => {
   try {
-
     const { 
       isCreditSystemEnabled, 
       creditsPerListing, 
       maxListingsRewarded, 
       maxAllowedListings,
+      isWelcomeBonusEnabled, // ADDED
+      welcomeBonusAmount,    // ADDED
       isReferralSystemEnabled,
       referralRewardCredits,
       maxReferralLimit,
@@ -168,12 +169,14 @@ const updateCreditSettings = async (req, res) => {
       setting = new CreditSetting({});
     }
 
-  
     if (isCreditSystemEnabled !== undefined) setting.isCreditSystemEnabled = isCreditSystemEnabled;
     if (creditsPerListing !== undefined) setting.creditsPerListing = creditsPerListing;
     if (maxListingsRewarded !== undefined) setting.maxListingsRewarded = maxListingsRewarded;
     if (maxAllowedListings !== undefined) setting.maxAllowedListings = maxAllowedListings;
     
+    // ADDED LOGIC FOR WELCOME BONUS
+    if (isWelcomeBonusEnabled !== undefined) setting.isWelcomeBonusEnabled = isWelcomeBonusEnabled;
+    if (welcomeBonusAmount !== undefined) setting.welcomeBonusAmount = welcomeBonusAmount;
   
     if (isReferralSystemEnabled !== undefined) setting.isReferralSystemEnabled = isReferralSystemEnabled;
     if (referralRewardCredits !== undefined) setting.referralRewardCredits = referralRewardCredits;
@@ -196,12 +199,12 @@ const updateCreditSettings = async (req, res) => {
   }
 };
 
-
 const getPublicCreditSettings = async (req, res) => {
   try {
    
     let setting = await CreditSetting.findOne().select(
-      'isReferralSystemEnabled referralRewardCredits maxAllowedListings maxReferralLimit milestoneReferralReward'
+      // ADDED isWelcomeBonusEnabled and welcomeBonusAmount here
+      'isReferralSystemEnabled referralRewardCredits maxAllowedListings maxReferralLimit milestoneReferralReward isWelcomeBonusEnabled welcomeBonusAmount'
     );
     
     if (!setting) {
@@ -210,7 +213,9 @@ const getPublicCreditSettings = async (req, res) => {
         referralRewardCredits: 40, 
         maxAllowedListings: 5,
         maxReferralLimit: 5,
-        milestoneReferralReward: 100
+        milestoneReferralReward: 100,
+        isWelcomeBonusEnabled: true, 
+        welcomeBonusAmount: 50       
       };
     }
     res.status(200).json({ success: true, data: setting });

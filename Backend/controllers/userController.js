@@ -32,6 +32,7 @@ const sendTokenResponse = (user, statusCode, res, message) => {
       email: user.email, 
       role: user.role,
       account_credits: user.account_credits,
+      hasClaimedWelcomeBonus: user.hasClaimedWelcomeBonus, // Added to response
       referralCode: user.referralCode,
       totalReferrals: user.totalReferrals 
     }
@@ -436,6 +437,46 @@ const getWishlist = async (req, res) => {
   }
 };
 
+// Added the claimWelcomeBonus function
+const claimWelcomeBonus = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (user.hasClaimedWelcomeBonus) {
+      return res.status(400).json({ success: false, message: 'Welcome bonus already claimed' });
+    }
+
+    const setting = await CreditSetting.findOne();
+    const isEnabled = setting ? setting.isWelcomeBonusEnabled : true;
+    const amount = setting ? setting.welcomeBonusAmount : 50;
+
+    if (!isEnabled) {
+      return res.status(400).json({ success: false, message: 'Welcome bonus is currently disabled by Admin' });
+    }
+
+    user.account_credits += amount;
+    user.hasClaimedWelcomeBonus = true;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Successfully claimed ${amount} credits!`,
+      data: {
+        account_credits: user.account_credits,
+        hasClaimedWelcomeBonus: user.hasClaimedWelcomeBonus
+      }
+    });
+
+  } catch (error) {
+    console.error('[DEBUG] Error in claimWelcomeBonus:', error);
+    res.status(500).json({ success: false, message: 'Server Error while claiming bonus' });
+  }
+};
+
 module.exports = {
   registerUser,
   verifyOtp, 
@@ -446,5 +487,6 @@ module.exports = {
   getUserProfile,
   updateProfilePic,
   toggleWishlist,
-  getWishlist
+  getWishlist,
+  claimWelcomeBonus 
 };
