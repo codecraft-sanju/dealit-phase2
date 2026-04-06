@@ -8,7 +8,6 @@ const sendTokenResponse = (user, statusCode, res, message) => {
     expiresIn: '7d' 
   });
 
-  // CHANGED: Environment ke hisaab se cookie options auto-set honge
   const isProduction = process.env.NODE_ENV === 'production';
 
   const options = {
@@ -197,7 +196,6 @@ const logoutUser = (req, res) => {
  
   const isProduction = process.env.NODE_ENV === 'production';
 
-
   console.log('[DEBUG] Logging out user, clearing cookie');
 
   res.cookie('token', 'none', {
@@ -279,7 +277,6 @@ const resetPassword = async (req, res) => {
 };
 
 const getUserProfile = async (req, res) => {
-  // NAYA DEBUG
   console.log('[DEBUG] GET /profile called');
   console.log('[DEBUG] req.user object from middleware:', req.user ? `Found user ${req.user._id}` : 'UNDEFINED! Middleware failed or no cookie received.');
 
@@ -305,7 +302,6 @@ const getUserProfile = async (req, res) => {
 };
 
 const updateProfilePic = async (req, res) => {
-  // NAYA DEBUG
   console.log('[DEBUG] PUT /profile-pic called');
   console.log('[DEBUG] Incoming req.body:', req.body);
   console.log('[DEBUG] req.user from middleware:', req.user ? `Found user ${req.user._id}` : 'UNDEFINED! Cookie missing on iOS.');
@@ -342,6 +338,59 @@ const updateProfilePic = async (req, res) => {
   }
 };
 
+// CHANGE START: Wishlist Functions
+const toggleWishlist = async (req, res) => {
+  try {
+    const itemId = req.params.itemId;
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Check if the item is already in the wishlist
+    const index = user.wishlist.indexOf(itemId);
+
+    if (index === -1) {
+  
+      user.wishlist.push(itemId);
+      await user.save();
+      return res.status(200).json({ success: true, message: 'Added to wishlist', isWishlisted: true });
+    } else {
+      
+      user.wishlist.splice(index, 1);
+      await user.save();
+      return res.status(200).json({ success: true, message: 'Removed from wishlist', isWishlisted: false });
+    }
+  } catch (error) {
+    console.error('[DEBUG] Error in toggleWishlist:', error);
+    res.status(500).json({ success: false, message: 'Server Error toggling wishlist' });
+  }
+};
+
+const getWishlist = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).populate({
+      path: 'wishlist',
+      match: { status: 'active' }, // Only fetch items that are still active
+      populate: { path: 'owner', select: 'full_name city profilePic' } // Get owner details inside the item
+    });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+
+    const activeWishlist = user.wishlist.filter(item => item !== null);
+
+    res.status(200).json({ success: true, count: activeWishlist.length, data: activeWishlist });
+  } catch (error) {
+    console.error('[DEBUG] Error in getWishlist:', error);
+    res.status(500).json({ success: false, message: 'Server Error fetching wishlist' });
+  }
+};
+
+
 module.exports = {
   registerUser,
   verifyOtp, 
@@ -350,5 +399,9 @@ module.exports = {
   forgotPassword,
   resetPassword,
   getUserProfile,
-  updateProfilePic 
+  updateProfilePic,
+
+  toggleWishlist,
+  getWishlist
+
 };

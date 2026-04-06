@@ -13,6 +13,7 @@ const userSchema = new mongoose.Schema({
     default: 'user' 
   },
   profilePic: { type: String, default: '' },
+  wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item' }],
   
   account_credits: { type: Number, default: 50 }, // Welcome bonus of 50 credits
 

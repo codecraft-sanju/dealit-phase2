@@ -8,7 +8,11 @@ const {
   forgotPassword, 
   resetPassword, 
   getUserProfile,
-  updateProfilePic 
+  updateProfilePic,
+  // CHANGE START: Import the new wishlist functions
+  toggleWishlist,
+  getWishlist
+  // CHANGE END
 } = require('../controllers/userController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -20,5 +24,8 @@ router.post('/forgotpassword', forgotPassword);
 router.post('/resetpassword', resetPassword);
 router.get('/profile', protect, getUserProfile);
 router.put('/profile-pic', protect, updateProfilePic);
+
+router.post('/wishlist/:itemId', protect, toggleWishlist);
+router.get('/wishlist', protect, getWishlist);
 
 module.exports = router;

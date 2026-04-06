@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Package, RefreshCw, X, AlertCircle, Coins, CheckCircle2, Info, ShieldCheck, User, Share2, ArrowLeft, Calendar, Grid, TrendingUp } from 'lucide-react';
+// CHANGE START: Imported Heart icon
+import { Package, RefreshCw, X, AlertCircle, Coins, CheckCircle2, Info, ShieldCheck, User, Share2, ArrowLeft, Calendar, Grid, TrendingUp, Heart } from 'lucide-react';
+// CHANGE END
 import axios from 'axios';
 import ProductCard from './ProductCard'; 
 
@@ -28,6 +30,11 @@ const ItemDetailPage = ({ user }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollRef = useRef(null);
 
+  // CHANGE START: Added Wishlist States
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [togglingWishlist, setTogglingWishlist] = useState(false);
+  // CHANGE END
+
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     
@@ -36,6 +43,17 @@ const ItemDetailPage = ({ user }) => {
         setLoading(true);
         const response = await axios.get(`${API_URL}/items/${id}`);
         setItem(response.data.data);
+
+        // CHANGE START: Fetch User Profile to check if item is in wishlist
+        if (user) {
+          const profileRes = await axios.get(`${API_URL}/users/profile`, { withCredentials: true });
+          if (profileRes.data.success && profileRes.data.data.wishlist) {
+            const userWishlist = profileRes.data.data.wishlist;
+            setIsWishlisted(userWishlist.includes(id));
+          }
+        }
+        // CHANGE END
+
       } catch (error) {
         console.error('Error fetching item details:', error);
       } finally {
@@ -59,7 +77,7 @@ const ItemDetailPage = ({ user }) => {
 
     fetchItemDetails();
     fetchRelatedItems();
-  }, [id]);
+  }, [id, user]); // Added user to dependencies
 
   const handleScroll = (e) => {
     if (!e.target) return;
@@ -97,6 +115,26 @@ const ItemDetailPage = ({ user }) => {
       console.log('Error sharing:', error);
     }
   };
+
+  // CHANGE START: Toggle Wishlist Handler
+  const handleToggleWishlist = async () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    setTogglingWishlist(true);
+    try {
+      const response = await axios.post(`${API_URL}/users/wishlist/${id}`, {}, { withCredentials: true });
+      if (response.data.success) {
+        setIsWishlisted(response.data.isWishlisted);
+      }
+    } catch (error) {
+      console.error('Error toggling wishlist:', error);
+    } finally {
+      setTogglingWishlist(false);
+    }
+  };
+  // CHANGE END
 
   const handleOpenBarterModal = async () => {
     if (!user) {
@@ -253,9 +291,25 @@ const ItemDetailPage = ({ user }) => {
               <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 leading-tight tracking-tight pr-4">
                 {item.title}
               </h1>
-              <button onClick={handleShare} className="flex w-10 h-10 bg-slate-50 hover:bg-slate-100 border border-slate-100 shadow-sm rounded-full items-center justify-center text-[#6B46C1] transition-colors shrink-0 active:scale-95">
-                <Share2 className="w-4 h-4" />
-              </button>
+              
+              {/* CHANGE START: Added Wishlist Button Group */}
+              <div className="flex items-center gap-2 shrink-0">
+                <button 
+                  onClick={handleToggleWishlist} 
+                  disabled={togglingWishlist}
+                  className="flex w-10 h-10 bg-slate-50 hover:bg-red-50 border border-slate-100 shadow-sm rounded-full items-center justify-center transition-colors active:scale-95 group"
+                >
+                  <Heart className={`w-4 h-4 transition-colors ${isWishlisted ? 'fill-red-500 text-red-500' : 'text-slate-400 group-hover:text-red-500'}`} />
+                </button>
+                <button 
+                  onClick={handleShare} 
+                  className="flex w-10 h-10 bg-slate-50 hover:bg-slate-100 border border-slate-100 shadow-sm rounded-full items-center justify-center text-[#6B46C1] transition-colors active:scale-95"
+                >
+                  <Share2 className="w-4 h-4" />
+                </button>
+              </div>
+              {/* CHANGE END */}
+
             </div>
 
             <div className="flex items-center gap-2 pb-6 border-b border-slate-100">
@@ -337,7 +391,6 @@ const ItemDetailPage = ({ user }) => {
         </div>
       )}
 
-      {/* CHANGE START: Removed the solid white container background, gradient background, and borders. Now it's just a floating button above BottomNav. */}
       <div className="fixed bottom-[calc(60px+env(safe-area-inset-bottom))] md:bottom-0 left-0 right-0 z-40 pointer-events-none lg:static lg:mt-auto px-4 lg:px-0">
         <div className="pointer-events-auto">
           {user && (item.owner?._id === user._id || item.owner?._id === user.id) ? (
@@ -366,7 +419,6 @@ const ItemDetailPage = ({ user }) => {
           </div>
         </div>
       </div>
-      {/* CHANGE END */}
 
       {/* ================= Modern Barter Modal ================= */}
       {showModal && (

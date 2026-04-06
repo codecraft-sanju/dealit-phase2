@@ -7,7 +7,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
-// Create a motion-enabled Link component
 const MotionLink = motion(Link);
 
 const ProfilePage = ({ user, onLogout }) => {
@@ -99,7 +98,6 @@ const ProfilePage = ({ user, onLogout }) => {
 
   if (!user) return <Navigate to="/login" />;
 
-  // Framer Motion Animation Variants
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -120,7 +118,6 @@ const ProfilePage = ({ user, onLogout }) => {
   return (
     <div className="min-h-screen bg-[#f4f2f9] pb-10 font-sans relative overflow-x-hidden">
       
-      {/* Sticky Header */}
       <header 
         className={`fixed top-0 left-0 right-0 z-50 bg-[#6B46C1] transition-all duration-300 ease-in-out shadow-md ${
           isScrolled ? 'py-3' : 'py-5'
@@ -151,7 +148,6 @@ const ProfilePage = ({ user, onLogout }) => {
         </div>
       </header>
 
-      {/* Decorative Background */}
       <motion.div 
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -169,7 +165,6 @@ const ProfilePage = ({ user, onLogout }) => {
               exit={{ opacity: 0, transition: { duration: 0.2 } }}
               className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 animate-pulse"
             >
-              {/* Skeleton UI */}
               <div className="md:col-span-1 bg-white rounded-3xl shadow-sm border border-gray-100 p-5 flex flex-col items-center text-center">
                 <div className="w-24 h-24 bg-gray-200 rounded-[1.5rem] mb-4"></div>
                 <div className="h-6 w-3/4 bg-gray-200 rounded-lg mb-2"></div>
@@ -206,7 +201,6 @@ const ProfilePage = ({ user, onLogout }) => {
               className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6"
             >
               
-              {/* Profile Card */}
               <motion.div variants={itemVariants} className="md:col-span-1 bg-white rounded-3xl shadow-sm border border-gray-100 p-5 flex flex-col items-center text-center relative overflow-hidden">
                 <div className="relative mb-4">
                   <motion.div 
@@ -261,11 +255,9 @@ const ProfilePage = ({ user, onLogout }) => {
                 </div>
               </motion.div>
 
-              {/* Menu List */}
               <motion.div variants={itemVariants} className="md:col-span-2 flex flex-col gap-4">
                 <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
                   
-                  {/* Expandable Account Details */}
                   <motion.button 
                     whileTap={{ backgroundColor: "#f9fafb" }}
                     onClick={() => setShowAccountDetails(!showAccountDetails)} 
@@ -325,13 +317,16 @@ const ProfilePage = ({ user, onLogout }) => {
                     )}
                   </AnimatePresence>
 
-                  {/* Standard Menu Items */}
                   {[
                     { to: "/dashboard", icon: ClipboardList, title: "My Listings", subtitle: "", badge: "2 Active" },
                     { to: "#", icon: Archive, title: "My Orders", subtitle: "View your past transactions" },
                     { to: "/swaps", icon: RefreshCw, title: "My Swaps", subtitle: "Your Trade Offers & Barters" },
                     { to: "#", icon: Tag, title: "My Offers", subtitle: "Items You've Bid On", iconClass: "fill-[#6B46C1]/20" },
-                    { to: "#", icon: Heart, title: "Wishlist", subtitle: "Saved Items", iconClass: "fill-[#6B46C1]" },
+                    
+                    // CHANGE START: Updated link destination for Wishlist
+                    { to: "/wishlist", icon: Heart, title: "Wishlist", subtitle: "Saved Items", iconClass: "fill-[#6B46C1]" },
+                    // CHANGE END
+
                     { to: "/wallet", icon: Wallet, title: "My Wallet", subtitle: "Credit Balance & Purchases" },
                     { to: "#", icon: Bell, title: "Notifications", subtitle: "Alert Settings", iconClass: "fill-[#6B46C1]" },
                     { to: "#", icon: HelpCircle, title: "Help & Support", subtitle: "Get Assistance", iconClass: "fill-[#6B46C1]/20", noBorder: true }

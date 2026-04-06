@@ -22,6 +22,9 @@ const ItemsPage = lazy(() => import('./components/ItemsPage'));
 const DashboardPage = lazy(() => import('./components/DashboardPage'));
 const DealDetailsPage = lazy(() => import('./components/DealDetailsPage'));
 
+const WishlistPage = lazy(() => import('./components/WishlistPage'));
+
+
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
@@ -41,7 +44,6 @@ axios.interceptors.request.use(
   }
 );
 
-// CHANGED: Premium ZeroPriceAlert Component with Purple Theme
 const ZeroPriceAlert = ({ user }) => {
   const [show, setShow] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -82,7 +84,6 @@ const ZeroPriceAlert = ({ user }) => {
   if (!show) return null;
 
   return (
-    // CHANGED YAHAN KIYA HAI: bg-black/60 aur backdrop-blur-md hata diya gaya hai for transparent fast background
     <div 
       onClick={handleClose}
       className={`fixed inset-0 z-[100] flex items-center justify-center px-4 ${isClosing ? 'animate-out fade-out' : 'animate-in fade-in'} duration-300`}
@@ -92,7 +93,6 @@ const ZeroPriceAlert = ({ user }) => {
         className={`bg-gray-900 border border-purple-500/50 rounded-[2rem] p-8 max-w-sm w-full text-center shadow-[0_20px_60px_rgba(163,136,225,0.2)] relative overflow-hidden transform ${isClosing ? 'animate-out zoom-out-95 slide-out-to-bottom-8' : 'animate-in zoom-in-95 slide-in-from-bottom-8'} duration-300`}
       >
         
-        {/* Background Premium Glow Effects */}
         <div className="absolute -top-24 -left-24 w-48 h-48 bg-purple-500/20 rounded-full blur-[3rem] pointer-events-none"></div>
         <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-emerald-500/10 rounded-full blur-[3rem] pointer-events-none"></div>
 
@@ -115,7 +115,6 @@ const ZeroPriceAlert = ({ user }) => {
               Some of your listed items have a value of <strong className="text-purple-400">0 Credits</strong>. Please update their prices so others can make fair trade offers.
             </p>
             
-            {/* Category Reminder Box */}
             <div className="bg-gray-800/60 p-4 rounded-2xl border border-gray-700 text-left flex gap-3">
               <Package className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
               <p className="text-xs text-gray-300 leading-relaxed">
@@ -327,6 +326,10 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
             <Route path="/dashboard" element={user ? <DashboardPage user={user} /> : <Navigate to="/login" />} />
             <Route path="/edit-item/:id" element={user ? <EditItemPage /> : <Navigate to="/login" />} />
             
+            {/* CHANGE START: Added the Wishlist Route */}
+            <Route path="/wishlist" element={user ? <WishlistPage user={user} /> : <Navigate to="/login" />} />
+            {/* CHANGE END */}
+
             <Route path="/admin" element={<AdminPanel user={user} />} />
             <Route path="/add-item" element={user ? <AddItemPage /> : <Navigate to="/login" />} />
             
