@@ -1,10 +1,64 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Plus, ChevronLeft, Gift } from 'lucide-react'; 
+import { X, Plus, ChevronLeft, Gift, Image as ImageIcon } from 'lucide-react'; 
 import axios from 'axios';
+import Cropper from 'react-easy-crop'; // NAYA: Crop library import ki
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
+
+// NAYA CHANGE: Cropper helper functions (AdminPanel se liye gaye hain)
+const createImage = (url) =>
+  new Promise((resolve, reject) => {
+    const image = new Image();
+    image.addEventListener('load', () => resolve(image));
+    image.addEventListener('error', (error) => reject(error));
+    image.setAttribute('crossOrigin', 'anonymous');
+    image.src = url;
+  });
+
+const getCroppedImg = async (imageSrc, pixelCrop) => {
+  const image = await createImage(imageSrc);
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+
+  if (!ctx) return null;
+
+  canvas.width = image.width;
+  canvas.height = image.height;
+  ctx.drawImage(image, 0, 0);
+
+  const croppedCanvas = document.createElement('canvas');
+  const croppedCtx = croppedCanvas.getContext('2d');
+
+  if (!croppedCtx) return null;
+
+  croppedCanvas.width = pixelCrop.width;
+  croppedCanvas.height = pixelCrop.height;
+
+  croppedCtx.drawImage(
+    canvas,
+    pixelCrop.x,
+    pixelCrop.y,
+    pixelCrop.width,
+    pixelCrop.height,
+    0,
+    0,
+    pixelCrop.width,
+    pixelCrop.height
+  );
+
+  return new Promise((resolve, reject) => {
+    croppedCanvas.toBlob((file) => {
+      if (file) {
+        file.name = 'cropped.jpeg';
+        resolve(file);
+      } else {
+        reject(new Error('Canvas is empty'));
+      }
+    }, 'image/jpeg', 0.9); // Quality 90% for good balance
+  });
+};
 
 const AddItemPage = ({ user, setUser }) => {
   const navigate = useNavigate();
@@ -17,69 +71,108 @@ const AddItemPage = ({ user, setUser }) => {
     estimated_value: ''
   });
   const [images, setImages] = useState([]);
-  const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [successMsg, setSuccessMsg] = useState(''); 
   
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
 
-  // User ke list kiye gaye products ka count (agar data nahi hai toh 0)
+  // Backend settings ke liye state
+  const [systemSettings, setSystemSettings] = useState({
+    isCreditSystemEnabled: true,
+    creditsPerListing: 50,
+    maxListingsRewarded: 3,
+    maxAllowedListings: 5 // Default limit
+  });
+  const [loadingSettings, setLoadingSettings] = useState(true);
+
+  // NAYA CHANGE: Crop states
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+  const [isProcessingCrop, setIsProcessingCrop] = useState(false);
+
+  // Dynamic limits check
   const listedCount = user?.listedProductsCount || 0;
-  const isLimitReached = listedCount >= 5;
+  const isLimitReached = listedCount >= systemSettings.maxAllowedListings;
 
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchData = async () => {
       try {
-        const response = await axios.get(`${API_URL}/categories`);
-        if (response.data.success) {
-          setCategories(response.data.data);
+        const catRes = await axios.get(`${API_URL}/categories`);
+        if (catRes.data.success) {
+          setCategories(catRes.data.data);
+        }
+
+        const settingsRes = await axios.get(`${API_URL}/admin/credit-settings`, { withCredentials: true });
+        if (settingsRes.data.success && settingsRes.data.data) {
+          setSystemSettings(settingsRes.data.data);
         }
       } catch (err) {
-        console.error('Error fetching categories:', err);
+        console.error('Error fetching initial data:', err);
       } finally {
         setLoadingCategories(false);
+        setLoadingSettings(false);
       }
     };
-    fetchCategories();
+    fetchData();
   }, []);
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleImageUpload = async (e) => {
-    const files = Array.from(e.target.files);
-    
-    if (images.length + files.length > 5) {
+  // NAYA CHANGE: Select image for cropping
+  const handleImageSelect = (e) => {
+    if (images.length >= 5) {
       setError('You can only upload a maximum of 5 images.');
       return;
     }
 
-    setUploading(true);
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.addEventListener('load', () => {
+        setImageToCrop(reader.result);
+        setCrop({ x: 0, y: 0 });
+        setZoom(1);
+        setCropModalOpen(true);
+      });
+      reader.readAsDataURL(file);
+    }
+    e.target.value = null; // reset input
+  };
+
+  const onCropComplete = (croppedArea, croppedAreaPixels) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  };
+
+  // NAYA CHANGE: Upload cropped image to cloudinary
+  const handleCropAndUpload = async () => {
+    setIsProcessingCrop(true);
     setError('');
-
-    const uploadedUrls = [...images];
-
     try {
-      for (const file of files) {
-        const data = new FormData();
-        data.append('file', file);
-        data.append('upload_preset', 'salon_preset');
+      const croppedImageBlob = await getCroppedImg(imageToCrop, croppedAreaPixels);
 
-        const response = await axios.post(
-          `https://api.cloudinary.com/v1_1/dvoenforj/image/upload`,
-          data
-        );
-        uploadedUrls.push(response.data.secure_url);
-      }
-      setImages(uploadedUrls);
+      const data = new FormData();
+      data.append('file', croppedImageBlob);
+      data.append('upload_preset', 'salon_preset');
+
+      const response = await axios.post(
+        `https://api.cloudinary.com/v1_1/dvoenforj/image/upload`,
+        data
+      );
+      
+      setImages([...images, response.data.secure_url]);
+      setCropModalOpen(false);
+      setImageToCrop(null);
     } catch (err) {
       console.error('Upload Error:', err);
-      setError('Failed to upload images. Please try again.');
+      setError('Failed to upload image. Please try again.');
     } finally {
-      setUploading(false);
+      setIsProcessingCrop(false);
     }
   };
 
@@ -106,7 +199,6 @@ const AddItemPage = ({ user, setUser }) => {
       );
 
       if (response.data.success) {
-        // Form submit hone ke baad user state update kar do taaki limit count update ho jaye
         try {
           const userRes = await axios.get(`${API_URL}/users/profile`, { withCredentials: true });
           if (userRes.data.success && setUser) {
@@ -117,7 +209,6 @@ const AddItemPage = ({ user, setUser }) => {
           console.error("Failed to update user profile locally", e);
         }
 
-        // Backend se aaya response message show karo
         window.alert(response.data.message);
         navigate('/dashboard'); 
       }
@@ -127,6 +218,14 @@ const AddItemPage = ({ user, setUser }) => {
       setLoading(false);
     }
   };
+
+  if (loadingSettings) {
+    return (
+      <div className="min-h-screen bg-[#f4f2f9] flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-[#6B46C1]/30 border-t-[#6B46C1] rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f4f2f9] md:py-10 flex justify-center font-sans">
@@ -150,25 +249,37 @@ const AddItemPage = ({ user, setUser }) => {
 
         <div className="p-6 md:p-8 overflow-y-auto custom-scrollbar">
           
-          {/* NAYA CHANGE: Banner update kiya gaya admin approval wale logic ke hisaab se */}
           {!isLimitReached ? (
             <div className="bg-purple-50 border border-purple-200 rounded-2xl p-4 mb-6 flex items-start gap-3 shadow-sm">
               <div className="bg-purple-100 p-2 rounded-full mt-1 flex-shrink-0">
                 <Gift className="w-5 h-5 text-purple-600" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-purple-800">Earn Credits on Approval! 🪙</h4>
-                <p className="text-xs text-purple-600 mt-1 leading-relaxed">
-                  You can list a maximum of <strong>5 items</strong>. Earn <strong>50 Credits</strong> for your first 3 listings once the admin approves them!
-                  <br/>
-                  <span className="font-semibold text-purple-700 inline-block mt-1">Your current listings: {listedCount}/5</span>
-                </p>
+                {systemSettings.isCreditSystemEnabled ? (
+                  <>
+                    <h4 className="text-sm font-bold text-purple-800">Earn Credits on Approval! 🪙</h4>
+                    <p className="text-xs text-purple-600 mt-1 leading-relaxed">
+                      You can list a maximum of <strong>{systemSettings.maxAllowedListings} items</strong>. Earn <strong>{systemSettings.creditsPerListing} Credits</strong> for your first {systemSettings.maxListingsRewarded} listings once the admin approves them!
+                      <br/>
+                      <span className="font-semibold text-purple-700 inline-block mt-1">Your current listings: {listedCount}/{systemSettings.maxAllowedListings}</span>
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h4 className="text-sm font-bold text-purple-800">List Your Items! 📦</h4>
+                    <p className="text-xs text-purple-600 mt-1 leading-relaxed">
+                      You can list up to <strong>{systemSettings.maxAllowedListings} items</strong> on the platform. Add clear pictures and details!
+                      <br/>
+                      <span className="font-semibold text-purple-700 inline-block mt-1">Your current listings: {listedCount}/{systemSettings.maxAllowedListings}</span>
+                    </p>
+                  </>
+                )}
               </div>
             </div>
           ) : (
             <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-6 shadow-sm">
               <h4 className="text-sm font-bold text-red-800">Listing Limit Reached</h4>
-              <p className="text-xs text-red-600 mt-1">You have reached the maximum limit of 5 listed items. You cannot list more items right now.</p>
+              <p className="text-xs text-red-600 mt-1">You have reached the maximum limit of {systemSettings.maxAllowedListings} listed items. You cannot list more items right now.</p>
             </div>
           )}
 
@@ -199,15 +310,15 @@ const AddItemPage = ({ user, setUser }) => {
                   </div>
                 ))}
                 
+                {/* NAYA CHANGE: Removed 'multiple' to support manual cropping one by one */}
                 {images.length < 5 && !isLimitReached && (
                   <label className="w-24 h-24 bg-[#f8f6ff] border-2 border-[#e9d8ff] rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-[#f3edff] hover:border-[#d6bcfa] transition-all shadow-sm">
                     <Plus className="w-8 h-8 text-[#805ad5] mb-1" />
                     <span className="text-xs font-semibold text-[#805ad5]">Add Photo</span>
-                    <input type="file" multiple accept="image/*" onChange={handleImageUpload} disabled={uploading} className="hidden" />
+                    <input type="file" accept="image/*" onChange={handleImageSelect} disabled={isProcessingCrop} className="hidden" />
                   </label>
                 )}
               </div>
-              {uploading && <p className="text-[#805ad5] font-medium text-sm mt-3 animate-pulse">Uploading images...</p>}
             </div>
 
             <div className="space-y-5">
@@ -316,9 +427,9 @@ const AddItemPage = ({ user, setUser }) => {
             <div className="pt-4">
               <button 
                 type="submit" 
-                disabled={loading || uploading || isLimitReached} 
+                disabled={loading || isProcessingCrop || isLimitReached} 
                 className={`w-full font-bold text-lg rounded-[1.25rem] px-4 py-4 transition-all transform hover:scale-[1.01] active:scale-[0.99] ${
-                  loading || uploading || isLimitReached
+                  loading || isProcessingCrop || isLimitReached
                     ? 'bg-[#b794f4] text-white cursor-not-allowed' 
                     : 'bg-gradient-to-r from-[#805ad5] to-[#6B46C1] hover:shadow-lg hover:shadow-purple-500/30 text-white'
                 }`}
@@ -327,13 +438,71 @@ const AddItemPage = ({ user, setUser }) => {
               </button>
               
               <p className="text-center text-xs font-medium text-gray-500 mt-4">
-                List up to 5 items. Make sure your details are accurate!
+                List up to {systemSettings.maxAllowedListings} items. Make sure your details are accurate!
               </p>
             </div>
 
           </form>
         </div>
       </div>
+
+      {/* NAYA CHANGE: Interactive Crop Modal */}
+      {cropModalOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center px-4 py-4 bg-black/80 backdrop-blur-sm transition-opacity">
+          <div className="bg-gray-800 w-full max-w-xl rounded-3xl border border-gray-700 shadow-2xl overflow-hidden flex flex-col h-[70vh] animate-in zoom-in-95 duration-200">
+            <div className="p-5 border-b border-gray-700 flex justify-between items-center bg-gray-900/80 backdrop-blur-md shrink-0">
+              <h2 className="text-lg font-black text-white flex items-center gap-2">
+                <ImageIcon className="w-5 h-5 text-[#A388E1]" /> 
+                Adjust Image (1:1)
+              </h2>
+              <button onClick={() => setCropModalOpen(false)} className="text-gray-400 hover:text-white transition-all p-2 bg-gray-800 hover:bg-gray-700 rounded-full">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="relative flex-1 bg-black w-full h-full">
+              {imageToCrop && (
+                <Cropper
+                  image={imageToCrop}
+                  crop={crop}
+                  zoom={zoom}
+                  aspect={1} // 1:1 Square crop for uniform UI
+                  onCropChange={setCrop}
+                  onCropComplete={onCropComplete}
+                  onZoomChange={setZoom}
+                />
+              )}
+            </div>
+
+            <div className="p-5 border-t border-gray-700 bg-gray-900/80 backdrop-blur-md flex flex-col items-center justify-between gap-4 shrink-0">
+              <div className="flex items-center gap-3 w-full">
+                <span className="text-gray-400 text-sm font-bold">Zoom</span>
+                <input
+                  type="range"
+                  value={zoom}
+                  min={1}
+                  max={3}
+                  step={0.1}
+                  aria-labelledby="Zoom"
+                  onChange={(e) => setZoom(e.target.value)}
+                  className="w-full accent-[#A388E1]"
+                />
+              </div>
+              <div className="flex gap-3 w-full justify-end mt-2">
+                <button type="button" onClick={() => setCropModalOpen(false)} className="px-6 py-2.5 rounded-xl font-bold text-gray-400 hover:text-white transition-all">Cancel</button>
+                <button
+                  onClick={handleCropAndUpload}
+                  disabled={isProcessingCrop}
+                  className={`px-8 py-2.5 rounded-xl font-bold transition-all flex items-center justify-center gap-2 w-full sm:w-auto ${isProcessingCrop ? 'bg-[#A388E1]/50 text-white/50 cursor-not-allowed' : 'bg-[#A388E1] hover:bg-[#8b70ca] text-white shadow-[0_0_15px_rgba(163,136,225,0.4)]'}`}
+                >
+                  {isProcessingCrop ? 'Uploading...' : 'Crop & Upload'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

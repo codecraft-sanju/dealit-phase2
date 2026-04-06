@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-// CHANGE START: Imported Heart icon
 import { Package, RefreshCw, X, AlertCircle, Coins, CheckCircle2, Info, ShieldCheck, User, Share2, ArrowLeft, Calendar, Grid, TrendingUp, Heart } from 'lucide-react';
-// CHANGE END
 import axios from 'axios';
 import ProductCard from './ProductCard'; 
 
@@ -30,10 +28,9 @@ const ItemDetailPage = ({ user }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollRef = useRef(null);
 
-  // CHANGE START: Added Wishlist States
+  // Wishlist States
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [togglingWishlist, setTogglingWishlist] = useState(false);
-  // CHANGE END
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -44,7 +41,7 @@ const ItemDetailPage = ({ user }) => {
         const response = await axios.get(`${API_URL}/items/${id}`);
         setItem(response.data.data);
 
-        // CHANGE START: Fetch User Profile to check if item is in wishlist
+        // Fetch User Profile to check if item is in wishlist
         if (user) {
           const profileRes = await axios.get(`${API_URL}/users/profile`, { withCredentials: true });
           if (profileRes.data.success && profileRes.data.data.wishlist) {
@@ -52,7 +49,6 @@ const ItemDetailPage = ({ user }) => {
             setIsWishlisted(userWishlist.includes(id));
           }
         }
-        // CHANGE END
 
       } catch (error) {
         console.error('Error fetching item details:', error);
@@ -77,7 +73,7 @@ const ItemDetailPage = ({ user }) => {
 
     fetchItemDetails();
     fetchRelatedItems();
-  }, [id, user]); // Added user to dependencies
+  }, [id, user]); 
 
   const handleScroll = (e) => {
     if (!e.target) return;
@@ -116,7 +112,7 @@ const ItemDetailPage = ({ user }) => {
     }
   };
 
-  // CHANGE START: Toggle Wishlist Handler
+  // Toggle Wishlist Handler
   const handleToggleWishlist = async () => {
     if (!user) {
       navigate('/login');
@@ -134,7 +130,6 @@ const ItemDetailPage = ({ user }) => {
       setTogglingWishlist(false);
     }
   };
-  // CHANGE END
 
   const handleOpenBarterModal = async () => {
     if (!user) {
@@ -218,7 +213,8 @@ const ItemDetailPage = ({ user }) => {
         
         <div className="lg:col-span-7 w-full mx-auto space-y-6">
           
-          <div className="relative w-full aspect-square lg:aspect-auto lg:h-[500px] bg-[#f8f9fb] lg:rounded-[2rem] overflow-hidden border-b lg:border border-slate-100 shadow-sm group">
+          {/* NAYA CHANGE: Main image viewer aspect-square on desktop and mobile */}
+          <div className="relative w-full aspect-square bg-[#f8f9fb] lg:rounded-[2rem] overflow-hidden border-b lg:border border-slate-100 shadow-sm group">
             
             {item.images && item.images.length > 1 && (
               <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-3 py-1.5 rounded-full lg:hidden z-10 tracking-widest shadow-sm">
@@ -233,11 +229,12 @@ const ItemDetailPage = ({ user }) => {
             >
               {item.images && item.images.length > 0 ? (
                 item.images.map((img, idx) => (
-                  <div key={idx} className="w-full h-full flex-shrink-0 snap-center flex items-center justify-center p-4 lg:p-8 relative">
+                  // NAYA CHANGE: p-4 removed and object-cover added for full-width perfect square look
+                  <div key={idx} className="w-full h-full flex-shrink-0 snap-center relative">
                     <img 
                       src={img} 
                       alt={`${item.title} ${idx + 1}`} 
-                      className="max-w-full max-h-full object-contain drop-shadow-sm" 
+                      className="w-full h-full object-cover drop-shadow-sm" 
                     />
                   </div>
                 ))
@@ -266,9 +263,10 @@ const ItemDetailPage = ({ user }) => {
                 <button 
                   key={idx}
                   onClick={() => handleThumbnailClick(idx)}
-                  className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all p-1 bg-[#f8f9fb] ${activeIndex === idx ? 'border-[#6B46C1] shadow-sm scale-[0.98]' : 'border-slate-100 hover:border-slate-300'}`}
+                  // NAYA CHANGE: object-cover added for thumbnails
+                  className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all bg-[#f8f9fb] ${activeIndex === idx ? 'border-[#6B46C1] shadow-sm scale-[0.98]' : 'border-slate-100 hover:border-slate-300'}`}
                 >
-                  <img src={img} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-contain mix-blend-multiply" />
+                  <img src={img} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover mix-blend-multiply" />
                 </button>
               ))}
             </div>
@@ -292,7 +290,6 @@ const ItemDetailPage = ({ user }) => {
                 {item.title}
               </h1>
               
-              {/* CHANGE START: Added Wishlist Button Group */}
               <div className="flex items-center gap-2 shrink-0">
                 <button 
                   onClick={handleToggleWishlist} 
@@ -308,7 +305,6 @@ const ItemDetailPage = ({ user }) => {
                   <Share2 className="w-4 h-4" />
                 </button>
               </div>
-              {/* CHANGE END */}
 
             </div>
 
@@ -476,9 +472,10 @@ const ItemDetailPage = ({ user }) => {
                             : 'border-transparent shadow-sm hover:border-slate-200'
                         }`}
                       >
-                        <div className="aspect-[4/3] bg-[#f8f9fb] flex items-center justify-center overflow-hidden p-2">
+                        {/* NAYA CHANGE: aspect-square and object-cover added for consistent 1:1 image boxes */}
+                        <div className="aspect-square bg-[#f8f9fb] flex items-center justify-center overflow-hidden">
                           {myItem.images && myItem.images.length > 0 && myItem.images[0] ? (
-                            <img src={myItem.images[0]} alt={myItem.title} className="w-full h-full object-contain mix-blend-multiply" />
+                            <img src={myItem.images[0]} alt={myItem.title} className="w-full h-full object-cover mix-blend-multiply" />
                           ) : (
                             <Package className="w-8 h-8 text-[#A388E1]/40" />
                           )}

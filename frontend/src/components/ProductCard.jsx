@@ -7,7 +7,8 @@ const ProductCard = ({ item, isLoading, className = '' }) => {
   if (isLoading) {
     return (
       <div className={`bg-[#F8F6FF] rounded-2xl p-2.5 relative block border border-gray-50 animate-pulse ${className}`}>
-        <div className="h-20 w-full bg-[#EBE5F7] rounded-xl mb-2"></div>
+        {/* NAYA CHANGE: h-20 w-full ki jagah 'w-full aspect-square' (1:1 Square Ratio) */}
+        <div className="w-full aspect-square bg-[#EBE5F7] rounded-xl mb-3"></div>
         <div>
           <div className="h-2.5 w-full bg-[#EBE5F7] rounded-md mb-1.5"></div>
           <div className="h-2.5 w-2/3 bg-[#EBE5F7] rounded-md mb-2"></div>
@@ -30,9 +31,11 @@ const ProductCard = ({ item, isLoading, className = '' }) => {
       to={`/item/${item._id}`} 
       className={`bg-[#F8F6FF] rounded-2xl p-2.5 relative block hover:shadow-md transition-shadow ${className}`}
     >
-      <div className="h-20 w-full flex items-center justify-center mb-2">
+      {/* NAYA CHANGE: Image container ko 'w-full aspect-square' (1:1) diya hai */}
+      <div className="w-full aspect-square flex items-center justify-center mb-3 bg-white/40 rounded-xl overflow-hidden">
         {item.images && item.images.length > 0 && item.images[0] ? (
-          <img src={item.images[0]} alt={item.title} className="max-h-full max-w-full object-contain mix-blend-multiply drop-shadow-md" />
+          // NAYA CHANGE: object-contain ki jagah object-cover lagaya taaki square perfect dikhe
+          <img src={item.images[0]} alt={item.title} className="w-full h-full object-cover mix-blend-multiply drop-shadow-sm transition-transform duration-300 hover:scale-105" />
         ) : (
           <Package className="w-8 h-8 text-[#A388E1]/40" />
         )}

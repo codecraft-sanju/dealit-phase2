@@ -187,12 +187,13 @@ const HomePage = ({ user }) => {
         
         <div className="grid grid-cols-5 gap-2 mb-3">
           <div className="col-span-3 bg-white border border-[#EBE5F7] rounded-2xl p-3 flex flex-col justify-center h-full">
-            {/* UPDATED TEXT: Removed <br/>, added responsive sizes, updated content to match image */}
-            <h1 className="text-[14px] sm:text-base md:text-xl font-extrabold text-gray-900 leading-tight mb-1 tracking-tight">
-              Turn unused items into things you <span className="text-[#A388E1]">want</span>
+            
+            <h1 className="text-[13px] sm:text-[15px] md:text-[20px] font-extrabold text-gray-900 leading-tight mb-1.5 tracking-tight">
+              Sell what you don't use<br/>
+              Get what you <span className="text-[#A388E1]">actually want</span>
             </h1>
-            <p className="text-[9px] sm:text-[11px] md:text-sm text-gray-500 font-medium leading-snug">
-              Use your credits to get products instantly
+            <p className="text-[9px] sm:text-[11px] md:text-xs text-gray-500 font-medium leading-snug">
+              Sell your stuff &rarr; Earn credits &rarr; Buy anything.
             </p>
           </div>
 
