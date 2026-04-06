@@ -8,8 +8,9 @@ const {
   deleteUser, 
   getAllItems,
   updateUserRole,
-  getCreditSettings,     // NAYA: Import kiya
-  updateCreditSettings   // NAYA: Import kiya
+  getCreditSettings,     
+  updateCreditSettings,
+  getPublicCreditSettings // NAYA: Import kiya yahan
 } = require('../controllers/adminController');
 
 const {
@@ -20,6 +21,10 @@ const {
 } = require('../controllers/offerController');
 
 const { protect, admin } = require('../middleware/authMiddleware');
+
+
+router.route('/public-settings')
+  .get(getPublicCreditSettings);
 
 router.route('/pending-items')
   .get(protect, admin, getPendingItems);

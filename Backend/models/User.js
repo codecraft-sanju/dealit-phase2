@@ -15,8 +15,11 @@ const userSchema = new mongoose.Schema({
   profilePic: { type: String, default: '' },
   wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item' }],
   
-  account_credits: { type: Number, default: 50 }, // Welcome bonus of 50 credits
+  account_credits: { type: Number, default: 50 },
   listedProductsCount: { type: Number, default: 0 },
+
+  referralCode: { type: String, unique: true, sparse: true },
+  referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
 
   isVerified: { type: Boolean, default: false },
   otp: { type: String },

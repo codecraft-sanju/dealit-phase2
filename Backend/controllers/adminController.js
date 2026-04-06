@@ -15,8 +15,6 @@ const getPendingItems = async (req, res) => {
 const updateItemStatus = async (req, res) => {
   try {
     const { status, rejection_reason } = req.body; 
-
-    // Allowed status ki list me saare naye status bhi hain (optional validation if you want, handled by mongoose anyway)
     if (!['pending', 'active', 'rejected', 'reserved', 'swapped'].includes(status)) {
       return res.status(400).json({ success: false, message: 'Invalid status value' });
     }
@@ -46,10 +44,9 @@ const updateItemStatus = async (req, res) => {
       }
 
       if (setting.isCreditSystemEnabled) {
-        // Count karo user ke kitne items pehle se 'active' hain
+      
         const activeItemsCount = await Item.countDocuments({ owner: item.owner, status: 'active' });
 
-        // Agar active items ki ginti reward limit (jaise 3) ke andar hai, toh credit do
         if (activeItemsCount <= setting.maxListingsRewarded) {
           const user = await User.findById(item.owner);
           if (user) {
@@ -60,7 +57,6 @@ const updateItemStatus = async (req, res) => {
       }
     }
 
-    // Response bhejne se pehle owner populate kar lo
     await item.populate('owner', 'full_name email');
 
     res.status(200).json({ success: true, data: item });
@@ -143,7 +139,7 @@ const getCreditSettings = async (req, res) => {
   try {
     let setting = await CreditSetting.findOne();
     if (!setting) {
-      // Agar setting exist nahi karti toh default values ke sath bana do
+   
       setting = await CreditSetting.create({});
     }
     res.status(200).json({ success: true, data: setting });
@@ -155,19 +151,31 @@ const getCreditSettings = async (req, res) => {
 
 const updateCreditSettings = async (req, res) => {
   try {
-    // NAYA: maxAllowedListings ko body se extract kiya
-    const { isCreditSystemEnabled, creditsPerListing, maxListingsRewarded, maxAllowedListings } = req.body;
+
+    const { 
+      isCreditSystemEnabled, 
+      creditsPerListing, 
+      maxListingsRewarded, 
+      maxAllowedListings,
+      isReferralSystemEnabled,
+      referralRewardCredits 
+    } = req.body;
     
     let setting = await CreditSetting.findOne();
     if (!setting) {
       setting = new CreditSetting({});
     }
 
-    // Jo values aayi hain sirf unhe update karo
+  
     if (isCreditSystemEnabled !== undefined) setting.isCreditSystemEnabled = isCreditSystemEnabled;
     if (creditsPerListing !== undefined) setting.creditsPerListing = creditsPerListing;
     if (maxListingsRewarded !== undefined) setting.maxListingsRewarded = maxListingsRewarded;
-    if (maxAllowedListings !== undefined) setting.maxAllowedListings = maxAllowedListings; // NAYA: Value save kiya
+    if (maxAllowedListings !== undefined) setting.maxAllowedListings = maxAllowedListings;
+    
+  
+    if (isReferralSystemEnabled !== undefined) setting.isReferralSystemEnabled = isReferralSystemEnabled;
+    if (referralRewardCredits !== undefined) setting.referralRewardCredits = referralRewardCredits;
+    
     setting.updated_at = Date.now();
 
     await setting.save();
@@ -183,6 +191,21 @@ const updateCreditSettings = async (req, res) => {
   }
 };
 
+// NAYA FUNCTION: Frontend ko data dene ke liye bina admin login ke
+const getPublicCreditSettings = async (req, res) => {
+  try {
+    let setting = await CreditSetting.findOne().select('isReferralSystemEnabled referralRewardCredits maxAllowedListings');
+    if (!setting) {
+      // Default settings agar DB empty ho
+      setting = { isReferralSystemEnabled: true, referralRewardCredits: 40, maxAllowedListings: 5 };
+    }
+    res.status(200).json({ success: true, data: setting });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
 module.exports = {
   getPendingItems,
   updateItemStatus,
@@ -191,5 +214,6 @@ module.exports = {
   updateUserRole, 
   deleteUser,
   getCreditSettings,     
-  updateCreditSettings  
+  updateCreditSettings,
+  getPublicCreditSettings 
 };

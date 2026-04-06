@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { User, Lock, Mail, Phone, MapPin, CheckCircle } from 'lucide-react';
+import { User, Lock, Mail, Phone, MapPin, CheckCircle, Gift } from 'lucide-react';
 import './AuthPage.css'; 
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
@@ -11,18 +11,14 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Controls the CSS animation class
   const [isSignUpMode, setIsSignUpMode] = useState(defaultMode === 'signup');
-  
-  // Form States
-  const [formData, setFormData] = useState({ full_name: '', email: '', password: '', phone: '', city: '' });
-  
-  // OTP States
+  const [formData, setFormData] = useState({ full_name: '', email: '', password: '', phone: '', city: '', referralCode: '' });
+  const [appSettings, setAppSettings] = useState({ isReferralSystemEnabled: true });
+
   const [showOtp, setShowOtp] = useState(false);
   const [otp, setOtp] = useState('');
   const [registeredEmail, setRegisteredEmail] = useState('');
   
-  // UI States
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -30,6 +26,19 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
     setIsSignUpMode(defaultMode === 'signup');
     setError('');
     setShowOtp(false);
+    
+    const fetchSettings = async () => {
+      try {
+        const res = await axios.get(`${API_URL}/admin/public-settings`);
+        if(res.data.success) {
+          setAppSettings(res.data.data);
+        }
+      } catch (error) {
+        console.log("Using default settings");
+      }
+    };
+    fetchSettings();
+
   }, [defaultMode, location.pathname]);
 
   const handleChange = (e) => {
@@ -57,7 +66,6 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
       if (response.data.success) {
         setUser(response.data.user);
         localStorage.setItem('dealit_user', JSON.stringify(response.data.user));
-        // NAYA: Token save kar rahe hain iOS ke liye
         if(response.data.token) {
           localStorage.setItem('dealit_token', response.data.token);
         }
@@ -82,7 +90,6 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
           setRegisteredEmail(response.data.email || formData.email);
           setShowOtp(true); 
         } else {
-          // NAYA: Direct signup bypass hua toh welcome bonus trigger set karo
           localStorage.setItem('showWelcomeBonus', 'true');
           
           setUser(response.data.user);
@@ -112,7 +119,6 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
       );
       
       if (response.data.success) {
-        // NAYA: OTP verify hote hi welcome bonus trigger set karo
         localStorage.setItem('showWelcomeBonus', 'true');
         
         setUser(response.data.user);
@@ -133,11 +139,9 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
     <div className="auth-wrapper">
       <div className={`auth-container ${isSignUpMode ? 'sign-up-mode' : ''}`}>
         
-        {/* Forms Container */}
         <div className="auth-container__forms">
           <div className="auth-form">
             
-            {/* ---------------- LOGIN FORM ---------------- */}
             <form onSubmit={handleLogin} className="auth-form-wrap form__sign-in">
               <h2 className="form__title">Sign In</h2>
               {error && !isSignUpMode && <div className="error-message">{error}</div>}
@@ -159,7 +163,6 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
               </p>
             </form>
 
-            {/* ---------------- SIGNUP / OTP FORM ---------------- */}
             <form onSubmit={showOtp ? handleVerifyOtp : handleSignup} className="auth-form-wrap form__sign-up">
               
               {!showOtp ? (
@@ -192,11 +195,17 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                     <input type="text" name="city" placeholder="City" value={formData.city} onChange={handleChange} />
                   </div>
 
+                  {appSettings.isReferralSystemEnabled && (
+                    <div className="form__input-field">
+                      <Gift />
+                      <input type="text" name="referralCode" placeholder="Referral Code (Optional)" value={formData.referralCode} onChange={handleChange} style={{textTransform: 'uppercase'}} />
+                    </div>
+                  )}
+
                   <input type="submit" className="form__submit" value={loading ? "Please wait..." : "Sign Up"} disabled={loading} />
                 </>
               ) : (
                 <>
-                  {/* OTP Verification UI */}
                   <h2 className="form__title">Verify Email</h2>
                   <p className="form__text">
                     We sent a 6-digit code to <strong>{registeredEmail}</strong>
@@ -229,9 +238,7 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
           </div>
         </div>
 
-        {/* Sliding Panels Container */}
         <div className="auth-container__panels">
-          
           <div className="panel panel__left">
             <div className="panel__content">
               <h3 className="panel__title">New to Dealit?</h3>
@@ -257,8 +264,8 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
             </div>
             <img className="panel__image" src="https://www.pngkey.com/png/full/444-4444270_ia-press-play-website.png" alt="Sign in illustration" />
           </div>
-
         </div>
+
       </div>
     </div>
   );

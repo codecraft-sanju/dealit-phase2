@@ -4,7 +4,7 @@ import {
   Shield, Users, Package, Trash2, X, CheckCircle, Edit, List, AlertTriangle, Eye, Coins, User, 
   ShieldAlert, ShieldCheck, Mail, Phone, MapPin, Calendar, Wallet, Image as ImageIcon, Plus, 
   Check, ToggleLeft, ToggleRight, Layers, Settings,
-  Car, Monitor, Book, Shirt, Gamepad2, Watch, Home as HomeIcon, Sofa, Music, Utensils, Heart, Briefcase, Camera, Dumbbell, Smartphone
+  Car, Monitor, Book, Shirt, Gamepad2, Watch, Home as HomeIcon, Sofa, Music, Utensils, Heart, Briefcase, Camera, Dumbbell, Smartphone, Gift
 } from 'lucide-react'; 
 import axios from 'axios';
 import Cropper from 'react-easy-crop';
@@ -71,12 +71,14 @@ const AdminPanel = ({ user }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // NAYA CHANGE: Added maxAllowedListings to state
+  // NAYA: Referral settings added to state
   const [creditSettings, setCreditSettings] = useState({
     isCreditSystemEnabled: true,
     creditsPerListing: 50,
     maxListingsRewarded: 3,
-    maxAllowedListings: 5
+    maxAllowedListings: 5,
+    isReferralSystemEnabled: true, 
+    referralRewardCredits: 40      
   });
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -102,7 +104,7 @@ const AdminPanel = ({ user }) => {
   const [isUploadingDesktop, setIsUploadingDesktop] = useState(false);
   const [cropModalOpen, setCropModalOpen] = useState(false);
   const [imageToCrop, setImageToCrop] = useState(null);
-  const [cropType, setCropType] = useState('desktop'); // 'desktop' or 'mobile'
+  const [cropType, setCropType] = useState('desktop'); 
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
@@ -542,7 +544,6 @@ const AdminPanel = ({ user }) => {
           </div>
         ) : activeTab === 'settings' ? (
           
-          // Settings Panel UI with maxAllowedListings added
           <div className="flex-1 p-6 md:p-10 overflow-y-auto admin-scroll">
             <div className="max-w-4xl mx-auto bg-gray-800/80 rounded-[2rem] border border-gray-700 p-8 shadow-2xl">
               <div className="flex items-center gap-4 mb-8 border-b border-gray-700/80 pb-6">
@@ -556,7 +557,8 @@ const AdminPanel = ({ user }) => {
               </div>
               
               <form onSubmit={handleSaveSettings} className="space-y-8">
-                {/* Active Toggle */}
+                
+                {/* 1. Free Credits Section */}
                 <div className="bg-gray-900/60 p-6 rounded-2xl border border-gray-700 flex items-center justify-between cursor-pointer hover:border-gray-500 transition-colors" onClick={() => setCreditSettings({ ...creditSettings, isCreditSystemEnabled: !creditSettings.isCreditSystemEnabled })}>
                    <div>
                      <p className="font-bold text-white text-lg tracking-wide">Enable Free Credits</p>
@@ -570,7 +572,6 @@ const AdminPanel = ({ user }) => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                   {/* Credits Amount Input */}
                    <div className="space-y-3">
                       <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">Credits Per Listing</label>
                       <div className="relative">
@@ -590,7 +591,6 @@ const AdminPanel = ({ user }) => {
                       <p className="text-xs text-gray-500">Amount awarded upon approval.</p>
                    </div>
 
-                   {/* Max Rewarded Listings Input */}
                    <div className="space-y-3">
                       <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">Max Rewarded Limit</label>
                       <div className="relative">
@@ -610,7 +610,6 @@ const AdminPanel = ({ user }) => {
                       <p className="text-xs text-gray-500">Listings eligible for reward (e.g., 3).</p>
                    </div>
 
-                   {/* NAYA CHANGE: Max Allowed Listings Input */}
                    <div className="space-y-3">
                       <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">Max Allowed Listings</label>
                       <div className="relative">
@@ -627,6 +626,42 @@ const AdminPanel = ({ user }) => {
                         />
                       </div>
                       <p className="text-xs text-gray-500">Total items a user can list on platform.</p>
+                   </div>
+                </div>
+
+                <hr className="border-gray-700 my-4" />
+
+                {/* 2. Referral System Section */}
+                <div className="bg-gray-900/60 p-6 rounded-2xl border border-gray-700 flex items-center justify-between cursor-pointer hover:border-gray-500 transition-colors" onClick={() => setCreditSettings({ ...creditSettings, isReferralSystemEnabled: !creditSettings.isReferralSystemEnabled })}>
+                   <div>
+                     <p className="font-bold text-white text-lg tracking-wide">Enable Refer & Earn</p>
+                     <p className="text-sm text-gray-400 mt-1 max-w-md">If turned off, the referral input on sign-up and the share page will be hidden.</p>
+                   </div>
+                   {creditSettings.isReferralSystemEnabled ? (
+                     <ToggleRight className="w-14 h-14 text-blue-500 drop-shadow-[0_0_10px_rgba(59,130,246,0.3)]" />
+                   ) : (
+                     <ToggleLeft className="w-14 h-14 text-gray-600" />
+                   )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                   <div className="space-y-3">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">Referral Reward (Credits)</label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                          <Gift className="w-5 h-5 text-blue-400" />
+                        </div>
+                        <input 
+                          type="number" 
+                          required 
+                          min="0" 
+                          value={creditSettings.referralRewardCredits || 40} 
+                          onChange={(e) => setCreditSettings({...creditSettings, referralRewardCredits: Number(e.target.value)})} 
+                          disabled={!creditSettings.isReferralSystemEnabled} 
+                          className="w-full bg-gray-900 border-2 border-gray-700 rounded-xl pl-12 pr-4 py-3.5 text-white font-bold focus:outline-none focus:border-blue-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed" 
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500">Credits given to the referrer.</p>
                    </div>
                 </div>
 
@@ -808,7 +843,6 @@ const AdminPanel = ({ user }) => {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex flex-col items-start gap-1.5">
-                            {/* NAYA CHANGE: Added specific badge styling for reserved and swapped statuses */}
                             <span className={`px-3 py-1 rounded-lg text-xs font-black uppercase tracking-widest w-fit shadow-sm ${
                               row.status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' :
                               row.status === 'pending' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30' :

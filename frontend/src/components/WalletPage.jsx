@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
-import { ArrowLeft, Wallet, Coins, CreditCard, ChevronRight, Check, MoreHorizontal, Plus, Package, Sparkles } from 'lucide-react';
+import { ArrowLeft, Wallet, Coins, CreditCard, ChevronRight, Check, MoreHorizontal, Plus, Package, Sparkles, Copy, Users } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
@@ -24,7 +24,9 @@ const WalletPage = ({ user, setUser }) => {
   const [processing, setProcessing] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
 
-  // Celebration States
+  const [appSettings, setAppSettings] = useState({ isReferralSystemEnabled: true, referralRewardCredits: 40 });
+  const [copied, setCopied] = useState(false);
+
   const [showCelebration, setShowCelebration] = useState(false);
   const [addedAmount, setAddedAmount] = useState(0);
 
@@ -34,18 +36,36 @@ const WalletPage = ({ user, setUser }) => {
       return;
     }
 
-    const fetchProfile = async () => {
+    const fetchData = async () => {
       try {
-        const response = await axios.get(`${API_URL}/users/profile`, { withCredentials: true });
-        setProfileData(response.data.data);
+        const profileResponse = await axios.get(`${API_URL}/users/profile`, { withCredentials: true });
+        setProfileData(profileResponse.data.data);
+
+        try {
+          const settingsRes = await axios.get(`${API_URL}/admin/public-settings`); 
+          if(settingsRes.data.success) {
+            setAppSettings(settingsRes.data.data);
+          }
+        } catch (setErr) {
+          console.log("Using fallback settings");
+        }
+
       } catch (error) {
-        console.error('Error fetching profile:', error);
+        console.error('Error fetching data:', error);
       } finally {
         setLoading(false);
       }
     };
-    fetchProfile();
+    fetchData();
   }, [user]);
+
+  const handleCopyCode = () => {
+    if(profileData?.referralCode) {
+      navigator.clipboard.writeText(profileData.referralCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   const handlePayment = async (amount) => {
     if (!amount || amount <= 0) return;
@@ -99,11 +119,9 @@ const WalletPage = ({ user, setUser }) => {
               setCustomAmount('');
               setShowPaymentForm(false);
               
-              // TRIGGER THE COIN SHOWER CELEBRATION
               setAddedAmount(amount);
               setShowCelebration(true);
               
-              // Auto hide celebration after 5.5 seconds
               setTimeout(() => {
                 setShowCelebration(false);
               }, 5500);
@@ -146,7 +164,6 @@ const WalletPage = ({ user, setUser }) => {
 
   if (!user) return <Navigate to="/login" />;
 
-  // Golden gradients to mimic shiny coins
   const coinGradients = [
     'radial-gradient(circle, #FFF099 20%, #FBBF24 80%, #D97706 100%)',
     'radial-gradient(circle, #FEF08A 20%, #F59E0B 80%, #B45309 100%)',
@@ -156,7 +173,6 @@ const WalletPage = ({ user, setUser }) => {
   return (
     <div className="max-w-md mx-auto bg-white min-h-screen pb-2 md:max-w-7xl relative">
       
-      {/* Header */}
       <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm flex justify-between items-center px-5 py-4 md:px-8 transition-all">
         <Link to="/" className="p-2 -ml-2 text-gray-700 hover:text-[#A388E1] hover:bg-gray-50 rounded-full transition-colors">
           <ArrowLeft className="w-6 h-6" />
@@ -167,14 +183,11 @@ const WalletPage = ({ user, setUser }) => {
         </button>
       </div>
 
-      {/* NAYA: Pura page loading me daalne ki jagah humne normal layout open rakha hai */}
       <div className="md:grid md:grid-cols-2 md:gap-8 md:px-8 mt-4">
         
         <div className="space-y-6 mt-2">
-          {/* Top Purple Banner - Gets a golden glow when celebration happens */}
           <div className={`mx-5 md:mx-0 bg-gradient-to-r from-[#A388E1] to-[#b7a3eb] rounded-3xl p-5 text-white shadow-lg relative overflow-hidden transition-all duration-1000 ${showCelebration ? 'shadow-yellow-400/50 scale-[1.02]' : 'shadow-[#A388E1]/30'}`}>
             
-            {/* NAYA: Agar loading hai toh premium skeleton dikhega, warna real data */}
             {loading ? (
               <div className="flex items-center gap-3 mb-4 relative z-10 animate-pulse">
                 <div className="w-10 h-10 bg-white/30 rounded-full"></div>
@@ -188,7 +201,6 @@ const WalletPage = ({ user, setUser }) => {
                 <span className="text-4xl font-black relative">
                   {profileData?.account_credits || 0}
                   
-                  {/* Magical floating addition text */}
                   {showCelebration && (
                     <span className="absolute -top-6 -right-16 text-2xl text-yellow-300 font-black floating-up drop-shadow-[0_0_8px_rgba(253,224,71,0.8)] flex items-center">
                       +{addedAmount} <Sparkles className="w-4 h-4 ml-1 animate-spin" />
@@ -204,7 +216,6 @@ const WalletPage = ({ user, setUser }) => {
               ₹ 1 = 1 credit
             </div>
             
-            {/* Decorative elements to mimic the 3D assets */}
             <div className="absolute right-0 bottom-0 opacity-20 transform translate-x-4 translate-y-4">
               <Package className="w-32 h-32" />
             </div>
@@ -213,7 +224,38 @@ const WalletPage = ({ user, setUser }) => {
           <div className="px-5 md:px-0 mt-6">
             <h2 className="text-lg font-bold text-gray-900 mb-4">Ways to Earn Credits</h2>
 
-            {/* Card 1: List Items */}
+            {appSettings.isReferralSystemEnabled && (
+              <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-3xl p-5 relative overflow-hidden mb-4 border border-emerald-100 hover:shadow-md transition-shadow">
+                <h3 className="font-bold text-gray-900 mb-2">Refer a Friend</h3>
+                <p className="text-xs text-gray-600 font-medium mb-4 w-2/3 relative z-10">
+                  Invite your friends to Dealit and get <strong className="text-emerald-600">{appSettings.referralRewardCredits} credits</strong> when they sign up!
+                </p>
+                
+                {profileData?.referralCode ? (
+                  <div className="flex items-center gap-2 relative z-10">
+                    <div className="bg-white border border-emerald-200 px-4 py-2.5 rounded-xl font-black text-gray-800 tracking-wider flex-1 text-center shadow-inner">
+                      {profileData.referralCode}
+                    </div>
+                    <button 
+                      onClick={handleCopyCode}
+                      className={`px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-1.5 shadow-sm ${copied ? 'bg-emerald-500 text-white' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'}`}
+                    >
+                      {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      {copied ? 'Copied' : 'Copy'}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-xs text-gray-500 italic bg-white/50 p-2 rounded-lg border border-emerald-100">
+                    You don't have a referral code yet.
+                  </div>
+                )}
+
+                <div className="absolute right-[-10px] bottom-[-10px] w-24 h-24 bg-emerald-100 rounded-full opacity-50 flex items-center justify-center">
+                  <Users className="w-10 h-10 text-emerald-500" />
+                </div>
+              </div>
+            )}
+
             <div className="bg-[#F8F6FF] rounded-3xl p-5 relative overflow-hidden mb-4 border border-[#EBE5F7] hover:shadow-md transition-shadow">
               <h3 className="font-bold text-gray-900 mb-3">List Items to Earn Credits</h3>
               <ul className="space-y-2 mb-5 w-2/3 relative z-10">
@@ -230,13 +272,11 @@ const WalletPage = ({ user, setUser }) => {
                 <Plus className="w-4 h-4" /> List an Item
               </Link>
               
-              {/* Visual Graphic Placeholder */}
               <div className="absolute right-[-10px] bottom-[-10px] w-28 h-28 bg-[#EBE5F7] rounded-full opacity-50 flex items-center justify-center">
                 <Wallet className="w-12 h-12 text-[#A388E1]" />
               </div>
             </div>
 
-            {/* Card 2: Buy Credits */}
             <div className="bg-[#F8F6FF] rounded-3xl p-5 relative overflow-hidden mb-4 border border-[#EBE5F7] hover:shadow-md transition-shadow">
               <div className="w-2/3 relative z-10">
                 <h3 className="font-bold text-gray-900 mb-1">Buy Credits</h3>
@@ -255,7 +295,6 @@ const WalletPage = ({ user, setUser }) => {
                 </button>
               </div>
 
-              {/* Form expansion for Custom Amount Payment */}
               {showPaymentForm && (
                 <form onSubmit={handleCustomSubmit} className="mt-5 pt-5 border-t border-[#EBE5F7] relative z-10 animate-in slide-in-from-top-2 duration-300">
                   <div className="flex gap-2 items-center">
@@ -287,13 +326,11 @@ const WalletPage = ({ user, setUser }) => {
                 </form>
               )}
 
-              {/* Visual Graphic Placeholder */}
               <div className="absolute right-[-10px] top-[10px] w-24 h-24 bg-[#EBE5F7] rounded-full opacity-50 flex items-center justify-center">
                 <CreditCard className="w-10 h-10 text-[#A388E1]" />
               </div>
             </div>
 
-            {/* Card 3: Sell Items */}
             <div className="bg-[#FFF9E5] rounded-3xl p-5 relative overflow-hidden border border-[#FFE28A]/50 hover:shadow-md transition-shadow">
               <h3 className="font-bold text-gray-900 mb-1">Got unused items?</h3>
               <h4 className="font-bold text-gray-900 mb-1 text-sm">Sell them to earn credits now!</h4>
@@ -304,7 +341,6 @@ const WalletPage = ({ user, setUser }) => {
                 <Plus className="w-4 h-4" /> List Item
               </Link>
 
-              {/* Visual Graphic Placeholder */}
               <div className="absolute right-[-10px] bottom-[-10px] w-24 h-24 bg-[#FFE28A]/30 rounded-full flex items-center justify-center">
                 <Package className="w-10 h-10 text-yellow-600" />
               </div>
@@ -314,13 +350,11 @@ const WalletPage = ({ user, setUser }) => {
         </div>
       </div>
 
-      {/* --- PREMIUM COIN SHOWER OVERLAY (NO POPUP) --- */}
       {showCelebration && (
         <div className="fixed inset-0 z-[100] pointer-events-none overflow-hidden">
-          {/* Coin Generator */}
           {[...Array(40)].map((_, i) => {
-            const size = Math.random() * 16 + 12; // 12px to 28px (larger to look like coins)
-            const isSparkle = i % 5 === 0; // Every 5th element is a sparkle instead of a coin
+            const size = Math.random() * 16 + 12; 
+            const isSparkle = i % 5 === 0; 
 
             if (isSparkle) {
               const style = {
@@ -340,7 +374,7 @@ const WalletPage = ({ user, setUser }) => {
 
             const style = {
               left: `${Math.random() * 100}%`,
-              animationDuration: `${Math.random() * 2.5 + 2}s`, // Falling speed
+              animationDuration: `${Math.random() * 2.5 + 2}s`, 
               animationDelay: `${Math.random() * 0.3}s`,
               background: coinGradients[Math.floor(Math.random() * coinGradients.length)],
               width: `${size}px`,
@@ -354,7 +388,6 @@ const WalletPage = ({ user, setUser }) => {
         </div>
       )}
 
-      {/* Embedded CSS for Coin Animations */}
       <style>{`
         @keyframes coinFall {
           0% { 
@@ -370,7 +403,6 @@ const WalletPage = ({ user, setUser }) => {
           position: absolute;
           top: -10%;
           z-index: 50;
-          /* Coins tumbling in 3D */
           animation: coinFall linear forwards;
         }
         

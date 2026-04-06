@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const CreditSetting = require('../models/CreditSetting'); 
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const sendEmail = require('../utils/sendEmail');
@@ -17,7 +18,6 @@ const sendTokenResponse = (user, statusCode, res, message) => {
     sameSite: isProduction ? 'none' : 'lax' 
   };
 
-  // NAYA DEBUG: Cookie options check karne ke liye ki production me sahi set ho raha hai ya nahi
   console.log('[DEBUG] Setting token cookie for user:', user.email);
   console.log('[DEBUG] Environment:', process.env.NODE_ENV);
   console.log('[DEBUG] Cookie Options:', options);
@@ -25,22 +25,39 @@ const sendTokenResponse = (user, statusCode, res, message) => {
   res.status(statusCode).cookie('token', token, options).json({
     success: true,
     message,
-    token: token, // <--- YE LINE ADD KARNA BAHUT ZARURI THA! Iske bina frontend header auth nahi kar sakta.
+    token: token, 
     user: { 
       id: user._id, 
       full_name: user.full_name, 
       email: user.email, 
       role: user.role,
-      account_credits: user.account_credits 
+      account_credits: user.account_credits,
+      referralCode: user.referralCode 
     }
   });
 };
 
+const generateUniqueReferralCode = async (name) => {
+  let isUnique = false;
+  let code = '';
+
+  const prefix = name.substring(0, 3).toUpperCase().padEnd(3, 'X'); 
+
+  while (!isUnique) {
+    const randomNum = Math.floor(1000 + Math.random() * 9000);
+    code = `${prefix}${randomNum}`;
+
+    const existingCode = await User.findOne({ referralCode: code });
+    if (!existingCode) {
+      isUnique = true; 
+    }
+  }
+  return code;
+};
+
 const registerUser = async (req, res) => {
   try {
-    const { full_name, email, password, phone, city } = req.body;
-    
-    // NAYA: Check if OTP is enabled in .env
+    const { full_name, email, password, phone, city, referralCode } = req.body;
     const isOtpEnabled = process.env.ENABLE_OTP === 'true'; 
 
     let user = await User.findOne({ email });
@@ -54,8 +71,6 @@ const registerUser = async (req, res) => {
         user.full_name = full_name;
         user.phone = phone;
         user.city = city;
-        
-        // Agar OTP disabled hai, toh automatically verify kardo
         if (!isOtpEnabled) {
           user.isVerified = true;
         }
@@ -63,6 +78,8 @@ const registerUser = async (req, res) => {
     } else {
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
+      
+      const newReferralCode = await generateUniqueReferralCode(full_name);
 
       user = new User({
         full_name,
@@ -70,12 +87,30 @@ const registerUser = async (req, res) => {
         password: hashedPassword,
         phone,
         city,
-        // Agar OTP disabled hai, toh directly true save hoga
-        isVerified: !isOtpEnabled 
+        isVerified: !isOtpEnabled,
+        referralCode: newReferralCode 
       });
+
+      if (referralCode) {
+        const cleanReferralCode = referralCode.toUpperCase().trim();
+        const referrer = await User.findOne({ referralCode: cleanReferralCode });
+        
+        if (referrer) {
+          user.referredBy = referrer._id;
+          
+          let setting = await CreditSetting.findOne();
+          if (!setting) {
+            setting = { isReferralSystemEnabled: true, referralRewardCredits: 40 };
+          }
+
+          if (setting.isReferralSystemEnabled) {
+            referrer.account_credits += setting.referralRewardCredits;
+            await referrer.save();
+          }
+        }
+      }
     }
 
-    // --- LOGIC SPLIT: OTP ENABLED VS DISABLED ---
     if (isOtpEnabled) {
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       user.otp = otp;
@@ -93,12 +128,11 @@ const registerUser = async (req, res) => {
 
       return res.status(200).json({ 
         success: true, 
-        requiresOtp: true, // NAYA: Frontend ko batane ke liye ki OTP chahiye
+        requiresOtp: true, 
         message: 'OTP sent to your email. Please verify to complete registration.',
         email: user.email
       });
     } else {
-   
       user.otp = undefined;
       user.otpExpiry = undefined;
       await user.save();
@@ -148,7 +182,6 @@ const verifyOtp = async (req, res) => {
 };
 
 const loginUser = async (req, res) => {
-  // NAYA DEBUG
   console.log('[DEBUG] Login attempt for email:', req.body.email);
   
   try {
@@ -193,7 +226,6 @@ const loginUser = async (req, res) => {
 };
 
 const logoutUser = (req, res) => {
- 
   const isProduction = process.env.NODE_ENV === 'production';
 
   console.log('[DEBUG] Logging out user, clearing cookie');
@@ -278,19 +310,24 @@ const resetPassword = async (req, res) => {
 
 const getUserProfile = async (req, res) => {
   console.log('[DEBUG] GET /profile called');
-  console.log('[DEBUG] req.user object from middleware:', req.user ? `Found user ${req.user._id}` : 'UNDEFINED! Middleware failed or no cookie received.');
 
   try {
     if (!req.user || !req.user._id) {
-       console.log('[DEBUG] Aborting: req.user is missing');
        return res.status(401).json({ success: false, message: 'Not authorized, no user data found in request' });
     }
 
     const user = await User.findById(req.user._id).select('-password');
     
     if (!user) {
-      console.log('[DEBUG] User not found in database for ID:', req.user._id);
       return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // NAYA LOGIC: Agar purane user ke paas code nahi hai, toh abhi bana do!
+    if (!user.referralCode) {
+      console.log(`[DEBUG] Generating missing referral code for old user: ${user.email}`);
+      const newCode = await generateUniqueReferralCode(user.full_name);
+      user.referralCode = newCode;
+      await user.save();
     }
     
     console.log('[DEBUG] Profile fetched successfully for:', user.email);
@@ -303,19 +340,15 @@ const getUserProfile = async (req, res) => {
 
 const updateProfilePic = async (req, res) => {
   console.log('[DEBUG] PUT /profile-pic called');
-  console.log('[DEBUG] Incoming req.body:', req.body);
-  console.log('[DEBUG] req.user from middleware:', req.user ? `Found user ${req.user._id}` : 'UNDEFINED! Cookie missing on iOS.');
-
+  
   try {
     const { profilePic } = req.body;
     
     if (!profilePic) {
-      console.log('[DEBUG] Error: No profilePic URL provided in body');
       return res.status(400).json({ success: false, message: 'Please provide an image URL' });
     }
 
     if (!req.user || !req.user._id) {
-      console.log('[DEBUG] Aborting update: req.user is missing');
       return res.status(401).json({ success: false, message: 'Not authorized' });
     }
 
@@ -326,11 +359,9 @@ const updateProfilePic = async (req, res) => {
     ).select('-password');
 
     if (!user) {
-      console.log('[DEBUG] User not found in DB during update');
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    console.log('[DEBUG] Profile pic updated successfully');
     res.status(200).json({ success: true, message: 'Profile picture updated', data: user });
   } catch (error) {
     console.error('[DEBUG] Error in updateProfilePic:', error);
@@ -338,7 +369,6 @@ const updateProfilePic = async (req, res) => {
   }
 };
 
-// CHANGE START: Wishlist Functions
 const toggleWishlist = async (req, res) => {
   try {
     const itemId = req.params.itemId;
@@ -348,16 +378,13 @@ const toggleWishlist = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // Check if the item is already in the wishlist
     const index = user.wishlist.indexOf(itemId);
 
     if (index === -1) {
-  
       user.wishlist.push(itemId);
       await user.save();
       return res.status(200).json({ success: true, message: 'Added to wishlist', isWishlisted: true });
     } else {
-      
       user.wishlist.splice(index, 1);
       await user.save();
       return res.status(200).json({ success: true, message: 'Removed from wishlist', isWishlisted: false });
@@ -372,14 +399,13 @@ const getWishlist = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).populate({
       path: 'wishlist',
-      match: { status: 'active' }, // Only fetch items that are still active
-      populate: { path: 'owner', select: 'full_name city profilePic' } // Get owner details inside the item
+      match: { status: 'active' }, 
+      populate: { path: 'owner', select: 'full_name city profilePic' } 
     });
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
-
 
     const activeWishlist = user.wishlist.filter(item => item !== null);
 
@@ -390,7 +416,6 @@ const getWishlist = async (req, res) => {
   }
 };
 
-
 module.exports = {
   registerUser,
   verifyOtp, 
@@ -400,8 +425,6 @@ module.exports = {
   resetPassword,
   getUserProfile,
   updateProfilePic,
-
   toggleWishlist,
   getWishlist
-
 };
