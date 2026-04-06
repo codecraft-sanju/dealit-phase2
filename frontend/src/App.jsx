@@ -6,7 +6,7 @@ import axios from 'axios';
 import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
 import IosInstallPopup from './components/IosInstallPopup';
-
+const PrivacyPage = lazy(() => import('./components/PrivacyPage'));
 const AuthPage = lazy(() => import('./components/AuthPage'));
 const SearchPage = lazy(() => import('./components/SearchPage'));
 const AdminPanel = lazy(() => import('./components/AdminPanel'));
@@ -21,14 +21,13 @@ const AddItemPage = lazy(() => import('./components/AddItemPage'));
 const ItemsPage = lazy(() => import('./components/ItemsPage'));
 const DashboardPage = lazy(() => import('./components/DashboardPage'));
 const DealDetailsPage = lazy(() => import('./components/DealDetailsPage'));
-
 const WishlistPage = lazy(() => import('./components/WishlistPage'));
 
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
-// AXIOS INTERCEPTOR
+
 axios.interceptors.request.use(
   (config) => {
     if (config.url && config.url.includes(API_BASE)) {
@@ -325,15 +324,10 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
             <Route path="/profile" element={user ? <ProfilePage user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             <Route path="/dashboard" element={user ? <DashboardPage user={user} /> : <Navigate to="/login" />} />
             <Route path="/edit-item/:id" element={user ? <EditItemPage /> : <Navigate to="/login" />} />
-            
-            {/* CHANGE START: Added the Wishlist Route */}
             <Route path="/wishlist" element={user ? <WishlistPage user={user} /> : <Navigate to="/login" />} />
-            {/* CHANGE END */}
-
+            <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/admin" element={<AdminPanel user={user} />} />
             <Route path="/add-item" element={user ? <AddItemPage /> : <Navigate to="/login" />} />
-            
-        
             <Route path="/item/:id" element={
               <>
                 <Navbar user={user} onLogout={handleLogout} />
