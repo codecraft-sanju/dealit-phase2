@@ -71,12 +71,14 @@ const AdminPanel = ({ user }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // Dynamic Settings Initial State
+  // Dynamic Settings Initial State (Updated with Welcome Bonus)
   const [creditSettings, setCreditSettings] = useState({
     isCreditSystemEnabled: true,
     creditsPerListing: 50,
     maxListingsRewarded: 3,
     maxAllowedListings: 5,
+    isWelcomeBonusEnabled: true, // NAYA
+    welcomeBonusAmount: 50,      // NAYA
     isReferralSystemEnabled: true, 
     referralRewardCredits: 40,
     maxReferralLimit: 5,
@@ -633,6 +635,42 @@ const AdminPanel = ({ user }) => {
 
                 <hr className="border-gray-700 my-4" />
 
+                {/* --- WELCOME BONUS SECTION --- */}
+                <div className="bg-gray-900/60 p-6 rounded-2xl border border-gray-700 flex items-center justify-between cursor-pointer hover:border-gray-500 transition-colors" onClick={() => setCreditSettings({ ...creditSettings, isWelcomeBonusEnabled: !creditSettings.isWelcomeBonusEnabled })}>
+                   <div>
+                     <p className="font-bold text-white text-lg tracking-wide">Enable Welcome Bonus</p>
+                     <p className="text-sm text-gray-400 mt-1 max-w-md">If turned off, the claim bonus button will be hidden for new users.</p>
+                   </div>
+                   {creditSettings.isWelcomeBonusEnabled ? (
+                     <ToggleRight className="w-14 h-14 text-pink-500 drop-shadow-[0_0_10px_rgba(236,72,153,0.3)]" />
+                   ) : (
+                     <ToggleLeft className="w-14 h-14 text-gray-600" />
+                   )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                   <div className="space-y-3">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">Bonus Amount</label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                          <Gift className="w-5 h-5 text-pink-400" />
+                        </div>
+                        <input 
+                          type="number" 
+                          required 
+                          min="0" 
+                          value={creditSettings.welcomeBonusAmount || 50} 
+                          onChange={(e) => setCreditSettings({...creditSettings, welcomeBonusAmount: Number(e.target.value)})} 
+                          disabled={!creditSettings.isWelcomeBonusEnabled} 
+                          className="w-full bg-gray-900 border-2 border-gray-700 rounded-xl pl-12 pr-4 py-3.5 text-white font-bold focus:outline-none focus:border-pink-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed" 
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500">Credits given when user claims bonus.</p>
+                   </div>
+                </div>
+
+                <hr className="border-gray-700 my-4" />
+
                 {/* 2. Referral System Section */}
                 <div className="bg-gray-900/60 p-6 rounded-2xl border border-gray-700 flex items-center justify-between cursor-pointer hover:border-gray-500 transition-colors" onClick={() => setCreditSettings({ ...creditSettings, isReferralSystemEnabled: !creditSettings.isReferralSystemEnabled })}>
                    <div>
@@ -1049,7 +1087,6 @@ const AdminPanel = ({ user }) => {
                     </div>
                   </div>
                   
-                  {/* NAYA: Admin view me user ka refer status dikhao */}
                   <div className="flex items-center gap-4 text-gray-300 bg-gray-900/50 p-4 rounded-2xl border border-gray-700/50 hover:border-gray-600 transition-colors">
                     <div className="p-3 bg-gray-800 rounded-xl"><Target className="w-5 h-5 text-yellow-400" /></div>
                     <div>
