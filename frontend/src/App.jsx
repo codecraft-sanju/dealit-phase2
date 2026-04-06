@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate, Navigate, useLocation, useParams } from 'react-router-dom';
-import { Package, X, AlertCircle, ArrowLeft, Edit2, Trash2 } from 'lucide-react';
+import { Package, X, AlertCircle, ArrowLeft, Edit2, Trash2, Gift, Sparkles, Coins, Plus } from 'lucide-react';
 import axios from 'axios';
 
 import Navbar from './components/Navbar';
@@ -41,7 +41,8 @@ axios.interceptors.request.use(
   }
 );
 
-const ZeroPriceAlert = ({ user }) => {
+// CHANGED: Added onCheckComplete prop to communicate with MainAppContent
+const ZeroPriceAlert = ({ user, onCheckComplete }) => {
   const [show, setShow] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const navigate = useNavigate();
@@ -58,17 +59,23 @@ const ZeroPriceAlert = ({ user }) => {
         
         if (needsUpdate) {
           setShow(true);
+          onCheckComplete(true); // Found issue
+        } else {
+          onCheckComplete(false); // No issue
         }
         setHasChecked(true); 
       } catch (error) {
         console.error('Error checking item prices:', error);
+        onCheckComplete(false);
       }
     };
     
     if (!location.pathname.includes('/dashboard') && !location.pathname.includes('/edit-item')) {
        checkItems();
+    } else {
+       onCheckComplete(false);
     }
-  }, [user, hasChecked, location.pathname]);
+  }, [user, hasChecked, location.pathname, onCheckComplete]);
 
   const handleClose = () => {
     setIsClosing(true);
@@ -128,6 +135,139 @@ const ZeroPriceAlert = ({ user }) => {
             className="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-400 hover:to-purple-500 text-white font-black text-lg py-4 px-4 rounded-2xl transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-purple-500/30 flex items-center justify-center gap-2"
           >
             <Edit2 className="w-5 h-5" /> Update My Items
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// NAYA COMPONENT: Beautiful Promo Alert for Free Credits
+const PromoAlert = ({ user, hasZeroPriceIssue }) => {
+  const [show, setShow] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+  const [settings, setSettings] = useState(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const checkPromoEligibility = async () => {
+      // Basic checks
+      if (!user) return;
+      if (hasZeroPriceIssue !== false) return; // Wait until ZeroPriceAlert clears them
+      if (location.pathname.includes('/login') || location.pathname.includes('/signup')) return;
+
+      // Agar is session me pehle dikh chuka hai, toh dobara mat dikhao
+      const promoShown = sessionStorage.getItem('promo_shown');
+      if (promoShown === 'true') return;
+
+      // Rule: Agar user ne kam se kam 2 products list kar diye hain, toh usko popup nahi dikhega
+      if ((user.listedProductsCount || 0) >= 2) return;
+
+      try {
+        const res = await axios.get(`${API_URL}/admin/public-settings`);
+        if (res.data.success) {
+          const fetchedSettings = res.data.data;
+          
+          // NAYA LOGIC: Agar dono schemes band hain, toh popup mat dikhao
+          if (!fetchedSettings.isCreditSystemEnabled && !fetchedSettings.isReferralSystemEnabled) {
+            return;
+          }
+
+          setSettings(fetchedSettings);
+          setShow(true);
+          sessionStorage.setItem('promo_shown', 'true'); // Mark as shown for this session
+        }
+      } catch (err) {
+        console.error("Failed to load promo settings");
+      }
+    };
+
+    // Thoda delay dete hain taaki direct muh pe na aaye (better UX)
+    if (hasZeroPriceIssue === false) {
+      const timer = setTimeout(checkPromoEligibility, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [user, hasZeroPriceIssue, location.pathname]);
+
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setShow(false);
+      setIsClosing(false);
+    }, 300);
+  };
+
+  if (!show || !settings) return null;
+
+  // Double check, incase settings load and both are false
+  if (!settings.isCreditSystemEnabled && !settings.isReferralSystemEnabled) return null;
+
+  return (
+    <div 
+      onClick={handleClose}
+      className={`fixed inset-0 z-[90] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm ${isClosing ? 'animate-out fade-out' : 'animate-in fade-in'} duration-300`}
+    >
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        className={`bg-gradient-to-b from-gray-800 to-gray-900 border border-emerald-500/30 rounded-[2rem] p-8 max-w-sm w-full text-center shadow-[0_20px_60px_rgba(16,185,129,0.2)] relative overflow-hidden transform ${isClosing ? 'animate-out zoom-out-95 slide-out-to-bottom-8' : 'animate-in zoom-in-95 slide-in-from-bottom-8'} duration-300`}
+      >
+        <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-[3rem] pointer-events-none -translate-y-1/2 translate-x-1/2"></div>
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/10 rounded-full blur-[3rem] pointer-events-none translate-y-1/2 -translate-x-1/2"></div>
+
+        <button 
+          onClick={handleClose} 
+          className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors p-2 bg-gray-800/80 hover:bg-gray-700 rounded-full z-20 border border-gray-700"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        <div className="relative z-10">
+          <div className="w-20 h-20 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-[1.5rem] flex items-center justify-center mx-auto mb-6 shadow-[0_0_30px_rgba(16,185,129,0.4)] transform -rotate-6 hover:rotate-0 transition-transform duration-300">
+            <Gift className="w-10 h-10 text-white" />
+            <Sparkles className="w-6 h-6 text-yellow-300 absolute -top-2 -right-2 animate-pulse" />
+          </div>
+
+          <h3 className="text-2xl font-black text-white mb-2 tracking-tight">Earn Free Credits!</h3>
+          <p className="text-gray-400 text-sm mb-6">Kickstart your trading journey on Dealit with these exclusive rewards.</p>
+
+          <div className="space-y-3 mb-8">
+            
+            {/* NAYA LOGIC: Admin ne listing credits enabled kiya hai tabhi dikhega */}
+            {settings.isCreditSystemEnabled && (
+              <div className="bg-gray-800/80 p-4 rounded-2xl border border-gray-700 flex items-center gap-4 text-left shadow-inner">
+                <div className="bg-blue-500/20 p-2.5 rounded-xl border border-blue-500/30 shrink-0">
+                  <Package className="w-6 h-6 text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-white font-bold text-sm">List an Item</p>
+                  <p className="text-gray-400 text-xs mt-0.5">Get <strong className="text-blue-400">{settings.creditsPerListing || 50} credits</strong> when approved</p>
+                </div>
+              </div>
+            )}
+
+            {/* Refer friends wala dabha */}
+            {settings.isReferralSystemEnabled && (
+              <div className="bg-gray-800/80 p-4 rounded-2xl border border-gray-700 flex items-center gap-4 text-left shadow-inner">
+                <div className="bg-yellow-500/20 p-2.5 rounded-xl border border-yellow-500/30 shrink-0">
+                  <Coins className="w-6 h-6 text-yellow-400" />
+                </div>
+                <div>
+                  <p className="text-white font-bold text-sm">Refer Friends</p>
+                  <p className="text-gray-400 text-xs mt-0.5">Earn <strong className="text-yellow-400">{settings.referralRewardCredits || 40} credits</strong> per referral</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <button 
+            onClick={() => {
+              handleClose();
+              setTimeout(() => navigate('/add-item'), 300);
+            }}
+            className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-black text-lg py-4 px-4 rounded-2xl transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-[0_10px_20px_rgba(16,185,129,0.3)] flex items-center justify-center gap-2"
+          >
+            <Plus className="w-6 h-6" /> List First Item Now
           </button>
         </div>
       </div>
@@ -295,13 +435,17 @@ const PremiumLoader = () => (
 
 const MainAppContent = ({ user, handleLogout, setUser }) => {
   const location = useLocation();
+  // State to track if the user has 0 price items
+  const [hasZeroPriceIssue, setHasZeroPriceIssue] = useState(null);
   
   const hideNavbarRoutes = ['/login', '/signup', '/forgot-password'];
   const shouldShowBottomNav = !hideNavbarRoutes.includes(location.pathname);
 
   return (
     <div className="min-h-screen bg-gray-900 font-sans selection:bg-emerald-500/30 pb-16 md:pb-0"> 
-      <ZeroPriceAlert user={user} />
+      {/* Both Alerts are mounted but they coordinate using hasZeroPriceIssue */}
+      <ZeroPriceAlert user={user} onCheckComplete={setHasZeroPriceIssue} />
+      <PromoAlert user={user} hasZeroPriceIssue={hasZeroPriceIssue} />
       <IosInstallPopup />
       
       <main>
@@ -326,7 +470,6 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/admin" element={<AdminPanel user={user} />} />
             
-            {/* NAYA CHANGE: AddItemPage me user aur setUser props pass kiye hain */}
             <Route path="/add-item" element={user ? <AddItemPage user={user} setUser={setUser} /> : <Navigate to="/login" />} />
             
             <Route path="/item/:id" element={
