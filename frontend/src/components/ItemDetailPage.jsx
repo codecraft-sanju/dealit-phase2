@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Package, RefreshCw, X, AlertCircle, Coins, CheckCircle2, Info, ShieldCheck, User, Share2, ArrowLeft, Calendar, Grid } from 'lucide-react';
+import { Package, RefreshCw, X, AlertCircle, Coins, CheckCircle2, Info, ShieldCheck, User, Share2, ArrowLeft, Calendar, Grid, TrendingUp } from 'lucide-react';
 import axios from 'axios';
+import ProductCard from './ProductCard'; 
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -12,6 +13,10 @@ const ItemDetailPage = ({ user }) => {
   const [item, setItem] = useState(null);
   const [loading, setLoading] = useState(true);
   
+  // Related Items State
+  const [relatedItems, setRelatedItems] = useState([]);
+  const [loadingRelated, setLoadingRelated] = useState(true);
+
   // Modal & Swap States
   const [showModal, setShowModal] = useState(false);
   const [myItems, setMyItems] = useState([]);
@@ -25,8 +30,10 @@ const ItemDetailPage = ({ user }) => {
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    
     const fetchItemDetails = async () => {
       try {
+        setLoading(true);
         const response = await axios.get(`${API_URL}/items/${id}`);
         setItem(response.data.data);
       } catch (error) {
@@ -35,7 +42,23 @@ const ItemDetailPage = ({ user }) => {
         setLoading(false);
       }
     };
+
+    const fetchRelatedItems = async () => {
+      try {
+        setLoadingRelated(true);
+        const response = await axios.get(`${API_URL}/items/${id}/related`);
+        if (response.data.success) {
+          setRelatedItems(response.data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching related items:', error);
+      } finally {
+        setLoadingRelated(false);
+      }
+    };
+
     fetchItemDetails();
+    fetchRelatedItems();
   }, [id]);
 
   const handleScroll = (e) => {
@@ -152,27 +175,16 @@ const ItemDetailPage = ({ user }) => {
   const postDate = item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recently';
 
   return (
-    <div className="max-w-7xl mx-auto bg-white min-h-screen pb-32 lg:pb-12 font-sans animate-in fade-in duration-500 relative">
+    <div className="max-w-7xl mx-auto bg-white min-h-screen pb-[150px] md:pb-32 lg:pb-12 font-sans animate-in fade-in duration-500 relative">
       
-      {/* Mobile Floating Header (Back & Share) */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 p-4 flex justify-between items-center z-50 pointer-events-none">
-        <button onClick={() => navigate(-1)} className="pointer-events-auto w-10 h-10 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center shadow-sm border border-slate-200/50 text-slate-700 hover:bg-white transition-colors">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <button onClick={handleShare} className="pointer-events-auto w-10 h-10 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center shadow-sm border border-slate-200/50 text-slate-700 hover:bg-white transition-colors">
-          <Share2 className="w-4 h-4" />
-        </button>
-      </div>
+     
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-12 items-start lg:pt-10 lg:px-6">
         
-        {/* LEFT COLUMN: Gallery & Desktop Description */}
         <div className="lg:col-span-7 w-full mx-auto space-y-6">
           
-          {/* Main Swipeable Container */}
           <div className="relative w-full aspect-square lg:aspect-auto lg:h-[500px] bg-[#f8f9fb] lg:rounded-[2rem] overflow-hidden border-b lg:border border-slate-100 shadow-sm group">
             
-            {/* NAYA: Mobile Image Counter Badge */}
             {item.images && item.images.length > 1 && (
               <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-3 py-1.5 rounded-full lg:hidden z-10 tracking-widest shadow-sm">
                 {activeIndex + 1} / {item.images.length}
@@ -201,7 +213,6 @@ const ItemDetailPage = ({ user }) => {
               )}
             </div>
 
-            {/* Mobile Dots Indicator */}
             {item.images && item.images.length > 1 && (
               <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 lg:hidden z-10">
                 {item.images.map((_, idx) => (
@@ -214,7 +225,6 @@ const ItemDetailPage = ({ user }) => {
             )}
           </div>
 
-          {/* Thumbnails */}
           {item.images && item.images.length > 1 && (
             <div className="flex gap-3 overflow-x-auto hide-scrollbar px-4 lg:px-0 mt-4 lg:mt-0 pb-2">
               {item.images.map((img, idx) => (
@@ -229,7 +239,6 @@ const ItemDetailPage = ({ user }) => {
             </div>
           )}
 
-          {/* Desktop Description */}
           <div className="hidden lg:block bg-white rounded-3xl p-7 border border-slate-100 shadow-sm">
             <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
               <Info className="w-5 h-5 text-[#6B46C1]" /> Item Description
@@ -240,7 +249,6 @@ const ItemDetailPage = ({ user }) => {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Details & Actions */}
         <div className="lg:col-span-5 flex flex-col h-full px-5 lg:px-0 pt-6 lg:pt-0 pb-16 lg:pb-0 lg:sticky lg:top-24">
           
           <div className="mb-6">
@@ -248,8 +256,7 @@ const ItemDetailPage = ({ user }) => {
               <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 leading-tight tracking-tight pr-4">
                 {item.title}
               </h1>
-              {/* Desktop Share Button */}
-              <button onClick={handleShare} className="hidden lg:flex w-10 h-10 bg-slate-50 hover:bg-slate-100 rounded-full items-center justify-center text-slate-500 transition-colors shrink-0">
+              <button onClick={handleShare} className="flex w-10 h-10 bg-slate-50 hover:bg-slate-100 border border-slate-100 shadow-sm rounded-full items-center justify-center text-[#6B46C1] transition-colors shrink-0 active:scale-95">
                 <Share2 className="w-4 h-4" />
               </button>
             </div>
@@ -268,7 +275,6 @@ const ItemDetailPage = ({ user }) => {
             </div>
           </div>
 
-          {/* Item Stats Grid */}
           <div className="grid grid-cols-2 gap-3 mb-6">
             <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex flex-col">
               <CheckCircle2 className="w-4 h-4 text-[#6B46C1] mb-2" />
@@ -287,7 +293,6 @@ const ItemDetailPage = ({ user }) => {
             </div>
           </div>
 
-          {/* Owner Profile Card */}
           <div className="bg-white border border-slate-100 rounded-2xl p-4 flex items-center gap-4 shadow-sm mb-6 lg:mb-8 hover:border-[#EBE5F7] hover:shadow-md transition-all cursor-default">
             <div className="w-12 h-12 bg-[#F8F6FF] rounded-full flex items-center justify-center overflow-hidden border border-[#EBE5F7] shrink-0">
               {item.owner?.profilePic ? (
@@ -302,7 +307,6 @@ const ItemDetailPage = ({ user }) => {
             </div>
           </div>
 
-          {/* Mobile Description */}
           <div className="block lg:hidden mb-4 relative">
             <h3 className="text-sm font-bold text-slate-900 mb-2">Description</h3>
             <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-line pb-4">
@@ -310,42 +314,62 @@ const ItemDetailPage = ({ user }) => {
             </p>
           </div>
 
-          {/* Fixed Bottom Action Container */}
-          <div className="fixed bottom-20 lg:bottom-0 left-0 right-0 z-40 pointer-events-none lg:static lg:mt-auto">
-            
-            {/* NAYA: Gradient Fade for scrolling text beneath the button */}
-            <div className="h-10 bg-gradient-to-t from-white to-transparent lg:hidden w-full"></div>
-            
-            <div className="p-4 bg-white/95 backdrop-blur-xl border-t border-slate-100 lg:bg-transparent lg:border-none lg:p-0 pointer-events-auto">
-              {user && (item.owner?._id === user._id || item.owner?._id === user.id) ? (
-                <button disabled className="w-full bg-[#F8F9FA] text-slate-400 py-4 rounded-xl font-bold text-base cursor-not-allowed border border-slate-200 flex items-center justify-center gap-2">
-                  <Package className="w-5 h-5 opacity-50" /> This is your item
-                </button>
-              ) : (
-                <button 
-                  onClick={handleOpenBarterModal}
-                  className="w-full bg-[#6B46C1] hover:bg-[#5a3aa8] text-white py-4 rounded-xl font-bold text-base transition-all hover:-translate-y-0.5 flex items-center justify-center gap-2 shadow-lg shadow-[#6B46C1]/20 active:scale-[0.98]"
-                >
-                  <RefreshCw className="w-5 h-5" /> Offer a Trade
-                </button>
-              )}
-              
-              {/* Trust Badges */}
-              <div className="hidden lg:flex items-center justify-center gap-4 mt-4 text-slate-400">
-                <div className="flex items-center gap-1.5">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  <span className="text-[9px] font-bold uppercase tracking-wider">Secure</span>
-                </div>
-                <div className="w-1 h-1 bg-slate-200 rounded-full"></div>
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span className="text-[9px] font-bold uppercase tracking-wider">Verified</span>
-                </div>
-              </div>
+        </div>
+      </div>
+
+      {(!loadingRelated && relatedItems.length > 0) && (
+        <div className="mt-8 lg:mt-16 pt-8 lg:pt-12 border-t border-slate-100 px-5 lg:px-6 mb-8 lg:mb-10">
+          <div className="flex items-center gap-2 mb-6">
+            <TrendingUp className="w-5 h-5 text-[#6B46C1]" />
+            <h2 className="text-xl lg:text-2xl font-black text-slate-900">More items you might like</h2>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {relatedItems.map(relItem => (
+              <ProductCard key={relItem._id} item={relItem} />
+            ))}
+          </div>
+        </div>
+      )}
+      {loadingRelated && (
+        <div className="mt-8 lg:mt-16 pt-8 lg:pt-12 border-t border-slate-100 px-5 lg:px-6 mb-8 lg:mb-10 animate-pulse">
+           <div className="h-6 w-48 bg-slate-200 rounded-lg mb-6"></div>
+           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+             {[1, 2, 3, 4].map(i => <ProductCard key={i} isLoading={true} />)}
+           </div>
+        </div>
+      )}
+
+      {/* CHANGE START: Removed the solid white container background, gradient background, and borders. Now it's just a floating button above BottomNav. */}
+      <div className="fixed bottom-[calc(60px+env(safe-area-inset-bottom))] md:bottom-0 left-0 right-0 z-40 pointer-events-none lg:static lg:mt-auto px-4 lg:px-0">
+        <div className="pointer-events-auto">
+          {user && (item.owner?._id === user._id || item.owner?._id === user.id) ? (
+            <button disabled className="w-full bg-[#F8F9FA]/95 backdrop-blur-md text-slate-500 py-4 rounded-2xl font-bold text-base cursor-not-allowed border border-slate-200 shadow-sm flex items-center justify-center gap-2">
+              <Package className="w-5 h-5 opacity-50" /> This is your item
+            </button>
+          ) : (
+            <button 
+              onClick={handleOpenBarterModal}
+              className="w-full bg-[#6B46C1] hover:bg-[#5a3aa8] text-white py-4 rounded-2xl font-bold text-base transition-all hover:-translate-y-1 flex items-center justify-center gap-2 shadow-[0_10px_25px_-5px_rgba(107,70,193,0.6)] active:scale-[0.98]"
+            >
+              <RefreshCw className="w-5 h-5" /> Offer a Trade
+            </button>
+          )}
+          
+          <div className="hidden lg:flex items-center justify-center gap-4 mt-4 text-slate-400">
+            <div className="flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span className="text-[9px] font-bold uppercase tracking-wider">Secure</span>
+            </div>
+            <div className="w-1 h-1 bg-slate-200 rounded-full"></div>
+            <div className="flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span className="text-[9px] font-bold uppercase tracking-wider">Verified</span>
             </div>
           </div>
         </div>
       </div>
+      {/* CHANGE END */}
 
       {/* ================= Modern Barter Modal ================= */}
       {showModal && (

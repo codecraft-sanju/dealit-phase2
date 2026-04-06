@@ -1,4 +1,7 @@
 const Item = require('../models/Item');
+// CHANGE START: Imported mongoose for ObjectId casting in aggregation
+const mongoose = require('mongoose');
+// CHANGE END
 
 const createItem = async (req, res) => {
   try {
@@ -28,38 +31,38 @@ const createItem = async (req, res) => {
 };
 
 const getItems = async (req, res) => {
-  try {
- 
-    const { category, limit } = req.query;
+  try {
+ 
+    const { category, limit } = req.query;
 
-    let queryCondition = { 
-      status: 'active',
-      estimated_value: { $gt: 0 } 
-    };
+    let queryCondition = { 
+      status: 'active',
+      estimated_value: { $gt: 0 } 
+    };
 
 
-    if (category && category !== 'All') {
-      queryCondition.category = category;
-    }
+    if (category && category !== 'All') {
+      queryCondition.category = category;
+    }
 
- 
-    let itemsQuery = Item.find(queryCondition)
-      .populate('owner', 'full_name city email')
-      .sort({ created_at: -1 }); // Latest pehle
+ 
+    let itemsQuery = Item.find(queryCondition)
+      .populate('owner', 'full_name city email')
+      .sort({ created_at: -1 });
 
-  
-    if (limit) {
-      itemsQuery = itemsQuery.limit(parseInt(limit, 10));
-    }
+  
+    if (limit) {
+      itemsQuery = itemsQuery.limit(parseInt(limit, 10));
+    }
 
-   
-    const items = await itemsQuery;
-    
-    res.status(200).json({ success: true, count: items.length, data: items });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: 'Server Error' });
-  }
+   
+    const items = await itemsQuery;
+    
+    res.status(200).json({ success: true, count: items.length, data: items });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
 };
 
 
@@ -175,6 +178,43 @@ const searchItems = async (req, res) => {
   }
 };
 
+// CHANGE START: Added getRelatedItems function
+const getRelatedItems = async (req, res) => {
+  try {
+    const itemId = req.params.id;
+
+    const currentItem = await Item.findById(itemId);
+    if (!currentItem) {
+      return res.status(404).json({ success: false, message: 'Item not found' });
+    }
+
+    const sameCategoryItems = await Item.find({
+      _id: { $ne: itemId },
+      category: currentItem.category,
+      status: 'active',
+      estimated_value: { $gt: 0 }
+    }).limit(6);
+
+    const excludedIds = [
+      new mongoose.Types.ObjectId(itemId),
+      ...sameCategoryItems.map(item => item._id)
+    ];
+
+    const randomItems = await Item.aggregate([
+      { $match: { _id: { $nin: excludedIds }, status: 'active', estimated_value: { $gt: 0 } } },
+      { $sample: { size: 6 } }
+    ]);
+
+    const relatedItems = [...sameCategoryItems, ...randomItems];
+
+    res.status(200).json({ success: true, count: relatedItems.length, data: relatedItems });
+  } catch (error) {
+    console.error('Error fetching related items:', error);
+    res.status(500).json({ success: false, message: 'Server Error while fetching related items' });
+  }
+};
+// CHANGE END
+
 module.exports = {
   createItem,
   getItems,
@@ -182,5 +222,6 @@ module.exports = {
   getItemById,
   updateItem,
   deleteItem,
-  searchItems 
+  searchItems,
+  getRelatedItems
 };
