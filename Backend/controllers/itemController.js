@@ -1,25 +1,32 @@
 const Item = require('../models/Item');
-const User = require('../models/User'); // NAYA: User model import kiya
-const CreditSetting = require('../models/CreditSetting'); // NAYA: Setting model import kiya
-// CHANGE START: Imported mongoose for ObjectId casting in aggregation
+const User = require('../models/User'); 
+const CreditSetting = require('../models/CreditSetting'); 
 const mongoose = require('mongoose');
-// CHANGE END
 
 const createItem = async (req, res) => {
   try {
     const { title, description, category, condition, images, preferred_item, estimated_value } = req.body;
 
-    // NAYA CHANGE: User ki current state fetch karo
     const user = await User.findById(req.user._id);
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // NAYA CHANGE: 5 products ki limit check karo
-    if (user.listedProductsCount >= 5) {
+    // NAYA CHANGE: Backend pehle database se settings mangwayega
+    let setting = await CreditSetting.findOne();
+    if (!setting) {
+      // Fallback in case settings collection is totally empty
+      setting = { maxAllowedListings: 5 }; 
+    }
+    
+    // Dynamic max limit jo admin panel se aayegi
+    const maxLimit = setting.maxAllowedListings !== undefined ? setting.maxAllowedListings : 5;
+
+    // Limit check using dynamic variable
+    if (user.listedProductsCount >= maxLimit) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Aap maximum 5 products hi list kar sakte hain.' 
+        message: `Aap maximum ${maxLimit} products hi list kar sakte hain.` 
       });
     }
 
@@ -44,7 +51,6 @@ const createItem = async (req, res) => {
     user.listedProductsCount += 1;
     await user.save();
 
-    // NAYA CHANGE: Message update kiya taaki user ko clear ho
     res.status(201).json({ 
       success: true, 
       message: 'Product successfully list ho gaya! Admin ke approve karne par aapko credits mil jayenge.', 
@@ -58,7 +64,6 @@ const createItem = async (req, res) => {
 
 const getItems = async (req, res) => {
   try {
- 
     const { category, limit } = req.query;
 
     let queryCondition = { 
@@ -70,17 +75,14 @@ const getItems = async (req, res) => {
       queryCondition.category = category;
     }
 
- 
     let itemsQuery = Item.find(queryCondition)
       .populate('owner', 'full_name city email')
       .sort({ created_at: -1 });
 
-  
     if (limit) {
       itemsQuery = itemsQuery.limit(parseInt(limit, 10));
     }
 
-   
     const items = await itemsQuery;
     
     res.status(200).json({ success: true, count: items.length, data: items });

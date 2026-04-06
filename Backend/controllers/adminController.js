@@ -16,18 +16,17 @@ const updateItemStatus = async (req, res) => {
   try {
     const { status, rejection_reason } = req.body; 
 
-    if (!['active', 'rejected'].includes(status)) {
+    // Allowed status ki list me saare naye status bhi hain (optional validation if you want, handled by mongoose anyway)
+    if (!['pending', 'active', 'rejected', 'reserved', 'swapped'].includes(status)) {
       return res.status(400).json({ success: false, message: 'Invalid status value' });
     }
 
-  
     const item = await Item.findById(req.params.id);
     if (!item) {
       return res.status(404).json({ success: false, message: 'Item not found' });
     }
 
     const wasAlreadyActive = item.status === 'active';
-
 
     item.status = status;
     item.updated_at = Date.now();
@@ -140,7 +139,6 @@ const deleteUser = async (req, res) => {
   }
 };
 
-// NAYA CHANGE: Admin ke liye Credit Settings get karne ka function
 const getCreditSettings = async (req, res) => {
   try {
     let setting = await CreditSetting.findOne();
@@ -155,10 +153,10 @@ const getCreditSettings = async (req, res) => {
   }
 };
 
-// NAYA CHANGE: Admin ke liye Credit Settings update karne ka function
 const updateCreditSettings = async (req, res) => {
   try {
-    const { isCreditSystemEnabled, creditsPerListing, maxListingsRewarded } = req.body;
+    // NAYA: maxAllowedListings ko body se extract kiya
+    const { isCreditSystemEnabled, creditsPerListing, maxListingsRewarded, maxAllowedListings } = req.body;
     
     let setting = await CreditSetting.findOne();
     if (!setting) {
@@ -169,6 +167,7 @@ const updateCreditSettings = async (req, res) => {
     if (isCreditSystemEnabled !== undefined) setting.isCreditSystemEnabled = isCreditSystemEnabled;
     if (creditsPerListing !== undefined) setting.creditsPerListing = creditsPerListing;
     if (maxListingsRewarded !== undefined) setting.maxListingsRewarded = maxListingsRewarded;
+    if (maxAllowedListings !== undefined) setting.maxAllowedListings = maxAllowedListings; // NAYA: Value save kiya
     setting.updated_at = Date.now();
 
     await setting.save();
