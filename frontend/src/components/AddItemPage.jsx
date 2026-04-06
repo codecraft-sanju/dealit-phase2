@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Plus, ChevronLeft } from 'lucide-react';
+import { X, Plus, ChevronLeft, Gift } from 'lucide-react'; 
 import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
-const AddItemPage = () => {
+const AddItemPage = ({ user, setUser }) => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     title: '',
@@ -20,9 +20,14 @@ const AddItemPage = () => {
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState(''); 
   
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
+
+  // User ke list kiye gaye products ka count (agar data nahi hai toh 0)
+  const listedCount = user?.listedProductsCount || 0;
+  const isLimitReached = listedCount >= 5;
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -101,6 +106,19 @@ const AddItemPage = () => {
       );
 
       if (response.data.success) {
+        // Form submit hone ke baad user state update kar do taaki limit count update ho jaye
+        try {
+          const userRes = await axios.get(`${API_URL}/users/profile`, { withCredentials: true });
+          if (userRes.data.success && setUser) {
+            setUser(userRes.data.data);
+            localStorage.setItem('dealit_user', JSON.stringify(userRes.data.data));
+          }
+        } catch (e) {
+          console.error("Failed to update user profile locally", e);
+        }
+
+        // Backend se aaya response message show karo
+        window.alert(response.data.message);
         navigate('/dashboard'); 
       }
     } catch (err) {
@@ -132,6 +150,28 @@ const AddItemPage = () => {
 
         <div className="p-6 md:p-8 overflow-y-auto custom-scrollbar">
           
+          {/* NAYA CHANGE: Banner update kiya gaya admin approval wale logic ke hisaab se */}
+          {!isLimitReached ? (
+            <div className="bg-purple-50 border border-purple-200 rounded-2xl p-4 mb-6 flex items-start gap-3 shadow-sm">
+              <div className="bg-purple-100 p-2 rounded-full mt-1 flex-shrink-0">
+                <Gift className="w-5 h-5 text-purple-600" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-purple-800">Earn Credits on Approval! 🪙</h4>
+                <p className="text-xs text-purple-600 mt-1 leading-relaxed">
+                  You can list a maximum of <strong>5 items</strong>. Earn <strong>50 Credits</strong> for your first 3 listings once the admin approves them!
+                  <br/>
+                  <span className="font-semibold text-purple-700 inline-block mt-1">Your current listings: {listedCount}/5</span>
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-6 shadow-sm">
+              <h4 className="text-sm font-bold text-red-800">Listing Limit Reached</h4>
+              <p className="text-xs text-red-600 mt-1">You have reached the maximum limit of 5 listed items. You cannot list more items right now.</p>
+            </div>
+          )}
+
           {error && (
             <div className="bg-red-50 text-red-600 border border-red-200 text-sm px-4 py-3 rounded-2xl mb-6 shadow-sm">
               {error}
@@ -159,7 +199,7 @@ const AddItemPage = () => {
                   </div>
                 ))}
                 
-                {images.length < 5 && (
+                {images.length < 5 && !isLimitReached && (
                   <label className="w-24 h-24 bg-[#f8f6ff] border-2 border-[#e9d8ff] rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-[#f3edff] hover:border-[#d6bcfa] transition-all shadow-sm">
                     <Plus className="w-8 h-8 text-[#805ad5] mb-1" />
                     <span className="text-xs font-semibold text-[#805ad5]">Add Photo</span>
@@ -178,9 +218,10 @@ const AddItemPage = () => {
                   type="text" 
                   name="title" 
                   required 
+                  disabled={isLimitReached}
                   value={formData.title} 
                   onChange={handleInputChange} 
-                  className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-4 py-3.5 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#805ad5] focus:border-transparent transition-all" 
+                  className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-4 py-3.5 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#805ad5] focus:border-transparent transition-all disabled:bg-gray-100" 
                   placeholder="Enter item title" 
                 />
               </div>
@@ -191,9 +232,10 @@ const AddItemPage = () => {
                   type="number" 
                   name="estimated_value" 
                   required
+                  disabled={isLimitReached}
                   value={formData.estimated_value} 
                   onChange={handleInputChange} 
-                  className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-4 py-3.5 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#805ad5] focus:border-transparent transition-all" 
+                  className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-4 py-3.5 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#805ad5] focus:border-transparent transition-all disabled:bg-gray-100" 
                   placeholder="Enter price in credits" 
                 />
                 <div className="mt-2 text-xs">
@@ -207,10 +249,10 @@ const AddItemPage = () => {
                 <select 
                   name="category" 
                   required 
+                  disabled={loadingCategories || isLimitReached}
                   value={formData.category} 
                   onChange={handleInputChange} 
-                  className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-4 py-3.5 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#805ad5] focus:border-transparent transition-all appearance-none"
-                  disabled={loadingCategories}
+                  className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-4 py-3.5 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#805ad5] focus:border-transparent transition-all appearance-none disabled:bg-gray-100"
                 >
                   <option value="" disabled className="text-gray-400">
                     {loadingCategories ? 'Loading categories...' : 'Select category'}
@@ -229,9 +271,10 @@ const AddItemPage = () => {
                 <select 
                   name="condition" 
                   required 
+                  disabled={isLimitReached}
                   value={formData.condition} 
                   onChange={handleInputChange} 
-                  className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-4 py-3.5 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#805ad5] focus:border-transparent transition-all appearance-none"
+                  className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-4 py-3.5 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#805ad5] focus:border-transparent transition-all appearance-none disabled:bg-gray-100"
                 >
                   <option value="" disabled>Select Condition</option>
                   <option value="New">Brand New</option>
@@ -246,10 +289,11 @@ const AddItemPage = () => {
                 <textarea 
                   name="description" 
                   required 
+                  disabled={isLimitReached}
                   rows="3" 
                   value={formData.description} 
                   onChange={handleInputChange} 
-                  className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-4 py-3.5 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#805ad5] focus:border-transparent transition-all resize-none" 
+                  className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-4 py-3.5 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#805ad5] focus:border-transparent transition-all resize-none disabled:bg-gray-100" 
                   placeholder="Describe the item in detail..."
                 ></textarea>
               </div>
@@ -259,9 +303,10 @@ const AddItemPage = () => {
                 <input 
                   type="text" 
                   name="preferred_item" 
+                  disabled={isLimitReached}
                   value={formData.preferred_item} 
                   onChange={handleInputChange} 
-                  className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-4 py-3.5 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#805ad5] focus:border-transparent transition-all" 
+                  className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-4 py-3.5 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#805ad5] focus:border-transparent transition-all disabled:bg-gray-100" 
                   placeholder="What are you looking for?" 
                 />
               </div>
@@ -271,9 +316,9 @@ const AddItemPage = () => {
             <div className="pt-4">
               <button 
                 type="submit" 
-                disabled={loading || uploading} 
+                disabled={loading || uploading || isLimitReached} 
                 className={`w-full font-bold text-lg rounded-[1.25rem] px-4 py-4 transition-all transform hover:scale-[1.01] active:scale-[0.99] ${
-                  loading || uploading 
+                  loading || uploading || isLimitReached
                     ? 'bg-[#b794f4] text-white cursor-not-allowed' 
                     : 'bg-gradient-to-r from-[#805ad5] to-[#6B46C1] hover:shadow-lg hover:shadow-purple-500/30 text-white'
                 }`}
@@ -282,7 +327,7 @@ const AddItemPage = () => {
               </button>
               
               <p className="text-center text-xs font-medium text-gray-500 mt-4">
-                List up to 3 items. To list more, sell an item first.
+                List up to 5 items. Make sure your details are accurate!
               </p>
             </div>
 

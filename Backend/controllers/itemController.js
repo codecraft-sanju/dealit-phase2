@@ -1,4 +1,6 @@
 const Item = require('../models/Item');
+const User = require('../models/User'); // NAYA: User model import kiya
+const CreditSetting = require('../models/CreditSetting'); // NAYA: Setting model import kiya
 // CHANGE START: Imported mongoose for ObjectId casting in aggregation
 const mongoose = require('mongoose');
 // CHANGE END
@@ -6,6 +8,20 @@ const mongoose = require('mongoose');
 const createItem = async (req, res) => {
   try {
     const { title, description, category, condition, images, preferred_item, estimated_value } = req.body;
+
+    // NAYA CHANGE: User ki current state fetch karo
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // NAYA CHANGE: 5 products ki limit check karo
+    if (user.listedProductsCount >= 5) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Aap maximum 5 products hi list kar sakte hain.' 
+      });
+    }
 
     const newItem = new Item({
       supabaseId: `mongo-${Date.now()}`,
@@ -23,7 +39,17 @@ const createItem = async (req, res) => {
     });
 
     const savedItem = await newItem.save();
-    res.status(201).json({ success: true, data: savedItem });
+
+    // Har haal me listedProductsCount badhana hai kyunki item list ho gaya
+    user.listedProductsCount += 1;
+    await user.save();
+
+    // NAYA CHANGE: Message update kiya taaki user ko clear ho
+    res.status(201).json({ 
+      success: true, 
+      message: 'Product successfully list ho gaya! Admin ke approve karne par aapko credits mil jayenge.', 
+      data: savedItem 
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: 'Server Error' });
@@ -39,7 +65,6 @@ const getItems = async (req, res) => {
       status: 'active',
       estimated_value: { $gt: 0 } 
     };
-
 
     if (category && category !== 'All') {
       queryCondition.category = category;
@@ -64,7 +89,6 @@ const getItems = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
-
 
 const getMyItems = async (req, res) => {
   try {
@@ -138,7 +162,6 @@ const deleteItem = async (req, res) => {
   }
 };
 
-
 const searchItems = async (req, res) => {
   try {
     const { q } = req.query;
@@ -178,7 +201,6 @@ const searchItems = async (req, res) => {
   }
 };
 
-// CHANGE START: Added getRelatedItems function
 const getRelatedItems = async (req, res) => {
   try {
     const itemId = req.params.id;
@@ -213,7 +235,6 @@ const getRelatedItems = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server Error while fetching related items' });
   }
 };
-// CHANGE END
 
 module.exports = {
   createItem,

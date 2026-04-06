@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { 
   Shield, Users, Package, Trash2, X, CheckCircle, Edit, List, AlertTriangle, Eye, Coins, User, 
   ShieldAlert, ShieldCheck, Mail, Phone, MapPin, Calendar, Wallet, Image as ImageIcon, Plus, 
-  Check, ToggleLeft, ToggleRight, Layers,
+  Check, ToggleLeft, ToggleRight, Layers, Settings, // NAYA: Settings icon import kiya
   Car, Monitor, Book, Shirt, Gamepad2, Watch, Home as HomeIcon, Sofa, Music, Utensils, Heart, Briefcase, Camera, Dumbbell, Smartphone
 } from 'lucide-react'; 
 import axios from 'axios';
@@ -11,12 +11,9 @@ import Cropper from 'react-easy-crop';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
-
-// Cloudinary Credentials
 const UPLOAD_PRESET = import.meta.env.VITE_UPLOAD_PRESET || 'salon_preset';
 const CLOUD_NAME = import.meta.env.VITE_CLOUD_NAME || 'dvoenforj';
 
-// --- Image Cropping Helper Functions ---
 const createImage = (url) =>
   new Promise((resolve, reject) => {
     const image = new Image();
@@ -70,11 +67,17 @@ const getCroppedImg = async (imageSrc, pixelCrop) => {
 };
 
 const AdminPanel = ({ user }) => {
-  const [activeTab, setActiveTab] = useState('pending'); // 'pending', 'items', 'users', 'offers', 'categories'
+  const [activeTab, setActiveTab] = useState('pending');
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // NAYA CHANGE: Credit Settings State
+  const [creditSettings, setCreditSettings] = useState({
+    isCreditSystemEnabled: true,
+    creditsPerListing: 50,
+    maxListingsRewarded: 3
+  });
 
-  // Edit Item Modal States
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingItemId, setEditingItemId] = useState(null);
   const [updating, setUpdating] = useState(false);
@@ -82,27 +85,20 @@ const AdminPanel = ({ user }) => {
     title: '', description: '', category: '', condition: '', estimated_value: '', preferred_item: ''
   });
 
-  // Reject Modal States
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [rejectingItemId, setRejectingItemId] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
 
-  // View Item Details Modal States
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [viewingItem, setViewingItem] = useState(null);
-
-  // View User Details Modal States
   const [isViewUserModalOpen, setIsViewUserModalOpen] = useState(false);
   const [viewingUser, setViewingUser] = useState(null);
 
-  // Offer Modal States
   const [isOfferModalOpen, setIsOfferModalOpen] = useState(false);
   const [editingOfferId, setEditingOfferId] = useState(null);
   const [offerForm, setOfferForm] = useState({ mobileImage: '', desktopImage: '', isActive: true });
   const [isUploadingMobile, setIsUploadingMobile] = useState(false);
   const [isUploadingDesktop, setIsUploadingDesktop] = useState(false);
-
-  // Image Cropper States
   const [cropModalOpen, setCropModalOpen] = useState(false);
   const [imageToCrop, setImageToCrop] = useState(null);
   const [cropType, setCropType] = useState('desktop'); // 'desktop' or 'mobile'
@@ -111,7 +107,6 @@ const AdminPanel = ({ user }) => {
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
   const [isProcessingCrop, setIsProcessingCrop] = useState(false);
 
-  // Category Modal States
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [editingCategoryId, setEditingCategoryId] = useState(null);
   const [categoryForm, setCategoryForm] = useState({ name: '', icon: 'Package', isActive: true });
@@ -131,19 +126,27 @@ const AdminPanel = ({ user }) => {
     return <Navigate to="/" />;
   }
 
+  // NAYA CHANGE: Fetch Logic update kiya settings tab ke liye
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        let endpoint = '';
-        if (activeTab === 'pending') endpoint = `${API_URL}/admin/pending-items`;
-        else if (activeTab === 'users') endpoint = `${API_URL}/admin/users`;
-        else if (activeTab === 'items') endpoint = `${API_URL}/admin/all-items`;
-        else if (activeTab === 'offers') endpoint = `${API_URL}/admin/offers`; 
-        else if (activeTab === 'categories') endpoint = `${API_URL}/categories`;
+        if (activeTab === 'settings') {
+          const response = await axios.get(`${API_URL}/admin/credit-settings`, { withCredentials: true });
+          if (response.data.success && response.data.data) {
+            setCreditSettings(response.data.data);
+          }
+        } else {
+          let endpoint = '';
+          if (activeTab === 'pending') endpoint = `${API_URL}/admin/pending-items`;
+          else if (activeTab === 'users') endpoint = `${API_URL}/admin/users`;
+          else if (activeTab === 'items') endpoint = `${API_URL}/admin/all-items`;
+          else if (activeTab === 'offers') endpoint = `${API_URL}/admin/offers`; 
+          else if (activeTab === 'categories') endpoint = `${API_URL}/categories`;
 
-        const response = await axios.get(endpoint, { withCredentials: true });
-        setData(response.data.data || []);
+          const response = await axios.get(endpoint, { withCredentials: true });
+          setData(response.data.data || []);
+        }
       } catch (error) {
         console.error(`Error fetching ${activeTab}:`, error);
       } finally {
@@ -153,7 +156,6 @@ const AdminPanel = ({ user }) => {
     fetchData();
   }, [activeTab]);
 
-  // --- ITEM FUNCTIONS ---
   const handleApprove = async (id) => {
     try {
       await axios.put(`${API_URL}/admin/item-status/${id}`, { status: 'active' }, { withCredentials: true });
@@ -281,7 +283,6 @@ const AdminPanel = ({ user }) => {
     setIsViewUserModalOpen(true);
   };
 
-  // --- OFFER / BANNER FUNCTIONS ---
   const handleImageSelect = (e, imageType) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
@@ -384,7 +385,6 @@ const AdminPanel = ({ user }) => {
     }
   };
 
-  // --- CATEGORY FUNCTIONS ---
   const handleAddCategoryClick = () => {
     setEditingCategoryId(null);
     setCategoryForm({ name: '', icon: 'Package', isActive: true });
@@ -430,6 +430,23 @@ const AdminPanel = ({ user }) => {
     }
   };
 
+  // NAYA CHANGE: Function for saving Credit Settings
+  const handleSaveSettings = async (e) => {
+    e.preventDefault();
+    setUpdating(true);
+    try {
+      const response = await axios.put(`${API_URL}/admin/credit-settings`, creditSettings, { withCredentials: true });
+      if (response.data.success) {
+        alert('Credit settings successfully updated! 🎉');
+      }
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      alert('Failed to save settings.');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   return (
     <div className="h-[calc(100vh-80px)] min-h-[600px] w-full bg-gray-900 flex flex-col pt-6 pb-6 px-4 sm:px-6 lg:px-8">
       
@@ -452,7 +469,6 @@ const AdminPanel = ({ user }) => {
             </div>
           </div>
           
-          {/* Dynamic Top Action Buttons based on Active Tab */}
           {activeTab === 'offers' && (
             <button 
               onClick={handleAddOfferClick}
@@ -472,7 +488,6 @@ const AdminPanel = ({ user }) => {
           )}
         </div>
 
-        {/* Navigation Tabs */}
         <div className="flex flex-wrap gap-3 mb-6 bg-gray-800/40 p-1.5 rounded-2xl border border-gray-700/50 backdrop-blur-xl w-fit">
           <button 
             onClick={() => setActiveTab('pending')}
@@ -507,16 +522,104 @@ const AdminPanel = ({ user }) => {
           >
             <Layers className="w-4 h-4" /> Categories
           </button>
+
+          {/* NAYA CHANGE: Credit Settings Tab Button */}
+          <button 
+            onClick={() => setActiveTab('settings')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${activeTab === 'settings' ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20 scale-100' : 'text-gray-400 hover:text-white hover:bg-gray-700/50 scale-95'}`}
+          >
+            <Settings className="w-4 h-4" /> Settings
+          </button>
         </div>
       </div>
 
-      {/* Main Table Container */}
+      {/* Main Container */}
       <div className="max-w-7xl mx-auto w-full flex-1 min-h-0 bg-gray-800/40 backdrop-blur-xl border border-gray-700/60 rounded-3xl shadow-2xl flex flex-col overflow-hidden relative">
         {loading ? (
           <div className="flex-1 flex flex-col items-center justify-center space-y-4">
             <div className="w-12 h-12 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin"></div>
             <p className="text-emerald-400 font-bold tracking-widest animate-pulse">LOADING DATA...</p>
           </div>
+        ) : activeTab === 'settings' ? (
+          
+          // NAYA CHANGE: Settings Panel UI
+          <div className="flex-1 p-6 md:p-10 overflow-y-auto admin-scroll">
+            <div className="max-w-3xl mx-auto bg-gray-800/80 rounded-[2rem] border border-gray-700 p-8 shadow-2xl">
+              <div className="flex items-center gap-4 mb-8 border-b border-gray-700/80 pb-6">
+                <div className="p-3 bg-yellow-500/10 rounded-2xl border border-yellow-500/20">
+                  <Coins className="w-8 h-8 text-yellow-500" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black text-white tracking-wide">Credit System Configuration</h2>
+                  <p className="text-sm text-gray-400 mt-1">Manage rules for awarding free credits to users.</p>
+                </div>
+              </div>
+              
+              <form onSubmit={handleSaveSettings} className="space-y-8">
+                {/* Active Toggle */}
+                <div className="bg-gray-900/60 p-6 rounded-2xl border border-gray-700 flex items-center justify-between cursor-pointer hover:border-gray-500 transition-colors" onClick={() => setCreditSettings({ ...creditSettings, isCreditSystemEnabled: !creditSettings.isCreditSystemEnabled })}>
+                   <div>
+                     <p className="font-bold text-white text-lg tracking-wide">Enable Free Credits</p>
+                     <p className="text-sm text-gray-400 mt-1 max-w-md">If turned off, users will not receive any credits for listing new products.</p>
+                   </div>
+                   {creditSettings.isCreditSystemEnabled ? (
+                     <ToggleRight className="w-14 h-14 text-emerald-500 drop-shadow-[0_0_10px_rgba(16,185,129,0.3)]" />
+                   ) : (
+                     <ToggleLeft className="w-14 h-14 text-gray-600" />
+                   )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                   {/* Credits Amount Input */}
+                   <div className="space-y-3">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">Credits Per Listing</label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                          <Coins className="w-5 h-5 text-yellow-500" />
+                        </div>
+                        <input 
+                          type="number" 
+                          required 
+                          min="0" 
+                          value={creditSettings.creditsPerListing} 
+                          onChange={(e) => setCreditSettings({...creditSettings, creditsPerListing: Number(e.target.value)})} 
+                          disabled={!creditSettings.isCreditSystemEnabled} 
+                          className="w-full bg-gray-900 border-2 border-gray-700 rounded-xl pl-12 pr-4 py-3.5 text-white font-bold focus:outline-none focus:border-purple-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed" 
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500">Amount to award when you approve an item.</p>
+                   </div>
+
+                   {/* Max Listings Input */}
+                   <div className="space-y-3">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">Max Rewarded Listings</label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                          <Package className="w-5 h-5 text-blue-400" />
+                        </div>
+                        <input 
+                          type="number" 
+                          required 
+                          min="1" 
+                          value={creditSettings.maxListingsRewarded} 
+                          onChange={(e) => setCreditSettings({...creditSettings, maxListingsRewarded: Number(e.target.value)})} 
+                          disabled={!creditSettings.isCreditSystemEnabled} 
+                          className="w-full bg-gray-900 border-2 border-gray-700 rounded-xl pl-12 pr-4 py-3.5 text-white font-bold focus:outline-none focus:border-blue-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed" 
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500">How many initial items get the reward (e.g., 3).</p>
+                   </div>
+                </div>
+
+                <div className="pt-8 border-t border-gray-700 flex justify-end">
+                   <button type="submit" disabled={updating} className={`px-8 py-3.5 rounded-xl font-black uppercase tracking-widest transition-all flex items-center gap-2 text-sm ${updating ? 'bg-purple-600/50 text-white/50 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-500 text-white shadow-[0_0_20px_rgba(147,51,234,0.4)]'}`}>
+                     {updating ? 'Saving...' : 'Save Settings'}
+                   </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
         ) : data.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
             <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mb-4 border border-gray-700">
@@ -1176,7 +1279,6 @@ const AdminPanel = ({ user }) => {
           <div className="bg-gray-800 w-full max-w-2xl rounded-3xl border border-gray-700 shadow-2xl overflow-hidden flex flex-col max-h-full animate-in zoom-in-95 duration-200">
             <div className="p-5 border-b border-gray-700 flex justify-between items-center bg-gray-900/80 backdrop-blur-md shrink-0">
               <h2 className="text-xl font-black text-white flex items-center gap-2">
-                {/* CHANGED: Icon color and title to match the exact ratio context */}
                 {editingOfferId ? <Edit className="w-6 h-6 text-[#A388E1]" /> : <ImageIcon className="w-6 h-6 text-[#A388E1]" />} 
                 {editingOfferId ? 'Update Banner' : 'Upload New Banner'}
               </h2>
@@ -1193,7 +1295,6 @@ const AdminPanel = ({ user }) => {
                   <div className="space-y-3">
                     <div>
                       <label className="block text-xs font-bold text-gray-300 uppercase tracking-wide">Desktop Banner</label>
-                      {/* CHANGED: Text recommendation to 5:1 */}
                       <span className="text-[10px] text-gray-500 font-medium">Recommended: 1200x240 (Landscape 5:1)</span>
                     </div>
                     
@@ -1231,7 +1332,6 @@ const AdminPanel = ({ user }) => {
                   <div className="space-y-3">
                     <div>
                       <label className="block text-xs font-bold text-gray-300 uppercase tracking-wide">Mobile Banner</label>
-                      {/* CHANGED: Text recommendation to 2.5:1 */}
                       <span className="text-[10px] text-gray-500 font-medium">Recommended: 800x320 (Landscape 2.5:1)</span>
                     </div>
                     
@@ -1304,7 +1404,6 @@ const AdminPanel = ({ user }) => {
             <div className="p-5 border-b border-gray-700 flex justify-between items-center bg-gray-900/80 backdrop-blur-md shrink-0">
               <h2 className="text-xl font-black text-white flex items-center gap-2">
                 <ImageIcon className="w-6 h-6 text-[#A388E1]" /> 
-                {/* CHANGED: Dynamic title to reflect correct ratios */}
                 Crop {cropType === 'desktop' ? 'Desktop (5:1)' : 'Mobile (2.5:1)'} Banner
               </h2>
               <button onClick={() => setCropModalOpen(false)} className="text-gray-400 hover:text-white transition-all p-2 bg-gray-800 hover:bg-gray-700 rounded-full">
@@ -1318,7 +1417,6 @@ const AdminPanel = ({ user }) => {
                   image={imageToCrop}
                   crop={crop}
                   zoom={zoom}
-               
                   aspect={cropType === 'desktop' ? 5 / 1 : 2.5 / 1}
                   onCropChange={setCrop}
                   onCropComplete={onCropComplete}

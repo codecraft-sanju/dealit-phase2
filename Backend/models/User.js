@@ -16,6 +16,7 @@ const userSchema = new mongoose.Schema({
   wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item' }],
   
   account_credits: { type: Number, default: 50 }, // Welcome bonus of 50 credits
+  listedProductsCount: { type: Number, default: 0 },
 
   isVerified: { type: Boolean, default: false },
   otp: { type: String },

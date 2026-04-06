@@ -1,5 +1,6 @@
 const Item = require('../models/Item');
 const User = require('../models/User'); 
+const CreditSetting = require('../models/CreditSetting'); 
 
 const getPendingItems = async (req, res) => {
   try {
@@ -18,25 +19,50 @@ const updateItemStatus = async (req, res) => {
     if (!['active', 'rejected'].includes(status)) {
       return res.status(400).json({ success: false, message: 'Invalid status value' });
     }
-    const updateData = { 
-      status: status, 
-      updated_at: Date.now() 
-    };
-    if (status === 'rejected') {
-      updateData.rejection_reason = rejection_reason || 'No reason provided by admin.';
-    } else {
-      updateData.rejection_reason = ''; 
-    }
 
-    const item = await Item.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true, runValidators: true }
-    ).populate('owner', 'full_name email');
-
+  
+    const item = await Item.findById(req.params.id);
     if (!item) {
       return res.status(404).json({ success: false, message: 'Item not found' });
     }
+
+    const wasAlreadyActive = item.status === 'active';
+
+
+    item.status = status;
+    item.updated_at = Date.now();
+    
+    if (status === 'rejected') {
+      item.rejection_reason = rejection_reason || 'No reason provided by admin.';
+    } else {
+      item.rejection_reason = ''; 
+    }
+
+    await item.save();
+
+    if (status === 'active' && !wasAlreadyActive) {
+      let setting = await CreditSetting.findOne();
+      if (!setting) {
+        setting = { isCreditSystemEnabled: true, creditsPerListing: 50, maxListingsRewarded: 3 };
+      }
+
+      if (setting.isCreditSystemEnabled) {
+        // Count karo user ke kitne items pehle se 'active' hain
+        const activeItemsCount = await Item.countDocuments({ owner: item.owner, status: 'active' });
+
+        // Agar active items ki ginti reward limit (jaise 3) ke andar hai, toh credit do
+        if (activeItemsCount <= setting.maxListingsRewarded) {
+          const user = await User.findById(item.owner);
+          if (user) {
+            user.account_credits += setting.creditsPerListing;
+            await user.save();
+          }
+        }
+      }
+    }
+
+    // Response bhejne se pehle owner populate kar lo
+    await item.populate('owner', 'full_name email');
 
     res.status(200).json({ success: true, data: item });
   } catch (error) {
@@ -114,11 +140,57 @@ const deleteUser = async (req, res) => {
   }
 };
 
+// NAYA CHANGE: Admin ke liye Credit Settings get karne ka function
+const getCreditSettings = async (req, res) => {
+  try {
+    let setting = await CreditSetting.findOne();
+    if (!setting) {
+      // Agar setting exist nahi karti toh default values ke sath bana do
+      setting = await CreditSetting.create({});
+    }
+    res.status(200).json({ success: true, data: setting });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+// NAYA CHANGE: Admin ke liye Credit Settings update karne ka function
+const updateCreditSettings = async (req, res) => {
+  try {
+    const { isCreditSystemEnabled, creditsPerListing, maxListingsRewarded } = req.body;
+    
+    let setting = await CreditSetting.findOne();
+    if (!setting) {
+      setting = new CreditSetting({});
+    }
+
+    // Jo values aayi hain sirf unhe update karo
+    if (isCreditSystemEnabled !== undefined) setting.isCreditSystemEnabled = isCreditSystemEnabled;
+    if (creditsPerListing !== undefined) setting.creditsPerListing = creditsPerListing;
+    if (maxListingsRewarded !== undefined) setting.maxListingsRewarded = maxListingsRewarded;
+    setting.updated_at = Date.now();
+
+    await setting.save();
+    
+    res.status(200).json({ 
+      success: true, 
+      message: 'Credit settings successfully update ho gayi hain', 
+      data: setting 
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
 module.exports = {
   getPendingItems,
   updateItemStatus,
   getAllItems, 
   getAllUsers, 
   updateUserRole, 
-  deleteUser
+  deleteUser,
+  getCreditSettings,     
+  updateCreditSettings  
 };

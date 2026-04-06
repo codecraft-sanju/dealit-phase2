@@ -7,7 +7,9 @@ const {
   getAllUsers, 
   deleteUser, 
   getAllItems,
-  updateUserRole
+  updateUserRole,
+  getCreditSettings,     // NAYA: Import kiya
+  updateCreditSettings   // NAYA: Import kiya
 } = require('../controllers/adminController');
 
 const {
@@ -44,5 +46,9 @@ router.route('/offers')
 router.route('/offers/:id')
   .put(protect, admin, updateOffer)
   .delete(protect, admin, deleteOffer);
+
+router.route('/credit-settings')
+  .get(protect, admin, getCreditSettings)
+  .put(protect, admin, updateCreditSettings);
 
 module.exports = router;
