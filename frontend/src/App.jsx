@@ -515,17 +515,15 @@ function App() {
     return savedUser ? JSON.parse(savedUser) : null;
   });
 
-const handleLogout = async () => {
+  const handleLogout = async () => {
     try {
       await axios.post(`${API_URL}/users/logout`, {}, { withCredentials: true });
-    } catch (error) {
-      console.error('Error logging out:', error);
-    } finally {
       setUser(null);
+    
       localStorage.removeItem('dealit_user');
       localStorage.removeItem('dealit_token'); 
-      sessionStorage.clear();
-      window.location.href = '/login';
+    } catch (error) {
+      console.error('Error logging out:', error);
     }
   };
 
