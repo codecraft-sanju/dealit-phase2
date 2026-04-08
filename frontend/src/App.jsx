@@ -24,6 +24,7 @@ const DealDetailsPage = lazy(() => import('./components/DealDetailsPage'));
 const WishlistPage = lazy(() => import('./components/WishlistPage'));
 const CheckoutPage = lazy(() => import('./components/CheckoutPage'));
 const OrdersPage = lazy(() => import('./components/OrdersPage'));
+const DeleteAccountPage = lazy(() => import('./components/DeleteAccountPage'));
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -484,6 +485,7 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
             <Route path="/checkout/:itemId" element={user ? <CheckoutPage user={user} setUser={setUser} /> : <Navigate to="/login" />} />
             <Route path="/orders" element={user ? <OrdersPage user={user} /> : <Navigate to="/login" />} />
             <Route path="/add-item" element={user ? <AddItemPage user={user} setUser={setUser} /> : <Navigate to="/login" />} />
+            <Route path="/delete-account" element={user ? <DeleteAccountPage user={user} /> : <Navigate to="/login" />} />
             
             <Route path="/item/:id" element={
               <>
