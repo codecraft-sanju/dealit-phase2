@@ -52,7 +52,6 @@ const HomePage = ({ user, setUser }) => {
   const [showCelebration, setShowCelebration] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
-  // NAYE STATES FOR CLAIM BONUS
   const [isClaiming, setIsClaiming] = useState(false);
   const [bonusSettings, setBonusSettings] = useState({ enabled: true, amount: 50 });
 
@@ -61,7 +60,6 @@ const HomePage = ({ user, setUser }) => {
   const startX = useRef(0);
   const scrollLeftPos = useRef(0);
 
-  // Fetch Public Settings to get Welcome Bonus status
   useEffect(() => {
     const fetchSettings = async () => {
       try {
@@ -146,7 +144,6 @@ const HomePage = ({ user, setUser }) => {
     fetchItems(); 
   }, [activeCategory]);
 
-  // NAYA FUNCTION: Handle Claim Button Click
   const handleClaimBonus = async () => {
     if (isClaiming) return;
     setIsClaiming(true);
@@ -155,23 +152,17 @@ const HomePage = ({ user, setUser }) => {
       const response = await axios.post(`${API_URL}/users/claim-bonus`, {}, { withCredentials: true });
       
       if (response.data.success) {
-        // Run Celebration Animation
         setShowCelebration(true);
         
-        // Update user state globally to reflect new credits and hide the claim button
-   // Is code se replace kar do:
-setUser(prevUser => {
-  const updatedUser = {
-    ...prevUser,
-    account_credits: response.data.data.account_credits,
-    hasClaimedWelcomeBonus: response.data.data.hasClaimedWelcomeBonus
-  };
-  
-  // YEH LINE ADD KARNA ZARURI HAI
-  localStorage.setItem('dealit_user', JSON.stringify(updatedUser));
-  
-  return updatedUser;
-});
+        setUser(prevUser => {
+          const updatedUser = {
+            ...prevUser,
+            account_credits: response.data.data.account_credits,
+            hasClaimedWelcomeBonus: response.data.data.hasClaimedWelcomeBonus
+          };
+          localStorage.setItem('dealit_user', JSON.stringify(updatedUser));
+          return updatedUser;
+        });
 
         setTimeout(() => {
           setShowCelebration(false);
@@ -179,7 +170,23 @@ setUser(prevUser => {
       }
     } catch (error) {
       console.error('Error claiming bonus:', error);
-      // Optional: Handle error message showing to user here
+      
+      // Fix for users who already claimed but local storage wasn't updated
+      if (error.response && error.response.status === 400) {
+        setUser(prevUser => {
+          const updatedUser = {
+            ...prevUser,
+            hasClaimedWelcomeBonus: true 
+          };
+          localStorage.setItem('dealit_user', JSON.stringify(updatedUser));
+          return updatedUser;
+        });
+        
+        // Optional alert to let them know
+        alert(error.response.data.message || 'Bonus already claimed!');
+      } else {
+        alert('Failed to claim bonus. Please try again.');
+      }
     } finally {
       setIsClaiming(false);
     }
@@ -228,7 +235,6 @@ setUser(prevUser => {
     'radial-gradient(circle, #FDE047 20%, #EAB308 80%, #92400E 100%)'
   ];
 
-  // Helper condition to show claim button
   const shouldShowClaimButton = user && !user.hasClaimedWelcomeBonus && bonusSettings.enabled;
 
   return (
@@ -271,7 +277,6 @@ setUser(prevUser => {
                 </div>
               </div>
 
-              {/* NAYA LOGIC: Conditional Button Rendering */}
               {shouldShowClaimButton ? (
                 <button 
                   onClick={handleClaimBonus}
