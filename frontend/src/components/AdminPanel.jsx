@@ -4,7 +4,8 @@ import {
   Shield, Users, Package, Trash2, X, Edit, List, AlertTriangle, Eye, User, 
   ShieldAlert, ShieldCheck, Mail, Phone, MapPin, Calendar, Wallet, Image as ImageIcon, Plus, 
   Check, ToggleLeft, ToggleRight, Layers, Settings,
-  Car, Monitor, Book, Shirt, Gamepad2, Watch, Home as HomeIcon, Sofa, Music, Utensils, Heart, Briefcase, Camera, Dumbbell, Smartphone, Target
+  Car, Monitor, Book, Shirt, Gamepad2, Watch, Home as HomeIcon, Sofa, Music, Utensils, Heart, Briefcase, Camera, Dumbbell, Smartphone, Target,
+  IndianRupee, Activity // NAYA: Added icons for transactions
 } from 'lucide-react'; 
 import axios from 'axios';
 import Cropper from 'react-easy-crop';
@@ -76,14 +77,17 @@ const AdminPanel = ({ user }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   
+  // NAYA: Total income track karne ke liye state
+  const [totalIncome, setTotalIncome] = useState(0);
+  
   // Dynamic Settings Initial State (Updated with Welcome Bonus)
   const [creditSettings, setCreditSettings] = useState({
     isCreditSystemEnabled: true,
     creditsPerListing: 50,
     maxListingsRewarded: 3,
     maxAllowedListings: 5,
-    isWelcomeBonusEnabled: true, // NAYA
-    welcomeBonusAmount: 50,      // NAYA
+    isWelcomeBonusEnabled: true, 
+    welcomeBonusAmount: 50,      
     isReferralSystemEnabled: true, 
     referralRewardCredits: 40,
     maxReferralLimit: 5,
@@ -157,8 +161,15 @@ const AdminPanel = ({ user }) => {
           else if (activeTab === 'items') endpoint = `${API_URL}/admin/all-items`;
           else if (activeTab === 'offers') endpoint = `${API_URL}/admin/offers`; 
           else if (activeTab === 'categories') endpoint = `${API_URL}/categories`;
+          else if (activeTab === 'transactions') endpoint = `${API_URL}/admin/transactions`; // NAYA
 
           const response = await axios.get(endpoint, { withCredentials: true });
+          
+          // NAYA: Agar transactions tab hai, toh total income set karo
+          if (activeTab === 'transactions') {
+             setTotalIncome(response.data.totalIncome || 0);
+          }
+          
           setData(response.data.data || []);
         }
       } catch (error) {
@@ -534,6 +545,13 @@ const AdminPanel = ({ user }) => {
           >
             <Layers className="w-4 h-4" /> Categories
           </button>
+          {/* NAYA: Transactions Tab Button */}
+          <button 
+            onClick={() => setActiveTab('transactions')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${activeTab === 'transactions' ? 'bg-yellow-500 text-gray-900 shadow-lg shadow-yellow-500/20 scale-100' : 'text-gray-400 hover:text-white hover:bg-gray-700/50 scale-95'}`}
+          >
+            <IndianRupee className="w-4 h-4" /> Transactions
+          </button>
 
           <button 
             onClick={() => setActiveTab('settings')}
@@ -552,14 +570,103 @@ const AdminPanel = ({ user }) => {
             <p className="text-emerald-400 font-bold tracking-widest animate-pulse">LOADING DATA...</p>
           </div>
         ) : activeTab === 'settings' ? (
-          
           <SettingsPanel 
             creditSettings={creditSettings}
             setCreditSettings={setCreditSettings}
             handleSaveSettings={handleSaveSettings}
             updating={updating}
           />
+        ) : activeTab === 'transactions' ? (
+          // NAYA: Custom view for Transactions tab
+          <div className="flex-1 flex flex-col p-6 overflow-hidden">
+            {/* Income Summary Widgets */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 shrink-0">
+              <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-3xl p-6 text-white shadow-lg shadow-emerald-500/20 flex items-center justify-between border border-emerald-400/30">
+                <div>
+                  <p className="text-emerald-100 font-bold uppercase tracking-wider text-xs mb-1">Total Platform Income</p>
+                  <h3 className="text-4xl font-black">₹{totalIncome.toLocaleString('en-IN')}</h3>
+                </div>
+                <div className="bg-white/20 p-4 rounded-2xl">
+                  <IndianRupee className="w-10 h-10 text-white" />
+                </div>
+              </div>
+              <div className="bg-gray-800 rounded-3xl p-6 text-white shadow-lg border border-gray-700 flex items-center justify-between">
+                <div>
+                  <p className="text-gray-400 font-bold uppercase tracking-wider text-xs mb-1">Total Transactions</p>
+                  <h3 className="text-4xl font-black">{data.length}</h3>
+                </div>
+                <div className="bg-blue-500/10 p-4 rounded-2xl border border-blue-500/20">
+                  <Activity className="w-10 h-10 text-blue-400" />
+                </div>
+              </div>
+            </div>
 
+            {/* Transactions Table */}
+            {data.length === 0 ? (
+               <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-gray-800/50 rounded-3xl border border-gray-700/50">
+                 <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mb-4 border border-gray-700">
+                   <IndianRupee className="w-10 h-10 text-gray-500" />
+                 </div>
+                 <h3 className="text-xl font-bold text-white mb-1">No Transactions Yet</h3>
+                 <p className="text-gray-500">Wait for users to start buying credits on Dealit.</p>
+               </div>
+            ) : (
+               <div className="flex-1 overflow-auto admin-scroll bg-gray-800/50 rounded-3xl border border-gray-700/50 relative">
+                 <table className="w-full text-left border-collapse min-w-max">
+                   <thead className="sticky top-0 z-10 bg-gray-900 border-b border-gray-700 shadow-sm">
+                     <tr className="text-xs uppercase tracking-wider text-gray-400">
+                       <th className="p-5 font-bold">User</th>
+                       <th className="p-5 font-bold">Amount</th>
+                       <th className="p-5 font-bold">Order Details</th>
+                       <th className="p-5 font-bold">Status</th>
+                       <th className="p-5 font-bold">Date & Time</th>
+                     </tr>
+                   </thead>
+                   <tbody className="divide-y divide-gray-700/50">
+                     {data.map(txn => (
+                       <tr key={txn._id} className="hover:bg-gray-700/30 transition-colors">
+                         <td className="p-5">
+                           <div className="flex items-center gap-3">
+                             {txn.user?.profilePic ? (
+                               <img src={txn.user.profilePic} alt="User" className="w-10 h-10 rounded-full object-cover border-2 border-gray-700" />
+                             ) : (
+                               <div className="w-10 h-10 rounded-full bg-gray-700 border-2 border-gray-600 flex items-center justify-center">
+                                  <User className="w-5 h-5 text-gray-400" />
+                               </div>
+                             )}
+                             <div>
+                                <p className="text-sm font-bold text-white">{txn.user?.full_name || 'Unknown User'}</p>
+                                <p className="text-xs text-gray-400">{txn.user?.email || 'N/A'}</p>
+                             </div>
+                           </div>
+                         </td>
+                         <td className="p-5">
+                           <span className="text-lg font-black text-emerald-400 flex items-center">
+                             ₹{txn.amount}
+                           </span>
+                         </td>
+                         <td className="p-5">
+                           <div className="text-xs font-mono">
+                             <p className="text-gray-300 font-bold mb-1">ID: <span className="text-blue-300">{txn.razorpay_order_id}</span></p>
+                             <p className="text-gray-500 truncate w-48" title={txn.razorpay_payment_id}>Pay: {txn.razorpay_payment_id}</p>
+                           </div>
+                         </td>
+                         <td className="p-5">
+                            <span className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider ${txn.status === 'success' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : txn.status === 'pending' ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                              {txn.status}
+                            </span>
+                         </td>
+                         <td className="p-5">
+                           <p className="text-sm text-gray-300 font-bold">{new Date(txn.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                           <p className="text-xs text-gray-500 mt-0.5">{new Date(txn.created_at).toLocaleTimeString()}</p>
+                         </td>
+                       </tr>
+                     ))}
+                   </tbody>
+                 </table>
+               </div>
+            )}
+          </div>
         ) : data.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
             <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mb-4 border border-gray-700">
@@ -691,7 +798,7 @@ const AdminPanel = ({ user }) => {
         </div>
       )}
 
-      {/* -> CHANGES MADE: Replaced inline View Item Modal with the new ViewItemModal Component */}
+      {/* View Item Modal */}
       <ViewItemModal 
         isViewModalOpen={isViewModalOpen}
         setIsViewModalOpen={setIsViewModalOpen}
@@ -882,7 +989,7 @@ const AdminPanel = ({ user }) => {
         </div>
       )}
 
-      {/* -> CHANGES MADE: Replaced inline Offer Banner Modal with the new OfferModal Component */}
+      {/* Offer Modal */}
       <OfferModal 
         isOfferModalOpen={isOfferModalOpen}
         setIsOfferModalOpen={setIsOfferModalOpen}

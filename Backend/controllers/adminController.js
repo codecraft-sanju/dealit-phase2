@@ -1,6 +1,7 @@
 const Item = require('../models/Item');
 const User = require('../models/User'); 
 const CreditSetting = require('../models/CreditSetting'); 
+const Transaction = require('../models/Transaction');
 
 const getPendingItems = async (req, res) => {
   try {
@@ -9,6 +10,33 @@ const getPendingItems = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+const getAllTransactions = async (req, res) => {
+  try {
+    // Saari transactions fetch karo aur user details bhi populate karo
+    const transactions = await Transaction.find()
+      .populate('user', 'full_name email phone profilePic')
+      .sort({ created_at: -1 });
+
+    // Total income calculate karo sirf successful transactions se
+    const totalIncome = transactions.reduce((sum, txn) => {
+      if (txn.status === 'success') {
+        return sum + txn.amount;
+      }
+      return sum;
+    }, 0);
+
+    res.status(200).json({ 
+      success: true, 
+      totalIncome: totalIncome,
+      count: transactions.length, 
+      data: transactions 
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server Error fetching transactions' });
   }
 };
 
@@ -234,5 +262,6 @@ module.exports = {
   deleteUser,
   getCreditSettings,     
   updateCreditSettings,
-  getPublicCreditSettings 
+  getPublicCreditSettings ,
+  getAllTransactions
 };

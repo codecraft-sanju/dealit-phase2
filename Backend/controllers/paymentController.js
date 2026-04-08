@@ -1,6 +1,7 @@
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
-const User = require('../models/User'); // Tumhare User model ka exact path
+const User = require('../models/User'); 
+const Transaction = require('../models/Transaction');
 
 // Razorpay instance initialize karna
 const razorpayInstance = new Razorpay({
@@ -35,23 +36,17 @@ const createOrder = async (req, res) => {
   }
 };
 
-// 2. Payment Verify karke User ke Credits update karne ki API
 const verifyPayment = async (req, res) => {
   try {
-    // FIX 1: req.body se 'amount' hata diya hai taki frontend manipulation ka risk na rahe
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
-    
-    // Auth middleware se user ID aayegi
     const userId = req.user._id; 
 
-    // Signature verify karne ka formula
     const body = razorpay_order_id + "|" + razorpay_payment_id;
     const expectedSignature = crypto
       .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
       .update(body.toString())
       .digest('hex');
 
-    // FIX 2: === ki jagah crypto.timingSafeEqual use kiya for better security (Medium risk bug fix)
     const expectedBuffer = Buffer.from(expectedSignature, 'hex');
     const signatureBuffer = Buffer.from(razorpay_signature, 'hex');
     
@@ -61,26 +56,36 @@ const verifyPayment = async (req, res) => {
     }
 
     if (isAuthentic) {
-      // FIX 3: Razorpay server se order details fetch karke actual amount nikalna (Critical bug fix)
       const orderDetails = await razorpayInstance.orders.fetch(razorpay_order_id);
 
       if (orderDetails.status !== 'paid') {
           return res.status(400).json({ success: false, message: 'Payment incomplete at Razorpay end.' });
       }
 
-      // Payment verify ho gayi, ab User ke credits badha do (1 Rs = 1 Credit)
-      // Razorpay paise me amount deta hai, isliye 100 se divide kiya
-      const creditsToAdd = orderDetails.amount / 100; 
+      // Actual amount in INR
+      const actualAmountInINR = orderDetails.amount / 100; 
 
+      // NAYA: Transaction Database mein save karna
+      const newTransaction = new Transaction({
+        user: userId,
+        amount: actualAmountInINR,
+        razorpay_order_id,
+        razorpay_payment_id,
+        razorpay_signature,
+        status: 'success'
+      });
+      await newTransaction.save();
+
+      // User ke credits update karna
       const updatedUser = await User.findByIdAndUpdate(
         userId,
-        { $inc: { account_credits: creditsToAdd } }, // Credits increment kar rahe hain
+        { $inc: { account_credits: actualAmountInINR } }, 
         { new: true }
       ).select('-password'); 
 
       res.status(200).json({
         success: true,
-        message: 'Payment verified and credits added successfully',
+        message: 'Payment verified, transaction saved, and credits added successfully',
         user: updatedUser,
       });
     } else {
@@ -91,7 +96,6 @@ const verifyPayment = async (req, res) => {
     res.status(500).json({ success: false, message: 'Internal Server Error during verification' });
   }
 };
-
 module.exports = {
   createOrder,
   verifyPayment

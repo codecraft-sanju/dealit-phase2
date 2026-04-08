@@ -10,7 +10,8 @@ const {
   updateUserRole,
   getCreditSettings,     
   updateCreditSettings,
-  getPublicCreditSettings // NAYA: Import kiya yahan
+  getPublicCreditSettings,
+  getAllTransactions
 } = require('../controllers/adminController');
 
 const {
@@ -55,5 +56,9 @@ router.route('/offers/:id')
 router.route('/credit-settings')
   .get(protect, admin, getCreditSettings)
   .put(protect, admin, updateCreditSettings);
+
+
+router.route('/transactions')
+  .get(protect, admin, getAllTransactions);
 
 module.exports = router;
