@@ -7,6 +7,32 @@ import { motion, AnimatePresence } from 'framer-motion';
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
+// --- NEW ADDITION: Professional Shimmer/Skeleton Component ---
+const OrderSkeleton = () => (
+  <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm p-5 md:p-6 mb-6">
+    <div className="flex justify-between items-center mb-6">
+      <div className="h-3 w-24 bg-gray-200 rounded-full animate-pulse"></div>
+      <div className="h-6 w-20 bg-gray-200 rounded-full animate-pulse"></div>
+    </div>
+    <div className="flex flex-col md:flex-row gap-6">
+      <div className="flex gap-4 md:w-1/2">
+        <div className="w-24 h-24 bg-gray-100 rounded-[1.2rem] animate-pulse shrink-0"></div>
+        <div className="space-y-3 flex-1 pt-1">
+          <div className="h-5 w-3/4 bg-gray-200 rounded-md animate-pulse"></div>
+          <div className="h-3 w-1/2 bg-gray-200 rounded-md animate-pulse"></div>
+          <div className="h-6 w-24 bg-gray-100 rounded-lg animate-pulse mt-2"></div>
+        </div>
+      </div>
+      <div className="md:w-1/2 space-y-3 pt-1">
+        <div className="h-3 w-1/3 bg-gray-200 rounded-md animate-pulse mb-4"></div>
+        <div className="h-3 w-full bg-gray-100 rounded-md animate-pulse"></div>
+        <div className="h-3 w-2/3 bg-gray-100 rounded-md animate-pulse"></div>
+        <div className="h-3 w-1/2 bg-gray-200 rounded-md animate-pulse mt-4"></div>
+      </div>
+    </div>
+  </div>
+);
+
 const OrdersPage = ({ user }) => {
   const [activeTab, setActiveTab] = useState('purchases'); 
   const [orders, setOrders] = useState([]);
@@ -42,7 +68,7 @@ const OrdersPage = ({ user }) => {
       }
     };
 
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true }); // passive true for better mobile scroll performance
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -58,20 +84,21 @@ const OrdersPage = ({ user }) => {
     }
   };
 
+  // --- UPDATED: Optimized Animation Variants for Zero Lag ---
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: { staggerChildren: 0.08, delayChildren: 0.1 }
+      transition: { staggerChildren: 0.05 } // Reduced stagger time for faster perception
     }
   };
 
   const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
+    hidden: { opacity: 0, y: 15 },
     visible: { 
       opacity: 1, 
       y: 0, 
-      transition: { type: 'spring', stiffness: 300, damping: 24 } 
+      transition: { type: 'spring', stiffness: 400, damping: 30 } // Tighter spring for crisp movement
     }
   };
 
@@ -118,46 +145,58 @@ const OrdersPage = ({ user }) => {
 
       <div className="max-w-md mx-auto md:max-w-4xl px-5 md:px-8 pt-28 relative z-20">
         
-        {/* Tabs */}
+        {/* --- UPDATED: Fluid Animated Tabs --- */}
         <div className="flex bg-white p-1.5 rounded-2xl mb-8 border border-gray-100 shadow-sm relative z-20">
-          <button 
-            onClick={() => setActiveTab('purchases')}
-            className={`flex-1 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-sm md:text-base ${
-              activeTab === 'purchases' 
-                ? 'bg-[#6B46C1] text-white shadow-md' 
-                : 'text-gray-500 hover:text-gray-900 hover:bg-[#f8f6ff]'
-            }`}
-          >
-            <ShoppingBag className={`w-5 h-5 ${activeTab === 'purchases' ? 'text-white' : 'text-[#6B46C1]'}`} /> 
-            My Purchases
-          </button>
-          <button 
-            onClick={() => setActiveTab('sales')}
-            className={`flex-1 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-sm md:text-base ${
-              activeTab === 'sales' 
-                ? 'bg-[#6B46C1] text-white shadow-md' 
-                : 'text-gray-500 hover:text-gray-900 hover:bg-[#f8f6ff]'
-            }`}
-          >
-            <Truck className={`w-5 h-5 ${activeTab === 'sales' ? 'text-white' : 'text-[#6B46C1]'}`} /> 
-            Incoming Orders
-          </button>
+          {['purchases', 'sales'].map((tab) => {
+            const isActive = activeTab === tab;
+            return (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className="relative flex-1 py-3 rounded-xl font-bold text-sm md:text-base outline-none tap-highlight-transparent"
+                style={{ WebkitTapHighlightColor: 'transparent' }}
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="activeTabBg"
+                    className="absolute inset-0 bg-[#6B46C1] rounded-xl shadow-md"
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  />
+                )}
+                <span className={`relative z-10 flex items-center justify-center gap-2 transition-colors duration-200 ${
+                  isActive ? 'text-white' : 'text-gray-500 hover:text-gray-800'
+                }`}>
+                  {tab === 'purchases' ? (
+                    <ShoppingBag className="w-5 h-5" />
+                  ) : (
+                    <Truck className="w-5 h-5" />
+                  )}
+                  {tab === 'purchases' ? 'My Purchases' : 'Incoming Orders'}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         <AnimatePresence mode="wait">
           {loading ? (
             <motion.div 
               key="loading"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="flex flex-col items-center justify-center py-20"
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }}
+              className="w-full"
             >
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#6B46C1] mb-4"></div>
-              <p className="text-gray-500 font-medium">Loading your orders...</p>
+              {/* --- NEW: Rendering 3 Skeleton items for a better loading experience --- */}
+              <OrderSkeleton />
+              <OrderSkeleton />
+              <OrderSkeleton />
             </motion.div>
           ) : orders.length === 0 ? (
             <motion.div 
               key="empty"
               initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
               className="text-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm"
             >
               <div className="bg-[#f8f6ff] w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -178,7 +217,13 @@ const OrdersPage = ({ user }) => {
               className="space-y-6"
             >
               {orders.map((order) => (
-                <motion.div variants={itemVariants} key={order._id} className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm">
+                <motion.div 
+                  variants={itemVariants} 
+                  key={order._id} 
+                  layout // Enables smooth reflow if items are removed/updated
+                  className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm"
+                  style={{ willChange: 'transform, opacity' }} // Hardware acceleration hint
+                >
                   {/* Status Bar */}
                   <div className="bg-[#f8f6ff] px-5 py-4 flex justify-between items-center border-b border-gray-100">
                     <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Order ID: #{order._id.slice(-6)}</span>
@@ -200,6 +245,7 @@ const OrdersPage = ({ user }) => {
                             src={order.item?.images?.[0] || 'https://via.placeholder.com/150'} 
                             alt={order.item?.title} 
                             className="w-full h-full object-cover" 
+                            loading="lazy" // Performance boost for images
                           />
                         </div>
                         <div>
@@ -218,13 +264,13 @@ const OrdersPage = ({ user }) => {
                           <MapPin className="w-3.5 h-3.5 text-[#A388E1]" /> Shipping Address
                         </h4>
                         <p className="text-sm font-bold text-gray-900 mb-1 flex items-center gap-2">
-                          <User className="w-3.5 h-3.5 text-gray-400" /> {order.shippingAddress.fullName}
+                          <User className="w-3.5 h-3.5 text-gray-400" /> {order.shippingAddress?.fullName}
                         </p>
                         <p className="text-xs text-gray-600 font-medium leading-relaxed pl-5.5">
-                          {order.shippingAddress.addressLine}, {order.shippingAddress.city}, {order.shippingAddress.state} - {order.shippingAddress.pincode}
+                          {order.shippingAddress?.addressLine}, {order.shippingAddress?.city}, {order.shippingAddress?.state} - {order.shippingAddress?.pincode}
                         </p>
                         <p className="text-sm font-bold text-[#6B46C1] mt-2.5 flex items-center gap-2">
-                          <Phone className="w-3.5 h-3.5 text-[#A388E1]" /> {order.shippingAddress.phone}
+                          <Phone className="w-3.5 h-3.5 text-[#A388E1]" /> {order.shippingAddress?.phone}
                         </p>
                       </div>
                     </div>
@@ -235,7 +281,7 @@ const OrdersPage = ({ user }) => {
                         {order.orderStatus === 'pending' && (
                           <button 
                             onClick={() => handleUpdateStatus(order._id, 'processing')}
-                            className="bg-[#6B46C1] hover:bg-[#5a3aa3] text-white px-6 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm"
+                            className="bg-[#6B46C1] hover:bg-[#5a3aa3] text-white px-6 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm active:scale-95"
                           >
                             Accept & Process
                           </button>
@@ -243,7 +289,7 @@ const OrdersPage = ({ user }) => {
                         {order.orderStatus === 'processing' && (
                           <button 
                             onClick={() => handleUpdateStatus(order._id, 'shipped')}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm"
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm active:scale-95"
                           >
                             Mark as Shipped
                           </button>
@@ -251,14 +297,14 @@ const OrdersPage = ({ user }) => {
                         {order.orderStatus === 'shipped' && (
                           <button 
                             onClick={() => handleUpdateStatus(order._id, 'delivered')}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm flex items-center gap-2"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm flex items-center gap-2 active:scale-95"
                           >
                             <CheckCircle className="w-4 h-4" /> Delivered (Get Credits)
                           </button>
                         )}
                         <button 
                           onClick={() => handleUpdateStatus(order._id, 'cancelled')}
-                          className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 px-6 py-2.5 rounded-xl font-bold text-sm transition-colors"
+                          className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 px-6 py-2.5 rounded-xl font-bold text-sm transition-colors active:scale-95"
                         >
                           Cancel Order
                         </button>

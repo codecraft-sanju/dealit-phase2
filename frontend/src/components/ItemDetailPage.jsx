@@ -400,7 +400,7 @@ const ItemDetailPage = ({ user }) => {
       {/* --- MODIFIED ACTION BAR: Added Buy Now Button --- */}
       <div className="fixed bottom-[calc(60px+env(safe-area-inset-bottom))] md:bottom-0 left-0 right-0 z-40 pointer-events-none lg:static lg:mt-auto px-4 lg:px-0">
         <div className="pointer-events-auto max-w-lg mx-auto lg:max-w-full">
-          {user && (item.owner?._id === user._id || item.owner?._id === user.id) ? (
+          {user && item?.owner?._id && (item.owner._id === user._id || item.owner._id === user.id) ? (
             <button disabled className="w-full bg-[#F8F9FA]/95 backdrop-blur-md text-slate-500 py-4 rounded-2xl font-bold text-base cursor-not-allowed border border-slate-200 shadow-sm flex items-center justify-center gap-2">
               <Package className="w-5 h-5 opacity-50" /> This is your item
             </button>
