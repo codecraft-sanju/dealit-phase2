@@ -322,13 +322,10 @@ const ProfilePage = ({ user, onLogout }) => {
                     { to: "/orders", icon: Archive, title: "My Orders", subtitle: "View your past transactions" },
                     { to: "/swaps", icon: RefreshCw, title: "My Swaps", subtitle: "Your Trade Offers & Barters" },
                     { to: "#", icon: Tag, title: "My Offers", subtitle: "Items You've Bid On", iconClass: "fill-[#6B46C1]/20" },
-                    
-                    // CHANGE START: Updated link destination for Wishlist
+                
                     { to: "/wishlist", icon: Heart, title: "Wishlist", subtitle: "Saved Items", iconClass: "fill-[#6B46C1]" },
-                    // CHANGE END
-
                     { to: "/wallet", icon: Wallet, title: "My Wallet", subtitle: "Credit Balance & Purchases" },
-                    { to: "#", icon: Bell, title: "Notifications", subtitle: "Alert Settings", iconClass: "fill-[#6B46C1]" },
+                    { to: "#", icon: Bell, title: "Notifications", subtitle: "Alert Settings", iconClass: "fill-[#6B46C1]" },      
                     { to: "#", icon: HelpCircle, title: "Help & Support", subtitle: "Get Assistance", iconClass: "fill-[#6B46C1]/20", noBorder: true }
                   ].map((item, index) => (
                     <MotionLink 
