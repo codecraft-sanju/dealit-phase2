@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Plus, ChevronLeft, Gift, Image as ImageIcon } from 'lucide-react'; 
+// NAYA CHANGE: Imported Sparkles icon for the AI button
+import { X, Plus, ChevronLeft, Gift, Image as ImageIcon, Sparkles } from 'lucide-react'; 
 import axios from 'axios';
-import Cropper from 'react-easy-crop'; // NAYA: Crop library import ki
+import Cropper from 'react-easy-crop'; 
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
-// NAYA CHANGE: Cropper helper functions (AdminPanel se liye gaye hain)
 const createImage = (url) =>
   new Promise((resolve, reject) => {
     const image = new Image();
@@ -56,7 +56,7 @@ const getCroppedImg = async (imageSrc, pixelCrop) => {
       } else {
         reject(new Error('Canvas is empty'));
       }
-    }, 'image/jpeg', 0.9); // Quality 90% for good balance
+    }, 'image/jpeg', 0.9); 
   });
 };
 
@@ -77,16 +77,14 @@ const AddItemPage = ({ user, setUser }) => {
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
 
-  // Backend settings ke liye state
   const [systemSettings, setSystemSettings] = useState({
     isCreditSystemEnabled: true,
     creditsPerListing: 50,
     maxListingsRewarded: 3,
-    maxAllowedListings: 5 // Default limit
+    maxAllowedListings: 5 
   });
   const [loadingSettings, setLoadingSettings] = useState(true);
 
-  // NAYA CHANGE: Crop states
   const [cropModalOpen, setCropModalOpen] = useState(false);
   const [imageToCrop, setImageToCrop] = useState(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -94,7 +92,9 @@ const AddItemPage = ({ user, setUser }) => {
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
   const [isProcessingCrop, setIsProcessingCrop] = useState(false);
 
-  // Dynamic limits check
+  // NAYA CHANGE: State to track if AI is generating text
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+
   const listedCount = user?.listedProductsCount || 0;
   const isLimitReached = listedCount >= systemSettings.maxAllowedListings;
 
@@ -124,7 +124,6 @@ const AddItemPage = ({ user, setUser }) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // NAYA CHANGE: Select image for cropping
   const handleImageSelect = (e) => {
     if (images.length >= 5) {
       setError('You can only upload a maximum of 5 images.');
@@ -142,14 +141,13 @@ const AddItemPage = ({ user, setUser }) => {
       });
       reader.readAsDataURL(file);
     }
-    e.target.value = null; // reset input
+    e.target.value = null; 
   };
 
   const onCropComplete = (croppedArea, croppedAreaPixels) => {
     setCroppedAreaPixels(croppedAreaPixels);
   };
 
-  // NAYA CHANGE: Upload cropped image to cloudinary
   const handleCropAndUpload = async () => {
     setIsProcessingCrop(true);
     setError('');
@@ -178,6 +176,39 @@ const AddItemPage = ({ user, setUser }) => {
 
   const removeImage = (indexToRemove) => {
     setImages(images.filter((_, index) => index !== indexToRemove));
+  };
+
+  // NAYA CHANGE: Function to handle AI description generation
+  const handleGenerateDescription = async () => {
+    // Check if we have enough data to generate a meaningful description
+    if (!formData.title || !formData.category) {
+      setError("Please enter a Title and select a Category first so the AI knows what to write about.");
+      return;
+    }
+
+    setIsGeneratingAI(true);
+    setError('');
+
+    try {
+      const response = await axios.post(
+        `${API_URL}/ai/generate-description`, // Aapko backend par yeh route banana hoga
+        {
+          title: formData.title,
+          category: formData.category,
+          condition: formData.condition
+        },
+        { withCredentials: true }
+      );
+
+      if (response.data.success && response.data.description) {
+        setFormData(prev => ({ ...prev, description: response.data.description }));
+      }
+    } catch (err) {
+      console.error("AI Generation failed:", err);
+      setError("Failed to generate description with AI. Please type it manually.");
+    } finally {
+      setIsGeneratingAI(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -310,7 +341,6 @@ const AddItemPage = ({ user, setUser }) => {
                   </div>
                 ))}
                 
-                {/* NAYA CHANGE: Removed 'multiple' to support manual cropping one by one */}
                 {images.length < 5 && !isLimitReached && (
                   <label className="w-24 h-24 bg-[#f8f6ff] border-2 border-[#e9d8ff] rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-[#f3edff] hover:border-[#d6bcfa] transition-all shadow-sm">
                     <Plus className="w-8 h-8 text-[#805ad5] mb-1" />
@@ -395,13 +425,25 @@ const AddItemPage = ({ user, setUser }) => {
                 </select>
               </div>
 
+              {/* NAYA CHANGE: Description section with AI button side-by-side */}
               <div>
-                <label className="block text-sm font-bold text-[#553c9a] mb-2">Description</label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-bold text-[#553c9a]">Description</label>
+                  <button
+                    type="button"
+                    onClick={handleGenerateDescription}
+                    disabled={isGeneratingAI || isLimitReached}
+                    className="flex items-center gap-1.5 text-xs font-bold text-purple-700 bg-purple-100 hover:bg-purple-200 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Sparkles className={`w-3.5 h-3.5 ${isGeneratingAI ? 'animate-pulse' : ''}`} />
+                    {isGeneratingAI ? 'Writing...' : 'Write with AI'}
+                  </button>
+                </div>
                 <textarea 
                   name="description" 
                   required 
                   disabled={isLimitReached}
-                  rows="3" 
+                  rows="4" 
                   value={formData.description} 
                   onChange={handleInputChange} 
                   className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-4 py-3.5 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#805ad5] focus:border-transparent transition-all resize-none disabled:bg-gray-100" 
@@ -446,7 +488,6 @@ const AddItemPage = ({ user, setUser }) => {
         </div>
       </div>
 
-      {/* NAYA CHANGE: Interactive Crop Modal */}
       {cropModalOpen && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center px-4 py-4 bg-black/80 backdrop-blur-sm transition-opacity">
           <div className="bg-gray-800 w-full max-w-xl rounded-3xl border border-gray-700 shadow-2xl overflow-hidden flex flex-col h-[70vh] animate-in zoom-in-95 duration-200">
@@ -466,7 +507,7 @@ const AddItemPage = ({ user, setUser }) => {
                   image={imageToCrop}
                   crop={crop}
                   zoom={zoom}
-                  aspect={1} // 1:1 Square crop for uniform UI
+                  aspect={1} 
                   onCropChange={setCrop}
                   onCropComplete={onCropComplete}
                   onZoomChange={setZoom}
