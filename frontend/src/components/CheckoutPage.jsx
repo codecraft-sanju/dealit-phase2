@@ -34,10 +34,10 @@ const CheckoutPage = ({ user, setUser }) => {
   const [formData, setFormData] = useState({
     fullName: user?.full_name || '',
     phone: user?.phone || '',
-    addressLine: '',
+    addressLine: user?.addressLine || '',
     city: user?.city || '',
-    state: '',
-    pincode: ''
+    state: user?.state || '',
+    pincode: user?.pincode || ''
   });
 
   const [error, setError] = useState('');
@@ -139,7 +139,13 @@ const CheckoutPage = ({ user, setUser }) => {
               // Update global user state (SIRF item value ke credits deduct honge yaha)
               const updatedUser = {
                 ...user,
-                account_credits: user.account_credits - itemPrice
+                account_credits: user.account_credits - itemPrice,
+                addressLine: formData.addressLine,
+                city: formData.city,
+                state: formData.state,
+                pincode: formData.pincode,
+                full_name: formData.fullName,
+                phone: formData.phone
               };
               setUser(updatedUser);
               localStorage.setItem('dealit_user', JSON.stringify(updatedUser));
