@@ -6,9 +6,8 @@ const orderSchema = new mongoose.Schema({
   item: { type: mongoose.Schema.Types.ObjectId, ref: 'Item', required: true },
 
   itemPrice: { type: Number, required: true },      // Credits charged for the item
-  shippingCost: { type: Number, default: 0 },       // Credits charged for shipping
-  totalAmount: { type: Number, required: true },    // itemPrice + shippingCost
-
+  shippingCost: { type: Number, default: 0 },       // Rupees charged for shipping
+  totalAmount: { type: Number, required: true },    // itemPrice (credits) + shippingCost (rupees) for record
 
   shippingAddress: {
     fullName: { type: String, required: true },
@@ -33,6 +32,10 @@ const orderSchema = new mongoose.Schema({
     type: Boolean, 
     default: false 
   },
+
+ 
+  razorpay_order_id: { type: String },
+  razorpay_payment_id: { type: String },
 
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now }

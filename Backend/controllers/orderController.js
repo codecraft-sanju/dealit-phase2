@@ -2,14 +2,52 @@ const Order = require('../models/Order');
 const Item = require('../models/Item');
 const User = require('../models/User');
 const CreditSetting = require('../models/CreditSetting');
+const Transaction = require('../models/Transaction'); // <-- NAYA IMPORT: Transaction save karne ke liye
+const crypto = require('crypto'); 
 
-// 1. CREATE ORDER (Buy Now via Credits)
+// 1. CREATE ORDER (Buy Now via Credits + Real Money Shipping)
 const createOrder = async (req, res) => {
   try {
-    const { itemId, shippingAddress } = req.body;
+    const { itemId, shippingAddress, paymentDetails } = req.body;
     const buyerId = req.user._id;
 
-    // 1. Check Item details
+    // --- STEP 1: Verify Razorpay Payment for Shipping ---
+    if (!paymentDetails || !paymentDetails.razorpay_payment_id) {
+      return res.status(400).json({ success: false, message: 'Shipping payment details missing' });
+    }
+
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = paymentDetails;
+
+    // Signature verify karna (Security check)
+    const body = razorpay_order_id + "|" + razorpay_payment_id;
+    const expectedSignature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(body.toString())
+      .digest('hex');
+
+    if (expectedSignature !== razorpay_signature) {
+      return res.status(400).json({ success: false, message: 'Invalid payment signature. Shipping payment verification failed.' });
+    }
+    // ----------------------------------------------------
+
+    // 2. Fetch Shipping Cost from Admin Settings
+    let setting = await CreditSetting.findOne();
+    const shippingCost = setting && setting.flatShippingCost !== undefined ? setting.flatShippingCost : 60;
+
+    // --- NAYA STEP: Save Transaction for Admin Panel ---
+    const newTransaction = new Transaction({
+      user: buyerId,
+      amount: shippingCost, // Shipping ka real paisa
+      razorpay_order_id: razorpay_order_id,
+      razorpay_payment_id: razorpay_payment_id,
+      razorpay_signature: razorpay_signature,
+      status: 'success',
+      transactionType: 'shipping_fee'
+    });
+    await newTransaction.save();
+    // ----------------------------------------------------
+
+    // 3. Check Item details
     const item = await Item.findById(itemId);
     if (!item) {
       return res.status(404).json({ success: false, message: 'Item not found' });
@@ -20,49 +58,47 @@ const createOrder = async (req, res) => {
     if (item.owner.toString() === buyerId.toString()) {
       return res.status(400).json({ success: false, message: 'You cannot buy your own item' });
     }
-
-    // 2. Fetch Shipping Cost from Admin Settings
-    let setting = await CreditSetting.findOne();
-    const shippingCost = setting && setting.flatShippingCost !== undefined ? setting.flatShippingCost : 60;
+    
     const itemPrice = item.estimated_value || 0;
-    const totalAmount = itemPrice + shippingCost;
 
-    // 3. Check Buyer's Wallet Balance
+    // 4. Check Buyer's Wallet Balance (ONLY FOR ITEM PRICE)
     const buyer = await User.findById(buyerId);
-    if (buyer.account_credits < totalAmount) {
+    if (buyer.account_credits < itemPrice) {
       return res.status(400).json({ 
         success: false, 
-        message: `Insufficient credits. You need ${totalAmount} credits (Item: ${itemPrice} + Shipping: ${shippingCost}).`,
-        requiredCredits: totalAmount,
+        message: `Insufficient credits. You need ${itemPrice} credits for this item.`,
+        requiredCredits: itemPrice,
         currentCredits: buyer.account_credits
       });
     }
 
-    // 4. Deduct Credits from Buyer (Escrow Hold)
-    buyer.account_credits -= totalAmount;
+    // 5. Deduct Credits from Buyer (ONLY ITEM PRICE)
+    buyer.account_credits -= itemPrice;
     await buyer.save();
 
-    // 5. Update Item Status so nobody else can buy it
+    // 6. Update Item Status so nobody else can buy it
     item.status = 'reserved'; 
     await item.save();
 
-    // 6. Create the Order
+    // 7. Create the Order
     const order = await Order.create({
       buyer: buyerId,
       seller: item.owner,
       item: itemId,
       itemPrice: itemPrice,
       shippingCost: shippingCost,
-      totalAmount: totalAmount,
+      totalAmount: itemPrice + shippingCost, 
       shippingAddress: shippingAddress,
       orderStatus: 'pending',
-      paymentStatus: 'paid', // Kyunki credits cut chuke hain
-      isSellerPaid: false    // Seller ko abhi paise nahi mile hain
+      paymentStatus: 'paid', 
+      isSellerPaid: false,  
+      razorpay_order_id: razorpay_order_id,
+      razorpay_payment_id: razorpay_payment_id
     });
 
     res.status(201).json({
       success: true,
-      message: 'Order placed successfully! Credits deducted.',
+      message: 'Order placed successfully! Credits deducted and shipping paid.',
       data: order
     });
 
@@ -107,14 +143,13 @@ const updateOrderStatus = async (req, res) => {
   try {
     const { orderId } = req.params;
     const { status } = req.body; 
-    // status can be: 'processing', 'shipped', 'delivered', 'cancelled'
 
     const order = await Order.findById(orderId).populate('item');
     if (!order) {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
-    // Security: Only Admin or Seller should update status (You can refine this later)
+    // Security: Only Admin or Seller should update status
     if (order.seller.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Not authorized to update this order' });
     }
@@ -123,17 +158,14 @@ const updateOrderStatus = async (req, res) => {
     order.updated_at = Date.now();
 
     // --- ESCROW RELEASE LOGIC ---
-    // Agar order deliver ho gaya aur seller ko paise ab tak nahi mile
     if (status === 'delivered' && order.isSellerPaid === false) {
       const seller = await User.findById(order.seller);
       if (seller) {
-        // Sirf Item ki price seller ko milegi. Shipping platform rakhega (ya as per your business logic)
         seller.account_credits += order.itemPrice; 
         await seller.save();
         
         order.isSellerPaid = true;
 
-        // Item ka status permanently 'swapped' (ya sold) kar do
         if(order.item) {
            order.item.status = 'swapped';
            await order.item.save();
@@ -145,13 +177,12 @@ const updateOrderStatus = async (req, res) => {
     if (status === 'cancelled' && order.paymentStatus === 'paid') {
       const buyer = await User.findById(order.buyer);
       if (buyer) {
-        // Refund full amount to buyer
-        buyer.account_credits += order.totalAmount;
+        // Refund only the item credits
+        buyer.account_credits += order.itemPrice;
         await buyer.save();
         
         order.paymentStatus = 'refunded';
         
-        // Item wapas active kar do
         if(order.item) {
            order.item.status = 'active';
            await order.item.save();

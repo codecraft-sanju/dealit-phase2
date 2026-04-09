@@ -545,7 +545,6 @@ const AdminPanel = ({ user }) => {
           >
             <Layers className="w-4 h-4" /> Categories
           </button>
-          {/* NAYA: Transactions Tab Button */}
           <button 
             onClick={() => setActiveTab('transactions')}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${activeTab === 'transactions' ? 'bg-yellow-500 text-gray-900 shadow-lg shadow-yellow-500/20 scale-100' : 'text-gray-400 hover:text-white hover:bg-gray-700/50 scale-95'}`}
@@ -577,7 +576,6 @@ const AdminPanel = ({ user }) => {
             updating={updating}
           />
         ) : activeTab === 'transactions' ? (
-          // NAYA: Custom view for Transactions tab
           <div className="flex-1 flex flex-col p-6 overflow-hidden">
             {/* Income Summary Widgets */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 shrink-0">
@@ -617,6 +615,8 @@ const AdminPanel = ({ user }) => {
                      <tr className="text-xs uppercase tracking-wider text-gray-400">
                        <th className="p-5 font-bold">User</th>
                        <th className="p-5 font-bold">Amount</th>
+                       {/* ---> NAYA HEADER FOR TYPE <--- */}
+                       <th className="p-5 font-bold">Type</th>
                        <th className="p-5 font-bold">Order Details</th>
                        <th className="p-5 font-bold">Status</th>
                        <th className="p-5 font-bold">Date & Time</th>
@@ -645,6 +645,20 @@ const AdminPanel = ({ user }) => {
                              ₹{txn.amount}
                            </span>
                          </td>
+                         
+                         {/* ---> NAYA TYPE DATA COLUMN <--- */}
+                         <td className="p-5">
+                           {txn.transactionType === 'shipping_fee' ? (
+                             <span className="px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center w-fit gap-1.5">
+                               <Package className="w-3.5 h-3.5" /> Shipping
+                             </span>
+                           ) : (
+                             <span className="px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center w-fit gap-1.5">
+                               <Wallet className="w-3.5 h-3.5" /> Wallet
+                             </span>
+                           )}
+                         </td>
+
                          <td className="p-5">
                            <div className="text-xs font-mono">
                              <p className="text-gray-300 font-bold mb-1">ID: <span className="text-blue-300">{txn.razorpay_order_id}</span></p>

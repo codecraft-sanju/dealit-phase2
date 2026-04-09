@@ -10,6 +10,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
+// ---> NEW: Added Razorpay script loader function
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
+
 const CheckoutPage = ({ user, setUser }) => {
   const { itemId } = useParams();
   const navigate = useNavigate();
@@ -74,9 +85,10 @@ const CheckoutPage = ({ user, setUser }) => {
   };
 
   const itemPrice = item?.estimated_value || 0;
-  const totalAmount = itemPrice + shippingCost;
-  const hasEnoughCredits = user?.account_credits >= totalAmount;
+  // ---> CHANGED: Total amount logic removed. Now checking credits ONLY against itemPrice
+  const hasEnoughCredits = user?.account_credits >= itemPrice;
 
+  // ---> CHANGED: Updated handlePlaceOrder with Razorpay flow
   const handlePlaceOrder = async (e) => {
     e.preventDefault();
     if (!hasEnoughCredits) return;
@@ -84,28 +96,85 @@ const CheckoutPage = ({ user, setUser }) => {
     setProcessing(true);
     setError('');
 
+    // Step 1: Load Razorpay
+    const isScriptLoaded = await loadRazorpayScript();
+    if (!isScriptLoaded) {
+      setError('Failed to load Razorpay SDK. Please check your internet connection.');
+      setProcessing(false);
+      return;
+    }
+
     try {
-      const response = await axios.post(`${API_URL}/orders/checkout`, {
-        itemId: item._id,
-        shippingAddress: formData
-      }, { withCredentials: true });
+      // Step 2: Create Razorpay order for SHIPPING COST only
+      // Backend par ek endpoint hona chahiye jo sirf shipping ka order create kare
+      const orderResponse = await axios.post(
+        `${API_URL}/payment/create-order`, // Modify this if your backend needs a specific route for shipping vs wallet
+        { amount: shippingCost },
+        { withCredentials: true }
+      );
 
-      if (response.data.success) {
-        // Update global user state (credits deduct ho gaye hain)
-        const updatedUser = {
-          ...user,
-          account_credits: user.account_credits - totalAmount
-        };
-        setUser(updatedUser);
-        localStorage.setItem('dealit_user', JSON.stringify(updatedUser));
+      const orderData = orderResponse.data.data;
 
-        // Success! Order page ya dashboard par bhej do
-        alert('Order Placed Successfully! 🎉');
-        navigate('/dashboard'); 
-      }
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: 'Dealit',
+        description: `Shipping Charges for ${item.title}`,
+        order_id: orderData.id,
+        handler: async function (response) {
+          try {
+            // Step 3: Payment success ke baad backend par final checkout call karein
+            const checkoutRes = await axios.post(`${API_URL}/orders/checkout`, {
+              itemId: item._id,
+              shippingAddress: formData,
+              paymentDetails: {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              }
+            }, { withCredentials: true });
+
+            if (checkoutRes.data.success) {
+              // Update global user state (SIRF item value ke credits deduct honge yaha)
+              const updatedUser = {
+                ...user,
+                account_credits: user.account_credits - itemPrice
+              };
+              setUser(updatedUser);
+              localStorage.setItem('dealit_user', JSON.stringify(updatedUser));
+
+              // Success! Order page ya dashboard par bhej do
+              alert('Payment & Order Placed Successfully! 🎉');
+              navigate('/dashboard'); 
+            }
+          } catch (err) {
+            setError(err.response?.data?.message || 'Payment successful but order creation failed. Please contact support.');
+          } finally {
+            setProcessing(false);
+          }
+        },
+        prefill: {
+          name: formData.fullName || user?.full_name || '',
+          email: user?.email || '',
+          contact: formData.phone || user?.phone || '',
+        },
+        theme: {
+          color: '#6B46C1',
+        },
+      };
+
+      const paymentObject = new window.Razorpay(options);
+      
+      paymentObject.on('payment.failed', function (response) {
+        setError(`Payment Failed! Reason: ${response.error.description}`);
+        setProcessing(false); // Enable button again
+      });
+
+      paymentObject.open();
+
     } catch (err) {
-      setError(err.response?.data?.message || 'Something went wrong while placing order.');
-    } finally {
+      setError(err.response?.data?.message || 'Something went wrong while initiating payment.');
       setProcessing(false);
     }
   };
@@ -257,43 +326,44 @@ const CheckoutPage = ({ user, setUser }) => {
                 <h3 className="font-bold text-lg text-gray-800">Bill Summary</h3>
               </div>
               
+              {/* ---> CHANGED: Bill Summary UI */}
               <div className="space-y-3 text-gray-600 font-medium text-sm">
                 <div className="flex justify-between items-center">
-                  <span>Item Value</span>
+                  <span>Item Value (Will be deducted)</span>
                   <span className="flex items-center gap-1 font-bold text-gray-900">
-                    <Coins className="w-4 h-4 text-yellow-500" /> {itemPrice}
+                    <Coins className="w-4 h-4 text-yellow-500" /> {itemPrice} Credits
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>Shipping Fee</span>
+                  <span>Shipping Fee (Pay via Razorpay)</span>
                   <span className="flex items-center gap-1 font-bold text-gray-900">
-                    <Coins className="w-4 h-4 text-yellow-500" /> {shippingCost}
+                    ₹ {shippingCost}
                   </span>
                 </div>
                 <div className="border-t border-gray-100 pt-4 mt-2 flex justify-between items-center text-lg">
-                  <span className="font-bold text-gray-900">Total Amount</span>
-                  <span className="flex items-center gap-1.5 font-black text-[#6B46C1]">
-                    <Coins className="w-5 h-5 text-yellow-500" /> {totalAmount}
+                  <span className="font-bold text-gray-900">Total to Pay</span>
+                  <span className="font-black text-[#6B46C1]">
+                    ₹ {shippingCost}
                   </span>
                 </div>
               </div>
 
-              {/* Balance Warning */}
+              {/* ---> CHANGED: Balance Warning now checks only itemPrice */}
               <div className={`mt-6 p-4 rounded-2xl flex items-start gap-3 border ${hasEnoughCredits ? 'bg-[#f0fdf4] border-emerald-100' : 'bg-red-50 border-red-100'}`}>
                 {hasEnoughCredits ? (
                   <>
                     <CheckCircle className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
                     <div>
                       <p className="text-emerald-700 text-sm font-bold">Credits Available</p>
-                      <p className="text-emerald-600/80 text-xs mt-1 font-medium">You have {user.account_credits} credits in your wallet.</p>
+                      <p className="text-emerald-600/80 text-xs mt-1 font-medium">You have {user.account_credits} credits in your wallet to cover the item value.</p>
                     </div>
                   </>
                 ) : (
                   <>
                     <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-red-700 text-sm font-bold">Insufficient Balance</p>
-                      <p className="text-red-600/80 text-xs mt-1 font-medium">You need {totalAmount - user.account_credits} more credits to buy this.</p>
+                      <p className="text-red-700 text-sm font-bold">Insufficient Credits</p>
+                      <p className="text-red-600/80 text-xs mt-1 font-medium">You need {itemPrice - user.account_credits} more credits to claim this item.</p>
                     </div>
                   </>
                 )}
@@ -319,7 +389,7 @@ const CheckoutPage = ({ user, setUser }) => {
                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                       Processing...
                     </span>
-                  ) : 'Confirm & Place Order'}
+                  ) : `Pay ₹${shippingCost} & Place Order`}
                 </motion.button>
               ) : (
                 <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>

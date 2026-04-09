@@ -22,6 +22,11 @@ const transactionSchema = new mongoose.Schema({
     type: String, 
     required: true 
   },
+  transactionType: { 
+    type: String, 
+    enum: ['wallet_recharge', 'shipping_fee'], 
+    required: true 
+  },
   status: { 
     type: String, 
     enum: ['success', 'failed', 'pending'], 
