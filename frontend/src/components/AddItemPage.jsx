@@ -249,7 +249,9 @@ const AddItemPage = ({ user, setUser }) => {
         data
       );
       
-      setImages([...images, response.data.secure_url]);
+      const originalUrl = response.data.secure_url;
+      setImages([...images, originalUrl]);
+      
       setCropModalOpen(false);
       setImageToCrop(null);
     } catch (err) {
@@ -258,6 +260,23 @@ const AddItemPage = ({ user, setUser }) => {
     } finally {
       setIsProcessingCrop(false);
     }
+  };
+
+  const toggleAIBackground = (index) => {
+    const currentUrl = images[index];
+    let newUrl = "";
+    const aiParams = "e_background_removal/e_shadow:40,x_0,y_15/b_rgb:F8F9FA/";
+
+    if (currentUrl.includes("e_background_removal")) {
+      newUrl = currentUrl.replace(aiParams, "");
+    } else {
+      const urlParts = currentUrl.split('/upload/');
+      newUrl = `${urlParts[0]}/upload/${aiParams}${urlParts[1]}`;
+    }
+
+    const updatedImages = [...images];
+    updatedImages[index] = newUrl;
+    setImages(updatedImages);
   };
 
   const removeImage = (indexToRemove) => {
@@ -500,18 +519,31 @@ const AddItemPage = ({ user, setUser }) => {
               </label>
               
               <div className="flex flex-wrap gap-3 sm:gap-4">
-                {images.map((url, index) => (
-                  <div key={index} className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden shadow-sm border-2 border-white bg-gray-100 group">
-                    <img src={url} alt={`Upload ${index + 1}`} className="w-full h-full object-cover" />
-                    <button 
-                      type="button" 
-                      onClick={() => removeImage(index)} 
-                      className="absolute top-1 right-1 bg-black/60 p-1 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <X className="w-3 h-3 sm:w-4 sm:h-4" />
-                    </button>
-                  </div>
-                ))}
+                {images.map((url, index) => {
+                  const isAIApplied = url.includes("e_background_removal");
+                  return (
+                    <div key={index} className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden shadow-sm border-2 border-white bg-gray-100 group">
+                      <img src={url} alt={`Upload ${index + 1}`} className="w-full h-full object-cover" />
+                      
+                      <button 
+                        type="button" 
+                        onClick={() => toggleAIBackground(index)} 
+                        className={`absolute bottom-1 left-1 p-1.5 rounded-full text-white transition-all shadow-md ${isAIApplied ? 'bg-green-500 hover:bg-green-600' : 'bg-purple-600/90 hover:bg-purple-700'}`}
+                        title={isAIApplied ? "Revert to Original" : "Apply AI Background"}
+                      >
+                        <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
+                      </button>
+
+                      <button 
+                        type="button" 
+                        onClick={() => removeImage(index)} 
+                        className="absolute top-1 right-1 bg-black/60 p-1 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="w-3 h-3 sm:w-4 sm:h-4" />
+                      </button>
+                    </div>
+                  );
+                })}
                 
                 {images.length < 5 && !isLimitReached && (
                   <label className="w-20 h-20 sm:w-24 sm:h-24 bg-[#f8f6ff] border-2 border-[#e9d8ff] rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-[#f3edff] hover:border-[#d6bcfa] transition-all shadow-sm">
