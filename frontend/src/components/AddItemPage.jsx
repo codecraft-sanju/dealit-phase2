@@ -167,8 +167,14 @@ const AddItemPage = ({ user, setUser }) => {
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
   const [isProcessingCrop, setIsProcessingCrop] = useState(false);
 
+  // <-- NEW CHANGE: State to track which image is currently generating an AI background
+  const [processingAIIndex, setProcessingAIIndex] = useState(null);
+
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [isAutoFilling, setIsAutoFilling] = useState(false);
+  
+  // <-- NAYA CHANGE: State for premium loading progress (0-100%)
+  const [analyzeProgress, setAnalyzeProgress] = useState(0);
 
   const listedCount = user?.listedProductsCount || 0;
   const isLimitReached = listedCount >= systemSettings.maxAllowedListings;
@@ -263,6 +269,7 @@ const AddItemPage = ({ user, setUser }) => {
   };
 
   const toggleAIBackground = (index) => {
+    setProcessingAIIndex(index);
     const currentUrl = images[index];
     let newUrl = "";
     const aiParams = "e_background_removal/e_shadow:40,x_0,y_15/b_rgb:F8F9FA/";
@@ -298,7 +305,17 @@ const AddItemPage = ({ user, setUser }) => {
     }
 
     setIsAutoFilling(true);
+    setAnalyzeProgress(0);
     setError('');
+
+    // Simulate progress uploading and scanning logic
+    const progressInterval = setInterval(() => {
+      setAnalyzeProgress(prev => {
+        if (prev >= 92) return prev; // Hold at 92% until actual API returns
+        const jump = Math.floor(Math.random() * 8) + 4; // Random jump between 4 and 11
+        return Math.min(92, prev + jump);
+      });
+    }, 350);
 
     try {
       const response = await axios.post(
@@ -307,18 +324,31 @@ const AddItemPage = ({ user, setUser }) => {
         { withCredentials: true }
       );
 
+      clearInterval(progressInterval);
+      setAnalyzeProgress(100); // Shoot to 100% on success
+
       if (response.data.success && response.data.data) {
         const { title, category, description } = response.data.data;
         
-        setFormData(prev => ({ 
-          ...prev, 
-          title: title || prev.title,
-          category: category || prev.category,
-          description: description || prev.description
-        }));
+        // Slight delay so the user clearly sees the 100% full bar before it hides
+        setTimeout(() => {
+          setFormData(prev => ({ 
+            ...prev, 
+            title: title || prev.title,
+            category: category || prev.category,
+            description: description || prev.description
+          }));
+          setIsAutoFilling(false);
+          setAnalyzeProgress(0);
+        }, 600);
+      } else {
+        setIsAutoFilling(false);
+        setAnalyzeProgress(0);
       }
     } catch (err) {
       console.error("AI Vision failed:", err);
+      clearInterval(progressInterval);
+      
       const fallbackData = getFallbackVisionData();
       setFormData(prev => ({ 
         ...prev, 
@@ -326,9 +356,10 @@ const AddItemPage = ({ user, setUser }) => {
         category: prev.category || fallbackData.category,
         description: prev.description || fallbackData.description
       }));
+      
       setError("AI couldn't analyze the images right now. We filled in some generic details, please edit them manually.");
-    } finally {
       setIsAutoFilling(false);
+      setAnalyzeProgress(0);
     }
   };
 
@@ -518,57 +549,132 @@ const AddItemPage = ({ user, setUser }) => {
                 Add at least 3 images*
               </label>
               
-              <div className="flex flex-wrap gap-3 sm:gap-4">
+              <div className="flex flex-wrap gap-3 sm:gap-4 items-start">
                 {images.map((url, index) => {
                   const isAIApplied = url.includes("e_background_removal");
+                  const isProcessing = processingAIIndex === index;
+                  
                   return (
-                    <div key={index} className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden shadow-sm border-2 border-white bg-gray-100 group">
-                      <img src={url} alt={`Upload ${index + 1}`} className="w-full h-full object-cover" />
-                      
+                    <div key={index} className="flex flex-col gap-1.5 w-20 sm:w-24">
+                      {/* Image Thumbnail Container */}
+                      <div className="relative w-full aspect-square rounded-2xl overflow-hidden shadow-sm border-2 border-white bg-gray-100 group shrink-0">
+                        <img 
+                          src={url} 
+                          alt={`Upload ${index + 1}`} 
+                          className="w-full h-full object-cover" 
+                          onLoad={() => {
+                            if (processingAIIndex === index) setProcessingAIIndex(null);
+                          }}
+                          onError={() => {
+                            if (processingAIIndex === index) setProcessingAIIndex(null);
+                          }}
+                        />
+                        
+                        {/* Loading Overlay */}
+                        {isProcessing && (
+                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-[1px]">
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          </div>
+                        )}
+
+                        {/* Delete Button */}
+                        <button 
+                          type="button" 
+                          onClick={() => removeImage(index)} 
+                          disabled={isProcessing}
+                          className="absolute top-1 right-1 bg-black/60 p-1 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity disabled:hidden"
+                        >
+                          <X className="w-3 h-3 sm:w-4 sm:h-4" />
+                        </button>
+                      </div>
+
+                      {/* AI Background Button underneath */}
                       <button 
                         type="button" 
                         onClick={() => toggleAIBackground(index)} 
-                        className={`absolute bottom-1 left-1 p-1.5 rounded-full text-white transition-all shadow-md ${isAIApplied ? 'bg-green-500 hover:bg-green-600' : 'bg-purple-600/90 hover:bg-purple-700'}`}
+                        disabled={isProcessing}
+                        className={`w-full py-1.5 px-1 rounded-lg text-[10px] sm:text-xs font-bold flex items-center justify-center gap-1 transition-all shadow-sm ${
+                          isAIApplied 
+                            ? 'bg-green-100 text-green-700 hover:bg-green-200 border border-green-200' 
+                            : 'bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-200'
+                        } disabled:opacity-60 disabled:cursor-not-allowed`}
                         title={isAIApplied ? "Revert to Original" : "Apply AI Background"}
                       >
-                        <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
-                      </button>
-
-                      <button 
-                        type="button" 
-                        onClick={() => removeImage(index)} 
-                        className="absolute top-1 right-1 bg-black/60 p-1 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <X className="w-3 h-3 sm:w-4 sm:h-4" />
+                        {isProcessing ? (
+                          <>
+                            <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin"></div>
+                            <span>Wait...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                            <span>{isAIApplied ? 'Revert BG' : 'Remove BG'}</span>
+                          </>
+                        )}
                       </button>
                     </div>
                   );
                 })}
                 
                 {images.length < 5 && !isLimitReached && (
-                  <label className="w-20 h-20 sm:w-24 sm:h-24 bg-[#f8f6ff] border-2 border-[#e9d8ff] rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-[#f3edff] hover:border-[#d6bcfa] transition-all shadow-sm">
-                    <Plus className="w-6 h-6 sm:w-8 sm:h-8 text-[#805ad5] mb-1" />
-                    <span className="text-[10px] sm:text-xs font-semibold text-[#805ad5]">Add Photo</span>
-                    <input type="file" accept="image/*" onChange={handleImageSelect} disabled={isProcessingCrop} className="hidden" />
-                  </label>
+                  <div className="flex flex-col gap-1.5 w-20 sm:w-24">
+                    <label className="w-full aspect-square bg-[#f8f6ff] border-2 border-[#e9d8ff] rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-[#f3edff] hover:border-[#d6bcfa] transition-all shadow-sm">
+                      <Plus className="w-6 h-6 sm:w-8 sm:h-8 text-[#805ad5] mb-1" />
+                      <span className="text-[10px] sm:text-xs font-semibold text-[#805ad5]">Add Photo</span>
+                      <input type="file" accept="image/*" onChange={handleImageSelect} disabled={isProcessingCrop} className="hidden" />
+                    </label>
+                  </div>
                 )}
               </div>
 
               {images.length > 0 && !isLimitReached && (
-                <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm mt-4">
-                  <div>
-                    <h4 className="text-xs sm:text-sm font-bold text-purple-800">Lazy to type? 🪄</h4>
-                    <p className="text-[11px] sm:text-xs text-purple-600 mt-0.5">Let AI write the Title, Category, and Description based on your photos.</p>
+                <div className="bg-gradient-to-br from-purple-50 to-white border border-purple-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-[0_4px_20px_rgba(128,90,213,0.08)] mt-5 relative overflow-hidden">
+                  
+                  {/* Subtle background decoration */}
+                  <div className="absolute -right-6 -top-6 text-purple-100 opacity-50 transform rotate-12 pointer-events-none">
+                     <Sparkles className="w-24 h-24" />
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleAutoFillFromImages}
-                    disabled={isAutoFilling || isGeneratingAI}
-                    className="flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-[#805ad5] to-[#6B46C1] hover:shadow-md px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg transition-all disabled:opacity-70 disabled:cursor-not-allowed shrink-0 w-full sm:w-auto"
-                  >
-                    <Wand2 className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isAutoFilling ? 'animate-pulse' : ''}`} />
-                    {isAutoFilling ? 'Analyzing...' : 'Auto-Fill Details'}
-                  </button>
+
+                  <div className="relative z-10 w-full sm:w-auto">
+                    <h4 className="text-sm sm:text-base font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-800 to-[#6B46C1] flex items-center gap-1.5">
+                      Lazy to type? <Wand2 className="w-4 h-4 text-[#805ad5]" />
+                    </h4>
+                    <p className="text-[11px] sm:text-xs text-purple-600 mt-1 font-medium">Let AI write the Title, Category, and Description based on your photos.</p>
+                  </div>
+
+                  <div className="relative z-10 w-full sm:w-auto shrink-0 flex items-center justify-end">
+                    {isAutoFilling ? (
+                       <div className="w-full sm:w-48 flex flex-col gap-2">
+                         <div className="flex justify-between items-center text-[10px] sm:text-xs font-bold text-[#6B46C1]">
+                           <span className="flex items-center gap-1.5 animate-pulse">
+                             <Wand2 className="w-3.5 h-3.5" /> Analyzing Magic...
+                           </span>
+                           <span className="tabular-nums">{analyzeProgress}%</span>
+                         </div>
+                         <div className="w-full h-2.5 bg-purple-100 rounded-full overflow-hidden shadow-inner p-[1px]">
+                           <div
+                             className="h-full bg-gradient-to-r from-[#9F7AEA] via-[#805ad5] to-[#553C9A] rounded-full transition-all duration-300 ease-out relative"
+                             style={{ width: `${analyzeProgress}%` }}
+                           >
+                             {/* Glossy overlay effect for premium feel */}
+                             <div className="absolute top-0 left-0 right-0 h-1/2 bg-white/20 rounded-t-full"></div>
+                           </div>
+                         </div>
+                       </div>
+                    ) : (
+                       <button
+                         type="button"
+                         onClick={handleAutoFillFromImages}
+                         disabled={isGeneratingAI}
+                         className="group relative flex items-center justify-center gap-2 text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-[#9F7AEA] via-[#805ad5] to-[#6B46C1] bg-[length:200%_auto] hover:bg-right hover:shadow-[0_4px_15px_rgba(128,90,213,0.4)] px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl transition-all duration-500 disabled:opacity-70 disabled:cursor-not-allowed w-full sm:w-auto overflow-hidden"
+                       >
+                         {/* Shine effect on hover */}
+                         <span className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out rounded-xl"></span>
+                         <Sparkles className="w-4 h-4 relative z-10 group-hover:scale-110 transition-transform duration-300" />
+                         <span className="relative z-10">Auto-Fill Details</span>
+                       </button>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
