@@ -4,13 +4,13 @@ const User = require('../models/User');
 const CreditSetting = require('../models/CreditSetting');
 const Transaction = require('../models/Transaction'); 
 const crypto = require('crypto'); 
+const { checkServiceability, createShiprocketOrder } = require('../utils/shiprocket');
 
-// <-- NAYA CHANGE: Naya function jo frontend ko live cost batayega -->
 const calculateShippingCost = async (req, res) => {
   try {
     const { itemId, pincode } = req.body;
     
-    const item = await Item.findById(itemId);
+    const item = await Item.findById(itemId).populate('owner');
     if (!item) return res.status(404).json({ success: false, message: 'Item not found' });
 
     let setting = await CreditSetting.findOne();
@@ -18,10 +18,17 @@ const calculateShippingCost = async (req, res) => {
 
     if (setting) {
       if (setting.shippingMethod === 'dynamic') {
-        // TODO: Yahan Shiprocket API Integrate hogi!
-        // Abhi ke liye hum weight ke hisaab se dummy calculation kar rahe hain (₹80 per Kg)
+      
+        const pickupPincode = item.owner.pickupAddress?.pincode;
+        if (!pickupPincode) {
+          return res.status(400).json({ success: false, message: 'Seller pickup pincode missing.' });
+        }
+        
         const weight = item.weight || 0.5;
-        finalCost = Math.ceil(weight * 80); 
+      
+        const dimensions = item.dimensions || { length: 10, width: 10, height: 10 }; 
+        
+        finalCost = await checkServiceability(pickupPincode, pincode, weight, dimensions);
       } else {
         // Flat rate
         finalCost = setting.flatShippingCost !== undefined ? setting.flatShippingCost : 60;
@@ -31,7 +38,7 @@ const calculateShippingCost = async (req, res) => {
     res.status(200).json({ success: true, shippingCost: finalCost });
   } catch (error) {
     console.error('Error calculating shipping:', error);
-    res.status(500).json({ success: false, message: 'Server Error calculating shipping' });
+    res.status(500).json({ success: false, message: error.message || 'Server Error calculating shipping' });
   }
 };
 
@@ -41,15 +48,14 @@ const createOrder = async (req, res) => {
     const { itemId, shippingAddress, paymentDetails } = req.body;
     const buyerId = req.user._id;
 
-    // <-- NAYA CHANGE: Pehle Item fetch karo kyunki dynamic cost ko item ka weight chahiye
-    const item = await Item.findById(itemId);
+    const item = await Item.findById(itemId).populate('owner');
     if (!item) {
       return res.status(404).json({ success: false, message: 'Item not found' });
     }
     if (item.status !== 'active') {
       return res.status(400).json({ success: false, message: 'This item is no longer available for sale' });
     }
-    if (item.owner.toString() === buyerId.toString()) {
+    if (item.owner._id.toString() === buyerId.toString()) {
       return res.status(400).json({ success: false, message: 'You cannot buy your own item' });
     }
 
@@ -59,9 +65,11 @@ const createOrder = async (req, res) => {
 
     if (setting) {
       if (setting.shippingMethod === 'dynamic') {
-        // Yahan par wapas actual calculation hogi
+        const pickupPincode = item.owner.pickupAddress?.pincode;
         const weight = item.weight || 0.5;
-        shippingCost = Math.ceil(weight * 80);
+        const dimensions = item.dimensions || { length: 10, width: 10, height: 10 };
+        
+        shippingCost = await checkServiceability(pickupPincode, shippingAddress.pincode, weight, dimensions);
       } else {
         shippingCost = setting.flatShippingCost !== undefined ? setting.flatShippingCost : 60;
       }
@@ -123,10 +131,10 @@ const createOrder = async (req, res) => {
     item.status = 'reserved'; 
     await item.save();
 
-    // 7. Create the Order
+    // 7. Create the Order in MongoDB
     const order = await Order.create({
       buyer: buyerId,
-      seller: item.owner,
+      seller: item.owner._id,
       item: itemId,
       itemPrice: itemPrice,
       shippingCost: shippingCost,
@@ -137,8 +145,6 @@ const createOrder = async (req, res) => {
       isSellerPaid: false,  
       razorpay_order_id: razorpay_order_id,
       razorpay_payment_id: razorpay_payment_id,
-      
-      // <-- NAYA CHANGE: Tracking details empty add kardo future update ke liye
       trackingDetails: {
         shiprocket_order_id: '',
         shiprocket_shipment_id: '',
@@ -146,6 +152,62 @@ const createOrder = async (req, res) => {
         courier_company: ''
       }
     });
+
+    // <-- NAYA CHANGE: PUSH TO SHIPROCKET AFTER SUCCESSFUL DB SAVE -->
+    try {
+      const orderDate = new Date().toISOString().slice(0, 19).replace('T', ' '); // YYYY-MM-DD HH:MM:SS
+      const weight = item.weight || 0.5;
+      const dimensions = item.dimensions || { length: 10, width: 10, height: 10 };
+      
+      const shiprocketPayload = {
+        order_id: order._id.toString(), // Hamara unique order ID
+        order_date: orderDate,
+        pickup_location: "Primary", // Agar multiple pickup locations hain toh seller ka ID bhejna hoga
+        channel_id: "", 
+        billing_customer_name: shippingAddress.fullName,
+        billing_last_name: "",
+        billing_address: shippingAddress.addressLine,
+        billing_city: shippingAddress.city,
+        billing_pincode: shippingAddress.pincode,
+        billing_state: shippingAddress.state,
+        billing_country: "India",
+        billing_email: buyer.email,
+        billing_phone: shippingAddress.phone,
+        shipping_is_billing: true,
+        order_items: [
+          {
+            name: item.title,
+            sku: item._id.toString(),
+            units: 1,
+            selling_price: itemPrice > 0 ? itemPrice : 100, // Shiprocket needs a valid price
+            discount: 0,
+            tax: 0,
+            hsn: ""
+          }
+        ],
+        payment_method: "Prepaid",
+        sub_total: itemPrice > 0 ? itemPrice : 100,
+        length: dimensions.length,
+        breadth: dimensions.width,
+        height: dimensions.height,
+        weight: weight
+      };
+
+      const shiprocketRes = await createShiprocketOrder(shiprocketPayload);
+      
+      // Update our order with Shiprocket Details
+      order.trackingDetails = {
+        shiprocket_order_id: shiprocketRes.order_id,
+        shiprocket_shipment_id: shiprocketRes.shipment_id,
+        awb_code: '', 
+        courier_company: ''
+      };
+      await order.save();
+
+    } catch (shiprocketError) {
+      console.error("Order saved but failed to push to Shiprocket:", shiprocketError);
+      // Order DB me save ho gaya hai par Shiprocket me fail hua. Ise baad me admin retry kar sakta hai.
+    }
 
     res.status(201).json({
       success: true,
@@ -251,10 +313,64 @@ const updateOrderStatus = async (req, res) => {
   }
 };
 
+// <-- NAYA CHANGE: Shiprocket Webhook Handler -->
+const handleShiprocketWebhook = async (req, res) => {
+  try {
+    // Shiprocket sends payload here
+    const { awb, current_status } = req.body;
+
+    if (!awb || !current_status) {
+      return res.status(400).json({ success: false, message: 'Invalid payload' });
+    }
+
+    // Find order by AWB code
+    const order = await Order.findOne({ 'trackingDetails.awb_code': awb }).populate('item');
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    // If Shiprocket status is DELIVERED
+    if (current_status === 'DELIVERED' && order.orderStatus !== 'delivered') {
+      order.orderStatus = 'delivered';
+      order.updated_at = Date.now();
+
+      // --- ESCROW RELEASE LOGIC (Automatic) ---
+      if (order.isSellerPaid === false) {
+        const seller = await User.findById(order.seller);
+        if (seller) {
+          seller.account_credits += order.itemPrice; 
+          await seller.save();
+          
+          order.isSellerPaid = true;
+
+          if(order.item) {
+             order.item.status = 'swapped';
+             await order.item.save();
+          }
+        }
+      }
+      await order.save();
+    } 
+    // Status update for SHIPPED or IN TRANSIT
+    else if ((current_status === 'SHIPPED' || current_status === 'IN TRANSIT') && order.orderStatus === 'processing') {
+      order.orderStatus = 'shipped';
+      await order.save();
+    }
+
+    // Must return 200 OK so Shiprocket knows we received it
+    res.status(200).json({ success: true, message: 'Webhook processed successfully' });
+
+  } catch (error) {
+    console.error('Shiprocket Webhook Error:', error);
+    res.status(500).json({ success: false, message: 'Server error processing webhook' });
+  }
+};
+
 module.exports = {
   calculateShippingCost, 
   createOrder,
   getMyOrders,
   getSellerOrders,
-  updateOrderStatus
+  updateOrderStatus,
+  handleShiprocketWebhook 
 };

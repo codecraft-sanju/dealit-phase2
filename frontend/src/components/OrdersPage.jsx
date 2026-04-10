@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Truck, CheckCircle, Clock, MapPin, Phone, User, ArrowLeft, Coins, Package } from 'lucide-react';
+import { ShoppingBag, Truck, CheckCircle, Clock, MapPin, Phone, User, ArrowLeft, Coins, Package, ExternalLink } from 'lucide-react'; // <-- NAYA CHANGE: ExternalLink import kiya
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
-// --- NEW ADDITION: Professional Shimmer/Skeleton Component ---
+// --- Professional Shimmer/Skeleton Component ---
 const OrderSkeleton = () => (
   <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm p-5 md:p-6 mb-6">
     <div className="flex justify-between items-center mb-6">
@@ -68,7 +68,7 @@ const OrdersPage = ({ user }) => {
       }
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true }); // passive true for better mobile scroll performance
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -84,12 +84,11 @@ const OrdersPage = ({ user }) => {
     }
   };
 
-  // --- UPDATED: Optimized Animation Variants for Zero Lag ---
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: { staggerChildren: 0.05 } // Reduced stagger time for faster perception
+      transition: { staggerChildren: 0.05 } 
     }
   };
 
@@ -98,14 +97,14 @@ const OrdersPage = ({ user }) => {
     visible: { 
       opacity: 1, 
       y: 0, 
-      transition: { type: 'spring', stiffness: 400, damping: 30 } // Tighter spring for crisp movement
+      transition: { type: 'spring', stiffness: 400, damping: 30 } 
     }
   };
 
   return (
     <div className="min-h-screen bg-[#f4f2f9] pb-20 font-sans relative overflow-x-hidden">
       
-      {/* Header aligned with Profile/Checkout theme */}
+      {/* Header */}
       <header 
         className={`fixed top-0 left-0 right-0 z-50 bg-[#6B46C1] transition-all duration-300 ease-in-out shadow-md ${
           isScrolled ? 'py-3' : 'py-5'
@@ -145,7 +144,7 @@ const OrdersPage = ({ user }) => {
 
       <div className="max-w-md mx-auto md:max-w-4xl px-5 md:px-8 pt-28 relative z-20">
         
-        {/* --- UPDATED: Fluid Animated Tabs --- */}
+        {/* Tabs */}
         <div className="flex bg-white p-1.5 rounded-2xl mb-8 border border-gray-100 shadow-sm relative z-20">
           {['purchases', 'sales'].map((tab) => {
             const isActive = activeTab === tab;
@@ -187,7 +186,6 @@ const OrdersPage = ({ user }) => {
               exit={{ opacity: 0 }}
               className="w-full"
             >
-              {/* --- NEW: Rendering 3 Skeleton items for a better loading experience --- */}
               <OrderSkeleton />
               <OrderSkeleton />
               <OrderSkeleton />
@@ -220,9 +218,9 @@ const OrdersPage = ({ user }) => {
                 <motion.div 
                   variants={itemVariants} 
                   key={order._id} 
-                  layout // Enables smooth reflow if items are removed/updated
+                  layout 
                   className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm"
-                  style={{ willChange: 'transform, opacity' }} // Hardware acceleration hint
+                  style={{ willChange: 'transform, opacity' }}
                 >
                   {/* Status Bar */}
                   <div className="bg-[#f8f6ff] px-5 py-4 flex justify-between items-center border-b border-gray-100">
@@ -245,7 +243,7 @@ const OrdersPage = ({ user }) => {
                             src={order.item?.images?.[0] || 'https://via.placeholder.com/150'} 
                             alt={order.item?.title} 
                             className="w-full h-full object-cover" 
-                            loading="lazy" // Performance boost for images
+                            loading="lazy"
                           />
                         </div>
                         <div>
@@ -258,7 +256,7 @@ const OrdersPage = ({ user }) => {
                         </div>
                       </div>
 
-                      {/* Shipping Address (Always show for Seller) */}
+                      {/* Shipping Address */}
                       <div className="bg-[#f8f6ff] p-5 rounded-2xl border border-gray-100 md:w-1/2">
                         <h4 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
                           <MapPin className="w-3.5 h-3.5 text-[#A388E1]" /> Shipping Address
@@ -274,6 +272,39 @@ const OrdersPage = ({ user }) => {
                         </p>
                       </div>
                     </div>
+
+                    {/* <-- NAYA CHANGE: Tracking Details Box --> */}
+                    {order.trackingDetails && order.trackingDetails.shiprocket_order_id && (
+                      <div className="mt-5 bg-white border border-[#e9d8ff] p-4 rounded-2xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative overflow-hidden">
+                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#6B46C1]"></div>
+                        <div className="pl-2">
+                          <h4 className="text-[10px] font-bold text-[#6B46C1] uppercase tracking-widest mb-1">Shipping Details</h4>
+                          {order.trackingDetails.awb_code ? (
+                            <>
+                              <p className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                                <Truck className="w-4 h-4 text-gray-400" /> {order.trackingDetails.courier_company || 'Courier Partner'}
+                              </p>
+                              <p className="text-xs text-gray-500 font-medium mt-0.5">AWB: <span className="text-gray-800">{order.trackingDetails.awb_code}</span></p>
+                            </>
+                          ) : (
+                            <p className="text-sm font-bold text-gray-600 flex items-center gap-2">
+                              <Package className="w-4 h-4 text-gray-400" /> Shipment is being prepared...
+                            </p>
+                          )}
+                        </div>
+                        
+                        {order.trackingDetails.awb_code && (
+                          <a
+                            href={`https://shiprocket.co/tracking/${order.trackingDetails.awb_code}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-[#f8f6ff] border border-[#e9d8ff] text-[#6B46C1] hover:bg-[#6B46C1] hover:text-white hover:border-[#6B46C1] px-5 py-2.5 rounded-xl font-bold text-xs transition-all duration-300 flex items-center gap-2"
+                          >
+                            Track Package <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        )}
+                      </div>
+                    )}
 
                     {/* Actions for Seller */}
                     {activeTab === 'sales' && order.orderStatus !== 'delivered' && (

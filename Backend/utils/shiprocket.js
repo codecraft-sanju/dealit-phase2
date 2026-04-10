@@ -34,7 +34,11 @@ const checkServiceability = async (pickupPincode, deliveryPincode, weight, dimen
     };
 
     // Calculate volumetric weight
-    const volumetricWeight = (dimensions.length * dimensions.width * dimensions.height) / 5000;
+    const length = dimensions?.length || 10;
+    const width = dimensions?.width || 10;
+    const height = dimensions?.height || 10;
+    
+    const volumetricWeight = (length * width * height) / 5000;
     const finalWeight = Math.max(weight, volumetricWeight);
 
     const payload = {
@@ -73,7 +77,33 @@ const checkServiceability = async (pickupPincode, deliveryPincode, weight, dimen
   }
 };
 
+// <-- NAYA CHANGE: Order create karne ka naya function -->
+const createShiprocketOrder = async (orderData) => {
+  try {
+    const token = await getShiprocketToken();
+    
+    const config = {
+      headers: { 
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}` 
+      }
+    };
+
+    const response = await axios.post(
+      `${SHIPROCKET_BASE_URL}/orders/create/adhoc`,
+      orderData,
+      config
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error('Shiprocket Create Order Error:', error.response?.data || error.message);
+    throw new Error('Failed to create order on Shiprocket.');
+  }
+};
+
 module.exports = {
   getShiprocketToken,
-  checkServiceability
+  checkServiceability,
+  createShiprocketOrder 
 };
