@@ -1,5 +1,5 @@
 import React from 'react';
-import { Coins, ToggleRight, ToggleLeft, Package, List, Gift, Users, Target } from 'lucide-react';
+import { Coins, ToggleRight, ToggleLeft, Package, List, Gift, Users, Target, Truck } from 'lucide-react'; // <-- CHANGE: Added Truck icon
 
 const SettingsPanel = ({ creditSettings, setCreditSettings, handleSaveSettings, updating }) => {
   return (
@@ -195,6 +195,36 @@ const SettingsPanel = ({ creditSettings, setCreditSettings, handleSaveSettings, 
                   />
                 </div>
                 <p className="text-xs text-gray-500">Bumper prize when max limit is reached.</p>
+             </div>
+          </div>
+
+          {/* <-- CHANGE: ADDED SHIPPING SETTINGS SECTION --> */}
+          <hr className="border-gray-700 my-4" />
+
+          <div className="bg-gray-900/60 p-6 rounded-2xl border border-gray-700 flex flex-col justify-between">
+             <div className="mb-4">
+               <p className="font-bold text-white text-lg tracking-wide">Shipping Settings</p>
+               <p className="text-sm text-gray-400 mt-1 max-w-md">Configure the platform-wide shipping cost for users.</p>
+             </div>
+
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-3">
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">Flat Shipping Cost (₹)</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <Truck className="w-5 h-5 text-indigo-400" />
+                    </div>
+                    <input 
+                      type="number" 
+                      required 
+                      min="0" 
+                      value={creditSettings.flatShippingCost !== undefined ? creditSettings.flatShippingCost : 60} 
+                      onChange={(e) => setCreditSettings({...creditSettings, flatShippingCost: Number(e.target.value)})} 
+                      className="w-full bg-gray-900 border-2 border-gray-700 rounded-xl pl-12 pr-4 py-3.5 text-white font-bold focus:outline-none focus:border-indigo-500 transition-all" 
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500">Set 0 for free shipping. Payment gateway will bypass if 0.</p>
+                </div>
              </div>
           </div>
 

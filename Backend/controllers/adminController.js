@@ -186,6 +186,7 @@ const updateCreditSettings = async (req, res) => {
       maxAllowedListings,
       isWelcomeBonusEnabled, // ADDED
       welcomeBonusAmount,    // ADDED
+      flatShippingCost,      // ADDED
       isReferralSystemEnabled,
       referralRewardCredits,
       maxReferralLimit,
@@ -206,6 +207,9 @@ const updateCreditSettings = async (req, res) => {
     if (isWelcomeBonusEnabled !== undefined) setting.isWelcomeBonusEnabled = isWelcomeBonusEnabled;
     if (welcomeBonusAmount !== undefined) setting.welcomeBonusAmount = welcomeBonusAmount;
   
+    // ADDED LOGIC FOR SHIPPING COST
+    if (flatShippingCost !== undefined) setting.flatShippingCost = flatShippingCost;
+
     if (isReferralSystemEnabled !== undefined) setting.isReferralSystemEnabled = isReferralSystemEnabled;
     if (referralRewardCredits !== undefined) setting.referralRewardCredits = referralRewardCredits;
     
@@ -231,8 +235,8 @@ const getPublicCreditSettings = async (req, res) => {
   try {
    
     let setting = await CreditSetting.findOne().select(
-      // ADDED isWelcomeBonusEnabled and welcomeBonusAmount here
-      'isReferralSystemEnabled referralRewardCredits maxAllowedListings maxReferralLimit milestoneReferralReward isWelcomeBonusEnabled welcomeBonusAmount'
+      // ADDED isWelcomeBonusEnabled, welcomeBonusAmount, and flatShippingCost here
+      'isReferralSystemEnabled referralRewardCredits maxAllowedListings maxReferralLimit milestoneReferralReward isWelcomeBonusEnabled welcomeBonusAmount flatShippingCost'
     );
     
     if (!setting) {
@@ -243,7 +247,8 @@ const getPublicCreditSettings = async (req, res) => {
         maxReferralLimit: 5,
         milestoneReferralReward: 100,
         isWelcomeBonusEnabled: true, 
-        welcomeBonusAmount: 50       
+        welcomeBonusAmount: 50,
+        flatShippingCost: 60
       };
     }
     res.status(200).json({ success: true, data: setting });
@@ -262,6 +267,6 @@ module.exports = {
   deleteUser,
   getCreditSettings,     
   updateCreditSettings,
-  getPublicCreditSettings ,
+  getPublicCreditSettings,
   getAllTransactions
 };

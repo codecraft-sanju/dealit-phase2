@@ -10,7 +10,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
-// ---> NEW: Added Razorpay script loader function
 const loadRazorpayScript = () => {
   return new Promise((resolve) => {
     const script = document.createElement('script');
@@ -28,7 +27,7 @@ const CheckoutPage = ({ user, setUser }) => {
   const [item, setItem] = useState(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
-  const [shippingCost, setShippingCost] = useState(60); // Default, settings se aayega
+  const [shippingCost, setShippingCost] = useState(60); 
   const [isScrolled, setIsScrolled] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -58,16 +57,14 @@ const CheckoutPage = ({ user, setUser }) => {
   useEffect(() => {
     const fetchCheckoutData = async () => {
       try {
-        // 1. Fetch Item Details
         const itemRes = await axios.get(`${API_URL}/items/${itemId}`);
         if (itemRes.data.success) {
           setItem(itemRes.data.data);
         }
 
-        // 2. Fetch Shipping Cost from Admin Settings
         const settingsRes = await axios.get(`${API_URL}/admin/public-settings`);
         if (settingsRes.data.success) {
-          setShippingCost(settingsRes.data.data.flatShippingCost || 60);
+          setShippingCost(settingsRes.data.data.flatShippingCost !== undefined ? settingsRes.data.data.flatShippingCost : 60);
         }
       } catch (err) {
         setError('Failed to load checkout details.');
@@ -85,10 +82,41 @@ const CheckoutPage = ({ user, setUser }) => {
   };
 
   const itemPrice = item?.estimated_value || 0;
-  // ---> CHANGED: Total amount logic removed. Now checking credits ONLY against itemPrice
   const hasEnoughCredits = user?.account_credits >= itemPrice;
 
-  // ---> CHANGED: Updated handlePlaceOrder with Razorpay flow
+  // <-- CHANGE: Logic to bypass Razorpay if shipping is free -->
+  const processFinalOrder = async (paymentDetails = null) => {
+    try {
+      const checkoutRes = await axios.post(`${API_URL}/orders/checkout`, {
+        itemId: item._id,
+        shippingAddress: formData,
+        paymentDetails: paymentDetails // Will be null if free shipping
+      }, { withCredentials: true });
+
+      if (checkoutRes.data.success) {
+        const updatedUser = {
+          ...user,
+          account_credits: user.account_credits - itemPrice,
+          addressLine: formData.addressLine,
+          city: formData.city,
+          state: formData.state,
+          pincode: formData.pincode,
+          full_name: formData.fullName,
+          phone: formData.phone
+        };
+        setUser(updatedUser);
+        localStorage.setItem('dealit_user', JSON.stringify(updatedUser));
+
+        alert('Order Placed Successfully! 🎉');
+        navigate('/dashboard'); 
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Order creation failed. Please contact support.');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const handlePlaceOrder = async (e) => {
     e.preventDefault();
     if (!hasEnoughCredits) return;
@@ -96,7 +124,11 @@ const CheckoutPage = ({ user, setUser }) => {
     setProcessing(true);
     setError('');
 
-    // Step 1: Load Razorpay
+    // <-- CHANGE: Free Shipping Bypass -->
+    if (shippingCost === 0) {
+       return processFinalOrder(null);
+    }
+
     const isScriptLoaded = await loadRazorpayScript();
     if (!isScriptLoaded) {
       setError('Failed to load Razorpay SDK. Please check your internet connection.');
@@ -105,10 +137,8 @@ const CheckoutPage = ({ user, setUser }) => {
     }
 
     try {
-      // Step 2: Create Razorpay order for SHIPPING COST only
-      // Backend par ek endpoint hona chahiye jo sirf shipping ka order create kare
       const orderResponse = await axios.post(
-        `${API_URL}/payment/create-order`, // Modify this if your backend needs a specific route for shipping vs wallet
+        `${API_URL}/payment/create-order`,
         { amount: shippingCost },
         { withCredentials: true }
       );
@@ -123,42 +153,12 @@ const CheckoutPage = ({ user, setUser }) => {
         description: `Shipping Charges for ${item.title}`,
         order_id: orderData.id,
         handler: async function (response) {
-          try {
-            // Step 3: Payment success ke baad backend par final checkout call karein
-            const checkoutRes = await axios.post(`${API_URL}/orders/checkout`, {
-              itemId: item._id,
-              shippingAddress: formData,
-              paymentDetails: {
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-              }
-            }, { withCredentials: true });
-
-            if (checkoutRes.data.success) {
-              // Update global user state (SIRF item value ke credits deduct honge yaha)
-              const updatedUser = {
-                ...user,
-                account_credits: user.account_credits - itemPrice,
-                addressLine: formData.addressLine,
-                city: formData.city,
-                state: formData.state,
-                pincode: formData.pincode,
-                full_name: formData.fullName,
-                phone: formData.phone
-              };
-              setUser(updatedUser);
-              localStorage.setItem('dealit_user', JSON.stringify(updatedUser));
-
-              // Success! Order page ya dashboard par bhej do
-              alert('Payment & Order Placed Successfully! 🎉');
-              navigate('/dashboard'); 
-            }
-          } catch (err) {
-            setError(err.response?.data?.message || 'Payment successful but order creation failed. Please contact support.');
-          } finally {
-            setProcessing(false);
-          }
+          const paymentData = {
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature: response.razorpay_signature,
+          };
+          processFinalOrder(paymentData);
         },
         prefill: {
           name: formData.fullName || user?.full_name || '',
@@ -174,7 +174,7 @@ const CheckoutPage = ({ user, setUser }) => {
       
       paymentObject.on('payment.failed', function (response) {
         setError(`Payment Failed! Reason: ${response.error.description}`);
-        setProcessing(false); // Enable button again
+        setProcessing(false); 
       });
 
       paymentObject.open();
@@ -213,7 +213,6 @@ const CheckoutPage = ({ user, setUser }) => {
   return (
     <div className="min-h-screen bg-[#f4f2f9] pb-10 font-sans relative overflow-x-hidden">
       
-      {/* Header aligned with ProfilePage theme */}
       <header 
         className={`fixed top-0 left-0 right-0 z-50 bg-[#6B46C1] transition-all duration-300 ease-in-out shadow-md ${
           isScrolled ? 'py-3' : 'py-5'
@@ -243,7 +242,6 @@ const CheckoutPage = ({ user, setUser }) => {
         </div>
       </header>
 
-      {/* Background swoosh */}
       <motion.div 
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -259,7 +257,6 @@ const CheckoutPage = ({ user, setUser }) => {
           className="grid grid-cols-1 gap-4 md:gap-6"
         >
           
-          {/* 1. Item Summary */}
           <motion.div variants={itemVariants} className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm flex items-center gap-4">
             <div className="w-20 h-20 bg-[#f8f6ff] rounded-[1.2rem] overflow-hidden shrink-0 border border-gray-100">
               <img 
@@ -280,7 +277,6 @@ const CheckoutPage = ({ user, setUser }) => {
 
           <form onSubmit={handlePlaceOrder} className="space-y-4 md:space-y-6">
             
-            {/* 2. Shipping Address */}
             <motion.div variants={itemVariants} className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm space-y-5">
               <div className="flex items-center gap-3 border-b border-gray-50 pb-4">
                 <div className="bg-[#EBE5F7] p-2 rounded-xl text-[#6B46C1]">
@@ -323,7 +319,6 @@ const CheckoutPage = ({ user, setUser }) => {
               </div>
             </motion.div>
 
-            {/* 3. Order Summary & Credit Check */}
             <motion.div variants={itemVariants} className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
               <div className="flex items-center gap-3 border-b border-gray-50 pb-4 mb-4">
                 <div className="bg-[#EBE5F7] p-2 rounded-xl text-[#6B46C1]">
@@ -332,7 +327,6 @@ const CheckoutPage = ({ user, setUser }) => {
                 <h3 className="font-bold text-lg text-gray-800">Bill Summary</h3>
               </div>
               
-              {/* ---> CHANGED: Bill Summary UI */}
               <div className="space-y-3 text-gray-600 font-medium text-sm">
                 <div className="flex justify-between items-center">
                   <span>Item Value (Will be deducted)</span>
@@ -341,20 +335,19 @@ const CheckoutPage = ({ user, setUser }) => {
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>Shipping Fee (Pay via Razorpay)</span>
-                  <span className="flex items-center gap-1 font-bold text-gray-900">
-                    ₹ {shippingCost}
+                  <span>Shipping Fee {shippingCost > 0 ? '(Pay via Razorpay)' : ''}</span>
+                  <span className={`flex items-center gap-1 font-bold ${shippingCost === 0 ? 'text-emerald-500' : 'text-gray-900'}`}>
+                    {shippingCost === 0 ? 'FREE' : `₹ ${shippingCost}`}
                   </span>
                 </div>
                 <div className="border-t border-gray-100 pt-4 mt-2 flex justify-between items-center text-lg">
                   <span className="font-bold text-gray-900">Total to Pay</span>
                   <span className="font-black text-[#6B46C1]">
-                    ₹ {shippingCost}
+                    {shippingCost === 0 ? 'FREE' : `₹ ${shippingCost}`}
                   </span>
                 </div>
               </div>
 
-              {/* ---> CHANGED: Balance Warning now checks only itemPrice */}
               <div className={`mt-6 p-4 rounded-2xl flex items-start gap-3 border ${hasEnoughCredits ? 'bg-[#f0fdf4] border-emerald-100' : 'bg-red-50 border-red-100'}`}>
                 {hasEnoughCredits ? (
                   <>
@@ -381,7 +374,6 @@ const CheckoutPage = ({ user, setUser }) => {
                 </motion.div>
               )}
 
-              {/* Submit Button */}
               {hasEnoughCredits ? (
                 <motion.button 
                   whileHover={{ scale: 1.01 }}
@@ -395,7 +387,7 @@ const CheckoutPage = ({ user, setUser }) => {
                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                       Processing...
                     </span>
-                  ) : `Pay ₹${shippingCost} & Place Order`}
+                  ) : shippingCost === 0 ? 'Place Order' : `Pay ₹${shippingCost} & Place Order`}
                 </motion.button>
               ) : (
                 <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>

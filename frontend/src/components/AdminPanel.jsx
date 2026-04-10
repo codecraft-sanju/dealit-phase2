@@ -91,7 +91,8 @@ const AdminPanel = ({ user }) => {
     isReferralSystemEnabled: true, 
     referralRewardCredits: 40,
     maxReferralLimit: 5,
-    milestoneReferralReward: 100
+    milestoneReferralReward: 100,
+    flatShippingCost: 60
   });
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);

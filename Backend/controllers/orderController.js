@@ -11,41 +11,46 @@ const createOrder = async (req, res) => {
     const { itemId, shippingAddress, paymentDetails } = req.body;
     const buyerId = req.user._id;
 
-    // --- STEP 1: Verify Razorpay Payment for Shipping ---
-    if (!paymentDetails || !paymentDetails.razorpay_payment_id) {
-      return res.status(400).json({ success: false, message: 'Shipping payment details missing' });
-    }
-
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = paymentDetails;
-
-    // Signature verify karna (Security check)
-    const body = razorpay_order_id + "|" + razorpay_payment_id;
-    const expectedSignature = crypto
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
-      .update(body.toString())
-      .digest('hex');
-
-    if (expectedSignature !== razorpay_signature) {
-      return res.status(400).json({ success: false, message: 'Invalid payment signature. Shipping payment verification failed.' });
-    }
-    // ----------------------------------------------------
-
     // 2. Fetch Shipping Cost from Admin Settings
     let setting = await CreditSetting.findOne();
     const shippingCost = setting && setting.flatShippingCost !== undefined ? setting.flatShippingCost : 60;
 
-    // --- NAYA STEP: Save Transaction for Admin Panel ---
-    const newTransaction = new Transaction({
-      user: buyerId,
-      amount: shippingCost, // Shipping ka real paisa
-      razorpay_order_id: razorpay_order_id,
-      razorpay_payment_id: razorpay_payment_id,
-      razorpay_signature: razorpay_signature,
-      status: 'success',
-      transactionType: 'shipping_fee'
-    });
-    await newTransaction.save();
-    // ----------------------------------------------------
+    let razorpay_order_id, razorpay_payment_id;
+
+    // --- STEP 1: Verify Razorpay Payment for Shipping (Only if shipping is not free) ---
+    if (shippingCost > 0) {
+      if (!paymentDetails || !paymentDetails.razorpay_payment_id) {
+        return res.status(400).json({ success: false, message: 'Shipping payment details missing' });
+      }
+
+      razorpay_order_id = paymentDetails.razorpay_order_id;
+      razorpay_payment_id = paymentDetails.razorpay_payment_id;
+      const { razorpay_signature } = paymentDetails;
+
+      // Signature verify karna (Security check)
+      const body = razorpay_order_id + "|" + razorpay_payment_id;
+      const expectedSignature = crypto
+        .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+        .update(body.toString())
+        .digest('hex');
+
+      if (expectedSignature !== razorpay_signature) {
+        return res.status(400).json({ success: false, message: 'Invalid payment signature. Shipping payment verification failed.' });
+      }
+      
+      // --- NAYA STEP: Save Transaction for Admin Panel ---
+      const newTransaction = new Transaction({
+        user: buyerId,
+        amount: shippingCost, // Shipping ka real paisa
+        razorpay_order_id: razorpay_order_id,
+        razorpay_payment_id: razorpay_payment_id,
+        razorpay_signature: razorpay_signature,
+        status: 'success',
+        transactionType: 'shipping_fee'
+      });
+      await newTransaction.save();
+      // ----------------------------------------------------
+    }
 
     // 3. Check Item details
     const item = await Item.findById(itemId);
@@ -98,7 +103,7 @@ const createOrder = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Order placed successfully! Credits deducted and shipping paid.',
+      message: 'Order placed successfully! Credits deducted and shipping processed.',
       data: order
     });
 
