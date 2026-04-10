@@ -60,6 +60,89 @@ const getCroppedImg = async (imageSrc, pixelCrop) => {
   });
 };
 
+// CHANGE: Added professional shimmer skeleton component matching your form layout
+const ShimmerLoading = () => {
+  return (
+    <div className="min-h-screen bg-[#f4f2f9] md:py-10 flex justify-center font-sans">
+      <div className="w-full max-w-lg bg-[#fcfbff] md:rounded-[2.5rem] shadow-2xl flex flex-col relative overflow-hidden">
+        
+        {/* Header Skeleton */}
+        <div className="sticky top-0 z-50 bg-gray-200 px-4 py-5 flex items-center justify-between shadow-md md:rounded-t-[2.5rem] animate-pulse">
+          <div className="w-8 h-8 bg-gray-300 rounded-full"></div>
+          <div className="w-32 h-6 bg-gray-300 rounded-md"></div>
+          <div className="w-12 h-4 bg-gray-300 rounded-md"></div>
+        </div>
+
+        <div className="p-6 md:p-8 space-y-6">
+          {/* Info Box Skeleton */}
+          <div className="bg-gray-100 rounded-2xl p-4 flex items-start gap-3 animate-pulse">
+            <div className="w-10 h-10 bg-gray-200 rounded-full shrink-0"></div>
+            <div className="space-y-2 w-full">
+              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+              <div className="h-3 bg-gray-200 rounded w-full"></div>
+              <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+            </div>
+          </div>
+
+          {/* Image Upload Area Skeleton */}
+          <div className="pb-4 border-b border-gray-100 animate-pulse">
+            <div className="h-4 bg-gray-200 rounded w-1/3 mb-4"></div>
+            <div className="flex gap-4">
+              <div className="w-24 h-24 bg-gray-200 rounded-2xl"></div>
+              <div className="w-24 h-24 bg-gray-200 rounded-2xl"></div>
+              <div className="w-24 h-24 bg-gray-200 rounded-2xl hidden sm:block"></div>
+            </div>
+          </div>
+
+          {/* Form Fields Skeleton */}
+          <div className="space-y-5 animate-pulse">
+            {/* Input 1 */}
+            <div>
+              <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
+              <div className="w-full h-12 bg-gray-100 rounded-xl"></div>
+            </div>
+            
+            {/* Input 2 */}
+            <div className="pb-4 border-b border-gray-100">
+              <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
+              <div className="w-full h-12 bg-gray-100 rounded-xl"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/3 mt-2"></div>
+            </div>
+
+            {/* Select 1 */}
+            <div>
+              <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
+              <div className="w-full h-12 bg-gray-100 rounded-xl"></div>
+            </div>
+
+            {/* Select 2 */}
+            <div>
+              <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
+              <div className="w-full h-12 bg-gray-100 rounded-xl"></div>
+            </div>
+
+            {/* Textarea */}
+            <div>
+              <div className="flex justify-between mb-2">
+                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                <div className="h-6 bg-gray-200 rounded w-1/4"></div>
+              </div>
+              <div className="w-full h-24 bg-gray-100 rounded-xl"></div>
+            </div>
+          </div>
+
+          {/* Button Skeleton */}
+          <div className="pt-4 animate-pulse">
+            <div className="w-full h-14 bg-gray-200 rounded-[1.25rem]"></div>
+            <div className="h-3 bg-gray-200 rounded w-1/2 mx-auto mt-4"></div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const AddItemPage = ({ user, setUser }) => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -178,6 +261,22 @@ const AddItemPage = ({ user, setUser }) => {
     setImages(images.filter((_, index) => index !== indexToRemove));
   };
 
+  // NAYA CHANGE: Fallback function added
+  const getFallbackDescription = (title, category, condition) => {
+    const safeTitle = title || "item";
+    const safeCondition = condition || "good";
+    
+    const templates = {
+      Electronics: `Selling my ${safeTitle}. It is in ${safeCondition} condition. Works perfectly fine with no major issues. Message me for more details!`,
+      Vehicles: `Up for sale is my ${safeTitle}. Condition is ${safeCondition}. Well maintained and ready to go. Let me know if you want to check it out.`,
+      Clothing: `Selling this ${safeTitle}. It is in ${safeCondition} condition. Looks great and fits perfectly. Reach out if interested.`,
+      Furniture: `Selling my ${safeTitle}. It's in ${safeCondition} condition. Very sturdy and well-maintained.`,
+      Other: `I am selling my ${safeTitle}. The condition is ${safeCondition}. Please contact me if you have any questions.`
+    };
+
+    return templates[category] || templates.Other;
+  };
+
   // NAYA CHANGE: Function to handle AI description generation
   const handleGenerateDescription = async () => {
     // Check if we have enough data to generate a meaningful description
@@ -205,7 +304,10 @@ const AddItemPage = ({ user, setUser }) => {
       }
     } catch (err) {
       console.error("AI Generation failed:", err);
-      setError("Failed to generate description with AI. Please type it manually.");
+      // NAYA CHANGE: Updated catch block for fallback
+      const fallbackText = getFallbackDescription(formData.title, formData.category, formData.condition);
+      setFormData(prev => ({ ...prev, description: fallbackText }));
+      setError("AI is currently busy. We added a basic template for you, feel free to edit it!");
     } finally {
       setIsGeneratingAI(false);
     }
@@ -250,12 +352,10 @@ const AddItemPage = ({ user, setUser }) => {
     }
   };
 
-  if (loadingSettings) {
-    return (
-      <div className="min-h-screen bg-[#f4f2f9] flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-[#6B46C1]/30 border-t-[#6B46C1] rounded-full animate-spin"></div>
-      </div>
-    );
+  // CHANGE: Replaced the basic spinner with the professional ShimmerLoading component
+  // Also included loadingCategories so it shows shimmer until categories are ready too
+  if (loadingSettings || loadingCategories) {
+    return <ShimmerLoading />;
   }
 
   return (
