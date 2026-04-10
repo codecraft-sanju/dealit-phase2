@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Plus, ChevronLeft, Gift, Image as ImageIcon, Sparkles, Wand2 } from 'lucide-react'; 
+import { X, Plus, ChevronLeft, Gift, Image as ImageIcon, Sparkles, Wand2, Scale, Box } from 'lucide-react'; // <-- NAYA CHANGE: Added Scale and Box icons
 import axios from 'axios';
 import Cropper from 'react-easy-crop'; 
 
@@ -139,7 +139,11 @@ const AddItemPage = ({ user, setUser }) => {
     category: '',
     condition: '',
     preferred_item: '',
-    estimated_value: ''
+    estimated_value: '',
+    // <-- NAYA CHANGE: Weight & Dimensions states added
+    weightCategory: '0.5', 
+    exactWeight: '',
+    dimensions: { length: 10, width: 10, height: 10 }
   });
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -193,6 +197,17 @@ const AddItemPage = ({ user, setUser }) => {
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  // <-- NAYA CHANGE: Separate handler for dimensions
+  const handleDimensionChange = (e) => {
+    setFormData({
+      ...formData,
+      dimensions: {
+        ...formData.dimensions,
+        [e.target.name]: e.target.value
+      }
+    });
   };
 
   const handleImageSelect = (e) => {
@@ -353,12 +368,35 @@ const AddItemPage = ({ user, setUser }) => {
       return;
     }
 
+    // <-- NAYA CHANGE: Calculate final weight based on user selection
+    const finalWeight = formData.weightCategory === 'custom' 
+      ? parseFloat(formData.exactWeight) 
+      : parseFloat(formData.weightCategory);
+
+    if (formData.weightCategory === 'custom' && (!finalWeight || finalWeight <= 0)) {
+       setError("Please enter a valid custom weight in Kg.");
+       return;
+    }
+
     setLoading(true);
 
     try {
+      // <-- NAYA CHANGE: Send the properly formatted payload
+      const payload = {
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        condition: formData.condition,
+        preferred_item: formData.preferred_item,
+        estimated_value: formData.estimated_value,
+        images: images,
+        weight: finalWeight,
+        dimensions: formData.dimensions
+      };
+
       const response = await axios.post(
         `${API_URL}/items`,
-        { ...formData, images },
+        payload,
         { withCredentials: true }
       );
 
@@ -409,7 +447,6 @@ const AddItemPage = ({ user, setUser }) => {
 
         <div className="p-4 sm:p-6 md:p-8 overflow-y-auto custom-scrollbar">
           
-          {/* NAYA CHANGE: Top Banner Made Compact */}
           {!isLimitReached ? (
             <div className="bg-purple-50 border border-purple-200 rounded-xl p-2.5 sm:p-3 mb-4 sm:mb-5 flex items-center gap-2.5 shadow-sm">
               <div className="bg-purple-100 p-1.5 rounded-full flex-shrink-0">
@@ -520,7 +557,6 @@ const AddItemPage = ({ user, setUser }) => {
                 />
               </div>
 
-              {/* NAYA CHANGE: Forced grid-cols-2 everywhere for Category and Condition */}
               <div className="grid grid-cols-2 gap-3 sm:gap-5">
                 <div>
                   <label className="block text-[11px] sm:text-sm font-bold text-[#553c9a] mb-1.5 sm:mb-2">Choose Category</label>
@@ -561,7 +597,6 @@ const AddItemPage = ({ user, setUser }) => {
                 </div>
               </div>
 
-              {/* NAYA CHANGE: Forced grid-cols-2 everywhere for Price and Preferred Item */}
               <div className="grid grid-cols-2 gap-3 sm:gap-5 pb-4 border-b border-purple-100 border-dashed">
                 <div>
                   <label className="block text-[11px] sm:text-sm font-bold text-[#553c9a] mb-1.5 sm:mb-2">Set Your Price</label>
@@ -591,6 +626,54 @@ const AddItemPage = ({ user, setUser }) => {
                     className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-2 sm:px-4 py-2.5 sm:py-3.5 text-xs sm:text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#805ad5] focus:border-transparent transition-all disabled:bg-gray-100" 
                     placeholder="Optional" 
                   />
+                </div>
+              </div>
+
+              {/* <-- NAYA CHANGE: Shipping Details UI --> */}
+              <div className="space-y-3 sm:space-y-4 pb-4 border-b border-purple-100 border-dashed">
+                <h3 className="text-xs sm:text-sm font-bold text-[#553c9a] flex items-center gap-1.5"><Box className="w-4 h-4" /> Shipping Details</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
+                  <div>
+                    <label className="block text-[11px] sm:text-sm font-bold text-gray-600 mb-1.5 sm:mb-2 flex items-center gap-1"><Scale className="w-3.5 h-3.5" /> Item Weight (Approx)</label>
+                    <select
+                      name="weightCategory"
+                      value={formData.weightCategory}
+                      onChange={handleInputChange}
+                      disabled={isLimitReached}
+                      className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-2 sm:px-4 py-2.5 sm:py-3.5 text-xs sm:text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#805ad5] focus:border-transparent transition-all disabled:bg-gray-100"
+                    >
+                      <option value="0.5">Up to 500g (Phones, Clothes)</option>
+                      <option value="1">500g to 1 Kg (Shoes, Books)</option>
+                      <option value="2">1 Kg to 2 Kg (Laptops, Appliances)</option>
+                      <option value="5">2 Kg to 5 Kg (Heavy items)</option>
+                      <option value="custom">Custom Weight (Kg)</option>
+                    </select>
+
+                    {formData.weightCategory === 'custom' && (
+                      <div className="relative mt-2">
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0.1"
+                          name="exactWeight"
+                          value={formData.exactWeight}
+                          onChange={handleInputChange}
+                          placeholder="e.g. 1.5"
+                          className="w-full bg-white border border-purple-300 shadow-sm rounded-xl pl-4 pr-10 py-2.5 sm:py-3.5 text-xs sm:text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#805ad5] focus:border-transparent transition-all"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-xs sm:text-sm">Kg</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] sm:text-sm font-bold text-gray-600 mb-1.5 sm:mb-2">Box Dimensions (L x W x H in cm)</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      <input type="number" name="length" placeholder="L" value={formData.dimensions.length} onChange={handleDimensionChange} className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-2 py-2.5 sm:py-3 text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#805ad5]" />
+                      <input type="number" name="width" placeholder="W" value={formData.dimensions.width} onChange={handleDimensionChange} className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-2 py-2.5 sm:py-3 text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#805ad5]" />
+                      <input type="number" name="height" placeholder="H" value={formData.dimensions.height} onChange={handleDimensionChange} className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-2 py-2.5 sm:py-3 text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#805ad5]" />
+                    </div>
+                  </div>
                 </div>
               </div>
 

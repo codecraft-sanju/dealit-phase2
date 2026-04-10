@@ -33,9 +33,16 @@ const orderSchema = new mongoose.Schema({
     default: false 
   },
 
- 
   razorpay_order_id: { type: String },
   razorpay_payment_id: { type: String },
+
+
+  trackingDetails: {
+    shiprocket_order_id: { type: String },
+    shiprocket_shipment_id: { type: String },
+    awb_code: { type: String }, // Tracking Number
+    courier_company: { type: String } // e.g. Delhivery, Xpressbees
+  },
 
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now }

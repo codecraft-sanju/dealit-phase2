@@ -80,7 +80,7 @@ const AdminPanel = ({ user }) => {
   // NAYA: Total income track karne ke liye state
   const [totalIncome, setTotalIncome] = useState(0);
   
-  // Dynamic Settings Initial State (Updated with Welcome Bonus)
+  // <-- NAYA CHANGE: Default states updated -->
   const [creditSettings, setCreditSettings] = useState({
     isCreditSystemEnabled: true,
     creditsPerListing: 50,
@@ -92,6 +92,7 @@ const AdminPanel = ({ user }) => {
     referralRewardCredits: 40,
     maxReferralLimit: 5,
     milestoneReferralReward: 100,
+    shippingMethod: 'flat', // Default flat rhega
     flatShippingCost: 60
   });
 
@@ -616,7 +617,6 @@ const AdminPanel = ({ user }) => {
                      <tr className="text-xs uppercase tracking-wider text-gray-400">
                        <th className="p-5 font-bold">User</th>
                        <th className="p-5 font-bold">Amount</th>
-                       {/* ---> NAYA HEADER FOR TYPE <--- */}
                        <th className="p-5 font-bold">Type</th>
                        <th className="p-5 font-bold">Order Details</th>
                        <th className="p-5 font-bold">Status</th>
@@ -647,7 +647,6 @@ const AdminPanel = ({ user }) => {
                            </span>
                          </td>
                          
-                         {/* ---> NAYA TYPE DATA COLUMN <--- */}
                          <td className="p-5">
                            {txn.transactionType === 'shipping_fee' ? (
                              <span className="px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center w-fit gap-1.5">
@@ -779,6 +778,20 @@ const AdminPanel = ({ user }) => {
                       <p className="font-semibold text-white capitalize">{viewingUser.city || <span className="text-gray-600 italic">Not provided</span>}</p>
                     </div>
                   </div>
+                  
+                  {/* <-- NAYA CHANGE: User ki Pickup address dekhne ka UI admin me --> */}
+                  <div className="flex items-center gap-4 text-gray-300 bg-gray-900/50 p-4 rounded-2xl border border-gray-700/50 hover:border-gray-600 transition-colors">
+                    <div className="p-3 bg-gray-800 rounded-xl"><Truck className="w-5 h-5 text-indigo-400" /></div>
+                    <div>
+                      <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-0.5">Pickup Address</p>
+                      <p className="font-semibold text-white capitalize">
+                        {viewingUser.pickupAddress?.addressLine 
+                          ? `${viewingUser.pickupAddress.addressLine}, ${viewingUser.pickupAddress.city}, ${viewingUser.pickupAddress.state} - ${viewingUser.pickupAddress.pincode}` 
+                          : <span className="text-gray-600 italic">Not provided</span>}
+                      </p>
+                    </div>
+                  </div>
+
                   <div className="flex items-center gap-4 text-gray-300 bg-gray-900/50 p-4 rounded-2xl border border-gray-700/50 hover:border-gray-600 transition-colors">
                     <div className="p-3 bg-gray-800 rounded-xl"><Calendar className="w-5 h-5 text-purple-400" /></div>
                     <div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { LogOut, User, Mail, Phone, MapPin, Calendar, Package, RefreshCw, Camera, Loader2, Coins, ChevronRight, ClipboardList, Archive, Tag, Heart, Wallet, Bell, HelpCircle } from 'lucide-react';
+import { LogOut, User, Mail, Phone, MapPin, Calendar, Package, RefreshCw, Camera, Loader2, Coins, ChevronRight, ClipboardList, Archive, Tag, Heart, Wallet, Bell, HelpCircle, Edit2, X, Home, Hash,Truck  } from 'lucide-react'; // <-- NAYA CHANGE: Imported Edit2, X, Home, Hash
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -14,8 +14,22 @@ const ProfilePage = ({ user, onLogout }) => {
   const [loading, setLoading] = useState(true);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [showAccountDetails, setShowAccountDetails] = useState(false);
-  
   const [isScrolled, setIsScrolled] = useState(false);
+
+  // <-- NAYA CHANGE: States for Edit Profile Modal
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [editForm, setEditForm] = useState({
+    full_name: '',
+    phone: '',
+    city: '',
+    pickupAddress: {
+      addressLine: '',
+      city: '',
+      state: '',
+      pincode: ''
+    }
+  });
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -96,6 +110,40 @@ const ProfilePage = ({ user, onLogout }) => {
     }
   };
 
+  // <-- NAYA CHANGE: Handlers for Edit Profile Submit -->
+  const openEditModal = () => {
+    setEditForm({
+      full_name: profileData?.full_name || '',
+      phone: profileData?.phone || '',
+      city: profileData?.city || '',
+      pickupAddress: {
+        addressLine: profileData?.pickupAddress?.addressLine || '',
+        city: profileData?.pickupAddress?.city || '',
+        state: profileData?.pickupAddress?.state || '',
+        pincode: profileData?.pickupAddress?.pincode || ''
+      }
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    setIsSavingProfile(true);
+    try {
+      const response = await axios.put(`${API_URL}/users/profile`, editForm, { withCredentials: true });
+      if (response.data.success) {
+        setProfileData(response.data.data);
+        setIsEditModalOpen(false);
+        alert('Profile updated successfully!');
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert('Failed to update profile.');
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
   if (!user) return <Navigate to="/login" />;
 
   const containerVariants = {
@@ -169,24 +217,16 @@ const ProfilePage = ({ user, onLogout }) => {
                 <div className="w-24 h-24 bg-gray-200 rounded-[1.5rem] mb-4"></div>
                 <div className="h-6 w-3/4 bg-gray-200 rounded-lg mb-2"></div>
                 <div className="h-4 w-1/2 bg-gray-200 rounded-lg mb-4"></div>
-                <div className="flex gap-2 w-full justify-center mt-2">
-                  <div className="h-6 w-16 bg-gray-200 rounded-full"></div>
-                  <div className="h-6 w-20 bg-gray-200 rounded-full"></div>
-                </div>
               </div>
 
               <div className="md:col-span-2 flex flex-col gap-4">
                 <div className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm">
-                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                  {[1, 2, 3].map((i) => (
                     <div key={i} className="flex items-center justify-between py-4 border-b border-gray-50">
                       <div className="flex items-center gap-4">
                         <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
-                        <div className="space-y-2">
-                          <div className="h-4 w-24 bg-gray-200 rounded-md"></div>
-                          <div className="h-3 w-32 bg-gray-200 rounded-md"></div>
-                        </div>
+                        <div className="h-4 w-24 bg-gray-200 rounded-md"></div>
                       </div>
-                      <div className="w-4 h-4 bg-gray-200 rounded-md"></div>
                     </div>
                   ))}
                 </div>
@@ -258,25 +298,34 @@ const ProfilePage = ({ user, onLogout }) => {
               <motion.div variants={itemVariants} className="md:col-span-2 flex flex-col gap-4">
                 <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
                   
-                  <motion.button 
-                    whileTap={{ backgroundColor: "#f9fafb" }}
-                    onClick={() => setShowAccountDetails(!showAccountDetails)} 
-                    className="flex items-center w-full justify-between p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors group"
+                  <motion.div 
+                    className="flex items-center justify-between border-b border-gray-100 bg-white group"
                   >
-                    <div className="flex items-center gap-4 text-left">
-                      <User className="w-6 h-6 text-[#6B46C1]" />
-                      <div className="flex flex-col">
-                        <span className="text-[15px] font-bold text-gray-800">Account Details</span>
-                        <span className="text-[11px] text-gray-500 font-medium mt-0.5">Personal info & contact</span>
-                      </div>
-                    </div>
-                    <motion.div
-                      animate={{ rotate: showAccountDetails ? 90 : 0 }}
-                      transition={{ duration: 0.3, ease: "easeInOut" }}
+                    <button 
+                      onClick={() => setShowAccountDetails(!showAccountDetails)} 
+                      className="flex items-center w-full justify-between p-4 hover:bg-gray-50 transition-colors"
                     >
-                      <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-[#6B46C1] transition-colors" />
-                    </motion.div>
-                  </motion.button>
+                      <div className="flex items-center gap-4 text-left">
+                        <User className="w-6 h-6 text-[#6B46C1]" />
+                        <div className="flex flex-col">
+                          <span className="text-[15px] font-bold text-gray-800">Account Details</span>
+                          <span className="text-[11px] text-gray-500 font-medium mt-0.5">Personal info & Pickup address</span>
+                        </div>
+                      </div>
+                      <motion.div
+                        animate={{ rotate: showAccountDetails ? 90 : 0 }}
+                        transition={{ duration: 0.3, ease: "easeInOut" }}
+                      >
+                        <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-[#6B46C1] transition-colors" />
+                      </motion.div>
+                    </button>
+                    {/* <-- NAYA CHANGE: Edit Profile Button --> */}
+                    {showAccountDetails && (
+                      <button onClick={openEditModal} className="pr-4 pl-2 py-4 hover:text-[#6B46C1] text-gray-400 transition-colors">
+                        <Edit2 className="w-5 h-5" />
+                      </button>
+                    )}
+                  </motion.div>
 
                   <AnimatePresence initial={false}>
                     {showAccountDetails && (
@@ -292,6 +341,7 @@ const ProfilePage = ({ user, onLogout }) => {
                             { icon: Mail, label: 'Email Address', value: profileData?.email },
                             { icon: Phone, label: 'Phone Number', value: profileData?.phone },
                             { icon: MapPin, label: 'Location', value: profileData?.city, capitalize: true },
+                            { icon: Truck, label: 'Pickup Address', value: profileData?.pickupAddress?.addressLine ? `${profileData.pickupAddress.addressLine}, ${profileData.pickupAddress.city}, ${profileData.pickupAddress.pincode}` : 'Not provided (Needed for selling)' }, // <-- NAYA CHANGE
                             { icon: Calendar, label: 'Member Since', value: profileData?.created_at ? new Date(profileData.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Recently' }
                           ].map((item, idx) => (
                             <motion.div 
@@ -307,7 +357,7 @@ const ProfilePage = ({ user, onLogout }) => {
                               <div>
                                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">{item.label}</p>
                                 <p className={`font-semibold text-gray-900 text-sm ${item.capitalize ? 'capitalize' : ''}`}>
-                                  {item.value || 'Not provided'}
+                                  {item.value || <span className="text-gray-400 italic">Not provided</span>}
                                 </p>
                               </div>
                             </motion.div>
@@ -318,7 +368,7 @@ const ProfilePage = ({ user, onLogout }) => {
                   </AnimatePresence>
 
                   {[
-                    { to: "/dashboard", icon: ClipboardList, title: "My Listings", subtitle: "", badge: "2 Active" },
+                    { to: "/dashboard", icon: ClipboardList, title: "My Listings", subtitle: "", badge: "Active" },
                     { to: "/orders", icon: Archive, title: "My Orders", subtitle: "View your past transactions" },
                     { to: "/swaps", icon: RefreshCw, title: "My Swaps", subtitle: "Your Trade Offers & Barters" },
                     { to: "#", icon: Tag, title: "My Offers", subtitle: "Items You've Bid On", iconClass: "fill-[#6B46C1]/20" },
@@ -362,6 +412,91 @@ const ProfilePage = ({ user, onLogout }) => {
           )}
         </AnimatePresence>
       </div>
+
+      {/* <-- NAYA CHANGE: Edit Profile Modal UI --> */}
+      <AnimatePresence>
+        {isEditModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+            >
+              <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-[#f8f6ff]">
+                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <Edit2 className="w-5 h-5 text-[#6B46C1]" /> Edit Profile
+                </h2>
+                <button onClick={() => setIsEditModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-2 bg-white rounded-full shadow-sm">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-6 overflow-y-auto flex-1 admin-scroll">
+                <form id="editProfileForm" onSubmit={handleEditSubmit} className="space-y-6">
+                  
+                  {/* Basic Info */}
+                  <div className="space-y-4">
+                    <h3 className="font-bold text-gray-800 text-sm border-b pb-2">Basic Information</h3>
+                    <div className="relative">
+                      <User className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
+                      <input type="text" placeholder="Full Name" required value={editForm.full_name} onChange={(e) => setEditForm({...editForm, full_name: e.target.value})}
+                        className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3 focus:border-[#6B46C1] focus:bg-white outline-none transition-all text-sm font-medium" />
+                    </div>
+                    <div className="relative">
+                      <Phone className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
+                      <input type="tel" placeholder="Phone Number" required value={editForm.phone} onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
+                        className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3 focus:border-[#6B46C1] focus:bg-white outline-none transition-all text-sm font-medium" />
+                    </div>
+                  </div>
+
+                  {/* Pickup Address */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between border-b pb-2">
+                      <h3 className="font-bold text-gray-800 text-sm">Pickup Address</h3>
+                      <span className="text-[10px] bg-yellow-100 text-yellow-700 px-2 py-1 rounded font-bold">Needed for Sellers</span>
+                    </div>
+                    
+                    <div className="relative">
+                      <Home className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
+                      <textarea placeholder="House No, Area, Street..." required rows="2" value={editForm.pickupAddress.addressLine} onChange={(e) => setEditForm({...editForm, pickupAddress: {...editForm.pickupAddress, addressLine: e.target.value}})}
+                        className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3 focus:border-[#6B46C1] focus:bg-white outline-none transition-all text-sm font-medium resize-none"></textarea>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <input type="text" placeholder="City" required value={editForm.pickupAddress.city} onChange={(e) => {
+                        setEditForm({
+                          ...editForm, 
+                          city: e.target.value, // Keep primary city synced with pickup city
+                          pickupAddress: {...editForm.pickupAddress, city: e.target.value}
+                        })
+                      }}
+                        className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl px-4 py-3 focus:border-[#6B46C1] focus:bg-white outline-none transition-all text-sm font-medium" />
+                      
+                      <input type="text" placeholder="State" required value={editForm.pickupAddress.state} onChange={(e) => setEditForm({...editForm, pickupAddress: {...editForm.pickupAddress, state: e.target.value}})}
+                        className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl px-4 py-3 focus:border-[#6B46C1] focus:bg-white outline-none transition-all text-sm font-medium" />
+                    </div>
+
+                    <div className="relative">
+                      <Hash className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
+                      <input type="text" placeholder="Pincode (6 Digits)" required maxLength="6" value={editForm.pickupAddress.pincode} onChange={(e) => setEditForm({...editForm, pickupAddress: {...editForm.pickupAddress, pincode: e.target.value}})}
+                        className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3 focus:border-[#6B46C1] focus:bg-white outline-none transition-all text-sm font-medium" />
+                    </div>
+                  </div>
+                </form>
+              </div>
+
+              <div className="p-5 border-t border-gray-100 bg-[#f8f6ff] flex justify-end gap-3 shrink-0">
+                <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-5 py-2.5 rounded-xl font-bold text-gray-500 hover:bg-gray-200 transition-all text-sm">Cancel</button>
+                <button type="submit" form="editProfileForm" disabled={isSavingProfile} className={`px-6 py-2.5 rounded-xl font-bold transition-all text-sm flex items-center gap-2 ${isSavingProfile ? 'bg-[#6B46C1]/50 text-white cursor-not-allowed' : 'bg-[#6B46C1] hover:bg-[#5a3aa3] text-white shadow-md shadow-[#6B46C1]/20'}`}>
+                  {isSavingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Details'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 };

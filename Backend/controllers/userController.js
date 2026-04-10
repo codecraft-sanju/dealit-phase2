@@ -19,9 +19,7 @@ const sendTokenResponse = (user, statusCode, res, message) => {
   };
 
   console.log('[DEBUG] Setting token cookie for user:', user.email);
-  console.log('[DEBUG] Environment:', process.env.NODE_ENV);
-  console.log('[DEBUG] Cookie Options:', options);
-
+  
   res.status(statusCode).cookie('token', token, options).json({
     success: true,
     message,
@@ -32,7 +30,7 @@ const sendTokenResponse = (user, statusCode, res, message) => {
       email: user.email, 
       role: user.role,
       account_credits: user.account_credits,
-      hasClaimedWelcomeBonus: user.hasClaimedWelcomeBonus, // Added to response
+      hasClaimedWelcomeBonus: user.hasClaimedWelcomeBonus, 
       referralCode: user.referralCode,
       totalReferrals: user.totalReferrals 
     }
@@ -93,7 +91,6 @@ const registerUser = async (req, res) => {
         referralCode: newReferralCode 
       });
 
-
       if (referralCode) {
         const cleanReferralCode = referralCode.toUpperCase().trim();
         const referrer = await User.findOne({ referralCode: cleanReferralCode });
@@ -110,24 +107,18 @@ const registerUser = async (req, res) => {
           }
 
           if (setting.isReferralSystemEnabled) {
-          
             if (referrer.totalReferrals < setting.maxReferralLimit) {
               user.referredBy = referrer._id; 
               referrer.totalReferrals += 1;   
 
-              // Reward Logic
               if (referrer.totalReferrals === 1) {
-                // FIRST Refer: Basic reward (e.g. 40)
                 referrer.account_credits += setting.referralRewardCredits;
               } else if (referrer.totalReferrals === setting.maxReferralLimit) {
-        
                 referrer.account_credits += setting.milestoneReferralReward;
               }
-           
 
               await referrer.save();
             }
-          
           }
         }
       }
@@ -331,8 +322,6 @@ const resetPassword = async (req, res) => {
 };
 
 const getUserProfile = async (req, res) => {
-  console.log('[DEBUG] GET /profile called');
-
   try {
     if (!req.user || !req.user._id) {
        return res.status(401).json({ success: false, message: 'Not authorized, no user data found in request' });
@@ -345,13 +334,11 @@ const getUserProfile = async (req, res) => {
     }
 
     if (!user.referralCode) {
-      console.log(`[DEBUG] Generating missing referral code for old user: ${user.email}`);
       const newCode = await generateUniqueReferralCode(user.full_name);
       user.referralCode = newCode;
       await user.save();
     }
     
-    console.log('[DEBUG] Profile fetched successfully for:', user.email);
     res.status(200).json({ success: true, data: user });
   } catch (error) {
     console.error('[DEBUG] Error in getUserProfile:', error);
@@ -359,9 +346,43 @@ const getUserProfile = async (req, res) => {
   }
 };
 
+// <-- NAYA CHANGE: User profile update karne ka function (pickupAddress save karne ke liye) -->
+const updateUserProfile = async (req, res) => {
+  try {
+    const { full_name, phone, city, pickupAddress } = req.body;
+
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ success: false, message: 'Not authorized' });
+    }
+
+    let user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (full_name) user.full_name = full_name;
+    if (phone) user.phone = phone;
+    if (city) user.city = city;
+    if (pickupAddress) {
+      user.pickupAddress = {
+        addressLine: pickupAddress.addressLine || user.pickupAddress?.addressLine,
+        city: pickupAddress.city || user.pickupAddress?.city,
+        state: pickupAddress.state || user.pickupAddress?.state,
+        pincode: pickupAddress.pincode || user.pickupAddress?.pincode,
+      };
+    }
+
+    user.updated_at = Date.now();
+    await user.save();
+
+    res.status(200).json({ success: true, message: 'Profile updated successfully', data: user });
+  } catch (error) {
+    console.error('Error in updateUserProfile:', error);
+    res.status(500).json({ success: false, message: 'Server Error updating profile' });
+  }
+};
+
 const updateProfilePic = async (req, res) => {
-  console.log('[DEBUG] PUT /profile-pic called');
-  
   try {
     const { profilePic } = req.body;
     
@@ -437,7 +458,6 @@ const getWishlist = async (req, res) => {
   }
 };
 
-// Added the claimWelcomeBonus function
 const claimWelcomeBonus = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
@@ -485,6 +505,7 @@ module.exports = {
   forgotPassword,
   resetPassword,
   getUserProfile,
+  updateUserProfile, 
   updateProfilePic,
   toggleWishlist,
   getWishlist,

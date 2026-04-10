@@ -16,6 +16,13 @@ const userSchema = new mongoose.Schema({
   profilePic: { type: String, default: '' },
   wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item' }],
   
+  pickupAddress: {
+    addressLine: { type: String },
+    city: { type: String },
+    state: { type: String },
+    pincode: { type: String }
+  },
+  
   account_credits: { type: Number, default: 0 },
   listedProductsCount: { type: Number, default: 0 },
   hasClaimedWelcomeBonus: { type: Boolean, default: false },

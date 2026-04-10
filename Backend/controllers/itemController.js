@@ -5,24 +5,21 @@ const mongoose = require('mongoose');
 
 const createItem = async (req, res) => {
   try {
-    const { title, description, category, condition, images, preferred_item, estimated_value } = req.body;
+    // <-- NAYA CHANGE: Added weight and dimensions in destructuring
+    const { title, description, category, condition, images, preferred_item, estimated_value, weight, dimensions } = req.body;
 
     const user = await User.findById(req.user._id);
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // NAYA CHANGE: Backend pehle database se settings mangwayega
     let setting = await CreditSetting.findOne();
     if (!setting) {
-      // Fallback in case settings collection is totally empty
       setting = { maxAllowedListings: 5 }; 
     }
     
-    // Dynamic max limit jo admin panel se aayegi
     const maxLimit = setting.maxAllowedListings !== undefined ? setting.maxAllowedListings : 5;
 
-    // Limit check using dynamic variable
     if (user.listedProductsCount >= maxLimit) {
       return res.status(400).json({ 
         success: false, 
@@ -40,14 +37,18 @@ const createItem = async (req, res) => {
       images: images || [],
       preferred_item,
       status: 'pending', 
-      estimated_value: estimated_value || 0, 
+      estimated_value: estimated_value || 0,
+      
+      // <-- NAYA CHANGE: Save weight and dimensions
+      weight: weight || 0.5,
+      dimensions: dimensions || { length: 10, width: 10, height: 10 },
+      
       created_at: Date.now(),
       updated_at: Date.now()
     });
 
     const savedItem = await newItem.save();
 
-    // Har haal me listedProductsCount badhana hai kyunki item list ho gaya
     user.listedProductsCount += 1;
     await user.save();
 

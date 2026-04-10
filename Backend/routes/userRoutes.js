@@ -9,6 +9,7 @@ const {
   forgotPassword, 
   resetPassword, 
   getUserProfile,
+  updateUserProfile, 
   updateProfilePic,
   toggleWishlist,
   getWishlist,
@@ -25,6 +26,9 @@ router.post('/forgotpassword', forgotPassword);
 router.post('/resetpassword', resetPassword);
 
 router.get('/profile', protect, getUserProfile);
+
+router.put('/profile', protect, updateUserProfile); 
+
 router.put('/profile-pic', protect, updateProfilePic);
 
 router.post('/wishlist/:itemId', protect, toggleWishlist);

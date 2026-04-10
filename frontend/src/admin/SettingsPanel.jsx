@@ -1,5 +1,5 @@
 import React from 'react';
-import { Coins, ToggleRight, ToggleLeft, Package, List, Gift, Users, Target, Truck } from 'lucide-react'; // <-- CHANGE: Added Truck icon
+import { Coins, ToggleRight, ToggleLeft, Package, List, Gift, Users, Target, Truck, Zap ,IndianRupee} from 'lucide-react'; // <-- NAYA CHANGE: Zap icon add kiya dynamic ke liye
 
 const SettingsPanel = ({ creditSettings, setCreditSettings, handleSaveSettings, updating }) => {
   return (
@@ -198,34 +198,82 @@ const SettingsPanel = ({ creditSettings, setCreditSettings, handleSaveSettings, 
              </div>
           </div>
 
-          {/* <-- CHANGE: ADDED SHIPPING SETTINGS SECTION --> */}
+          {/* <-- NAYA CHANGE: SHIPPING METHOD SELECTION --> */}
           <hr className="border-gray-700 my-4" />
 
           <div className="bg-gray-900/60 p-6 rounded-2xl border border-gray-700 flex flex-col justify-between">
-             <div className="mb-4">
+             <div className="mb-6">
                <p className="font-bold text-white text-lg tracking-wide">Shipping Settings</p>
-               <p className="text-sm text-gray-400 mt-1 max-w-md">Configure the platform-wide shipping cost for users.</p>
+               <p className="text-sm text-gray-400 mt-1 max-w-md">Configure how shipping costs are calculated for buyers.</p>
              </div>
 
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-3">
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">Flat Shipping Cost (₹)</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <Truck className="w-5 h-5 text-indigo-400" />
-                    </div>
-                    <input 
-                      type="number" 
-                      required 
-                      min="0" 
-                      value={creditSettings.flatShippingCost !== undefined ? creditSettings.flatShippingCost : 60} 
-                      onChange={(e) => setCreditSettings({...creditSettings, flatShippingCost: Number(e.target.value)})} 
-                      className="w-full bg-gray-900 border-2 border-gray-700 rounded-xl pl-12 pr-4 py-3.5 text-white font-bold focus:outline-none focus:border-indigo-500 transition-all" 
-                    />
-                  </div>
-                  <p className="text-xs text-gray-500">Set 0 for free shipping. Payment gateway will bypass if 0.</p>
-                </div>
+             {/* Shipping Method Toggles */}
+             <div className="flex bg-gray-800 p-1.5 rounded-2xl border border-gray-700 w-full mb-8">
+                <button
+                  type="button"
+                  onClick={() => setCreditSettings({...creditSettings, shippingMethod: 'flat'})}
+                  className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
+                    creditSettings.shippingMethod === 'flat' 
+                      ? 'bg-indigo-600 text-white shadow-lg' 
+                      : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                  }`}
+                >
+                  <Truck className="w-4 h-4" /> Flat Rate (Static)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCreditSettings({...creditSettings, shippingMethod: 'dynamic'})}
+                  className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
+                    creditSettings.shippingMethod === 'dynamic' 
+                      ? 'bg-emerald-600 text-white shadow-lg' 
+                      : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                  }`}
+                >
+                  <Zap className="w-4 h-4" /> Dynamic API (Shiprocket)
+                </button>
              </div>
+
+             {/* Conditional Form Fields based on Shipping Method */}
+             <div className="bg-gray-800/50 p-5 rounded-2xl border border-gray-700/50">
+               {creditSettings.shippingMethod === 'flat' ? (
+                 <div className="space-y-3 max-w-sm">
+                   <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">Flat Shipping Cost (₹)</label>
+                   <div className="relative">
+                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                       <IndianRupee className="w-5 h-5 text-indigo-400" />
+                     </div>
+                     <input 
+                       type="number" 
+                       required 
+                       min="0" 
+                       value={creditSettings.flatShippingCost !== undefined ? creditSettings.flatShippingCost : 60} 
+                       onChange={(e) => setCreditSettings({...creditSettings, flatShippingCost: Number(e.target.value)})} 
+                       className="w-full bg-gray-900 border-2 border-gray-700 rounded-xl pl-12 pr-4 py-3 text-white font-bold focus:outline-none focus:border-indigo-500 transition-all" 
+                     />
+                   </div>
+                   <p className="text-xs text-gray-500 mt-2">This fixed amount will be charged on all orders. Set to 0 for platform-wide free shipping.</p>
+                 </div>
+               ) : (
+                 <div className="space-y-4">
+                    <div className="flex items-start gap-3">
+                      <div className="bg-emerald-500/20 p-2 rounded-lg">
+                        <Zap className="w-5 h-5 text-emerald-400" />
+                      </div>
+                      <div>
+                        <h4 className="text-white font-bold text-sm">Dynamic Calculation Active</h4>
+                        <p className="text-gray-400 text-xs mt-1 leading-relaxed">
+                          Shipping cost is now calculated in real-time based on the item's weight and the distance between the seller's pickup address and the buyer's delivery pincode.
+                        </p>
+                      </div>
+                    </div>
+                    {/* Future me yahan Shiprocket API Keys input karne ka option banega */}
+                    <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl mt-4">
+                       <p className="text-yellow-500 text-xs font-bold">⚠️ Integration Note: To use Dynamic rates, ensure your courier aggregator API (e.g., Shiprocket) is configured in the backend.</p>
+                    </div>
+                 </div>
+               )}
+             </div>
+
           </div>
 
           <div className="pt-8 border-t border-gray-700 flex justify-end">

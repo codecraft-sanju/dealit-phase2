@@ -28,6 +28,7 @@ const CheckoutPage = ({ user, setUser }) => {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [shippingCost, setShippingCost] = useState(60); 
+  const [isCalculatingShipping, setIsCalculatingShipping] = useState(false); // <-- NAYA CHANGE
   const [isScrolled, setIsScrolled] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -54,6 +55,7 @@ const CheckoutPage = ({ user, setUser }) => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Fetch initial item and settings
   useEffect(() => {
     const fetchCheckoutData = async () => {
       try {
@@ -62,6 +64,7 @@ const CheckoutPage = ({ user, setUser }) => {
           setItem(itemRes.data.data);
         }
 
+        // Default flat cost fallback
         const settingsRes = await axios.get(`${API_URL}/admin/public-settings`);
         if (settingsRes.data.success) {
           setShippingCost(settingsRes.data.data.flatShippingCost !== undefined ? settingsRes.data.data.flatShippingCost : 60);
@@ -77,6 +80,35 @@ const CheckoutPage = ({ user, setUser }) => {
     fetchCheckoutData();
   }, [itemId]);
 
+  // <-- NAYA CHANGE: Pincode enter hone par live cost fetch karna -->
+  useEffect(() => {
+    const fetchDynamicShippingCost = async () => {
+      if (formData.pincode && formData.pincode.length >= 6) {
+        setIsCalculatingShipping(true);
+        try {
+          const res = await axios.post(`${API_URL}/orders/calculate-shipping`, {
+            itemId,
+            pincode: formData.pincode
+          }, { withCredentials: true });
+          
+          if (res.data.success) {
+            setShippingCost(res.data.shippingCost);
+          }
+        } catch (err) {
+          console.error('Error calculating dynamic shipping:', err);
+        } finally {
+          setIsCalculatingShipping(false);
+        }
+      }
+    };
+
+    const timeoutId = setTimeout(() => {
+      fetchDynamicShippingCost();
+    }, 800); // 800ms debounce taaki baar baar API hit na ho type karte waqt
+
+    return () => clearTimeout(timeoutId);
+  }, [formData.pincode, itemId]);
+
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -84,13 +116,12 @@ const CheckoutPage = ({ user, setUser }) => {
   const itemPrice = item?.estimated_value || 0;
   const hasEnoughCredits = user?.account_credits >= itemPrice;
 
-  // <-- CHANGE: Logic to bypass Razorpay if shipping is free -->
   const processFinalOrder = async (paymentDetails = null) => {
     try {
       const checkoutRes = await axios.post(`${API_URL}/orders/checkout`, {
         itemId: item._id,
         shippingAddress: formData,
-        paymentDetails: paymentDetails // Will be null if free shipping
+        paymentDetails: paymentDetails 
       }, { withCredentials: true });
 
       if (checkoutRes.data.success) {
@@ -124,7 +155,6 @@ const CheckoutPage = ({ user, setUser }) => {
     setProcessing(true);
     setError('');
 
-    // <-- CHANGE: Free Shipping Bypass -->
     if (shippingCost === 0) {
        return processFinalOrder(null);
     }
@@ -313,7 +343,7 @@ const CheckoutPage = ({ user, setUser }) => {
 
                 <div className="relative">
                   <Hash className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
-                  <input type="text" name="pincode" placeholder="Pincode" required value={formData.pincode} onChange={handleInputChange}
+                  <input type="text" name="pincode" placeholder="Pincode (6 Digits)" required value={formData.pincode} onChange={handleInputChange} maxLength="6"
                     className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-gray-800 placeholder-gray-400 font-medium" />
                 </div>
               </div>
@@ -336,14 +366,15 @@ const CheckoutPage = ({ user, setUser }) => {
                 </div>
                 <div className="flex justify-between items-center">
                   <span>Shipping Fee {shippingCost > 0 ? '(Pay via Razorpay)' : ''}</span>
-                  <span className={`flex items-center gap-1 font-bold ${shippingCost === 0 ? 'text-emerald-500' : 'text-gray-900'}`}>
-                    {shippingCost === 0 ? 'FREE' : `₹ ${shippingCost}`}
+                  {/* <-- NAYA CHANGE: Show Calculating text when API is running --> */}
+                  <span className={`flex items-center gap-1 font-bold ${isCalculatingShipping ? 'text-gray-400' : shippingCost === 0 ? 'text-emerald-500' : 'text-gray-900'}`}>
+                    {isCalculatingShipping ? 'Calculating...' : shippingCost === 0 ? 'FREE' : `₹ ${shippingCost}`}
                   </span>
                 </div>
                 <div className="border-t border-gray-100 pt-4 mt-2 flex justify-between items-center text-lg">
                   <span className="font-bold text-gray-900">Total to Pay</span>
                   <span className="font-black text-[#6B46C1]">
-                    {shippingCost === 0 ? 'FREE' : `₹ ${shippingCost}`}
+                    {isCalculatingShipping ? '...' : shippingCost === 0 ? 'FREE' : `₹ ${shippingCost}`}
                   </span>
                 </div>
               </div>
@@ -379,7 +410,7 @@ const CheckoutPage = ({ user, setUser }) => {
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.98 }}
                   type="submit" 
-                  disabled={processing}
+                  disabled={processing || isCalculatingShipping}
                   className="w-full bg-[#6B46C1] hover:bg-[#5a3aa3] text-white font-bold text-lg py-4 rounded-xl mt-6 transition-all shadow-md shadow-[#6B46C1]/20 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {processing ? (
@@ -387,7 +418,7 @@ const CheckoutPage = ({ user, setUser }) => {
                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                       Processing...
                     </span>
-                  ) : shippingCost === 0 ? 'Place Order' : `Pay ₹${shippingCost} & Place Order`}
+                  ) : isCalculatingShipping ? 'Calculating Shipping...' : shippingCost === 0 ? 'Place Order' : `Pay ₹${shippingCost} & Place Order`}
                 </motion.button>
               ) : (
                 <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>

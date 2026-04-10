@@ -2,8 +2,38 @@ const Order = require('../models/Order');
 const Item = require('../models/Item');
 const User = require('../models/User');
 const CreditSetting = require('../models/CreditSetting');
-const Transaction = require('../models/Transaction'); // <-- NAYA IMPORT: Transaction save karne ke liye
+const Transaction = require('../models/Transaction'); 
 const crypto = require('crypto'); 
+
+// <-- NAYA CHANGE: Naya function jo frontend ko live cost batayega -->
+const calculateShippingCost = async (req, res) => {
+  try {
+    const { itemId, pincode } = req.body;
+    
+    const item = await Item.findById(itemId);
+    if (!item) return res.status(404).json({ success: false, message: 'Item not found' });
+
+    let setting = await CreditSetting.findOne();
+    let finalCost = 60; // default fallback
+
+    if (setting) {
+      if (setting.shippingMethod === 'dynamic') {
+        // TODO: Yahan Shiprocket API Integrate hogi!
+        // Abhi ke liye hum weight ke hisaab se dummy calculation kar rahe hain (₹80 per Kg)
+        const weight = item.weight || 0.5;
+        finalCost = Math.ceil(weight * 80); 
+      } else {
+        // Flat rate
+        finalCost = setting.flatShippingCost !== undefined ? setting.flatShippingCost : 60;
+      }
+    }
+
+    res.status(200).json({ success: true, shippingCost: finalCost });
+  } catch (error) {
+    console.error('Error calculating shipping:', error);
+    res.status(500).json({ success: false, message: 'Server Error calculating shipping' });
+  }
+};
 
 // 1. CREATE ORDER (Buy Now via Credits + Real Money Shipping)
 const createOrder = async (req, res) => {
@@ -11,9 +41,31 @@ const createOrder = async (req, res) => {
     const { itemId, shippingAddress, paymentDetails } = req.body;
     const buyerId = req.user._id;
 
-    // 2. Fetch Shipping Cost from Admin Settings
+    // <-- NAYA CHANGE: Pehle Item fetch karo kyunki dynamic cost ko item ka weight chahiye
+    const item = await Item.findById(itemId);
+    if (!item) {
+      return res.status(404).json({ success: false, message: 'Item not found' });
+    }
+    if (item.status !== 'active') {
+      return res.status(400).json({ success: false, message: 'This item is no longer available for sale' });
+    }
+    if (item.owner.toString() === buyerId.toString()) {
+      return res.status(400).json({ success: false, message: 'You cannot buy your own item' });
+    }
+
+    // 2. Fetch Settings aur Cost dubara calculate karo fraud rokne ke liye
     let setting = await CreditSetting.findOne();
-    const shippingCost = setting && setting.flatShippingCost !== undefined ? setting.flatShippingCost : 60;
+    let shippingCost = 60; // default
+
+    if (setting) {
+      if (setting.shippingMethod === 'dynamic') {
+        // Yahan par wapas actual calculation hogi
+        const weight = item.weight || 0.5;
+        shippingCost = Math.ceil(weight * 80);
+      } else {
+        shippingCost = setting.flatShippingCost !== undefined ? setting.flatShippingCost : 60;
+      }
+    }
 
     let razorpay_order_id, razorpay_payment_id;
 
@@ -38,10 +90,9 @@ const createOrder = async (req, res) => {
         return res.status(400).json({ success: false, message: 'Invalid payment signature. Shipping payment verification failed.' });
       }
       
-      // --- NAYA STEP: Save Transaction for Admin Panel ---
       const newTransaction = new Transaction({
         user: buyerId,
-        amount: shippingCost, // Shipping ka real paisa
+        amount: shippingCost, 
         razorpay_order_id: razorpay_order_id,
         razorpay_payment_id: razorpay_payment_id,
         razorpay_signature: razorpay_signature,
@@ -49,21 +100,8 @@ const createOrder = async (req, res) => {
         transactionType: 'shipping_fee'
       });
       await newTransaction.save();
-      // ----------------------------------------------------
     }
 
-    // 3. Check Item details
-    const item = await Item.findById(itemId);
-    if (!item) {
-      return res.status(404).json({ success: false, message: 'Item not found' });
-    }
-    if (item.status !== 'active') {
-      return res.status(400).json({ success: false, message: 'This item is no longer available for sale' });
-    }
-    if (item.owner.toString() === buyerId.toString()) {
-      return res.status(400).json({ success: false, message: 'You cannot buy your own item' });
-    }
-    
     const itemPrice = item.estimated_value || 0;
 
     // 4. Check Buyer's Wallet Balance (ONLY FOR ITEM PRICE)
@@ -98,7 +136,15 @@ const createOrder = async (req, res) => {
       paymentStatus: 'paid', 
       isSellerPaid: false,  
       razorpay_order_id: razorpay_order_id,
-      razorpay_payment_id: razorpay_payment_id
+      razorpay_payment_id: razorpay_payment_id,
+      
+      // <-- NAYA CHANGE: Tracking details empty add kardo future update ke liye
+      trackingDetails: {
+        shiprocket_order_id: '',
+        shiprocket_shipment_id: '',
+        awb_code: '',
+        courier_company: ''
+      }
     });
 
     res.status(201).json({
@@ -206,6 +252,7 @@ const updateOrderStatus = async (req, res) => {
 };
 
 module.exports = {
+  calculateShippingCost, 
   createOrder,
   getMyOrders,
   getSellerOrders,

@@ -15,12 +15,10 @@ const getPendingItems = async (req, res) => {
 
 const getAllTransactions = async (req, res) => {
   try {
-    // Saari transactions fetch karo aur user details bhi populate karo
     const transactions = await Transaction.find()
       .populate('user', 'full_name email phone profilePic')
       .sort({ created_at: -1 });
 
-    // Total income calculate karo sirf successful transactions se
     const totalIncome = transactions.reduce((sum, txn) => {
       if (txn.status === 'success') {
         return sum + txn.amount;
@@ -167,7 +165,6 @@ const getCreditSettings = async (req, res) => {
   try {
     let setting = await CreditSetting.findOne();
     if (!setting) {
-   
       setting = await CreditSetting.create({});
     }
     res.status(200).json({ success: true, data: setting });
@@ -184,9 +181,10 @@ const updateCreditSettings = async (req, res) => {
       creditsPerListing, 
       maxListingsRewarded, 
       maxAllowedListings,
-      isWelcomeBonusEnabled, // ADDED
-      welcomeBonusAmount,    // ADDED
-      flatShippingCost,      // ADDED
+      isWelcomeBonusEnabled, 
+      welcomeBonusAmount,    
+      shippingMethod,        // <-- NAYA CHANGE
+      flatShippingCost,      
       isReferralSystemEnabled,
       referralRewardCredits,
       maxReferralLimit,
@@ -203,11 +201,11 @@ const updateCreditSettings = async (req, res) => {
     if (maxListingsRewarded !== undefined) setting.maxListingsRewarded = maxListingsRewarded;
     if (maxAllowedListings !== undefined) setting.maxAllowedListings = maxAllowedListings;
     
-    // ADDED LOGIC FOR WELCOME BONUS
     if (isWelcomeBonusEnabled !== undefined) setting.isWelcomeBonusEnabled = isWelcomeBonusEnabled;
     if (welcomeBonusAmount !== undefined) setting.welcomeBonusAmount = welcomeBonusAmount;
   
-    // ADDED LOGIC FOR SHIPPING COST
+    // <-- NAYA CHANGE: Save shipping method
+    if (shippingMethod !== undefined) setting.shippingMethod = shippingMethod;
     if (flatShippingCost !== undefined) setting.flatShippingCost = flatShippingCost;
 
     if (isReferralSystemEnabled !== undefined) setting.isReferralSystemEnabled = isReferralSystemEnabled;
@@ -233,10 +231,9 @@ const updateCreditSettings = async (req, res) => {
 
 const getPublicCreditSettings = async (req, res) => {
   try {
-   
     let setting = await CreditSetting.findOne().select(
-      // ADDED isWelcomeBonusEnabled, welcomeBonusAmount, and flatShippingCost here
-      'isReferralSystemEnabled referralRewardCredits maxAllowedListings maxReferralLimit milestoneReferralReward isWelcomeBonusEnabled welcomeBonusAmount flatShippingCost'
+      // <-- NAYA CHANGE: Added shippingMethod
+      'isReferralSystemEnabled referralRewardCredits maxAllowedListings maxReferralLimit milestoneReferralReward isWelcomeBonusEnabled welcomeBonusAmount shippingMethod flatShippingCost'
     );
     
     if (!setting) {
@@ -248,6 +245,7 @@ const getPublicCreditSettings = async (req, res) => {
         milestoneReferralReward: 100,
         isWelcomeBonusEnabled: true, 
         welcomeBonusAmount: 50,
+        shippingMethod: 'flat', 
         flatShippingCost: 60
       };
     }
