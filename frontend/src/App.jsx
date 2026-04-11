@@ -165,7 +165,6 @@ const PromoAlert = ({ user, hasZeroPriceIssue }) => {
       try {
         const res = await axios.get(`${API_URL}/admin/public-settings`);
         
-        // Setup robust defaults
         let finalSettings = {
           isCreditSystemEnabled: true,
           creditsPerListing: 50,
@@ -323,7 +322,7 @@ const EditItemPage = () => {
       } catch (err) {
         setError('Failed to load item details.');
       } finally {
-        setLoading(false);
+        loading(false);
       }
     };
     fetchItemDetails();
@@ -453,7 +452,7 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
   const [hasZeroPriceIssue, setHasZeroPriceIssue] = useState(null);
   
   const hideNavbarRoutes = ['/login', '/signup', '/forgot-password'];
-  const shouldShowBottomNav = !hideNavbarRoutes.includes(location.pathname);
+  const shouldShowBottomNav = !hideNavbarRoutes.includes(location.pathname) && !location.pathname.startsWith('/admin');
 
   return (
     <div className="min-h-screen bg-gray-900 font-sans selection:bg-emerald-500/30 pb-16 md:pb-0"> 
