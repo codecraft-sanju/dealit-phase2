@@ -62,10 +62,9 @@ const verifyPayment = async (req, res) => {
           return res.status(400).json({ success: false, message: 'Payment incomplete at Razorpay end.' });
       }
 
-      // Actual amount in INR
       const actualAmountInINR = orderDetails.amount / 100; 
 
-      // NAYA: Transaction Database mein save karna
+    
       const newTransaction = new Transaction({
         user: userId,
         amount: actualAmountInINR,

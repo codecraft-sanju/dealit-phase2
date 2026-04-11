@@ -3,9 +3,9 @@ import { Navigate } from 'react-router-dom';
 import { 
   Shield, Users, Package, Trash2, X, Edit, List, AlertTriangle, Eye, User, 
   ShieldAlert, ShieldCheck, Mail, Phone, MapPin, Calendar, Wallet, Image as ImageIcon, Plus, 
-  Check, ToggleLeft, ToggleRight, Layers, Settings,
+  Check, ToggleLeft, ToggleRight, Layers, Settings, Menu, // CHANGED: Added Menu icon
   Car, Monitor, Book, Shirt, Gamepad2, Watch, Home as HomeIcon, Sofa, Music, Utensils, Heart, Briefcase, Camera, Dumbbell, Smartphone, Target,
-  IndianRupee, Activity, Truck, ChevronRight
+  IndianRupee, Activity, Truck, ChevronRight, LayoutDashboard, Coins
 } from 'lucide-react'; 
 import axios from 'axios';
 import Cropper from 'react-easy-crop';
@@ -14,6 +14,7 @@ import SettingsPanel from '../admin/SettingsPanel';
 import AdminTable from '../admin/AdminTable';
 import ViewItemModal from '../admin/ViewItemModal';
 import OfferModal from '../admin/OfferModal';
+import DashboardOverview from '../admin/DashboardOverview';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -73,10 +74,13 @@ const getCroppedImg = async (imageSrc, pixelCrop) => {
 };
 
 const AdminPanel = ({ user }) => {
-  const [activeTab, setActiveTab] = useState('pending');
+  const [activeTab, setActiveTab] = useState('overview'); 
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   
+  // CHANGED: Added mobile sidebar state
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
   const [totalIncome, setTotalIncome] = useState(0);
   
   const [creditSettings, setCreditSettings] = useState({
@@ -99,6 +103,12 @@ const AdminPanel = ({ user }) => {
   const [updating, setUpdating] = useState(false);
   const [editForm, setEditForm] = useState({
     title: '', description: '', category: '', condition: '', estimated_value: '', preferred_item: ''
+  });
+
+  const [isEditOrderModalOpen, setIsEditOrderModalOpen] = useState(false);
+  const [editingOrder, setEditingOrder] = useState(null);
+  const [orderForm, setOrderForm] = useState({
+    orderStatus: '', awb_code: '', courier_company: ''
   });
 
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
@@ -154,11 +164,13 @@ const AdminPanel = ({ user }) => {
         } else {
           let endpoint = '';
           if (activeTab === 'pending') endpoint = `${API_URL}/admin/pending-items`;
+          else if (activeTab === 'overview') endpoint = `${API_URL}/admin/dashboard-stats`; 
           else if (activeTab === 'users') endpoint = `${API_URL}/admin/users`;
           else if (activeTab === 'items') endpoint = `${API_URL}/admin/all-items`;
           else if (activeTab === 'offers') endpoint = `${API_URL}/admin/offers`; 
           else if (activeTab === 'categories') endpoint = `${API_URL}/categories`;
           else if (activeTab === 'transactions') endpoint = `${API_URL}/admin/transactions`; 
+          else if (activeTab === 'orders') endpoint = `${API_URL}/admin/orders`; 
 
           const response = await axios.get(endpoint, { withCredentials: true });
           
@@ -177,7 +189,6 @@ const AdminPanel = ({ user }) => {
     fetchData();
   }, [activeTab]);
 
-  // ALL HANDLERS REMAIN UNCHANGED (handleApprove, handleRejectClick, etc.)
   const handleApprove = async (id) => {
     try {
       await axios.put(`${API_URL}/admin/item-status/${id}`, { status: 'active' }, { withCredentials: true });
@@ -244,6 +255,33 @@ const AdminPanel = ({ user }) => {
     } catch (error) {
       console.error('Error updating item:', error);
       alert('Failed to update item.');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleEditOrderClick = (order) => {
+    setEditingOrder(order);
+    setOrderForm({
+      orderStatus: order.orderStatus || 'pending',
+      awb_code: order.trackingDetails?.awb_code || '',
+      courier_company: order.trackingDetails?.courier_company || ''
+    });
+    setIsEditOrderModalOpen(true);
+  };
+
+  const handleOrderSubmit = async (e) => {
+    e.preventDefault();
+    setUpdating(true);
+    try {
+      const response = await axios.put(`${API_URL}/admin/orders/${editingOrder._id}`, orderForm, { withCredentials: true });
+      if (response.data.success) {
+        setData(data.map(o => o._id === editingOrder._id ? response.data.data : o));
+        setIsEditOrderModalOpen(false);
+      }
+    } catch (error) {
+      console.error('Error updating order:', error);
+      alert('Failed to update order details.');
     } finally {
       setUpdating(false);
     }
@@ -440,11 +478,12 @@ const AdminPanel = ({ user }) => {
     }
   };
 
-  // Nav Items Array
   const navItems = [
+    { id: 'overview', name: 'Dashboard Overview', icon: LayoutDashboard },
     { id: 'pending', name: 'Pending Approvals', icon: Package },
     { id: 'items', name: 'Manage Items', icon: List },
     { id: 'users', name: 'Manage Users', icon: Users },
+    { id: 'orders', name: 'Deliveries & Swaps', icon: Truck },
     { id: 'offers', name: 'Offers / Banners', icon: ImageIcon },
     { id: 'categories', name: 'Categories', icon: Layers },
     { id: 'transactions', name: 'Transactions', icon: IndianRupee },
@@ -466,18 +505,34 @@ const AdminPanel = ({ user }) => {
         .admin-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
       `}} />
 
+      {/* CHANGED: Mobile Sidebar Overlay */}
+      {isMobileSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden transition-opacity"
+          onClick={() => setIsMobileSidebarOpen(false)}
+        ></div>
+      )}
+
       {/* --- SIDEBAR (SaaS Style) --- */}
-      <aside className="w-64 md:w-72 flex-shrink-0 border-r border-white/5 bg-white/[0.01] backdrop-blur-2xl flex flex-col z-20 shadow-[4px_0_24px_rgba(0,0,0,0.2)]">
-        <div className="p-6 pb-8 border-b border-white/5">
+      {/* CHANGED: Made completely responsive with mobile sliding mechanics */}
+      <aside className={`fixed inset-y-0 left-0 w-64 md:w-72 flex-shrink-0 border-r border-white/5 bg-[#0B0F19]/95 md:bg-white/[0.01] backdrop-blur-2xl flex flex-col z-50 shadow-[4px_0_24px_rgba(0,0,0,0.5)] md:shadow-[4px_0_24px_rgba(0,0,0,0.2)] transform ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 transition-transform duration-300 ease-in-out`}>
+        <div className="p-5 md:p-6 pb-6 md:pb-8 border-b border-white/5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-gradient-to-br from-emerald-400 to-teal-600 rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.3)]">
-              <Shield className="w-6 h-6 text-white" />
+              <Shield className="w-5 h-5 md:w-6 md:h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 tracking-tight">Admin Portal</h1>
+              <h1 className="text-lg md:text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 tracking-tight">Admin Portal</h1>
               <p className="text-[10px] uppercase tracking-widest text-emerald-400 font-bold mt-0.5">Premium Workspace</p>
             </div>
           </div>
+          {/* CHANGED: Close button for mobile sidebar */}
+          <button 
+            onClick={() => setIsMobileSidebarOpen(false)}
+            className="md:hidden p-2 text-gray-400 hover:text-white transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-1.5 admin-scroll">
@@ -487,15 +542,18 @@ const AdminPanel = ({ user }) => {
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-sm font-semibold transition-all duration-300 group ${
+                onClick={() => {
+                  setActiveTab(item.id);
+                  setIsMobileSidebarOpen(false); // CHANGED: Close menu on mobile after selection
+                }}
+                className={`w-full flex items-center justify-between px-4 py-3 md:py-3.5 rounded-xl text-sm font-semibold transition-all duration-300 group ${
                   isActive 
                     ? 'bg-white/10 text-white shadow-[0_4px_12px_rgba(0,0,0,0.1)] border border-white/10' 
                     : 'text-gray-400 hover:bg-white/5 hover:text-gray-200 border border-transparent'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <Icon className={`w-5 h-5 transition-colors ${isActive ? (item.id === 'offers' ? 'text-[#A388E1]' : item.id === 'transactions' ? 'text-yellow-400' : 'text-emerald-400') : 'group-hover:text-white'}`} />
+                  <Icon className={`w-5 h-5 transition-colors ${isActive ? (item.id === 'offers' ? 'text-[#A388E1]' : item.id === 'transactions' ? 'text-yellow-400' : item.id === 'orders' ? 'text-blue-400' : 'text-emerald-400') : 'group-hover:text-white'}`} />
                   {item.name}
                 </div>
                 
@@ -505,62 +563,74 @@ const AdminPanel = ({ user }) => {
                     {data.length}
                   </span>
                 )}
-                {!isActive && <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-50 transition-opacity translate-x-[-10px] group-hover:translate-x-0" />}
+                {!isActive && <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-50 transition-opacity translate-x-[-10px] group-hover:translate-x-0 hidden md:block" />}
               </button>
             );
           })}
         </nav>
 
-        <div className="p-6 border-t border-white/5">
-          <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5 border border-white/10">
-            <img src={user?.profilePic || `https://ui-avatars.com/api/?name=Admin&background=random`} alt="Admin" className="w-9 h-9 rounded-full object-cover border border-white/20" />
+        <div className="p-5 md:p-6 border-t border-white/5">
+          <div className="flex items-center gap-3 px-3 py-2.5 md:px-4 md:py-3 rounded-xl bg-white/5 border border-white/10">
+            <img src={user?.profilePic || `https://ui-avatars.com/api/?name=Admin&background=random`} alt="Admin" className="w-8 h-8 md:w-9 md:h-9 rounded-full object-cover border border-white/20" />
             <div className="overflow-hidden">
               <p className="text-sm font-bold text-white truncate">{user?.full_name || 'Admin'}</p>
-              <p className="text-[10px] text-gray-400 uppercase tracking-wider">{user?.email}</p>
+              <p className="text-[10px] text-gray-400 uppercase tracking-wider truncate">{user?.email}</p>
             </div>
           </div>
         </div>
       </aside>
 
       {/* --- MAIN CONTENT AREA --- */}
-      <main className="flex-1 flex flex-col z-10 overflow-hidden relative">
+      <main className="flex-1 flex flex-col z-10 overflow-hidden relative w-full">
         
-        {/* Top Header Panel */}
-        <header className="px-8 py-6 flex items-center justify-between border-b border-white/5 bg-white/[0.01] backdrop-blur-md shrink-0">
-          <div>
-            <h2 className="text-2xl font-bold text-white capitalize tracking-tight">
-              {activeTab.replace('-', ' ')}
-            </h2>
-            <p className="text-sm text-gray-400 mt-1">Manage and monitor your platform data</p>
+        {/* CHANGED: Top Header Panel to handle mobile spacing and hamburger */}
+        <header className="px-4 md:px-8 py-4 md:py-6 flex items-center justify-between border-b border-white/5 bg-white/[0.01] backdrop-blur-md shrink-0 gap-4">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setIsMobileSidebarOpen(true)}
+              className="md:hidden p-2 -ml-2 text-gray-400 hover:text-white transition-colors"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold text-white capitalize tracking-tight truncate">
+                {activeTab.replace('-', ' ')}
+              </h2>
+              <p className="hidden md:block text-sm text-gray-400 mt-1">Manage and monitor your platform data</p>
+            </div>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex gap-2 md:gap-3 shrink-0">
             {activeTab === 'offers' && (
-              <button onClick={handleAddOfferClick} className="bg-[#A388E1] hover:bg-[#8b70ca] text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-[0_0_20px_rgba(163,136,225,0.3)] flex items-center gap-2 border border-white/10 hover:scale-105 active:scale-95">
-                <Plus className="w-5 h-5" /> New Banner
+              <button onClick={handleAddOfferClick} className="bg-[#A388E1] hover:bg-[#8b70ca] text-white px-3 md:px-5 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all shadow-[0_0_20px_rgba(163,136,225,0.3)] flex items-center gap-1.5 md:gap-2 border border-white/10 hover:scale-105 active:scale-95">
+                <Plus className="w-4 h-4 md:w-5 md:h-5" /> <span className="hidden sm:inline">New Banner</span>
               </button>
             )}
             {activeTab === 'categories' && (
-              <button onClick={handleAddCategoryClick} className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-[0_0_20px_rgba(37,99,235,0.3)] flex items-center gap-2 border border-white/10 hover:scale-105 active:scale-95">
-                <Plus className="w-5 h-5" /> New Category
+              <button onClick={handleAddCategoryClick} className="bg-blue-600 hover:bg-blue-500 text-white px-3 md:px-5 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all shadow-[0_0_20px_rgba(37,99,235,0.3)] flex items-center gap-1.5 md:gap-2 border border-white/10 hover:scale-105 active:scale-95">
+                <Plus className="w-4 h-4 md:w-5 md:h-5" /> <span className="hidden sm:inline">New Category</span>
               </button>
             )}
           </div>
         </header>
 
-        {/* Dynamic Content Container */}
-        <div className="flex-1 overflow-hidden flex flex-col p-6 lg:p-8">
-          <div className="flex-1 flex flex-col bg-white/[0.02] border border-white/[0.05] shadow-[0_8px_32px_0_rgba(0,0,0,0.2)] rounded-3xl overflow-hidden backdrop-blur-xl relative">
+        {/* CHANGED: Dynamic Content Container updated padding for mobile */}
+        <div className="flex-1 overflow-hidden flex flex-col p-4 md:p-6 lg:p-8">
+          <div className="flex-1 flex flex-col bg-white/[0.02] border border-white/[0.05] shadow-[0_8px_32px_0_rgba(0,0,0,0.2)] rounded-2xl md:rounded-3xl overflow-hidden backdrop-blur-xl relative">
             
             {loading ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0B0F19]/50 backdrop-blur-sm z-50">
-                <div className="w-12 h-12 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
-                <p className="text-emerald-400 font-bold tracking-widest mt-4 animate-pulse text-sm">FETCHING DATA...</p>
+                <div className="w-10 h-10 md:w-12 md:h-12 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
+                <p className="text-emerald-400 font-bold tracking-widest mt-4 animate-pulse text-xs md:text-sm">FETCHING DATA...</p>
               </div>
             ) : null}
 
             {/* --- SPECIFIC TAB RENDER LOGIC --- */}
             
+            {activeTab === 'overview' && !loading && (
+              <DashboardOverview data={data} />
+            )}
+
             {activeTab === 'settings' && !loading && (
               <SettingsPanel 
                 creditSettings={creditSettings}
@@ -571,33 +641,33 @@ const AdminPanel = ({ user }) => {
             )}
 
             {activeTab === 'transactions' && !loading && (
-              <div className="flex-1 flex flex-col p-6 overflow-hidden">
+              <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden">
                 {/* Income Summary Widgets - Premium Glass Style */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 shrink-0">
-                  <div className="relative overflow-hidden bg-gradient-to-br from-emerald-500/20 to-teal-900/40 rounded-3xl p-8 border border-emerald-500/30 shadow-[0_8px_32px_rgba(16,185,129,0.15)] group">
-                    <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-emerald-500/30 transition-colors"></div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6 shrink-0">
+                  <div className="relative overflow-hidden bg-gradient-to-br from-emerald-500/20 to-teal-900/40 rounded-2xl md:rounded-3xl p-6 md:p-8 border border-emerald-500/30 shadow-[0_8px_32px_rgba(16,185,129,0.15)] group">
+                    <div className="absolute top-0 right-0 w-32 h-32 md:w-40 md:h-40 bg-emerald-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-emerald-500/30 transition-colors"></div>
                     <div className="flex items-center justify-between relative z-10">
                       <div>
-                        <p className="text-emerald-300 font-bold uppercase tracking-widest text-xs mb-2">Total Platform Revenue</p>
-                        <h3 className="text-4xl lg:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-emerald-200">
+                        <p className="text-emerald-300 font-bold uppercase tracking-widest text-[10px] md:text-xs mb-1.5 md:mb-2">Total Platform Revenue</p>
+                        <h3 className="text-3xl md:text-4xl lg:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-emerald-200 truncate">
                           ₹{totalIncome.toLocaleString('en-IN')}
                         </h3>
                       </div>
-                      <div className="bg-emerald-500/20 p-4 rounded-2xl border border-emerald-500/30 backdrop-blur-md">
-                        <IndianRupee className="w-10 h-10 text-emerald-300" />
+                      <div className="bg-emerald-500/20 p-3 md:p-4 rounded-xl md:rounded-2xl border border-emerald-500/30 backdrop-blur-md hidden sm:block">
+                        <IndianRupee className="w-8 h-8 md:w-10 md:h-10 text-emerald-300" />
                       </div>
                     </div>
                   </div>
 
-                  <div className="relative overflow-hidden bg-white/[0.03] rounded-3xl p-8 border border-white/10 shadow-lg group">
-                    <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 group-hover:bg-blue-500/20 transition-colors"></div>
+                  <div className="relative overflow-hidden bg-white/[0.03] rounded-2xl md:rounded-3xl p-6 md:p-8 border border-white/10 shadow-lg group">
+                    <div className="absolute bottom-0 left-0 w-24 h-24 md:w-32 md:h-32 bg-blue-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 group-hover:bg-blue-500/20 transition-colors"></div>
                     <div className="flex items-center justify-between relative z-10">
                       <div>
-                        <p className="text-gray-400 font-bold uppercase tracking-widest text-xs mb-2">Total Transactions</p>
-                        <h3 className="text-4xl lg:text-5xl font-black text-white">{data.length}</h3>
+                        <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px] md:text-xs mb-1.5 md:mb-2">Total Transactions</p>
+                        <h3 className="text-3xl md:text-4xl lg:text-5xl font-black text-white">{data.length}</h3>
                       </div>
-                      <div className="bg-blue-500/10 p-4 rounded-2xl border border-blue-500/20 backdrop-blur-md">
-                        <Activity className="w-10 h-10 text-blue-400" />
+                      <div className="bg-blue-500/10 p-3 md:p-4 rounded-xl md:rounded-2xl border border-blue-500/20 backdrop-blur-md hidden sm:block">
+                        <Activity className="w-8 h-8 md:w-10 md:h-10 text-blue-400" />
                       </div>
                     </div>
                   </div>
@@ -605,68 +675,68 @@ const AdminPanel = ({ user }) => {
 
                 {/* Transactions Table - Glassmorphism */}
                 {data.length === 0 ? (
-                  <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-white/[0.02] rounded-3xl border border-white/5">
-                    <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-4 border border-white/10">
-                      <IndianRupee className="w-10 h-10 text-gray-500" />
+                  <div className="flex-1 flex flex-col items-center justify-center text-center p-6 md:p-8 bg-white/[0.02] rounded-2xl md:rounded-3xl border border-white/5">
+                    <div className="w-16 h-16 md:w-20 md:h-20 bg-white/5 rounded-full flex items-center justify-center mb-4 border border-white/10">
+                      <IndianRupee className="w-8 h-8 md:w-10 md:h-10 text-gray-500" />
                     </div>
-                    <h3 className="text-xl font-bold text-white mb-1 tracking-tight">No Revenue Yet</h3>
-                    <p className="text-gray-500 text-sm">Transactions will appear here once users start buying credits.</p>
+                    <h3 className="text-lg md:text-xl font-bold text-white mb-1 tracking-tight">No Revenue Yet</h3>
+                    <p className="text-gray-500 text-xs md:text-sm">Transactions will appear here once users start buying credits.</p>
                   </div>
                 ) : (
-                  <div className="flex-1 overflow-auto admin-scroll bg-white/[0.01] rounded-2xl border border-white/5 relative">
+                  <div className="flex-1 overflow-auto admin-scroll bg-white/[0.01] rounded-xl md:rounded-2xl border border-white/5 relative">
                     <table className="w-full text-left border-collapse min-w-max">
                       <thead className="sticky top-0 z-10 bg-[#0B0F19]/90 backdrop-blur-xl border-b border-white/10 shadow-sm">
-                        <tr className="text-xs uppercase tracking-widest text-gray-400">
-                          <th className="p-5 font-bold">User</th>
-                          <th className="p-5 font-bold">Amount</th>
-                          <th className="p-5 font-bold">Type</th>
-                          <th className="p-5 font-bold">Order Details</th>
-                          <th className="p-5 font-bold">Status</th>
-                          <th className="p-5 font-bold">Date & Time</th>
+                        <tr className="text-[10px] md:text-xs uppercase tracking-widest text-gray-400">
+                          <th className="p-4 md:p-5 font-bold">User</th>
+                          <th className="p-4 md:p-5 font-bold">Amount</th>
+                          <th className="p-4 md:p-5 font-bold">Type</th>
+                          <th className="p-4 md:p-5 font-bold">Order Details</th>
+                          <th className="p-4 md:p-5 font-bold">Status</th>
+                          <th className="p-4 md:p-5 font-bold">Date & Time</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-white/5">
                         {data.map(txn => (
-                          <tr key={txn._id} className="hover:bg-white/[0.02] transition-colors group">
-                            <td className="p-5">
+                          <tr key={txn._id} className="hover:bg-white/[0.02] transition-colors group text-xs md:text-sm">
+                            <td className="p-4 md:p-5">
                               <div className="flex items-center gap-3">
                                 {txn.user?.profilePic ? (
-                                  <img src={txn.user.profilePic} alt="User" className="w-10 h-10 rounded-full object-cover border border-white/10 shadow-sm" />
+                                  <img src={txn.user.profilePic} alt="User" className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover border border-white/10 shadow-sm" />
                                 ) : (
-                                  <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
-                                     <User className="w-5 h-5 text-gray-400" />
+                                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
+                                     <User className="w-4 h-4 md:w-5 md:h-5 text-gray-400" />
                                   </div>
                                 )}
                                 <div>
-                                   <p className="text-sm font-bold text-gray-200 group-hover:text-white transition-colors">{txn.user?.full_name || 'Unknown User'}</p>
-                                   <p className="text-[11px] text-gray-500">{txn.user?.email || 'N/A'}</p>
+                                   <p className="font-bold text-gray-200 group-hover:text-white transition-colors">{txn.user?.full_name || 'Unknown User'}</p>
+                                   <p className="text-[10px] md:text-[11px] text-gray-500">{txn.user?.email || 'N/A'}</p>
                                 </div>
                               </div>
                             </td>
-                            <td className="p-5">
-                              <span className="text-lg font-black text-emerald-400 tracking-tight">
+                            <td className="p-4 md:p-5">
+                              <span className="text-base md:text-lg font-black text-emerald-400 tracking-tight">
                                 ₹{txn.amount}
                               </span>
                             </td>
-                            <td className="p-5">
+                            <td className="p-4 md:p-5">
                               {txn.transactionType === 'shipping_fee' ? (
-                                <span className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center w-fit gap-1.5 shadow-sm">
-                                  <Package className="w-3.5 h-3.5" /> Shipping
+                                <span className="px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-[9px] md:text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center w-fit gap-1 md:gap-1.5 shadow-sm">
+                                  <Package className="w-3 h-3 md:w-3.5 md:h-3.5" /> Shipping
                                 </span>
                               ) : (
-                                <span className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center w-fit gap-1.5 shadow-sm">
-                                  <Wallet className="w-3.5 h-3.5" /> Wallet
+                                <span className="px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-[9px] md:text-[10px] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center w-fit gap-1 md:gap-1.5 shadow-sm">
+                                  <Wallet className="w-3 h-3 md:w-3.5 md:h-3.5" /> Wallet
                                 </span>
                               )}
                             </td>
-                            <td className="p-5">
-                              <div className="text-xs font-mono">
+                            <td className="p-4 md:p-5">
+                              <div className="text-[10px] md:text-xs font-mono">
                                 <p className="text-gray-400 font-semibold mb-1">ID: <span className="text-blue-300">{txn.razorpay_order_id}</span></p>
-                                <p className="text-gray-500/80 truncate w-48 text-[10px]" title={txn.razorpay_payment_id}>Pay: {txn.razorpay_payment_id}</p>
+                                <p className="text-gray-500/80 truncate w-32 md:w-48 text-[9px] md:text-[10px]" title={txn.razorpay_payment_id}>Pay: {txn.razorpay_payment_id}</p>
                               </div>
                             </td>
-                            <td className="p-5">
-                               <span className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider shadow-sm border ${
+                            <td className="p-4 md:p-5">
+                               <span className={`px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-[9px] md:text-[10px] font-bold uppercase tracking-wider shadow-sm border ${
                                  txn.status === 'success' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 
                                  txn.status === 'pending' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' : 
                                  'bg-red-500/10 text-red-400 border-red-500/20'
@@ -674,9 +744,9 @@ const AdminPanel = ({ user }) => {
                                  {txn.status}
                                </span>
                             </td>
-                            <td className="p-5">
-                              <p className="text-sm text-gray-300 font-bold">{new Date(txn.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</p>
-                              <p className="text-[11px] text-gray-500 mt-0.5">{new Date(txn.created_at).toLocaleTimeString()}</p>
+                            <td className="p-4 md:p-5">
+                              <p className="text-xs md:text-sm text-gray-300 font-bold">{new Date(txn.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                              <p className="text-[10px] md:text-[11px] text-gray-500 mt-0.5">{new Date(txn.created_at).toLocaleTimeString()}</p>
                             </td>
                           </tr>
                         ))}
@@ -687,18 +757,19 @@ const AdminPanel = ({ user }) => {
               </div>
             )}
 
-            {activeTab !== 'settings' && activeTab !== 'transactions' && !loading && (
+            {activeTab !== 'overview' && activeTab !== 'settings' && activeTab !== 'transactions' && !loading && (
               data.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-white/[0.01]">
-                  <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-5 border border-white/10 shadow-inner">
-                    {activeTab === 'pending' ? <Package className="w-8 h-8 text-gray-500" /> : 
-                     activeTab === 'users' ? <Users className="w-8 h-8 text-gray-500" /> : 
-                     activeTab === 'offers' ? <ImageIcon className="w-8 h-8 text-gray-500" /> : 
-                     activeTab === 'categories' ? <Layers className="w-8 h-8 text-gray-500" /> : 
-                     <List className="w-8 h-8 text-gray-500" />}
+                <div className="flex-1 flex flex-col items-center justify-center text-center p-6 md:p-8 bg-white/[0.01]">
+                  <div className="w-16 h-16 md:w-20 md:h-20 bg-white/5 rounded-full flex items-center justify-center mb-4 md:mb-5 border border-white/10 shadow-inner">
+                    {activeTab === 'pending' ? <Package className="w-6 h-6 md:w-8 md:h-8 text-gray-500" /> : 
+                     activeTab === 'users' ? <Users className="w-6 h-6 md:w-8 md:h-8 text-gray-500" /> : 
+                     activeTab === 'orders' ? <Truck className="w-6 h-6 md:w-8 md:h-8 text-gray-500" /> : 
+                     activeTab === 'offers' ? <ImageIcon className="w-6 h-6 md:w-8 md:h-8 text-gray-500" /> : 
+                     activeTab === 'categories' ? <Layers className="w-6 h-6 md:w-8 md:h-8 text-gray-500" /> : 
+                     <List className="w-6 h-6 md:w-8 md:h-8 text-gray-500" />}
                   </div>
-                  <h3 className="text-xl font-bold text-gray-200 mb-2 tracking-tight">No Records Found</h3>
-                  <p className="text-gray-500 text-sm">There are currently no {activeTab === 'pending' ? 'pending approvals' : activeTab === 'offers' ? 'banners available' : activeTab === 'categories' ? 'categories available' : 'records to display'}.</p>
+                  <h3 className="text-lg md:text-xl font-bold text-gray-200 mb-2 tracking-tight">No Records Found</h3>
+                  <p className="text-gray-500 text-xs md:text-sm px-4">There are currently no {activeTab === 'pending' ? 'pending approvals' : activeTab === 'offers' ? 'banners available' : activeTab === 'categories' ? 'categories available' : activeTab === 'orders' ? 'active orders or swaps' : 'records to display'}.</p>
                 </div>
               ) : (
                 <AdminTable 
@@ -717,6 +788,7 @@ const AdminPanel = ({ user }) => {
                   handleViewUserClick={handleViewUserClick}
                   handleUpdateRole={handleUpdateRole}
                   handleDeleteUser={handleDeleteUser}
+                  handleEditOrderClick={handleEditOrderClick} 
                 />
               )
             )}
@@ -724,102 +796,172 @@ const AdminPanel = ({ user }) => {
         </div>
       </main>
 
-      {/* --- ALL MODALS (Upgraded to Frosted Glass UI) --- */}
+      {/* --- ALL MODALS (Upgraded to Frosted Glass UI & fully responsive) --- */}
       
-      {/* View User Modal */}
-      {isViewUserModalOpen && viewingUser && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 py-8 bg-black/40 backdrop-blur-sm transition-opacity">
-          <div className="bg-[#0B0F19]/95 w-full max-w-2xl rounded-3xl border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col max-h-full animate-in zoom-in-95 duration-200 backdrop-blur-3xl">
-            <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 h-32 relative border-b border-white/5">
-              <button onClick={() => setIsViewUserModalOpen(false)} className="absolute top-4 right-4 text-white/70 hover:text-white transition p-2 bg-black/20 hover:bg-black/40 rounded-full backdrop-blur-sm border border-white/10">
-                <X className="w-5 h-5" />
+      {/* Edit Order Modal */}
+      {isEditOrderModalOpen && editingOrder && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm transition-opacity">
+          <div className="bg-[#0B0F19]/95 backdrop-blur-3xl w-full max-w-md rounded-2xl md:rounded-3xl border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="p-4 md:p-5 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+              <h2 className="text-base md:text-lg font-black text-white flex items-center gap-2">
+                <Truck className="w-4 h-4 md:w-5 md:h-5 text-blue-400" /> Update Order Status
+              </h2>
+              <button onClick={() => setIsEditOrderModalOpen(false)} className="text-gray-400 hover:text-white transition-all p-2 bg-white/5 hover:bg-white/10 rounded-full">
+                <X className="w-4 h-4" />
               </button>
             </div>
             
-            <div className="px-8 pb-8 relative flex-1 overflow-y-auto admin-scroll">
-              <div className="absolute -top-16 left-8">
-                <div className="w-32 h-32 bg-[#0B0F19] border-4 border-white/10 rounded-full flex items-center justify-center shadow-xl overflow-hidden">
+            <div className="p-5 md:p-6">
+              <form id="orderForm" onSubmit={handleOrderSubmit} className="space-y-4 md:space-y-5">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Order Status</label>
+                  <select 
+                    value={orderForm.orderStatus} 
+                    onChange={(e) => setOrderForm({ ...orderForm, orderStatus: e.target.value })} 
+                    className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-white text-xs md:text-sm focus:outline-none focus:border-blue-500/50 focus:bg-white/[0.05] transition-all appearance-none shadow-inner"
+                  >
+                    <option value="pending" className="bg-[#0B0F19]">Pending</option>
+                    <option value="processing" className="bg-[#0B0F19]">Processing</option>
+                    <option value="shipped" className="bg-[#0B0F19]">Shipped</option>
+                  
+                    <option value="delivered" className="bg-[#0B0F19]">Delivered (Will Release Escrow)</option>
+                    <option value="cancelled" className="bg-[#0B0F19]">Cancelled (Will Refund)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">AWB / Tracking Number</label>
+                  <input 
+                    type="text" 
+                    value={orderForm.awb_code} 
+                    onChange={(e) => setOrderForm({ ...orderForm, awb_code: e.target.value })} 
+                    className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-white text-xs md:text-sm focus:outline-none focus:border-blue-500/50 focus:bg-white/[0.05] transition-all shadow-inner placeholder:text-gray-600 font-mono"
+                    placeholder="e.g. AWB123456789"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Courier Company</label>
+                  <input 
+                    type="text" 
+                    value={orderForm.courier_company} 
+                    onChange={(e) => setOrderForm({ ...orderForm, courier_company: e.target.value })} 
+                    className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-white text-xs md:text-sm focus:outline-none focus:border-blue-500/50 focus:bg-white/[0.05] transition-all shadow-inner placeholder:text-gray-600"
+                    placeholder="e.g. Delhivery, Bluedart"
+                  />
+                </div>
+              </form>
+            </div>
+            
+            <div className="p-4 md:p-5 border-t border-white/5 bg-white/[0.01] flex justify-end gap-2 md:gap-3">
+              <button type="button" onClick={() => setIsEditOrderModalOpen(false)} className="px-4 md:px-5 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all">Cancel</button>
+              <button 
+                type="submit" 
+                form="orderForm" 
+                disabled={updating} 
+                className={`px-5 md:px-6 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center gap-2 ${updating ? 'bg-blue-600/30 text-white/50 cursor-not-allowed border-blue-500/20' : 'bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.3)] border border-blue-500/50'}`}
+              >
+                {updating ? 'Saving...' : 'Update'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View User Modal */}
+      {isViewUserModalOpen && viewingUser && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 py-6 md:py-8 bg-black/60 backdrop-blur-sm transition-opacity">
+          <div className="bg-[#0B0F19]/95 w-full max-w-2xl rounded-2xl md:rounded-3xl border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col max-h-full animate-in zoom-in-95 duration-200 backdrop-blur-3xl">
+            <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 h-24 md:h-32 relative border-b border-white/5">
+              <button onClick={() => setIsViewUserModalOpen(false)} className="absolute top-3 md:top-4 right-3 md:right-4 text-white/70 hover:text-white transition p-2 bg-black/20 hover:bg-black/40 rounded-full backdrop-blur-sm border border-white/10">
+                <X className="w-4 h-4 md:w-5 md:h-5" />
+              </button>
+            </div>
+            
+            <div className="px-6 md:px-8 pb-6 md:pb-8 relative flex-1 overflow-y-auto admin-scroll">
+              <div className="absolute -top-12 md:-top-16 left-6 md:left-8">
+                <div className="w-24 h-24 md:w-32 md:h-32 bg-[#0B0F19] border-4 border-white/10 rounded-full flex items-center justify-center shadow-xl overflow-hidden">
                   {viewingUser.profilePic ? (
                     <img src={viewingUser.profilePic} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
-                    <User className="w-12 h-12 text-gray-500" />
+                    <User className="w-10 h-10 md:w-12 md:h-12 text-gray-500" />
                   )}
                 </div>
               </div>
 
-              <div className="absolute top-6 right-8 bg-yellow-500/10 border border-yellow-500/20 px-5 py-3 rounded-2xl flex items-center gap-3 shadow-[0_0_20px_rgba(234,179,8,0.1)] backdrop-blur-md">
-                 <Wallet className="w-6 h-6 text-yellow-400" />
+              <div className="absolute top-4 md:top-6 right-6 md:right-8 bg-yellow-500/10 border border-yellow-500/20 px-3 md:px-5 py-2 md:py-3 rounded-xl md:rounded-2xl flex items-center gap-2 md:gap-3 shadow-[0_0_20px_rgba(234,179,8,0.1)] backdrop-blur-md">
+                 <Wallet className="w-4 h-4 md:w-6 md:h-6 text-yellow-400" />
                  <div>
-                   <p className="text-[10px] text-yellow-400/80 font-bold uppercase tracking-widest">Balance</p>
-                   <p className="text-2xl font-black text-yellow-400 leading-none">{viewingUser.account_credits || 0}</p>
+                   <p className="text-[8px] md:text-[10px] text-yellow-400/80 font-bold uppercase tracking-widest">Balance</p>
+                   <p className="text-lg md:text-2xl font-black text-yellow-400 leading-none">{viewingUser.account_credits || 0}</p>
                  </div>
               </div>
 
-              <div className="pt-20">
-                <h2 className="text-3xl font-black text-white flex items-center gap-2 tracking-tight">
+              <div className="pt-16 md:pt-20">
+                <h2 className="text-2xl md:text-3xl font-black text-white flex items-center gap-2 tracking-tight">
                   {viewingUser.full_name} 
                 </h2>
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg mt-3 border shadow-sm ${
+                <span className={`inline-flex items-center gap-1.5 px-2 md:px-3 py-1 md:py-1.5 text-[9px] md:text-[10px] font-black uppercase tracking-widest rounded-lg mt-2 md:mt-3 border shadow-sm ${
                   viewingUser.role === 'admin' ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' : 'bg-blue-500/10 text-blue-400 border-blue-500/30'
                 }`}>
-                  {viewingUser.role === 'admin' && <Shield className="w-3.5 h-3.5" />}
+                  {viewingUser.role === 'admin' && <Shield className="w-3 h-3 md:w-3.5 md:h-3.5" />}
                   Role: {viewingUser.role}
                 </span>
 
-                <div className="mt-8 space-y-3">
-                  {/* Detailed Info Cards */}
-                  <div className="flex items-center gap-4 text-gray-300 bg-white/[0.02] p-4 rounded-2xl border border-white/5 hover:bg-white/[0.04] transition-colors">
-                    <div className="p-3 bg-blue-500/10 rounded-xl border border-blue-500/20"><Mail className="w-5 h-5 text-blue-400" /></div>
-                    <div>
-                      <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-0.5">Email Address</p>
-                      <p className="font-semibold text-gray-200">{viewingUser.email}</p>
+                <div className="mt-6 md:mt-8 space-y-2 md:space-y-3">
+                  {/* Reuse existing rows, just adjusting padding and text sizing for mobile */}
+                  <div className="flex items-center gap-3 md:gap-4 text-gray-300 bg-white/[0.02] p-3 md:p-4 rounded-xl md:rounded-2xl border border-white/5 hover:bg-white/[0.04] transition-colors">
+                    <div className="p-2 md:p-3 bg-blue-500/10 rounded-lg md:rounded-xl border border-blue-500/20"><Mail className="w-4 h-4 md:w-5 md:h-5 text-blue-400" /></div>
+                    <div className="truncate">
+                      <p className="text-[9px] md:text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-0.5">Email Address</p>
+                      <p className="text-sm md:text-base font-semibold text-gray-200 truncate">{viewingUser.email}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 text-gray-300 bg-white/[0.02] p-4 rounded-2xl border border-white/5 hover:bg-white/[0.04] transition-colors">
-                    <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20"><Phone className="w-5 h-5 text-emerald-400" /></div>
+                  <div className="flex items-center gap-3 md:gap-4 text-gray-300 bg-white/[0.02] p-3 md:p-4 rounded-xl md:rounded-2xl border border-white/5 hover:bg-white/[0.04] transition-colors">
+                    <div className="p-2 md:p-3 bg-emerald-500/10 rounded-lg md:rounded-xl border border-emerald-500/20"><Phone className="w-4 h-4 md:w-5 md:h-5 text-emerald-400" /></div>
                     <div>
-                      <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-0.5">Phone Number</p>
-                      <p className="font-semibold text-gray-200">{viewingUser.phone || <span className="text-gray-600 italic">Not provided</span>}</p>
+                      <p className="text-[9px] md:text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-0.5">Phone Number</p>
+                      <p className="text-sm md:text-base font-semibold text-gray-200">{viewingUser.phone || <span className="text-gray-600 italic">Not provided</span>}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 text-gray-300 bg-white/[0.02] p-4 rounded-2xl border border-white/5 hover:bg-white/[0.04] transition-colors">
-                    <div className="p-3 bg-red-500/10 rounded-xl border border-red-500/20"><MapPin className="w-5 h-5 text-red-400" /></div>
+                  <div className="flex items-center gap-3 md:gap-4 text-gray-300 bg-white/[0.02] p-3 md:p-4 rounded-xl md:rounded-2xl border border-white/5 hover:bg-white/[0.04] transition-colors">
+                    <div className="p-2 md:p-3 bg-red-500/10 rounded-lg md:rounded-xl border border-red-500/20"><MapPin className="w-4 h-4 md:w-5 md:h-5 text-red-400" /></div>
                     <div>
-                      <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-0.5">Location</p>
-                      <p className="font-semibold text-gray-200 capitalize">{viewingUser.city || <span className="text-gray-600 italic">Not provided</span>}</p>
+                      <p className="text-[9px] md:text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-0.5">Location</p>
+                      <p className="text-sm md:text-base font-semibold text-gray-200 capitalize">{viewingUser.city || <span className="text-gray-600 italic">Not provided</span>}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 text-gray-300 bg-white/[0.02] p-4 rounded-2xl border border-white/5 hover:bg-white/[0.04] transition-colors">
-                    <div className="p-3 bg-indigo-500/10 rounded-xl border border-indigo-500/20"><Truck className="w-5 h-5 text-indigo-400" /></div>
-                    <div>
-                      <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-0.5">Pickup Address</p>
-                      <p className="font-semibold text-gray-200 capitalize">
+                  <div className="flex items-center gap-3 md:gap-4 text-gray-300 bg-white/[0.02] p-3 md:p-4 rounded-xl md:rounded-2xl border border-white/5 hover:bg-white/[0.04] transition-colors">
+                    <div className="p-2 md:p-3 bg-indigo-500/10 rounded-lg md:rounded-xl border border-indigo-500/20"><Truck className="w-4 h-4 md:w-5 md:h-5 text-indigo-400" /></div>
+                    <div className="flex-1">
+                      <p className="text-[9px] md:text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-0.5">Pickup Address</p>
+                      <p className="text-xs md:text-sm font-semibold text-gray-200 capitalize">
                         {viewingUser.pickupAddress?.addressLine 
                           ? `${viewingUser.pickupAddress.addressLine}, ${viewingUser.pickupAddress.city}, ${viewingUser.pickupAddress.state} - ${viewingUser.pickupAddress.pincode}` 
                           : <span className="text-gray-600 italic">Not provided</span>}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 text-gray-300 bg-white/[0.02] p-4 rounded-2xl border border-white/5 hover:bg-white/[0.04] transition-colors">
-                    <div className="p-3 bg-purple-500/10 rounded-xl border border-purple-500/20"><Calendar className="w-5 h-5 text-purple-400" /></div>
+                  <div className="flex items-center gap-3 md:gap-4 text-gray-300 bg-white/[0.02] p-3 md:p-4 rounded-xl md:rounded-2xl border border-white/5 hover:bg-white/[0.04] transition-colors">
+                    <div className="p-2 md:p-3 bg-purple-500/10 rounded-lg md:rounded-xl border border-purple-500/20"><Calendar className="w-4 h-4 md:w-5 md:h-5 text-purple-400" /></div>
                     <div>
-                      <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-0.5">Joined Platform</p>
-                      <p className="font-semibold text-gray-200">{new Date(viewingUser.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                      <p className="text-[9px] md:text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-0.5">Joined Platform</p>
+                      <p className="text-sm md:text-base font-semibold text-gray-200">{new Date(viewingUser.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</p>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
             
-            <div className="p-5 border-t border-white/5 bg-white/[0.01] flex justify-end gap-3 shrink-0">
+            <div className="p-4 md:p-5 border-t border-white/5 bg-white/[0.01] flex justify-end gap-2 md:gap-3 shrink-0">
               <button 
                 onClick={() => handleUpdateRole(viewingUser._id, viewingUser.role)}
-                className="px-6 py-2.5 rounded-xl text-sm font-bold text-gray-300 bg-white/[0.05] hover:text-white hover:bg-white/[0.1] border border-white/10 transition-all shadow-sm"
+                className="px-4 md:px-6 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold text-gray-300 bg-white/[0.05] hover:text-white hover:bg-white/[0.1] border border-white/10 transition-all shadow-sm"
               >
                 {viewingUser.role === 'admin' ? "Remove Admin" : "Make Admin"}
               </button>
-              <button onClick={() => setIsViewUserModalOpen(false)} className="px-6 py-2.5 rounded-xl text-sm font-bold bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-[0_0_15px_rgba(37,99,235,0.3)] border border-blue-500/50">
-                Close Profile
+              <button onClick={() => setIsViewUserModalOpen(false)} className="px-4 md:px-6 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-[0_0_15px_rgba(37,99,235,0.3)] border border-blue-500/50">
+                Close
               </button>
             </div>
           </div>
@@ -828,17 +970,17 @@ const AdminPanel = ({ user }) => {
 
       {/* Reject Item Modal */}
       {isRejectModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/40 backdrop-blur-sm transition-opacity">
-          <div className="bg-[#0B0F19]/95 backdrop-blur-3xl w-full max-w-md rounded-3xl border border-red-500/20 shadow-[0_0_50px_rgba(239,68,68,0.15)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
-            <div className="p-5 border-b border-red-500/10 flex justify-between items-center bg-red-500/5">
-              <h2 className="text-lg font-black text-red-400 flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5" /> Reject Item
+        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm transition-opacity">
+          <div className="bg-[#0B0F19]/95 backdrop-blur-3xl w-full max-w-md rounded-2xl md:rounded-3xl border border-red-500/20 shadow-[0_0_50px_rgba(239,68,68,0.15)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="p-4 md:p-5 border-b border-red-500/10 flex justify-between items-center bg-red-500/5">
+              <h2 className="text-base md:text-lg font-black text-red-400 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 md:w-5 md:h-5" /> Reject Item
               </h2>
               <button onClick={() => setIsRejectModalOpen(false)} className="text-gray-400 hover:text-white transition-all bg-white/5 p-2 rounded-full hover:bg-white/10">
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="p-6">
+            <div className="p-5 md:p-6">
               <form id="rejectForm" onSubmit={handleRejectSubmit}>
                 <label className="block text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-widest">Reason for rejection <span className="text-red-400 font-normal lowercase">*</span></label>
                 <textarea 
@@ -846,14 +988,14 @@ const AdminPanel = ({ user }) => {
                   rows="4" 
                   value={rejectionReason} 
                   onChange={(e) => setRejectionReason(e.target.value)} 
-                  className="w-full bg-white/[0.02] border border-white/10 rounded-2xl px-4 py-3 text-white focus:outline-none focus:border-red-500/50 focus:bg-white/[0.05] resize-none transition-all placeholder:text-gray-600 text-sm shadow-inner" 
+                  className="w-full bg-white/[0.02] border border-white/10 rounded-xl md:rounded-2xl px-4 py-3 text-white focus:outline-none focus:border-red-500/50 focus:bg-white/[0.05] resize-none transition-all placeholder:text-gray-600 text-xs md:text-sm shadow-inner" 
                   placeholder="E.g., Contains inappropriate imagery..."
                 ></textarea>
               </form>
             </div>
-            <div className="p-5 border-t border-white/5 bg-white/[0.01] flex justify-end gap-3">
-              <button onClick={() => setIsRejectModalOpen(false)} className="px-6 py-2.5 rounded-xl text-sm font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all">Cancel</button>
-              <button type="submit" form="rejectForm" className="px-6 py-2.5 rounded-xl text-sm font-bold bg-red-600 hover:bg-red-500 text-white shadow-[0_0_15px_rgba(220,38,38,0.3)] border border-red-500/50 transition-all">Confirm Rejection</button>
+            <div className="p-4 md:p-5 border-t border-white/5 bg-white/[0.01] flex justify-end gap-2 md:gap-3">
+              <button onClick={() => setIsRejectModalOpen(false)} className="px-4 md:px-6 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all">Cancel</button>
+              <button type="submit" form="rejectForm" className="px-5 md:px-6 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold bg-red-600 hover:bg-red-500 text-white shadow-[0_0_15px_rgba(220,38,38,0.3)] border border-red-500/50 transition-all">Confirm</button>
             </div>
           </div>
         </div>
@@ -861,30 +1003,30 @@ const AdminPanel = ({ user }) => {
 
       {/* Edit Item Modal */}
       {isEditModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 py-8 bg-black/40 backdrop-blur-sm transition-opacity">
-          <div className="bg-[#0B0F19]/95 backdrop-blur-3xl w-full max-w-2xl rounded-3xl border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
-            <div className="p-5 border-b border-white/5 flex justify-between items-center bg-white/[0.02] shrink-0">
-              <h2 className="text-lg font-black text-white flex items-center gap-2">
-                <Edit className="w-5 h-5 text-emerald-400" /> Edit Item Details
+        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 py-6 md:py-8 bg-black/60 backdrop-blur-sm transition-opacity">
+          <div className="bg-[#0B0F19]/95 backdrop-blur-3xl w-full max-w-2xl rounded-2xl md:rounded-3xl border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+            <div className="p-4 md:p-5 border-b border-white/5 flex justify-between items-center bg-white/[0.02] shrink-0">
+              <h2 className="text-base md:text-lg font-black text-white flex items-center gap-2">
+                <Edit className="w-4 h-4 md:w-5 md:h-5 text-emerald-400" /> Edit Item
               </h2>
               <button onClick={() => setIsEditModalOpen(false)} className="text-gray-400 hover:text-white transition-all p-2 bg-white/5 hover:bg-white/10 rounded-full border border-white/5">
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="p-6 overflow-y-auto flex-1 admin-scroll">
-              <form id="adminEditForm" onSubmit={handleEditSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="p-4 md:p-6 overflow-y-auto flex-1 admin-scroll">
+              <form id="adminEditForm" onSubmit={handleEditSubmit} className="space-y-4 md:space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
                   <div className="md:col-span-2">
                     <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Title</label>
-                    <input type="text" name="title" required value={editForm.title} onChange={handleEditChange} className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500/50 focus:bg-white/[0.05] transition-all shadow-inner" />
+                    <input type="text" name="title" required value={editForm.title} onChange={handleEditChange} className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-2.5 md:py-3 text-white text-xs md:text-sm focus:outline-none focus:border-emerald-500/50 focus:bg-white/[0.05] transition-all shadow-inner" />
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Description</label>
-                    <textarea name="description" required rows="4" value={editForm.description} onChange={handleEditChange} className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500/50 focus:bg-white/[0.05] resize-none transition-all shadow-inner"></textarea>
+                    <textarea name="description" required rows="4" value={editForm.description} onChange={handleEditChange} className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-2.5 md:py-3 text-white text-xs md:text-sm focus:outline-none focus:border-emerald-500/50 focus:bg-white/[0.05] resize-none transition-all shadow-inner"></textarea>
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Category</label>
-                    <select name="category" required value={editForm.category} onChange={handleEditChange} className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500/50 focus:bg-white/[0.05] transition-all appearance-none shadow-inner">
+                    <select name="category" required value={editForm.category} onChange={handleEditChange} className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-2.5 md:py-3 text-white text-xs md:text-sm focus:outline-none focus:border-emerald-500/50 focus:bg-white/[0.05] transition-all appearance-none shadow-inner">
                       <option value="Electronics" className="bg-[#0B0F19]">Electronics</option>
                       <option value="Fashion" className="bg-[#0B0F19]">Fashion</option>
                       <option value="Home" className="bg-[#0B0F19]">Home & Garden</option>
@@ -894,7 +1036,7 @@ const AdminPanel = ({ user }) => {
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Condition</label>
-                    <select name="condition" required value={editForm.condition} onChange={handleEditChange} className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500/50 focus:bg-white/[0.05] transition-all appearance-none shadow-inner">
+                    <select name="condition" required value={editForm.condition} onChange={handleEditChange} className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-2.5 md:py-3 text-white text-xs md:text-sm focus:outline-none focus:border-emerald-500/50 focus:bg-white/[0.05] transition-all appearance-none shadow-inner">
                       <option value="New" className="bg-[#0B0F19]">Brand New</option>
                       <option value="Like New" className="bg-[#0B0F19]">Like New</option>
                       <option value="Used" className="bg-[#0B0F19]">Used - Good</option>
@@ -902,105 +1044,24 @@ const AdminPanel = ({ user }) => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Estimated Value (Credits)</label>
+                    <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Estimated Value</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <Coins className="h-4 w-4 text-yellow-400" />
                       </div>
-                      <input type="number" name="estimated_value" value={editForm.estimated_value} onChange={handleEditChange} className="w-full bg-white/[0.02] border border-white/10 rounded-xl pl-9 pr-4 py-3 text-white text-sm focus:outline-none focus:border-yellow-500/50 focus:bg-white/[0.05] transition-all shadow-inner" />
+                      <input type="number" name="estimated_value" value={editForm.estimated_value} onChange={handleEditChange} className="w-full bg-white/[0.02] border border-white/10 rounded-xl pl-9 pr-4 py-2.5 md:py-3 text-white text-xs md:text-sm focus:outline-none focus:border-yellow-500/50 focus:bg-white/[0.05] transition-all shadow-inner" />
                     </div>
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Preferred Item</label>
-                    <input type="text" name="preferred_item" value={editForm.preferred_item} onChange={handleEditChange} className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500/50 focus:bg-white/[0.05] transition-all shadow-inner" />
+                    <input type="text" name="preferred_item" value={editForm.preferred_item} onChange={handleEditChange} className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-2.5 md:py-3 text-white text-xs md:text-sm focus:outline-none focus:border-emerald-500/50 focus:bg-white/[0.05] transition-all shadow-inner" />
                   </div>
                 </div>
               </form>
             </div>
-            <div className="p-5 border-t border-white/5 bg-white/[0.01] flex justify-end gap-3 shrink-0">
-              <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-6 py-2.5 rounded-xl text-sm font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all">Cancel</button>
-              <button type="submit" form="adminEditForm" disabled={updating} className={`px-8 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${updating ? 'bg-emerald-600/30 text-emerald-200/50 cursor-not-allowed border-emerald-500/20' : 'bg-emerald-500 hover:bg-emerald-400 text-white shadow-[0_0_15px_rgba(16,185,129,0.3)] border border-emerald-500/50'}`}>
-                {updating ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add/Edit Category Modal */}
-      {isCategoryModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/40 backdrop-blur-sm transition-opacity">
-          <div className="bg-[#0B0F19]/95 backdrop-blur-3xl w-full max-w-sm rounded-3xl border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
-            <div className="p-5 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
-              <h2 className="text-lg font-black text-white flex items-center gap-2">
-                {editingCategoryId ? <Edit className="w-5 h-5 text-blue-400" /> : <Layers className="w-5 h-5 text-blue-400" />} 
-                {editingCategoryId ? 'Edit Category' : 'New Category'}
-              </h2>
-              <button onClick={() => setIsCategoryModalOpen(false)} className="text-gray-400 hover:text-white transition-all p-2 bg-white/5 hover:bg-white/10 rounded-full">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            
-            <div className="p-6">
-              <form id="categoryForm" onSubmit={handleCategorySubmit} className="space-y-5">
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Category Name</label>
-                  <input 
-                    type="text" 
-                    value={categoryForm.name} 
-                    onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })} 
-                    className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500/50 focus:bg-white/[0.05] transition-all shadow-inner placeholder:text-gray-600"
-                    placeholder="e.g., Electronics..."
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Select Icon</label>
-                  <div className="flex gap-2.5 overflow-x-auto admin-scroll pb-2">
-                    {AVAILABLE_ICONS.map((iconObj) => {
-                      const IconComp = iconObj.icon;
-                      const isSelected = categoryForm.icon === iconObj.name;
-                      return (
-                        <div 
-                          key={iconObj.name}
-                          onClick={() => setCategoryForm({ ...categoryForm, icon: iconObj.name })}
-                          className={`flex-shrink-0 flex flex-col items-center justify-center p-3 rounded-xl cursor-pointer transition-all border ${
-                            isSelected 
-                              ? 'bg-blue-500/10 border-blue-500/50 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.2)]' 
-                              : 'bg-white/[0.02] border-white/10 text-gray-500 hover:bg-white/5 hover:text-gray-300'
-                          }`}
-                          title={iconObj.name}
-                        >
-                          <IconComp className="w-5 h-5" />
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="bg-white/[0.02] p-4 rounded-xl border border-white/10 flex items-center justify-between cursor-pointer hover:bg-white/[0.04] transition-colors" onClick={() => setCategoryForm({ ...categoryForm, isActive: !categoryForm.isActive })}>
-                  <div>
-                    <p className="font-bold text-white text-sm tracking-tight">Active Status</p>
-                    <p className="text-[10px] text-gray-500 mt-0.5">Hidden categories won't show to users.</p>
-                  </div>
-                  {categoryForm.isActive ? (
-                    <ToggleRight className="w-8 h-8 text-emerald-400 drop-shadow-[0_0_5px_rgba(16,185,129,0.5)]" />
-                  ) : (
-                    <ToggleLeft className="w-8 h-8 text-gray-600" />
-                  )}
-                </div>
-              </form>
-            </div>
-            
-            <div className="p-5 border-t border-white/5 bg-white/[0.01] flex justify-end gap-3">
-              <button type="button" onClick={() => setIsCategoryModalOpen(false)} className="px-5 py-2.5 rounded-xl text-sm font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all">Cancel</button>
-              <button 
-                type="submit" 
-                form="categoryForm" 
-                disabled={updating} 
-                className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${updating ? 'bg-blue-600/30 text-white/50 cursor-not-allowed border-blue-500/20' : 'bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.3)] border border-blue-500/50'}`}
-              >
+            <div className="p-4 md:p-5 border-t border-white/5 bg-white/[0.01] flex justify-end gap-2 md:gap-3 shrink-0">
+              <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-4 md:px-6 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all">Cancel</button>
+              <button type="submit" form="adminEditForm" disabled={updating} className={`px-5 md:px-8 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center gap-2 ${updating ? 'bg-emerald-600/30 text-emerald-200/50 cursor-not-allowed border-emerald-500/20' : 'bg-emerald-500 hover:bg-emerald-400 text-white shadow-[0_0_15px_rgba(16,185,129,0.3)] border border-emerald-500/50'}`}>
                 {updating ? 'Saving...' : 'Save'}
               </button>
             </div>
@@ -1032,12 +1093,12 @@ const AdminPanel = ({ user }) => {
 
       {/* Interactive Crop Modal */}
       {cropModalOpen && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center px-4 py-4 bg-black/80 backdrop-blur-md transition-opacity">
-          <div className="bg-[#0B0F19]/95 backdrop-blur-3xl w-full max-w-3xl rounded-3xl border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col h-[80vh] animate-in zoom-in-95 duration-200">
-            <div className="p-5 border-b border-white/5 flex justify-between items-center bg-white/[0.02] shrink-0">
-              <h2 className="text-lg font-black text-white flex items-center gap-2 tracking-tight">
-                <ImageIcon className="w-5 h-5 text-[#A388E1]" /> 
-                Crop {cropType === 'desktop' ? 'Desktop (5:1)' : 'Mobile (2.5:1)'} Banner
+        <div className="fixed inset-0 z-[200] flex items-center justify-center px-2 py-4 md:px-4 bg-black/80 backdrop-blur-md transition-opacity">
+          <div className="bg-[#0B0F19]/95 backdrop-blur-3xl w-full max-w-3xl rounded-2xl md:rounded-3xl border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col h-[70vh] md:h-[80vh] animate-in zoom-in-95 duration-200">
+            <div className="p-4 md:p-5 border-b border-white/5 flex justify-between items-center bg-white/[0.02] shrink-0">
+              <h2 className="text-sm md:text-lg font-black text-white flex items-center gap-2 tracking-tight">
+                <ImageIcon className="w-4 h-4 md:w-5 md:h-5 text-[#A388E1]" /> 
+                Crop {cropType === 'desktop' ? 'Desktop (5:1)' : 'Mobile (2.5:1)'}
               </h2>
               <button onClick={() => setCropModalOpen(false)} className="text-gray-400 hover:text-white transition-all p-2 bg-white/5 hover:bg-white/10 rounded-full">
                 <X className="w-4 h-4" />
@@ -1058,9 +1119,9 @@ const AdminPanel = ({ user }) => {
               )}
             </div>
 
-            <div className="p-5 bg-white/[0.01] flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0">
-              <div className="flex items-center gap-3 w-full sm:w-1/2 bg-white/[0.02] p-3 rounded-xl border border-white/5">
-                <span className="text-gray-400 text-xs font-bold uppercase tracking-widest">Zoom</span>
+            <div className="p-4 md:p-5 bg-white/[0.01] flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+              <div className="flex items-center gap-3 w-full sm:w-1/2 bg-white/[0.02] p-2 md:p-3 rounded-xl border border-white/5">
+                <span className="text-gray-400 text-[10px] md:text-xs font-bold uppercase tracking-widest">Zoom</span>
                 <input
                   type="range"
                   value={zoom}
@@ -1071,14 +1132,14 @@ const AdminPanel = ({ user }) => {
                   className="w-full accent-[#A388E1]"
                 />
               </div>
-              <div className="flex gap-3 w-full sm:w-auto justify-end">
-                <button type="button" onClick={() => setCropModalOpen(false)} className="px-6 py-2.5 rounded-xl text-sm font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all">Cancel</button>
+              <div className="flex gap-2 md:gap-3 w-full sm:w-auto justify-end">
+                <button type="button" onClick={() => setCropModalOpen(false)} className="px-4 md:px-6 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all">Cancel</button>
                 <button
                   onClick={handleCropAndUpload}
                   disabled={isProcessingCrop}
-                  className={`px-8 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${isProcessingCrop ? 'bg-[#A388E1]/30 text-white/50 cursor-not-allowed border-[#A388E1]/20' : 'bg-[#A388E1] hover:bg-[#8b70ca] text-white shadow-[0_0_15px_rgba(163,136,225,0.3)] border border-[#A388E1]/50'}`}
+                  className={`px-5 md:px-8 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center gap-2 ${isProcessingCrop ? 'bg-[#A388E1]/30 text-white/50 cursor-not-allowed border-[#A388E1]/20' : 'bg-[#A388E1] hover:bg-[#8b70ca] text-white shadow-[0_0_15px_rgba(163,136,225,0.3)] border border-[#A388E1]/50'}`}
                 >
-                  {isProcessingCrop ? 'Processing...' : 'Crop & Upload'}
+                  {isProcessingCrop ? 'Processing...' : 'Upload'}
                 </button>
               </div>
             </div>

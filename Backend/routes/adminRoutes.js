@@ -11,7 +11,10 @@ const {
   getCreditSettings,     
   updateCreditSettings,
   getPublicCreditSettings,
-  getAllTransactions
+  getAllTransactions,
+  getAllOrders,          
+  updateAdminOrderStatus    ,
+  getDashboardStats
 } = require('../controllers/adminController');
 
 const {
@@ -57,8 +60,15 @@ router.route('/credit-settings')
   .get(protect, admin, getCreditSettings)
   .put(protect, admin, updateCreditSettings);
 
-
 router.route('/transactions')
   .get(protect, admin, getAllTransactions);
+
+router.route('/orders')
+  .get(protect, admin, getAllOrders);
+
+router.route('/orders/:id')
+  .put(protect, admin, updateAdminOrderStatus);
+
+ router.get('/dashboard-stats', protect, admin, getDashboardStats);
 
 module.exports = router;
