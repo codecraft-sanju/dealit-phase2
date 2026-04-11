@@ -5,33 +5,98 @@ const Transaction = require('../models/Transaction');
 const Order = require('../models/Order');
 const BarterRequest = require('../models/BarterRequest');
 
+// CHANGED: Added search logic for Pending Items
 const getPendingItems = async (req, res) => {
   try {
-    const items = await Item.find({ status: 'pending' }).populate('owner', 'full_name email phone').sort({ created_at: -1 });
-    res.status(200).json({ success: true, count: items.length, data: items });
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+    const searchQuery = req.query.search || '';
+
+    let filter = { status: 'pending' };
+
+    if (searchQuery) {
+      const searchRegex = new RegExp(searchQuery, 'i'); // 'i' makes it case-insensitive
+      
+      // Find matching users first
+      const matchingUsers = await User.find({
+        $or: [{ full_name: searchRegex }, { email: searchRegex }]
+      }).select('_id');
+      const userIds = matchingUsers.map(u => u._id);
+
+      filter.$or = [
+        { title: searchRegex },
+        { category: searchRegex },
+        { owner: { $in: userIds } }
+      ];
+    }
+
+    const total = await Item.countDocuments(filter);
+    const items = await Item.find(filter)
+      .populate('owner', 'full_name email phone')
+      .sort({ created_at: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    res.status(200).json({ 
+      success: true, 
+      count: items.length, 
+      totalRecords: total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      data: items 
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
 
+// CHANGED: Added search logic for Transactions
 const getAllTransactions = async (req, res) => {
   try {
-    const transactions = await Transaction.find()
-      .populate('user', 'full_name email phone profilePic')
-      .sort({ created_at: -1 });
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+    const searchQuery = req.query.search || '';
 
-    const totalIncome = transactions.reduce((sum, txn) => {
-      if (txn.status === 'success') {
-        return sum + txn.amount;
-      }
-      return sum;
-    }, 0);
+    let filter = {};
+
+    if (searchQuery) {
+      const searchRegex = new RegExp(searchQuery, 'i');
+      
+      const matchingUsers = await User.find({
+        $or: [{ full_name: searchRegex }, { email: searchRegex }]
+      }).select('_id');
+      const userIds = matchingUsers.map(u => u._id);
+
+      filter.$or = [
+        { razorpay_order_id: searchRegex },
+        { razorpay_payment_id: searchRegex },
+        { user: { $in: userIds } }
+      ];
+    }
+
+    const total = await Transaction.countDocuments(filter);
+    const transactions = await Transaction.find(filter)
+      .populate('user', 'full_name email phone profilePic')
+      .sort({ created_at: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const incomeAgg = await Transaction.aggregate([
+      { $match: { status: 'success' } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+    const totalIncome = incomeAgg.length > 0 ? incomeAgg[0].total : 0;
 
     res.status(200).json({ 
       success: true, 
       totalIncome: totalIncome,
       count: transactions.length, 
+      totalRecords: total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
       data: transactions 
     });
   } catch (error) {
@@ -40,6 +105,7 @@ const getAllTransactions = async (req, res) => {
   }
 };
 
+// Update Item Status (No changes needed here for search)
 const updateItemStatus = async (req, res) => {
   try {
     const { status, rejection_reason } = req.body; 
@@ -94,26 +160,95 @@ const updateItemStatus = async (req, res) => {
   }
 };
 
+// CHANGED: Added search logic for All Items
 const getAllItems = async (req, res) => {
   try {
-    const items = await Item.find({}).populate('owner', 'full_name email phone').sort({ created_at: -1 });
-    res.status(200).json({ success: true, count: items.length, data: items });
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+    const searchQuery = req.query.search || '';
+
+    let filter = {};
+
+    if (searchQuery) {
+      const searchRegex = new RegExp(searchQuery, 'i');
+      
+      const matchingUsers = await User.find({
+        $or: [{ full_name: searchRegex }, { email: searchRegex }]
+      }).select('_id');
+      const userIds = matchingUsers.map(u => u._id);
+
+      filter.$or = [
+        { title: searchRegex },
+        { category: searchRegex },
+        { condition: searchRegex },
+        { owner: { $in: userIds } }
+      ];
+    }
+
+    const total = await Item.countDocuments(filter);
+    const items = await Item.find(filter)
+      .populate('owner', 'full_name email phone')
+      .sort({ created_at: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    res.status(200).json({ 
+      success: true, 
+      count: items.length, 
+      totalRecords: total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      data: items 
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
 
+// CHANGED: Added search logic for Users
 const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find({}).select('-password').sort({ created_at: -1 });
-    res.status(200).json({ success: true, count: users.length, data: users });
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+    const searchQuery = req.query.search || '';
+
+    let filter = {};
+
+    if (searchQuery) {
+      const searchRegex = new RegExp(searchQuery, 'i');
+      filter.$or = [
+        { full_name: searchRegex },
+        { email: searchRegex },
+        { phone: searchRegex },
+        { city: searchRegex }
+      ];
+    }
+
+    const total = await User.countDocuments(filter);
+    const users = await User.find(filter)
+      .select('-password')
+      .sort({ created_at: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    res.status(200).json({ 
+      success: true, 
+      count: users.length, 
+      totalRecords: total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      data: users 
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
 
+// Update Role, Delete User, Settings (No search changes needed here)
 const updateUserRole = async (req, res) => {
   try {
     const { role } = req.body;
@@ -256,23 +391,59 @@ const getPublicCreditSettings = async (req, res) => {
   }
 };
 
-// <-- NAYA CHANGE: Admin ke liye saare orders fetch karne ka function -->
+// CHANGED: Added search logic for Orders
 const getAllOrders = async (req, res) => {
   try {
-    const orders = await Order.find({})
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+    const searchQuery = req.query.search || '';
+
+    let filter = {};
+
+    if (searchQuery) {
+      const searchRegex = new RegExp(searchQuery, 'i');
+      
+      const matchingUsers = await User.find({
+        $or: [{ full_name: searchRegex }, { email: searchRegex }]
+      }).select('_id');
+      const userIds = matchingUsers.map(u => u._id);
+
+      const matchingItems = await Item.find({ title: searchRegex }).select('_id');
+      const itemIds = matchingItems.map(i => i._id);
+
+      filter.$or = [
+        { 'trackingDetails.awb_code': searchRegex },
+        { orderStatus: searchRegex },
+        { buyer: { $in: userIds } },
+        { seller: { $in: userIds } },
+        { item: { $in: itemIds } }
+      ];
+    }
+
+    const total = await Order.countDocuments(filter);
+    const orders = await Order.find(filter)
       .populate('buyer', 'full_name email phone city pickupAddress')
       .populate('seller', 'full_name email phone city pickupAddress')
       .populate('item', 'title images estimated_value category condition')
-      .sort({ created_at: -1 });
+      .sort({ created_at: -1 })
+      .skip(skip)
+      .limit(limit);
 
-    res.status(200).json({ success: true, count: orders.length, data: orders });
+    res.status(200).json({ 
+      success: true, 
+      count: orders.length, 
+      totalRecords: total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      data: orders 
+    });
   } catch (error) {
     console.error('Error fetching all orders for admin:', error);
     res.status(500).json({ success: false, message: 'Server Error fetching orders' });
   }
 };
 
-// <-- NAYA CHANGE: Admin manually order status aur tracking update kar sake -->
 const updateAdminOrderStatus = async (req, res) => {
   try {
     const { orderStatus, awb_code, courier_company } = req.body;
@@ -346,16 +517,13 @@ const getDashboardStats = async (req, res) => {
 
     const recentUsers = await User.find().select('full_name email profilePic created_at').sort({ created_at: -1 }).limit(5);
 
-    // --- 1. DYNAMIC CATEGORY DATA ---
     const categoryDataRaw = await Item.aggregate([
       { $match: { status: 'active' } },
       { $group: { _id: '$category', value: { $sum: 1 } } },
       { $project: { name: '$_id', value: 1, _id: 0 } }
     ]);
-    // Filter out empty names
     const categoryData = categoryDataRaw.filter(c => c.name);
 
-    // --- 2. DYNAMIC PERFORMANCE DATA (Last 7 Days) ---
     const performanceData = [];
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     
@@ -367,14 +535,12 @@ const getDashboardStats = async (req, res) => {
       const endDate = new Date(startDate);
       endDate.setHours(23, 59, 59, 999);
 
-      // Revenue for the day
       const dailyTxns = await Transaction.find({
         status: 'success',
         created_at: { $gte: startDate, $lte: endDate }
       });
       const dailyRevenue = dailyTxns.reduce((sum, txn) => sum + txn.amount, 0);
 
-      // Swaps for the day
       const dailySwaps = await BarterRequest.countDocuments({
         status: 'ACCEPTED',
         updated_at: { $gte: startDate, $lte: endDate }
@@ -387,10 +553,8 @@ const getDashboardStats = async (req, res) => {
       });
     }
 
-    // --- 3. DYNAMIC RECENT ACTIVITY FEED ---
     let activities = [];
 
-    // Swaps
     const recentSwaps = await BarterRequest.find({ status: 'ACCEPTED' }).sort({ updated_at: -1 }).limit(3).populate('item');
     recentSwaps.forEach(swap => activities.push({
       id: `swap-${swap._id}`,
@@ -401,7 +565,6 @@ const getDashboardStats = async (req, res) => {
       bg: 'bg-emerald-400/10 border-emerald-400/20'
     }));
 
-    // New Items
     const recentItemsList = await Item.find().sort({ created_at: -1 }).limit(3);
     recentItemsList.forEach(item => activities.push({
       id: `item-${item._id}`,
@@ -412,7 +575,6 @@ const getDashboardStats = async (req, res) => {
       bg: 'bg-blue-400/10 border-blue-400/20'
     }));
 
-    // Transactions
     const recentTxnsList = await Transaction.find({ status: 'success' }).sort({ created_at: -1 }).limit(3);
     recentTxnsList.forEach(txn => activities.push({
       id: `txn-${txn._id}`,
@@ -423,7 +585,6 @@ const getDashboardStats = async (req, res) => {
       bg: 'bg-yellow-400/10 border-yellow-400/20'
     }));
 
-    // Orders
     const recentOrdersList = await Order.find({ orderStatus: 'delivered' }).sort({ updated_at: -1 }).limit(3).populate('item');
     recentOrdersList.forEach(order => activities.push({
       id: `order-${order._id}`,
@@ -434,7 +595,6 @@ const getDashboardStats = async (req, res) => {
       bg: 'bg-purple-400/10 border-purple-400/20'
     }));
 
-    // Sort all activities by time (newest first) and keep top 6
     activities.sort((a, b) => new Date(b.time) - new Date(a.time));
     const recentActivity = activities.slice(0, 6);
 

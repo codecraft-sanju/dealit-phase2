@@ -35,4 +35,15 @@ const itemSchema = new mongoose.Schema({
   updated_at: { type: Date, default: Date.now }
 });
 
+// ⚡ PERFORMANCE INDEXES ADDED HERE ⚡
+
+// 1. Text Index for fast searching by Admin
+itemSchema.index({ title: 'text', category: 'text', condition: 'text' });
+
+// 2. Compound Index for fast filtering and sorting (e.g., getting pending items ordered by date)
+itemSchema.index({ status: 1, created_at: -1 });
+
+// 3. Index for fast lookup of a user's items
+itemSchema.index({ owner: 1 });
+
 module.exports = mongoose.model('Item', itemSchema);

@@ -1,4 +1,3 @@
-// User.js
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
@@ -37,5 +36,16 @@ const userSchema = new mongoose.Schema({
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now }
 });
+
+// ⚡ PERFORMANCE INDEXES ADDED HERE ⚡
+
+// 1. Text Index for fast searching by Admin
+userSchema.index({ full_name: 'text', email: 'text', phone: 'text', city: 'text' });
+
+// 2. Standard Index for fast sorting (Newest users first)
+userSchema.index({ created_at: -1 });
+
+// 3. Standard Index for role filtering
+userSchema.index({ role: 1 });
 
 module.exports = mongoose.model('User', userSchema);

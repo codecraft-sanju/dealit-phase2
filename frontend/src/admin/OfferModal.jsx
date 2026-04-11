@@ -1,5 +1,7 @@
 import React from 'react';
 import { Edit, Image as ImageIcon, X, Monitor, Smartphone, ToggleRight, ToggleLeft } from 'lucide-react';
+// CHANGED: Imported toast for validation messages inside the modal
+import { toast } from 'react-toastify'; 
 
 const OfferModal = ({
   isOfferModalOpen,

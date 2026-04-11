@@ -3,12 +3,17 @@ import { Navigate } from 'react-router-dom';
 import { 
   Shield, Users, Package, Trash2, X, Edit, List, AlertTriangle, Eye, User, 
   ShieldAlert, ShieldCheck, Mail, Phone, MapPin, Calendar, Wallet, Image as ImageIcon, Plus, 
-  Check, ToggleLeft, ToggleRight, Layers, Settings, Menu, // CHANGED: Added Menu icon
+  Check, ToggleLeft, ToggleRight, Layers, Settings, Menu, 
   Car, Monitor, Book, Shirt, Gamepad2, Watch, Home as HomeIcon, Sofa, Music, Utensils, Heart, Briefcase, Camera, Dumbbell, Smartphone, Target,
-  IndianRupee, Activity, Truck, ChevronRight, LayoutDashboard, Coins
+  IndianRupee, Activity, Truck, ChevronRight, LayoutDashboard, Coins,
+  Search // CHANGED: Added Search icon
 } from 'lucide-react'; 
 import axios from 'axios';
 import Cropper from 'react-easy-crop';
+
+// CHANGED: Imported react-toastify
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 import SettingsPanel from '../admin/SettingsPanel';
 import AdminTable from '../admin/AdminTable';
@@ -78,11 +83,19 @@ const AdminPanel = ({ user }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // CHANGED: Added mobile sidebar state
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const [totalIncome, setTotalIncome] = useState(0);
+
+  // Pagination States
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const limit = 10;
   
+  // CHANGED: Added Search States
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
   const [creditSettings, setCreditSettings] = useState({
     isCreditSystemEnabled: true,
     creditsPerListing: 50,
@@ -152,6 +165,18 @@ const AdminPanel = ({ user }) => {
     return <Navigate to="/" />;
   }
 
+  // CHANGED: Added Debounce logic for search
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      if (searchQuery !== debouncedSearch) {
+         setCurrentPage(1); // Reset to page 1 on new search
+      }
+    }, 500); // 500ms delay
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  // CHANGED: Added debouncedSearch to dependency array
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -172,6 +197,11 @@ const AdminPanel = ({ user }) => {
           else if (activeTab === 'transactions') endpoint = `${API_URL}/admin/transactions`; 
           else if (activeTab === 'orders') endpoint = `${API_URL}/admin/orders`; 
 
+          // CHANGED: Added search parameter to API call
+          if (['pending', 'users', 'items', 'transactions', 'orders'].includes(activeTab)) {
+            endpoint += `?page=${currentPage}&limit=${limit}&search=${encodeURIComponent(debouncedSearch)}`;
+          }
+
           const response = await axios.get(endpoint, { withCredentials: true });
           
           if (activeTab === 'transactions') {
@@ -179,23 +209,31 @@ const AdminPanel = ({ user }) => {
           }
           
           setData(response.data.data || []);
+          
+          if (response.data.totalPages) {
+             setTotalPages(response.data.totalPages);
+          } else {
+             setTotalPages(1);
+          }
         }
       } catch (error) {
         console.error(`Error fetching ${activeTab}:`, error);
+        toast.error('Failed to load data.');
       } finally {
         setLoading(false);
       }
     };
     fetchData();
-  }, [activeTab]);
+  }, [activeTab, currentPage, debouncedSearch]); // CHANGED: Added debouncedSearch
 
   const handleApprove = async (id) => {
     try {
       await axios.put(`${API_URL}/admin/item-status/${id}`, { status: 'active' }, { withCredentials: true });
       setData(data.filter(item => item._id !== id));
+      toast.success('Item approved successfully! 🎉'); // CHANGED: Added Toast
     } catch (error) {
       console.error('Error approving item:', error);
-      alert('Failed to approve item.');
+      toast.error('Failed to approve item.'); // CHANGED: Added Toast
     }
   };
 
@@ -215,9 +253,10 @@ const AdminPanel = ({ user }) => {
       );
       setData(data.filter(item => item._id !== rejectingItemId));
       setIsRejectModalOpen(false);
+      toast.success('Item rejected successfully.'); // CHANGED: Added Toast
     } catch (error) {
       console.error('Error rejecting item:', error);
-      alert('Failed to reject item.');
+      toast.error('Failed to reject item.'); // CHANGED: Added Toast
     }
   };
 
@@ -226,9 +265,10 @@ const AdminPanel = ({ user }) => {
     try {
       await axios.delete(`${API_URL}/items/${id}`, { withCredentials: true });
       setData(data.filter(item => item._id !== id));
+      toast.success('Item deleted permanently.'); // CHANGED: Added Toast
     } catch (error) {
       console.error(`Error deleting item:`, error);
-      alert('Failed to delete item.');
+      toast.error('Failed to delete item.'); // CHANGED: Added Toast
     }
   };
 
@@ -251,10 +291,11 @@ const AdminPanel = ({ user }) => {
       if (response.data.success) {
         setData(data.map(item => item._id === editingItemId ? { ...item, ...editForm } : item));
         setIsEditModalOpen(false);
+        toast.success('Item updated successfully! 📝'); // CHANGED: Added Toast
       }
     } catch (error) {
       console.error('Error updating item:', error);
-      alert('Failed to update item.');
+      toast.error('Failed to update item.'); // CHANGED: Added Toast
     } finally {
       setUpdating(false);
     }
@@ -278,10 +319,11 @@ const AdminPanel = ({ user }) => {
       if (response.data.success) {
         setData(data.map(o => o._id === editingOrder._id ? response.data.data : o));
         setIsEditOrderModalOpen(false);
+        toast.success('Order tracking & status updated! 🚚'); // CHANGED: Added Toast
       }
     } catch (error) {
       console.error('Error updating order:', error);
-      alert('Failed to update order details.');
+      toast.error('Failed to update order details.'); // CHANGED: Added Toast
     } finally {
       setUpdating(false);
     }
@@ -298,9 +340,10 @@ const AdminPanel = ({ user }) => {
       await axios.delete(`${API_URL}/admin/users/${id}`, { withCredentials: true });
       setData(data.filter(u => u._id !== id));
       if (isViewUserModalOpen && viewingUser?._id === id) setIsViewUserModalOpen(false);
+      toast.success('User account deleted.'); // CHANGED: Added Toast
     } catch (error) {
       console.error(`Error deleting user:`, error);
-      alert(error.response?.data?.message || 'Failed to delete user.');
+      toast.error(error.response?.data?.message || 'Failed to delete user.'); // CHANGED: Added Toast
     }
   };
 
@@ -317,10 +360,11 @@ const AdminPanel = ({ user }) => {
         if (isViewUserModalOpen && viewingUser?._id === id) {
           setViewingUser({ ...viewingUser, role: newRole });
         }
+        toast.success(`User role updated to ${newRole.toUpperCase()}! 🛡️`); // CHANGED: Added Toast
       }
     } catch (error) {
       console.error('Error updating user role:', error);
-      alert(error.response?.data?.message || 'Failed to update user role.');
+      toast.error(error.response?.data?.message || 'Failed to update user role.'); // CHANGED: Added Toast
     }
   };
 
@@ -364,9 +408,10 @@ const AdminPanel = ({ user }) => {
       else setOfferForm(prev => ({ ...prev, desktopImage: res.data.secure_url }));
       
       setCropModalOpen(false);
+      toast.success(`${cropType === 'mobile' ? 'Mobile' : 'Desktop'} banner uploaded!`); // CHANGED: Added Toast
     } catch (error) {
       console.error('Error cropping/uploading:', error);
-      alert('Failed to upload image.');
+      toast.error('Failed to upload image. Try again.'); // CHANGED: Added Toast
     } finally {
       setIsProcessingCrop(false);
       if (cropType === 'mobile') setIsUploadingMobile(false);
@@ -388,20 +433,24 @@ const AdminPanel = ({ user }) => {
 
   const handleOfferSubmit = async (e) => {
     e.preventDefault();
-    if (!offerForm.mobileImage || !offerForm.desktopImage) return alert('Provide Mobile and Desktop images.');
+    if (!offerForm.mobileImage || !offerForm.desktopImage) {
+      return toast.error('Please provide both Mobile and Desktop images.'); // CHANGED: Added Toast
+    }
     setUpdating(true);
     try {
       if (editingOfferId) {
         const res = await axios.put(`${API_URL}/admin/offers/${editingOfferId}`, offerForm, { withCredentials: true });
         setData(data.map(o => o._id === editingOfferId ? res.data.data : o));
+        toast.success('Banner updated successfully! 🖼️'); // CHANGED: Added Toast
       } else {
         const res = await axios.post(`${API_URL}/admin/offers`, offerForm, { withCredentials: true });
         setData([res.data.data, ...data]);
+        toast.success('New banner published! 🚀'); // CHANGED: Added Toast
       }
       setIsOfferModalOpen(false);
     } catch (error) {
       console.error('Error saving offer:', error);
-      alert('Failed to save offer.');
+      toast.error('Failed to save offer.'); // CHANGED: Added Toast
     } finally {
       setUpdating(false);
     }
@@ -412,9 +461,10 @@ const AdminPanel = ({ user }) => {
     try {
       await axios.delete(`${API_URL}/admin/offers/${id}`, { withCredentials: true });
       setData(data.filter(offer => offer._id !== id));
+      toast.success('Banner removed from platform.'); // CHANGED: Added Toast
     } catch (error) {
       console.error('Error deleting offer:', error);
-      alert('Failed to delete offer.');
+      toast.error('Failed to delete offer.'); // CHANGED: Added Toast
     }
   };
 
@@ -432,20 +482,22 @@ const AdminPanel = ({ user }) => {
 
   const handleCategorySubmit = async (e) => {
     e.preventDefault();
-    if (!categoryForm.name.trim()) return alert('Category name is required');
+    if (!categoryForm.name.trim()) return toast.error('Category name is required.'); // CHANGED: Added Toast
     setUpdating(true);
     try {
       if (editingCategoryId) {
         const res = await axios.put(`${API_URL}/categories/${editingCategoryId}`, categoryForm, { withCredentials: true });
         setData(data.map(c => c._id === editingCategoryId ? res.data.data : c));
+        toast.success('Category updated! 📑'); // CHANGED: Added Toast
       } else {
         const res = await axios.post(`${API_URL}/categories`, categoryForm, { withCredentials: true });
         setData([...data, res.data.data].sort((a,b) => a.name.localeCompare(b.name)));
+        toast.success('Category created! ✨'); // CHANGED: Added Toast
       }
       setIsCategoryModalOpen(false);
     } catch (error) {
       console.error('Error saving category:', error);
-      alert(error.response?.data?.message || 'Failed to save category.');
+      toast.error(error.response?.data?.message || 'Failed to save category.'); // CHANGED: Added Toast
     } finally {
       setUpdating(false);
     }
@@ -456,9 +508,10 @@ const AdminPanel = ({ user }) => {
     try {
       await axios.delete(`${API_URL}/categories/${id}`, { withCredentials: true });
       setData(data.filter(c => c._id !== id));
+      toast.success('Category deleted.'); // CHANGED: Added Toast
     } catch (error) {
       console.error('Error deleting category:', error);
-      alert('Failed to delete category.');
+      toast.error('Failed to delete category.'); // CHANGED: Added Toast
     }
   };
 
@@ -468,11 +521,11 @@ const AdminPanel = ({ user }) => {
     try {
       const response = await axios.put(`${API_URL}/admin/credit-settings`, creditSettings, { withCredentials: true });
       if (response.data.success) {
-        alert('Credit settings successfully updated! 🎉');
+        toast.success('Credit settings successfully updated! 🎉'); // CHANGED: Added Toast
       }
     } catch (error) {
       console.error('Error saving settings:', error);
-      alert('Failed to save settings.');
+      toast.error('Failed to save settings.'); // CHANGED: Added Toast
     } finally {
       setUpdating(false);
     }
@@ -490,9 +543,15 @@ const AdminPanel = ({ user }) => {
     { id: 'settings', name: 'System Settings', icon: Settings },
   ];
 
+  // CHANGED: Determine if current tab allows search
+  const isSearchableTab = ['pending', 'users', 'items', 'transactions', 'orders'].includes(activeTab);
+
   return (
     <div className="h-screen w-full bg-[#0B0F19] flex overflow-hidden relative selection:bg-emerald-500/30 text-gray-100 font-sans">
       
+      {/* CHANGED: Toast Container for Notifications */}
+      <ToastContainer theme="dark" position="bottom-right" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick pauseOnFocusLoss draggable pauseOnHover />
+
       {/* --- Ambient Deep Space Background Glows --- */}
       <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-purple-600/10 rounded-full blur-[140px] pointer-events-none"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] bg-emerald-600/10 rounded-full blur-[140px] pointer-events-none"></div>
@@ -505,7 +564,7 @@ const AdminPanel = ({ user }) => {
         .admin-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
       `}} />
 
-      {/* CHANGED: Mobile Sidebar Overlay */}
+      {/* Mobile Sidebar Overlay */}
       {isMobileSidebarOpen && (
         <div 
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden transition-opacity"
@@ -513,8 +572,7 @@ const AdminPanel = ({ user }) => {
         ></div>
       )}
 
-      {/* --- SIDEBAR (SaaS Style) --- */}
-      {/* CHANGED: Made completely responsive with mobile sliding mechanics */}
+      {/* --- SIDEBAR --- */}
       <aside className={`fixed inset-y-0 left-0 w-64 md:w-72 flex-shrink-0 border-r border-white/5 bg-[#0B0F19]/95 md:bg-white/[0.01] backdrop-blur-2xl flex flex-col z-50 shadow-[4px_0_24px_rgba(0,0,0,0.5)] md:shadow-[4px_0_24px_rgba(0,0,0,0.2)] transform ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 transition-transform duration-300 ease-in-out`}>
         <div className="p-5 md:p-6 pb-6 md:pb-8 border-b border-white/5 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -526,7 +584,6 @@ const AdminPanel = ({ user }) => {
               <p className="text-[10px] uppercase tracking-widest text-emerald-400 font-bold mt-0.5">Premium Workspace</p>
             </div>
           </div>
-          {/* CHANGED: Close button for mobile sidebar */}
           <button 
             onClick={() => setIsMobileSidebarOpen(false)}
             className="md:hidden p-2 text-gray-400 hover:text-white transition-colors"
@@ -544,7 +601,11 @@ const AdminPanel = ({ user }) => {
                 key={item.id}
                 onClick={() => {
                   setActiveTab(item.id);
-                  setIsMobileSidebarOpen(false); // CHANGED: Close menu on mobile after selection
+                  setCurrentPage(1);
+                  // CHANGED: Reset Search on Tab Change
+                  setSearchQuery('');
+                  setDebouncedSearch('');
+                  setIsMobileSidebarOpen(false); 
                 }}
                 className={`w-full flex items-center justify-between px-4 py-3 md:py-3.5 rounded-xl text-sm font-semibold transition-all duration-300 group ${
                   isActive 
@@ -557,8 +618,7 @@ const AdminPanel = ({ user }) => {
                   {item.name}
                 </div>
                 
-                {/* Dynamic Counters in Sidebar */}
-                {item.id === 'pending' && activeTab === 'pending' && data.length > 0 && (
+                {item.id === 'pending' && activeTab === 'pending' && data.length > 0 && !searchQuery && (
                   <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full text-[10px] tracking-wider">
                     {data.length}
                   </span>
@@ -583,16 +643,16 @@ const AdminPanel = ({ user }) => {
       {/* --- MAIN CONTENT AREA --- */}
       <main className="flex-1 flex flex-col z-10 overflow-hidden relative w-full">
         
-        {/* CHANGED: Top Header Panel to handle mobile spacing and hamburger */}
-        <header className="px-4 md:px-8 py-4 md:py-6 flex items-center justify-between border-b border-white/5 bg-white/[0.01] backdrop-blur-md shrink-0 gap-4">
-          <div className="flex items-center gap-3">
+        {/* CHANGED: Header Panel with Search Bar Integration */}
+        <header className="px-4 md:px-8 py-4 md:py-6 flex flex-col md:flex-row md:items-center justify-between border-b border-white/5 bg-white/[0.01] backdrop-blur-md shrink-0 gap-4">
+          <div className="flex items-center gap-3 w-full md:w-auto">
             <button 
               onClick={() => setIsMobileSidebarOpen(true)}
-              className="md:hidden p-2 -ml-2 text-gray-400 hover:text-white transition-colors"
+              className="md:hidden p-2 -ml-2 text-gray-400 hover:text-white transition-colors shrink-0"
             >
               <Menu className="w-6 h-6" />
             </button>
-            <div>
+            <div className="truncate">
               <h2 className="text-xl md:text-2xl font-bold text-white capitalize tracking-tight truncate">
                 {activeTab.replace('-', ' ')}
               </h2>
@@ -600,32 +660,43 @@ const AdminPanel = ({ user }) => {
             </div>
           </div>
 
-          <div className="flex gap-2 md:gap-3 shrink-0">
+          <div className="flex flex-col sm:flex-row gap-3 md:gap-4 w-full md:w-auto shrink-0">
+            {/* CHANGED: Search Bar Input */}
+            {isSearchableTab && (
+              <div className="relative w-full sm:w-64 md:w-72">
+                <Search className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input 
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={`Search in ${activeTab.replace('-', ' ')}...`}
+                  className="w-full bg-white/[0.03] border border-white/10 rounded-xl pl-10 pr-4 py-2 md:py-2.5 text-white text-xs md:text-sm focus:outline-none focus:border-[#A388E1]/50 focus:bg-white/[0.05] transition-all shadow-inner placeholder:text-gray-600"
+                />
+              </div>
+            )}
+
             {activeTab === 'offers' && (
-              <button onClick={handleAddOfferClick} className="bg-[#A388E1] hover:bg-[#8b70ca] text-white px-3 md:px-5 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all shadow-[0_0_20px_rgba(163,136,225,0.3)] flex items-center gap-1.5 md:gap-2 border border-white/10 hover:scale-105 active:scale-95">
-                <Plus className="w-4 h-4 md:w-5 md:h-5" /> <span className="hidden sm:inline">New Banner</span>
+              <button onClick={handleAddOfferClick} className="bg-[#A388E1] hover:bg-[#8b70ca] text-white px-3 md:px-5 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all shadow-[0_0_20px_rgba(163,136,225,0.3)] flex items-center justify-center gap-1.5 md:gap-2 border border-white/10 hover:scale-105 active:scale-95 w-full sm:w-auto">
+                <Plus className="w-4 h-4 md:w-5 md:h-5" /> <span>New Banner</span>
               </button>
             )}
             {activeTab === 'categories' && (
-              <button onClick={handleAddCategoryClick} className="bg-blue-600 hover:bg-blue-500 text-white px-3 md:px-5 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all shadow-[0_0_20px_rgba(37,99,235,0.3)] flex items-center gap-1.5 md:gap-2 border border-white/10 hover:scale-105 active:scale-95">
-                <Plus className="w-4 h-4 md:w-5 md:h-5" /> <span className="hidden sm:inline">New Category</span>
+              <button onClick={handleAddCategoryClick} className="bg-blue-600 hover:bg-blue-500 text-white px-3 md:px-5 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all shadow-[0_0_20px_rgba(37,99,235,0.3)] flex items-center justify-center gap-1.5 md:gap-2 border border-white/10 hover:scale-105 active:scale-95 w-full sm:w-auto">
+                <Plus className="w-4 h-4 md:w-5 md:h-5" /> <span>New Category</span>
               </button>
             )}
           </div>
         </header>
 
-        {/* CHANGED: Dynamic Content Container updated padding for mobile */}
         <div className="flex-1 overflow-hidden flex flex-col p-4 md:p-6 lg:p-8">
           <div className="flex-1 flex flex-col bg-white/[0.02] border border-white/[0.05] shadow-[0_8px_32px_0_rgba(0,0,0,0.2)] rounded-2xl md:rounded-3xl overflow-hidden backdrop-blur-xl relative">
             
             {loading ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0B0F19]/50 backdrop-blur-sm z-50">
-                <div className="w-10 h-10 md:w-12 md:h-12 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
-                <p className="text-emerald-400 font-bold tracking-widest mt-4 animate-pulse text-xs md:text-sm">FETCHING DATA...</p>
+                <div className="w-10 h-10 md:w-12 md:h-12 border-4 border-[#A388E1]/20 border-t-[#A388E1] rounded-full animate-spin"></div>
+                <p className="text-[#A388E1] font-bold tracking-widest mt-4 animate-pulse text-xs md:text-sm">FETCHING DATA...</p>
               </div>
             ) : null}
-
-            {/* --- SPECIFIC TAB RENDER LOGIC --- */}
             
             {activeTab === 'overview' && !loading && (
               <DashboardOverview data={data} />
@@ -642,7 +713,6 @@ const AdminPanel = ({ user }) => {
 
             {activeTab === 'transactions' && !loading && (
               <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden">
-                {/* Income Summary Widgets - Premium Glass Style */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6 shrink-0">
                   <div className="relative overflow-hidden bg-gradient-to-br from-emerald-500/20 to-teal-900/40 rounded-2xl md:rounded-3xl p-6 md:p-8 border border-emerald-500/30 shadow-[0_8px_32px_rgba(16,185,129,0.15)] group">
                     <div className="absolute top-0 right-0 w-32 h-32 md:w-40 md:h-40 bg-emerald-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-emerald-500/30 transition-colors"></div>
@@ -663,7 +733,7 @@ const AdminPanel = ({ user }) => {
                     <div className="absolute bottom-0 left-0 w-24 h-24 md:w-32 md:h-32 bg-blue-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 group-hover:bg-blue-500/20 transition-colors"></div>
                     <div className="flex items-center justify-between relative z-10">
                       <div>
-                        <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px] md:text-xs mb-1.5 md:mb-2">Total Transactions</p>
+                        <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px] md:text-xs mb-1.5 md:mb-2">Transactions Displayed</p>
                         <h3 className="text-3xl md:text-4xl lg:text-5xl font-black text-white">{data.length}</h3>
                       </div>
                       <div className="bg-blue-500/10 p-3 md:p-4 rounded-xl md:rounded-2xl border border-blue-500/20 backdrop-blur-md hidden sm:block">
@@ -673,14 +743,13 @@ const AdminPanel = ({ user }) => {
                   </div>
                 </div>
 
-                {/* Transactions Table - Glassmorphism */}
                 {data.length === 0 ? (
                   <div className="flex-1 flex flex-col items-center justify-center text-center p-6 md:p-8 bg-white/[0.02] rounded-2xl md:rounded-3xl border border-white/5">
                     <div className="w-16 h-16 md:w-20 md:h-20 bg-white/5 rounded-full flex items-center justify-center mb-4 border border-white/10">
                       <IndianRupee className="w-8 h-8 md:w-10 md:h-10 text-gray-500" />
                     </div>
-                    <h3 className="text-lg md:text-xl font-bold text-white mb-1 tracking-tight">No Revenue Yet</h3>
-                    <p className="text-gray-500 text-xs md:text-sm">Transactions will appear here once users start buying credits.</p>
+                    <h3 className="text-lg md:text-xl font-bold text-white mb-1 tracking-tight">No Transactions Found</h3>
+                    {searchQuery ? <p className="text-gray-500 text-xs md:text-sm">Try adjusting your search terms.</p> : <p className="text-gray-500 text-xs md:text-sm">Transactions will appear here once users start buying credits.</p>}
                   </div>
                 ) : (
                   <div className="flex-1 overflow-auto admin-scroll bg-white/[0.01] rounded-xl md:rounded-2xl border border-white/5 relative">
@@ -754,6 +823,30 @@ const AdminPanel = ({ user }) => {
                     </table>
                   </div>
                 )}
+                {/* Embedded Pagination for Transactions Tab */}
+                {totalPages > 1 && data.length > 0 && (
+                  <div className="flex items-center justify-between px-4 py-3 bg-white/[0.02] border border-t-0 border-white/5 rounded-b-xl md:rounded-b-2xl shrink-0 mt-4">
+                    <p className="text-xs text-gray-500 font-medium">
+                      Page <span className="text-white font-bold">{currentPage}</span> of <span className="text-white font-bold">{totalPages}</span>
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                        disabled={currentPage === 1}
+                        className="p-1.5 md:p-2 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                        disabled={currentPage === totalPages}
+                        className="p-1.5 md:p-2 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -769,7 +862,10 @@ const AdminPanel = ({ user }) => {
                      <List className="w-6 h-6 md:w-8 md:h-8 text-gray-500" />}
                   </div>
                   <h3 className="text-lg md:text-xl font-bold text-gray-200 mb-2 tracking-tight">No Records Found</h3>
-                  <p className="text-gray-500 text-xs md:text-sm px-4">There are currently no {activeTab === 'pending' ? 'pending approvals' : activeTab === 'offers' ? 'banners available' : activeTab === 'categories' ? 'categories available' : activeTab === 'orders' ? 'active orders or swaps' : 'records to display'}.</p>
+                  {searchQuery 
+                    ? <p className="text-gray-500 text-xs md:text-sm px-4">We couldn't find anything matching "{searchQuery}". Try a different keyword.</p>
+                    : <p className="text-gray-500 text-xs md:text-sm px-4">There are currently no {activeTab === 'pending' ? 'pending approvals' : activeTab === 'offers' ? 'banners available' : activeTab === 'categories' ? 'categories available' : activeTab === 'orders' ? 'active orders or swaps' : 'records to display'}.</p>
+                  }
                 </div>
               ) : (
                 <AdminTable 
@@ -789,6 +885,9 @@ const AdminPanel = ({ user }) => {
                   handleUpdateRole={handleUpdateRole}
                   handleDeleteUser={handleDeleteUser}
                   handleEditOrderClick={handleEditOrderClick} 
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  setCurrentPage={setCurrentPage}
                 />
               )
             )}
@@ -909,7 +1008,6 @@ const AdminPanel = ({ user }) => {
                 </span>
 
                 <div className="mt-6 md:mt-8 space-y-2 md:space-y-3">
-                  {/* Reuse existing rows, just adjusting padding and text sizing for mobile */}
                   <div className="flex items-center gap-3 md:gap-4 text-gray-300 bg-white/[0.02] p-3 md:p-4 rounded-xl md:rounded-2xl border border-white/5 hover:bg-white/[0.04] transition-colors">
                     <div className="p-2 md:p-3 bg-blue-500/10 rounded-lg md:rounded-xl border border-blue-500/20"><Mail className="w-4 h-4 md:w-5 md:h-5 text-blue-400" /></div>
                     <div className="truncate">
