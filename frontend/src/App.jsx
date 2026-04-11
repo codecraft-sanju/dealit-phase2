@@ -455,7 +455,8 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
   const shouldShowBottomNav = !hideNavbarRoutes.includes(location.pathname) && !location.pathname.startsWith('/admin');
 
   return (
-    <div className="min-h-screen bg-gray-900 font-sans selection:bg-emerald-500/30 pb-16 md:pb-0"> 
+    // <-- NAYA CHANGE: 'pb-16 md:pb-0' ko conditional banaya, ab sirf tabhi lagega jab BottomNav dikhna ho -->
+    <div className={`min-h-screen bg-gray-900 font-sans selection:bg-emerald-500/30 ${shouldShowBottomNav ? 'pb-16 md:pb-0' : ''}`}> 
       <ZeroPriceAlert user={user} onCheckComplete={setHasZeroPriceIssue} />
       <PromoAlert user={user} hasZeroPriceIssue={hasZeroPriceIssue} />
       <IosInstallPopup />
