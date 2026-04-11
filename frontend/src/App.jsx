@@ -3,9 +3,17 @@ import { BrowserRouter as Router, Routes, Route, Link, useNavigate, Navigate, us
 import { Package, X, AlertCircle, ArrowLeft, Edit2, Trash2, Gift, Sparkles, Coins, Plus } from 'lucide-react';
 import axios from 'axios';
 
+// <-- TOASTIFY IMPORT -->
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
 import IosInstallPopup from './components/IosInstallPopup';
+
+
+const DesktopLandingPage = lazy(() => import('./Desktop/DesktopLandingPage'));
+
 const PrivacyPage = lazy(() => import('./components/PrivacyPage'));
 const AuthPage = lazy(() => import('./components/AuthPage'));
 const SearchPage = lazy(() => import('./components/SearchPage'));
@@ -431,7 +439,7 @@ const EditItemPage = () => {
 };
 
 const PremiumLoader = () => (
-  <div className="flex flex-col items-center justify-center min-h-screen pb-20">
+  <div className="flex flex-col items-center justify-center min-h-screen pb-20 bg-[#090714]">
     <div className="relative flex items-center justify-center w-24 h-24 mb-6">
       <div className="absolute inset-0 border-4 border-[#A388E1]/20 rounded-full"></div>
       <div className="absolute inset-0 border-4 border-transparent border-t-[#A388E1] border-r-[#FFE28A] rounded-full animate-spin"></div>
@@ -440,21 +448,36 @@ const PremiumLoader = () => (
       </div>
     </div>
     <h2 className="text-xl font-bold text-white tracking-wide mb-2">Dealit</h2>
-    <div className="flex items-center gap-1.5">
-      <div className="w-2 h-2 bg-[#A388E1] rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-      <div className="w-2 h-2 bg-[#FFE28A] rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-      <div className="w-2 h-2 bg-[#A388E1] rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-    </div>
   </div>
 );
 
 const MainAppContent = ({ user, handleLogout, setUser }) => {
   const location = useLocation();
   const [hasZeroPriceIssue, setHasZeroPriceIssue] = useState(null);
-  
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth > 1024);
+
+  // <-- SCREEN RESIZE LISTENER -->
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth > 1024);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const hideNavbarRoutes = ['/login', '/signup', '/forgot-password'];
   const shouldShowBottomNav = !hideNavbarRoutes.includes(location.pathname) && !location.pathname.startsWith('/admin');
 
+  // <-- SMART ROUTING LOGIC: Desktop par Landing Page dikhao jab tak route admin ya login na ho -->
+  if (isDesktop && !location.pathname.startsWith('/admin') && location.pathname !== '/login') {
+    return (
+      <Suspense fallback={<PremiumLoader />}>
+        <DesktopLandingPage user={user} />
+      </Suspense>
+    );
+  }
+
+  // Mobile App or Desktop Admin/Login View
   return (
     <div className={`min-h-screen bg-gray-900 font-sans selection:bg-emerald-500/30 ${shouldShowBottomNav ? 'pb-16 md:pb-0' : ''}`}> 
       <ZeroPriceAlert user={user} onCheckComplete={setHasZeroPriceIssue} />
@@ -464,7 +487,6 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
       <main>
         <Suspense fallback={<PremiumLoader />}>
           <Routes>
-            
             <Route path="/" element={
               <>
                 <Navbar user={user} onLogout={handleLogout} />
@@ -500,8 +522,6 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
             <Route path="/search" element={<SearchPage />} />
             <Route path="/items" element={<ItemsPage />} />
             <Route path="/deal/:id" element={user ? <DealDetailsPage user={user} /> : <Navigate to="/login" />} />
-            
-            {/* <-- NAYA CHANGE: Notifications ka route setup kiya --> */}
             <Route path="/notifications" element={user ? <NotificationsPage /> : <Navigate to="/login" />} />
             
             <Route path="*" element={<div className="text-white text-center mt-20 text-xl">404 - Page Not Found</div>} />
@@ -533,9 +553,12 @@ function App() {
   };
 
   return (
-    <Router>
-      <MainAppContent user={user} handleLogout={handleLogout} setUser={setUser} />
-    </Router>
+    <>
+      <Router>
+        <MainAppContent user={user} handleLogout={handleLogout} setUser={setUser} />
+      </Router>
+      <ToastContainer />
+    </>
   );
 }
 
