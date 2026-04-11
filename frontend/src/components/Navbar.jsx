@@ -120,6 +120,11 @@ const Navbar = ({ user }) => {
                     <Coins className="w-4 h-4 text-yellow-500" />
                     <span className="text-sm font-bold">{credits}</span>
                   </Link>
+
+                  {/* <-- NAYA CHANGE: Desktop ke liye notification icon add kiya --> */}
+                  <Link to="/notifications" className="text-gray-500 hover:text-[#A388E1] transition flex items-center gap-1.5">
+                    <Bell className="w-5 h-5" /> <span className="text-sm font-medium">Alerts</span>
+                  </Link>
                   
                   <Link to="/profile" className="text-gray-500 hover:text-[#A388E1] transition flex items-center gap-1.5">
                     <div className="w-8 h-8 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center border border-gray-200">
@@ -152,9 +157,10 @@ const Navbar = ({ user }) => {
                       <Shield className="w-3.5 h-3.5" />
                     </Link>
                   )}
-                  <button className="text-gray-600 hover:text-[#A388E1] p-1">
+                 
+                  <Link to="/notifications" className="text-gray-600 hover:text-[#A388E1] p-1">
                     <Bell className="w-6 h-6" />
-                  </button>
+                  </Link>
                   <Link to="/profile" className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 border border-gray-200">
                     <User className="w-5 h-5" />
                   </Link>

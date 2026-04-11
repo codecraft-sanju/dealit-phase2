@@ -25,6 +25,7 @@ const WishlistPage = lazy(() => import('./components/WishlistPage'));
 const CheckoutPage = lazy(() => import('./components/CheckoutPage'));
 const OrdersPage = lazy(() => import('./components/OrdersPage'));
 const DeleteAccountPage = lazy(() => import('./components/DeleteAccountPage'));
+const NotificationsPage = lazy(() => import('./notification/NotificationsPage'));
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -322,7 +323,7 @@ const EditItemPage = () => {
       } catch (err) {
         setError('Failed to load item details.');
       } finally {
-        loading(false);
+        setLoading(false);
       }
     };
     fetchItemDetails();
@@ -455,7 +456,6 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
   const shouldShowBottomNav = !hideNavbarRoutes.includes(location.pathname) && !location.pathname.startsWith('/admin');
 
   return (
-    // <-- NAYA CHANGE: 'pb-16 md:pb-0' ko conditional banaya, ab sirf tabhi lagega jab BottomNav dikhna ho -->
     <div className={`min-h-screen bg-gray-900 font-sans selection:bg-emerald-500/30 ${shouldShowBottomNav ? 'pb-16 md:pb-0' : ''}`}> 
       <ZeroPriceAlert user={user} onCheckComplete={setHasZeroPriceIssue} />
       <PromoAlert user={user} hasZeroPriceIssue={hasZeroPriceIssue} />
@@ -500,6 +500,9 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
             <Route path="/search" element={<SearchPage />} />
             <Route path="/items" element={<ItemsPage />} />
             <Route path="/deal/:id" element={user ? <DealDetailsPage user={user} /> : <Navigate to="/login" />} />
+            
+            {/* <-- NAYA CHANGE: Notifications ka route setup kiya --> */}
+            <Route path="/notifications" element={user ? <NotificationsPage /> : <Navigate to="/login" />} />
             
             <Route path="*" element={<div className="text-white text-center mt-20 text-xl">404 - Page Not Found</div>} />
           </Routes>

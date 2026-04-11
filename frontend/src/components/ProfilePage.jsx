@@ -16,7 +16,7 @@ const ProfilePage = ({ user, onLogout }) => {
   const [showAccountDetails, setShowAccountDetails] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
-  // <-- NAYA CHANGE: States for Edit Profile Modal
+
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [editForm, setEditForm] = useState({
