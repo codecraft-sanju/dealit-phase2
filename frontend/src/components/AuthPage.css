@@ -42,16 +42,38 @@
   grid-template-columns: repeat(2, 1fr);
 }
 
+.auth-form {
+  position: absolute;
+  top: 50%;
+  left: 75%;
+  transform: translate(-50%, -50%);
+  width: 50%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: 1fr;
+  z-index: 5;
+  transition: 1s 0.7s ease-in-out;
+}
+
 .auth-form-wrap {
   display: flex;
   align-items: center;
-  justify-content: center;
   flex-direction: column;
   padding: 0 5rem;
-  overflow: hidden;
   grid-column: 1 / 2;
   grid-row: 1 / 2;
   transition: 0.2s 0.7s ease-in-out;
+  
+  /* Scroll Enable Kiya Gaya Hai */
+  overflow-y: auto;
+  max-height: 100%;
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+/* Hide scrollbar for Chrome/Safari for cleaner UI */
+.auth-form-wrap::-webkit-scrollbar {
+  display: none;
 }
 
 .auth-form-wrap.form__sign-in {
@@ -63,16 +85,11 @@
   opacity: 0;
 }
 
-.auth-form {
-  position: absolute;
-  top: 50%;
-  left: 75%;
-  transform: translate(-50%, -50%);
-  width: 50%;
-  display: grid;
-  grid-template-columns: 1fr;
-  z-index: 5;
-  transition: 1s 0.7s ease-in-out;
+/* Desktop Centering */
+@media (min-width: 871px) {
+  .auth-form-wrap {
+    justify-content: center;
+  }
 }
 
 .form__title {
@@ -151,6 +168,24 @@
 .form__submit:disabled {
   background-color: #d1c4e9;
   cursor: not-allowed;
+}
+
+.form__footer-text {
+  margin-top: 10px;
+  font-size: 0.9rem;
+  color: #444;
+}
+
+.form__footer-text a {
+  color: #444;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.go-back-btn {
+  color: #A388E1;
+  cursor: pointer;
+  font-weight: bold;
 }
 
 .panel {
@@ -271,6 +306,7 @@
   margin: 0 auto 10px auto;
 }
 
+/* MOBILE RESPONSIVENESS */
 @media (max-width: 870px) {
   .auth-container {
     min-height: 800px;
@@ -286,13 +322,35 @@
     top: initial;
     transition: 2s ease-in-out;
   }
+  
+  /* CRITICAL FIX FOR SCROLLING */
   .auth-form {
     width: 100%;
+    height: 68vh; /* Fixed height constrain karta hai taki form scroll ho sake */
     left: 50%;
     top: 95%;
     transform: translate(-50%, -100%);
     transition: 1s 0.8s ease-in-out;
   }
+  .auth-container.sign-up-mode .auth-form {
+    top: 5%;
+    transform: translate(-50%, 0);
+    left: 50%;
+  }
+  
+  .auth-form-wrap {
+    justify-content: flex-start; /* Ye line insure karti hai ki top cut na ho */
+    padding: 1.5rem 1.5rem 4rem 1.5rem; /* 4rem bottom padding taki button clear dikhe */
+  }
+
+  /* Short forms ko vertically center karne ke liye hack */
+  .form__title {
+    margin-top: auto;
+  }
+  .form__footer-text {
+    margin-bottom: auto;
+  }
+
   .auth-container__panels {
     grid-template-columns: 1fr;
     grid-template-rows: 1fr 2fr 1fr;
@@ -330,16 +388,11 @@
   .auth-container.sign-up-mode .panel__left .panel__content {
     transform: translateY(-300px);
   }
-  .auth-container.sign-up-mode .auth-form {
-    top: 5%;
-    transform: translate(-50%, 0);
-    left: 50%;
-  }
 }
 
 @media (max-width: 570px) {
   .auth-form-wrap {
-    padding: 0 1.5rem;
+    padding: 1.5rem 1rem 5rem 1rem; /* Chhoti screen par aur padding bottom me */
   }
   .panel__image {
     display: none;

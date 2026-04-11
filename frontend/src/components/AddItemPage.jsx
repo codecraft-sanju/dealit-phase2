@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { X, Plus, ChevronLeft, Gift, Image as ImageIcon, Sparkles, Wand2, Scale, Box } from 'lucide-react'; // <-- NAYA CHANGE: Added Scale and Box icons
 import axios from 'axios';
 import Cropper from 'react-easy-crop'; 
+import { toast } from 'react-toastify'; // <-- NEW CHANGE: Imported toast from react-toastify
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -147,7 +148,7 @@ const AddItemPage = ({ user, setUser }) => {
   });
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  // <-- MODIFIED: Removed local error state to use react-toastify instead
   
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
@@ -218,7 +219,7 @@ const AddItemPage = ({ user, setUser }) => {
 
   const handleImageSelect = (e) => {
     if (images.length >= 5) {
-      setError('You can only upload a maximum of 5 images.');
+      toast.error('You can only upload a maximum of 5 images.'); // <-- MODIFIED: Replaced setError with toast.error
       return;
     }
 
@@ -242,7 +243,6 @@ const AddItemPage = ({ user, setUser }) => {
 
   const handleCropAndUpload = async () => {
     setIsProcessingCrop(true);
-    setError('');
     try {
       const croppedImageBlob = await getCroppedImg(imageToCrop, croppedAreaPixels);
 
@@ -262,7 +262,7 @@ const AddItemPage = ({ user, setUser }) => {
       setImageToCrop(null);
     } catch (err) {
       console.error('Upload Error:', err);
-      setError('Failed to upload image. Please try again.');
+      toast.error('Failed to upload image. Please try again.'); // <-- MODIFIED: Replaced setError with toast.error
     } finally {
       setIsProcessingCrop(false);
     }
@@ -300,13 +300,12 @@ const AddItemPage = ({ user, setUser }) => {
 
   const handleAutoFillFromImages = async () => {
     if (images.length === 0) {
-      setError("Please upload at least 1 image first so the AI can analyze your item.");
+      toast.error("Please upload at least 1 image first so the AI can analyze your item."); // <-- MODIFIED: Replaced setError with toast.error
       return;
     }
 
     setIsAutoFilling(true);
     setAnalyzeProgress(0);
-    setError('');
 
     // Simulate progress uploading and scanning logic
     const progressInterval = setInterval(() => {
@@ -357,7 +356,7 @@ const AddItemPage = ({ user, setUser }) => {
         description: prev.description || fallbackData.description
       }));
       
-      setError("AI couldn't analyze the images right now. We filled in some generic details, please edit them manually.");
+      toast.warning("AI couldn't analyze the images right now. We filled in some generic details, please edit them manually."); // <-- MODIFIED: Replaced setError with toast.warning
       setIsAutoFilling(false);
       setAnalyzeProgress(0);
     }
@@ -378,12 +377,11 @@ const AddItemPage = ({ user, setUser }) => {
 
   const handleGenerateDescription = async () => {
     if (!formData.title || !formData.category) {
-      setError("Please enter a Title and select a Category first so the AI knows what to write about.");
+      toast.error("Please enter a Title and select a Category first so the AI knows what to write about."); // <-- MODIFIED: Replaced setError with toast.error
       return;
     }
 
     setIsGeneratingAI(true);
-    setError('');
 
     try {
       const response = await axios.post(
@@ -403,7 +401,7 @@ const AddItemPage = ({ user, setUser }) => {
       console.error("AI Generation failed:", err);
       const fallbackText = getFallbackDescription(formData.title, formData.category, formData.condition);
       setFormData(prev => ({ ...prev, description: fallbackText }));
-      setError("AI is currently busy. We added a basic template for you, feel free to edit it!");
+      toast.warning("AI is currently busy. We added a basic template for you, feel free to edit it!"); // <-- MODIFIED: Replaced setError with toast.warning
     } finally {
       setIsGeneratingAI(false);
     }
@@ -411,10 +409,9 @@ const AddItemPage = ({ user, setUser }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
 
     if (images.length < 3) {
-      setError('Please upload at least 3 images of your item.');
+      toast.error('Please upload at least 3 images of your item.'); // <-- MODIFIED: Replaced setError with toast.error
       return;
     }
 
@@ -424,7 +421,7 @@ const AddItemPage = ({ user, setUser }) => {
       : parseFloat(formData.weightCategory);
 
     if (formData.weightCategory === 'custom' && (!finalWeight || finalWeight <= 0)) {
-       setError("Please enter a valid custom weight in Kg.");
+       toast.error("Please enter a valid custom weight in Kg."); // <-- MODIFIED: Replaced setError with toast.error
        return;
     }
 
@@ -461,11 +458,11 @@ const AddItemPage = ({ user, setUser }) => {
           console.error("Failed to update user profile locally", e);
         }
 
-        window.alert(response.data.message);
+        toast.success(response.data.message); // <-- MODIFIED: Replaced window.alert with toast.success
         navigate('/dashboard'); 
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to list item. Please try again.');
+      toast.error(err.response?.data?.message || 'Failed to list item. Please try again.'); // <-- MODIFIED: Replaced setError with toast.error
     } finally {
       setLoading(false);
     }
@@ -536,11 +533,7 @@ const AddItemPage = ({ user, setUser }) => {
             </div>
           )}
 
-          {error && (
-            <div className="bg-red-50 text-red-600 border border-red-200 text-sm px-4 py-3 rounded-2xl mb-6 shadow-sm">
-              {error}
-            </div>
-          )}
+          {/* <-- MODIFIED: Removed the inline error rendering div since we are using toast notifications everywhere now --> */}
 
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
             

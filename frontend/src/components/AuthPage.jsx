@@ -158,8 +158,8 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
               
               <input type="submit" className="form__submit" value={loading ? "Signing In..." : "Sign In"} disabled={loading} />
               
-              <p style={{marginTop: '10px', fontSize: '0.9rem'}}>
-                <a href="/forgot-password" style={{color: '#444', textDecoration: 'none', fontWeight: '500'}}>Forgot your password?</a>
+              <p className="form__footer-text">
+                <a href="/forgot-password">Forgot your password?</a>
               </p>
             </form>
 
@@ -228,8 +228,8 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                   
                   <input type="submit" className="form__submit" value={loading ? "Verifying..." : "Verify & Login"} disabled={loading || otp.length < 6} />
                   
-                  <p style={{marginTop: '15px', fontSize: '0.9rem', color: '#444'}}>
-                    Wrong email? <span onClick={() => setShowOtp(false)} style={{color: '#A388E1', cursor: 'pointer', fontWeight: 'bold'}}>Go back</span>
+                  <p className="form__footer-text">
+                    Wrong email? <span onClick={() => setShowOtp(false)} className="go-back-btn">Go back</span>
                   </p>
                 </>
               )}
