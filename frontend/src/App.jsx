@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Link, useNavigate, Navigate, us
 import { Package, X, AlertCircle, ArrowLeft, Edit2, Trash2, Gift, Sparkles, Coins, Plus } from 'lucide-react';
 import axios from 'axios';
 
-// <-- TOASTIFY IMPORT -->
+
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
