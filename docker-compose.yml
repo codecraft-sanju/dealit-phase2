@@ -10,7 +10,7 @@ services:
   frontend:
     build: ./frontend # Isko 'frontend' hi rehne do agar folder small 'f' se hai
     ports:
-      - "5173:80"     # Yeh sahi hai, container ke andar Nginx port 80 par hoga aur bahar 5173 par
+      - "80:80"       # Yahan 5173 hata kar 80 kar diya hai
     depends_on:
       - backend
     restart: always
