@@ -10,7 +10,7 @@ services:
   frontend:
     build: ./frontend # Isko 'frontend' hi rehne do agar folder small 'f' se hai
     ports:
-      - "80:80"       # Yahan 5173 hata kar 80 kar diya hai
+      - "5173:80"     # YAHAN CHANGE KARNA HAI: Isko wapas 5173 kar do taaki port 80 Nginx ke liye free ho jaye
     depends_on:
       - backend
     restart: always
