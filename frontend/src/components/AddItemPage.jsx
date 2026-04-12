@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Plus, ChevronLeft, Gift, Image as ImageIcon, Sparkles, Wand2, Scale, Box } from 'lucide-react'; // <-- NAYA CHANGE: Added Scale and Box icons
 import axios from 'axios';
 import Cropper from 'react-easy-crop'; 
 import { toast } from 'react-toastify'; // <-- NEW CHANGE: Imported toast from react-toastify
 import { removeBackground } from '@imgly/background-removal';
+import { useQuery } from '@tanstack/react-query'; // <-- NAYA CHANGE: Imported React Query
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -153,16 +154,35 @@ const AddItemPage = ({ user, setUser }) => {
   const [loading, setLoading] = useState(false);
   // <-- MODIFIED: Removed local error state to use react-toastify instead
   
-  const [categories, setCategories] = useState([]);
-  const [loadingCategories, setLoadingCategories] = useState(true);
+  // <-- NAYA CHANGE: Replaced useEffect and manual states with useQuery for Categories
+  const { data: categories = [], isLoading: loadingCategories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const res = await axios.get(`${API_URL}/categories`);
+      return res.data.success ? res.data.data : [];
+    },
+    staleTime: 1000 * 60 * 30, // Cache for 30 minutes
+  });
 
-  const [systemSettings, setSystemSettings] = useState({
+  // <-- NAYA CHANGE: Replaced useEffect and manual states with useQuery for Settings
+  const { data: systemSettings = {
     isCreditSystemEnabled: true,
     creditsPerListing: 50,
     maxListingsRewarded: 3,
     maxAllowedListings: 5 
+  }, isLoading: loadingSettings } = useQuery({
+    queryKey: ['creditSettings'],
+    queryFn: async () => {
+      const res = await axios.get(`${API_URL}/admin/credit-settings`, { withCredentials: true });
+      return res.data.success && res.data.data ? res.data.data : {
+        isCreditSystemEnabled: true,
+        creditsPerListing: 50,
+        maxListingsRewarded: 3,
+        maxAllowedListings: 5 
+      };
+    },
+    staleTime: 1000 * 60 * 30, // Cache for 30 minutes
   });
-  const [loadingSettings, setLoadingSettings] = useState(true);
 
   const [cropModalOpen, setCropModalOpen] = useState(false);
   const [imageToCrop, setImageToCrop] = useState(null);
@@ -182,28 +202,6 @@ const AddItemPage = ({ user, setUser }) => {
 
   const listedCount = user?.listedProductsCount || 0;
   const isLimitReached = listedCount >= systemSettings.maxAllowedListings;
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const catRes = await axios.get(`${API_URL}/categories`);
-        if (catRes.data.success) {
-          setCategories(catRes.data.data);
-        }
-
-        const settingsRes = await axios.get(`${API_URL}/admin/credit-settings`, { withCredentials: true });
-        if (settingsRes.data.success && settingsRes.data.data) {
-          setSystemSettings(settingsRes.data.data);
-        }
-      } catch (err) {
-        console.error('Error fetching initial data:', err);
-      } finally {
-        setLoadingCategories(false);
-        setLoadingSettings(false);
-      }
-    };
-    fetchData();
-  }, []);
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });

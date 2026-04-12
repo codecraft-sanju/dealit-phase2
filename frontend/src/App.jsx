@@ -3,14 +3,13 @@ import { BrowserRouter as Router, Routes, Route, Link, useNavigate, Navigate, us
 import { Package, X, AlertCircle, ArrowLeft, Edit2, Trash2, Gift, Sparkles, Coins, Plus } from 'lucide-react';
 import axios from 'axios';
 
-
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'; // <-- Import already added by you
 
 import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
 import IosInstallPopup from './components/IosInstallPopup';
-
 
 const DesktopLandingPage = lazy(() => import('./Desktop/DesktopLandingPage'));
 
@@ -37,6 +36,16 @@ const NotificationsPage = lazy(() => import('./notification/NotificationsPage'))
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
+
+// <-- NAYA CHANGE: Initialize QueryClient here outside the component -->
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false, // Window focus karne par bar-bar refetch nahi karega
+      retry: 1, // Fail hone par sirf 1 baar retry karega
+    },
+  },
+});
 
 axios.interceptors.request.use(
   (config) => {
@@ -553,12 +562,13 @@ function App() {
   };
 
   return (
-    <>
+    // <-- NAYA CHANGE: Wrapped the entire app in QueryClientProvider -->
+    <QueryClientProvider client={queryClient}>
       <Router>
         <MainAppContent user={user} handleLogout={handleLogout} setUser={setUser} />
       </Router>
       <ToastContainer />
-    </>
+    </QueryClientProvider>
   );
 }
 
