@@ -4,6 +4,8 @@ const CreditSetting = require('../models/CreditSetting');
 const Transaction = require('../models/Transaction');
 const Order = require('../models/Order');
 const BarterRequest = require('../models/BarterRequest');
+// <-- NAYA CHANGE: Notification model import kiya -->
+const Notification = require('../models/Notification');
 
 // CHANGED: Added search logic for Pending Items
 const getPendingItems = async (req, res) => {
@@ -130,6 +132,23 @@ const updateItemStatus = async (req, res) => {
     }
 
     await item.save();
+
+    // <-- NAYA CHANGE: User ko in-app notification bhejna start -->
+    if ((status === 'active' && !wasAlreadyActive) || status === 'rejected') {
+      const notifTitle = status === 'active' ? 'Item Approved! ✅' : 'Item Rejected ❌';
+      const notifMessage = status === 'active' 
+        ? `Aapka item "${item.title}" approve ho gaya hai aur ab live hai.` 
+        : `Aapka item "${item.title}" reject kar diya gaya hai. Reason: ${item.rejection_reason}`;
+      
+      await Notification.create({
+        user: item.owner,
+        type: 'SYSTEM',
+        title: notifTitle,
+        message: notifMessage,
+        metadata: { referenceId: item._id, newStatus: status }
+      });
+    }
+    // <-- NAYA CHANGE: User ko in-app notification bhejna end -->
 
     if (status === 'active' && !wasAlreadyActive) {
       let setting = await CreditSetting.findOne();

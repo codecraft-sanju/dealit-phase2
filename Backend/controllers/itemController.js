@@ -4,6 +4,8 @@ const CreditSetting = require('../models/CreditSetting');
 const mongoose = require('mongoose');
 // CHANGED: Notification model import kiya
 const Notification = require('../models/Notification');
+// <-- NAYA CHANGE: sendEmail utility import kiya -->
+const sendEmail = require('../utils/sendEmail');
 
 const createItem = async (req, res) => {
   try {
@@ -62,6 +64,21 @@ const createItem = async (req, res) => {
       message: `Aapka item "${title}" review ke liye chala gaya hai. Approve hone par aapko credits milenge.`,
       metadata: { reason: 'item_pending_review', referenceId: savedItem._id }
     });
+
+    // <-- NAYA CHANGE: Admin ko email bhejna start -->
+    try {
+      const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_USER; 
+      const emailMessage = `A new item "${title}" has been submitted for review.\n\nCategory: ${category}\nCondition: ${condition}\nEstimated Value: ${estimated_value || 0}\n\nPlease login to the admin panel to accept or reject this item.`;
+      
+      await sendEmail({
+        email: adminEmail,
+        subject: `Action Required: New Item "${title}" Pending Review`,
+        message: emailMessage
+      });
+    } catch (emailError) {
+      console.error('Error sending email to admin:', emailError);
+    }
+    // <-- NAYA CHANGE: Admin ko email bhejna end -->
 
     res.status(201).json({ 
       success: true, 
