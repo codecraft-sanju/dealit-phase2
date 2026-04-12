@@ -4,9 +4,12 @@ import { X, Plus, ChevronLeft, Gift, Image as ImageIcon, Sparkles, Wand2, Scale,
 import axios from 'axios';
 import Cropper from 'react-easy-crop'; 
 import { toast } from 'react-toastify'; // <-- NEW CHANGE: Imported toast from react-toastify
+import { removeBackground } from '@imgly/background-removal';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
+
+const blobToOriginalMap = new Map();
 
 const createImage = (url) =>
   new Promise((resolve, reject) => {
@@ -268,22 +271,38 @@ const AddItemPage = ({ user, setUser }) => {
     }
   };
 
-  const toggleAIBackground = (index) => {
+  const toggleAIBackground = async (index) => {
     setProcessingAIIndex(index);
     const currentUrl = images[index];
-    let newUrl = "";
-    const aiParams = "e_background_removal/e_shadow:40,x_0,y_15/b_rgb:F8F9FA/";
 
-    if (currentUrl.includes("e_background_removal")) {
-      newUrl = currentUrl.replace(aiParams, "");
-    } else {
-      const urlParts = currentUrl.split('/upload/');
-      newUrl = `${urlParts[0]}/upload/${aiParams}${urlParts[1]}`;
+    if (currentUrl.startsWith("blob:")) {
+      const originalUrl = blobToOriginalMap.get(currentUrl);
+      if (originalUrl) {
+        const updatedImages = [...images];
+        updatedImages[index] = originalUrl;
+        setImages(updatedImages);
+      }
+      setProcessingAIIndex(null);
+      return;
     }
 
-    const updatedImages = [...images];
-    updatedImages[index] = newUrl;
-    setImages(updatedImages);
+    try {
+      const imageBlob = await removeBackground(currentUrl);
+      const transparentImageUrl = URL.createObjectURL(imageBlob);
+      
+      blobToOriginalMap.set(transparentImageUrl, currentUrl);
+
+      const updatedImages = [...images];
+      updatedImages[index] = transparentImageUrl;
+      setImages(updatedImages);
+      
+      toast.success("Background removed successfully!");
+    } catch (error) {
+      console.error("Local AI Background Removal Error:", error);
+      toast.error("Failed to remove background. Try a clearer image.");
+    } finally {
+      setProcessingAIIndex(null);
+    }
   };
 
   const removeImage = (indexToRemove) => {
@@ -544,7 +563,7 @@ const AddItemPage = ({ user, setUser }) => {
               
               <div className="flex flex-wrap gap-3 sm:gap-4 items-start">
                 {images.map((url, index) => {
-                  const isAIApplied = url.includes("e_background_removal");
+                  const isAIApplied = url.startsWith("blob:");
                   const isProcessing = processingAIIndex === index;
                   
                   return (

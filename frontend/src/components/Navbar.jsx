@@ -44,16 +44,17 @@ const DealitText = () => (
 const Navbar = ({ user }) => {
   const location = useLocation();
   const [credits, setCredits] = useState(user?.account_credits || 0);
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  useEffect(() => {}, [location.pathname]);
-
+  // Credits aur Notifications ek sath fetch kar rahe hain
   useEffect(() => {
-    const fetchFreshCredits = async () => {
+    const fetchUserData = async () => {
       if (!user) return;
       try {
-        const response = await axios.get(`${API_URL}/users/profile`, { withCredentials: true });
-        if (response.data.success) {
-          const freshCredits = response.data.data.account_credits;
+        // Fetch Credits
+        const profileResponse = await axios.get(`${API_URL}/users/profile`, { withCredentials: true });
+        if (profileResponse.data.success) {
+          const freshCredits = profileResponse.data.data.account_credits;
           setCredits(freshCredits);
           
           const storedUser = JSON.parse(localStorage.getItem('dealit_user'));
@@ -62,12 +63,18 @@ const Navbar = ({ user }) => {
             localStorage.setItem('dealit_user', JSON.stringify(storedUser));
           }
         }
+
+        // Fetch Unread Notification Count
+        const notifResponse = await axios.get(`${API_URL}/notifications?limit=1`, { withCredentials: true });
+        if (notifResponse.data.success) {
+          setUnreadCount(notifResponse.data.unreadCount || 0);
+        }
       } catch (error) {
-        console.error('Error fetching fresh credits:', error);
+        console.error('Error fetching user data for Navbar:', error);
       }
     };
 
-    fetchFreshCredits();
+    fetchUserData();
   }, [user, location.pathname]);
 
   return (
@@ -121,9 +128,17 @@ const Navbar = ({ user }) => {
                     <span className="text-sm font-bold">{credits}</span>
                   </Link>
 
-                  {/* <-- NAYA CHANGE: Desktop ke liye notification icon add kiya --> */}
-                  <Link to="/notifications" className="text-gray-500 hover:text-[#A388E1] transition flex items-center gap-1.5">
-                    <Bell className="w-5 h-5" /> <span className="text-sm font-medium">Alerts</span>
+                  {/* <-- NAYA CHANGE: Desktop ke liye notification icon with badge --> */}
+                  <Link to="/notifications" className="text-gray-500 hover:text-[#A388E1] transition flex items-center gap-1.5 relative">
+                    <div className="relative">
+                      <Bell className="w-5 h-5" />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full border border-white">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-sm font-medium">Alerts</span>
                   </Link>
                   
                   <Link to="/profile" className="text-gray-500 hover:text-[#A388E1] transition flex items-center gap-1.5">
@@ -158,8 +173,13 @@ const Navbar = ({ user }) => {
                     </Link>
                   )}
                  
-                  <Link to="/notifications" className="text-gray-600 hover:text-[#A388E1] p-1">
+                  <Link to="/notifications" className="text-gray-600 hover:text-[#A388E1] p-1 relative">
                     <Bell className="w-6 h-6" />
+                    {unreadCount > 0 && (
+                      <span className="absolute top-0.5 right-0.5 bg-red-500 text-white text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full border border-white">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
                   </Link>
                   <Link to="/profile" className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 border border-gray-200">
                     <User className="w-5 h-5" />

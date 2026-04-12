@@ -1,5 +1,7 @@
 const User = require('../models/User');
 const CreditSetting = require('../models/CreditSetting'); 
+// CHANGED: Notification model import kiya
+const Notification = require('../models/Notification');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const sendEmail = require('../utils/sendEmail');
@@ -113,8 +115,27 @@ const registerUser = async (req, res) => {
 
               if (referrer.totalReferrals === 1) {
                 referrer.account_credits += setting.referralRewardCredits;
+                
+                // CHANGED: Referral notification add kiya
+                await Notification.create({
+                  user: referrer._id,
+                  type: 'CREDIT_ADDED',
+                  title: 'Referral Bonus! 🎉',
+                  message: `Aapke code se naya user join hua. Aapko ${setting.referralRewardCredits} credits mile hain.`,
+                  metadata: { amount: setting.referralRewardCredits, reason: 'referral_bonus' }
+                });
+
               } else if (referrer.totalReferrals === setting.maxReferralLimit) {
                 referrer.account_credits += setting.milestoneReferralReward;
+                
+                // CHANGED: Milestone notification add kiya
+                await Notification.create({
+                  user: referrer._id,
+                  type: 'CREDIT_ADDED',
+                  title: 'Milestone Unlocked! 🚀',
+                  message: `Aapne max referrals complete kar liye. ${setting.milestoneReferralReward} bonus credits added.`,
+                  metadata: { amount: setting.milestoneReferralReward, reason: 'milestone_bonus' }
+                });
               }
 
               await referrer.save();
@@ -481,6 +502,15 @@ const claimWelcomeBonus = async (req, res) => {
     user.account_credits += amount;
     user.hasClaimedWelcomeBonus = true;
     await user.save();
+
+    // CHANGED: Welcome bonus notification add kiya
+    await Notification.create({
+      user: user._id,
+      type: 'CREDIT_ADDED',
+      title: 'Welcome Bonus! 🎉',
+      message: `Aapko Dealit join karne par ${amount} credits mile hain. Start exploring!`,
+      metadata: { amount: amount, reason: 'signup_bonus' }
+    });
 
     res.status(200).json({
       success: true,

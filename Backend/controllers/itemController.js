@@ -2,6 +2,8 @@ const Item = require('../models/Item');
 const User = require('../models/User'); 
 const CreditSetting = require('../models/CreditSetting'); 
 const mongoose = require('mongoose');
+// CHANGED: Notification model import kiya
+const Notification = require('../models/Notification');
 
 const createItem = async (req, res) => {
   try {
@@ -51,6 +53,15 @@ const createItem = async (req, res) => {
 
     user.listedProductsCount += 1;
     await user.save();
+
+    // CHANGED: Item submit hone par system notification add ki
+    await Notification.create({
+      user: req.user._id,
+      type: 'SYSTEM',
+      title: 'Item Submitted! 📦',
+      message: `Aapka item "${title}" review ke liye chala gaya hai. Approve hone par aapko credits milenge.`,
+      metadata: { reason: 'item_pending_review', referenceId: savedItem._id }
+    });
 
     res.status(201).json({ 
       success: true, 

@@ -13,6 +13,7 @@ const offerRoutes = require('./routes/offerRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const aiRoutes = require('./routes/aiRoutes')
+const notificationRoutes = require('./routes/notificationRoutes');
 const app = express();
 
 connectDB();
@@ -45,6 +46,7 @@ app.use('/api/offers', offerRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 const PORT = process.env.PORT || 5000;
 

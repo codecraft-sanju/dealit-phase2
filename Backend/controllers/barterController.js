@@ -1,6 +1,8 @@
 const BarterRequest = require('../models/BarterRequest');
 const Item = require('../models/Item');
 const User = require('../models/User'); 
+// CHANGED: Notification model import kiya
+const Notification = require('../models/Notification');
 
 const createBarterRequest = async (req, res) => {
   try {
@@ -49,10 +51,12 @@ const createBarterRequest = async (req, res) => {
       });
     }
 
+    const targetOwnerId = receiver || targetItem.owner;
+
     const newRequest = new BarterRequest({
       supabaseId: `mongo-barter-${Date.now()}`,
       requester: req.user._id,
-      owner: receiver || targetItem.owner,
+      owner: targetOwnerId,
       item: requestedItem, 
       offered_item: offeredItem, 
       status: 'PENDING',
@@ -63,6 +67,16 @@ const createBarterRequest = async (req, res) => {
     });
 
     const savedRequest = await newRequest.save();
+
+    // CHANGED: Target item ke owner ko naye offer ki notification bheji
+    await Notification.create({
+      user: targetOwnerId,
+      type: 'TRADE_ALERT',
+      title: 'New Trade Offer! 🤝',
+      message: `Aapke item "${targetItem.title}" ke badle ek naya offer aaya hai.`,
+      metadata: { reason: 'new_offer', referenceId: savedRequest._id }
+    });
+
     res.status(201).json({ success: true, data: savedRequest });
   } catch (error) {
     console.error(error);
@@ -226,6 +240,24 @@ const updateSwapStatus = async (req, res) => {
         
         requesterDoc.account_credits -= requiredCredits;
         await requesterDoc.save();
+
+        // CHANGED: Agar credit diff tha, toh requester ko deduction ki notification
+        await Notification.create({
+          user: barter.requester._id,
+          type: 'CREDIT_DEDUCTED',
+          title: 'Trade Accepted! 🎉',
+          message: `Aapka trade offer accept ho gaya hai. Difference cover karne ke liye ${requiredCredits} credits deduct hue.`,
+          metadata: { amount: requiredCredits, reason: 'trade_difference', referenceId: barter._id }
+        });
+      } else {
+         // CHANGED: Agar koi credit diff nahi tha, toh sirf acceptance ki notification
+         await Notification.create({
+          user: barter.requester._id,
+          type: 'TRADE_ALERT',
+          title: 'Trade Accepted! 🎉',
+          message: `Aapka offer accept ho gaya hai! Deal lock karke chat start karein.`,
+          metadata: { reason: 'trade_accepted', referenceId: barter._id }
+        });
       }
 
       // 2. 'swapped' ki jagah 'reserved' status set karo taaki deal process me dikhe
@@ -245,6 +277,15 @@ const updateSwapStatus = async (req, res) => {
           offered_item: barter.offered_item.title
         }
       };
+    } else if (status === 'REJECTED') {
+      // CHANGED: Reject hone par requester ko notify karo
+      await Notification.create({
+        user: barter.requester._id,
+        type: 'TRADE_ALERT',
+        title: 'Offer Declined 😔',
+        message: `Aapka offer "${barter.item.title}" ke liye decline kar diya gaya hai.`,
+        metadata: { reason: 'trade_rejected', referenceId: barter._id }
+      });
     }
 
     barter.status = status;

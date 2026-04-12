@@ -2,6 +2,8 @@ const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const User = require('../models/User'); 
 const Transaction = require('../models/Transaction');
+// CHANGED: Notification model import kiya
+const Notification = require('../models/Notification');
 
 // Razorpay instance initialize karna
 const razorpayInstance = new Razorpay({
@@ -83,6 +85,19 @@ const verifyPayment = async (req, res) => {
         { new: true }
       ).select('-password'); 
 
+      // CHANGED: Wallet recharge ki notification add ki
+      await Notification.create({
+        user: userId,
+        type: 'CREDIT_ADDED',
+        title: 'Wallet Recharged! 💳',
+        message: `Aapke account me ${actualAmountInINR} credits successfully add ho gaye hain.`,
+        metadata: { 
+          amount: actualAmountInINR, 
+          reason: 'wallet_recharge',
+          referenceId: newTransaction._id 
+        }
+      });
+
       res.status(200).json({
         success: true,
         message: 'Payment verified, transaction saved, and credits added successfully',
@@ -96,6 +111,7 @@ const verifyPayment = async (req, res) => {
     res.status(500).json({ success: false, message: 'Internal Server Error during verification' });
   }
 };
+
 module.exports = {
   createOrder,
   verifyPayment

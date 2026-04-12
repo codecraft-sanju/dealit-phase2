@@ -5,6 +5,8 @@ const CreditSetting = require('../models/CreditSetting');
 const Transaction = require('../models/Transaction'); 
 const crypto = require('crypto'); 
 const { checkServiceability, createShiprocketOrder } = require('../utils/shiprocket');
+// CHANGED: Notification model import kiya
+const Notification = require('../models/Notification');
 
 const calculateShippingCost = async (req, res) => {
   try {
@@ -153,6 +155,24 @@ const createOrder = async (req, res) => {
       }
     });
 
+    // CHANGED: Buyer ko credit deduction ki notification
+    await Notification.create({
+      user: buyerId,
+      type: 'CREDIT_DEDUCTED',
+      title: 'Order Confirmed! 🛒',
+      message: `Aapne "${item.title}" successfully purchase kar liya hai. ${itemPrice} credits deduct hue.`,
+      metadata: { amount: itemPrice, reason: 'item_purchase', referenceId: order._id }
+    });
+
+    // CHANGED: Seller ko naye order ki notification
+    await Notification.create({
+      user: item.owner._id,
+      type: 'ORDER_UPDATE',
+      title: 'New Order Received! 🎉',
+      message: `Kisi ne aapka item "${item.title}" kharid liya hai. Please pack the item!`,
+      metadata: { referenceId: order._id }
+    });
+
     // <-- NAYA CHANGE: PUSH TO SHIPROCKET AFTER SUCCESSFUL DB SAVE -->
     try {
       const orderDate = new Date().toISOString().slice(0, 19).replace('T', ' '); // YYYY-MM-DD HH:MM:SS
@@ -279,6 +299,15 @@ const updateOrderStatus = async (req, res) => {
         
         order.isSellerPaid = true;
 
+        // CHANGED: Seller ko payment receive hone ki notification
+        await Notification.create({
+          user: seller._id,
+          type: 'CREDIT_ADDED',
+          title: 'Payment Released! 💰',
+          message: `Order delivered! ${order.itemPrice} credits aapke wallet me add kar diye gaye hain.`,
+          metadata: { amount: order.itemPrice, reason: 'escrow_release', referenceId: order._id }
+        });
+
         if(order.item) {
            order.item.status = 'swapped';
            await order.item.save();
@@ -295,6 +324,15 @@ const updateOrderStatus = async (req, res) => {
         await buyer.save();
         
         order.paymentStatus = 'refunded';
+
+        // CHANGED: Buyer ko refund ki notification
+        await Notification.create({
+          user: buyer._id,
+          type: 'CREDIT_ADDED',
+          title: 'Order Cancelled & Refunded 🔄',
+          message: `Order cancel ho gaya hai. Aapke ${order.itemPrice} credits refund kar diye gaye hain.`,
+          metadata: { amount: order.itemPrice, reason: 'order_refund', referenceId: order._id }
+        });
         
         if(order.item) {
            order.item.status = 'active';
@@ -342,6 +380,15 @@ const handleShiprocketWebhook = async (req, res) => {
           await seller.save();
           
           order.isSellerPaid = true;
+
+          // CHANGED: Webhook se auto-release par seller ko notification
+          await Notification.create({
+            user: seller._id,
+            type: 'CREDIT_ADDED',
+            title: 'Payment Released! 💰',
+            message: `Order successfully delivered! ${order.itemPrice} credits aapke account me aagaye hain.`,
+            metadata: { amount: order.itemPrice, reason: 'escrow_release', referenceId: order._id }
+          });
 
           if(order.item) {
              order.item.status = 'swapped';
