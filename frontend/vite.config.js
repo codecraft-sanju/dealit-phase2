@@ -3,38 +3,45 @@ import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
 import tailwindcss from '@tailwindcss/vite'
 
-
 export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
     babel({ presets: [reactCompilerPreset()] }),
-    
   ],
   build: {
     rollupOptions: {
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            // Three.js ko alag tukde mein tod do
-            if (id.includes('three')) {
-              return 'vendor-three';
+            // 1. Heavy 3D/Animation Libraries
+            if (id.includes('three')) return 'vendor-three';
+            if (id.includes('lottie-web')) return 'vendor-lottie';
+            if (id.includes('gsap')) return 'vendor-gsap';
+            if (id.includes('framer-motion')) return 'vendor-motion';
+            
+            // 2. React Core Ecosystem
+            if (id.includes('react/') || id.includes('react-dom') || id.includes('react-router')) {
+              return 'vendor-react-core';
             }
-            // Lottie ko alag chunk mein daal do
-            if (id.includes('lottie-web')) {
-              return 'vendor-lottie';
+
+            // 3. Data Fetching & State Management
+            if (id.includes('@tanstack/react-query') || id.includes('axios')) {
+              return 'vendor-api';
             }
-            // GSAP (animations) ko alag kar do
-            if (id.includes('gsap')) {
-              return 'vendor-gsap';
+
+            // 4. Icons (Lucide etc.)
+            if (id.includes('lucide-react')) {
+              return 'vendor-icons';
             }
-            // Baaki saari libraries ek generic vendor file mein
-            return 'vendor';
+
+            // Note: Humne aakhir mein `return 'vendor'` hata diya hai. 
+            // Ab Rollup baaki bachi hui choti libraries ko apne hisaab se smartly split kar lega.
           }
         }
       }
     },
-    // Warning limit ko 1MB kar dete hain taaki choti warnings tang na karein
+    // Warning limit ko 1000 KB (1MB) set karna theek hai
     chunkSizeWarningLimit: 1000
   }
 })
