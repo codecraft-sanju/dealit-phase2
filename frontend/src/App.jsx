@@ -9,9 +9,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
-import IosInstallPopup from './components/IosInstallPopup';
 
-import PromoAlert from './popup/PromoAlert';
+const PromoAlert = lazy(() => import('./popup/PromoAlert'));
+const IosInstallPopup = lazy(() => import('./components/IosInstallPopup'));
 
 const DesktopLandingPage = lazy(() => import('./Desktop/DesktopLandingPage'));
 
@@ -348,9 +348,10 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
       <ZeroPriceAlert user={user} onCheckComplete={setHasZeroPriceIssue} />
       
       {/* NAYA CHANGE: Yahan component use kiya gaya hai */}
-      <PromoAlert user={user} hasZeroPriceIssue={hasZeroPriceIssue} />
-      
-      <IosInstallPopup />
+      <Suspense fallback={null}>
+        <PromoAlert user={user} hasZeroPriceIssue={hasZeroPriceIssue} />
+        <IosInstallPopup />
+      </Suspense>
       
       <main>
         <Suspense fallback={<PremiumLoader />}>

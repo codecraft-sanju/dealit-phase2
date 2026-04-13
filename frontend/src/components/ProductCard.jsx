@@ -1,13 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Package, Coins } from 'lucide-react';
+// <-- NAYA CHANGE: Import helper function from HomePage
+import { getOptimizedCloudinaryUrl } from './HomePage';
 
 const ProductCard = ({ item, isLoading, className = '' }) => {
   // Skeleton Loader State
   if (isLoading) {
     return (
       <div className={`bg-[#F8F6FF] rounded-2xl p-2.5 relative block border border-gray-50 animate-pulse ${className}`}>
-        {/* NAYA CHANGE: h-20 w-full ki jagah 'w-full aspect-square' (1:1 Square Ratio) */}
         <div className="w-full aspect-square bg-[#EBE5F7] rounded-xl mb-3"></div>
         <div>
           <div className="h-2.5 w-full bg-[#EBE5F7] rounded-md mb-1.5"></div>
@@ -31,11 +32,10 @@ const ProductCard = ({ item, isLoading, className = '' }) => {
       to={`/item/${item._id}`} 
       className={`bg-[#F8F6FF] rounded-2xl p-2.5 relative block hover:shadow-md transition-shadow ${className}`}
     >
-      {/* NAYA CHANGE: Image container ko 'w-full aspect-square' (1:1) diya hai */}
       <div className="w-full aspect-square flex items-center justify-center mb-3 bg-white/40 rounded-xl overflow-hidden">
         {item.images && item.images.length > 0 && item.images[0] ? (
-          // NAYA CHANGE: object-contain ki jagah object-cover lagaya taaki square perfect dikhe
-          <img src={item.images[0]} alt={item.title} className="w-full h-full object-cover mix-blend-multiply drop-shadow-sm transition-transform duration-300 hover:scale-105" />
+          // <-- NAYA CHANGE: Wrap item.images[0] with getOptimizedCloudinaryUrl -->
+          <img src={getOptimizedCloudinaryUrl(item.images[0])} alt={item.title} className="w-full h-full object-cover mix-blend-multiply drop-shadow-sm transition-transform duration-300 hover:scale-105" />
         ) : (
           <Package className="w-8 h-8 text-[#A388E1]/40" />
         )}

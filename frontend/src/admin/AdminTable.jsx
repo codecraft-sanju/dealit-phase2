@@ -1,8 +1,9 @@
 import React from 'react';
 import {
   User, Shield, Check, X, Package, Eye, CheckCircle,
-  Edit, Trash2, ShieldAlert, ShieldCheck, ChevronLeft, ChevronRight // CHANGED: Added Chevrons
+  Edit, Trash2, ShieldAlert, ShieldCheck, ChevronLeft, ChevronRight
 } from 'lucide-react';
+
 
 const AdminTable = ({
   activeTab,
@@ -21,24 +22,20 @@ const AdminTable = ({
   handleUpdateRole,
   handleDeleteUser,
   handleEditOrderClick,
-  // CHANGED: New props for pagination
   currentPage,
   totalPages,
   setCurrentPage
 }) => {
   
-  // CHANGED: Determine if the current tab should show pagination controls
   const isPaginatedTab = ['pending', 'users', 'items', 'transactions', 'orders'].includes(activeTab);
 
   return (
-    // CHANGED: Added wrapper flex container to hold table and pagination
     <div className="flex-1 flex flex-col h-full overflow-hidden w-full">
       <div className="flex-1 overflow-auto admin-scroll rounded-t-xl md:rounded-t-2xl border border-white/5 bg-white/[0.01] relative w-full">
         <table className="w-full text-left text-xs md:text-sm text-gray-300 border-collapse min-w-max">
           
           <thead className="sticky top-0 z-20 bg-[#0B0F19]/95 backdrop-blur-xl text-gray-400 border-b border-white/10 shadow-sm">
             <tr>
-              {/* ID Column - Hidden on very small mobile if needed, but keeping here as it's often small */}
               <th className="px-4 md:px-6 py-3 md:py-5 font-bold uppercase tracking-widest text-[9px] md:text-[10px]">ID</th>
               
               {activeTab === 'users' ? (
@@ -87,7 +84,8 @@ const AdminTable = ({
                     <td className="px-4 md:px-6 py-3 md:py-4">
                       <div className="flex items-center gap-2 md:gap-3">
                         {row.profilePic ? (
-                          <img src={row.profilePic} alt="Profile" className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover border border-white/10 shadow-sm" />
+                          // <-- NAYA CHANGE: Optimize profilePic
+                          <img src={getOptimizedCloudinaryUrl(row.profilePic)} alt="Profile" className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover border border-white/10 shadow-sm" />
                         ) : (
                           <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 shadow-sm">
                             <User className="w-4 h-4 md:w-5 md:h-5" />
@@ -121,7 +119,8 @@ const AdminTable = ({
                         {/* Desktop Preview */}
                         <div className="relative group/img">
                           <div className="w-24 md:w-32 h-10 md:h-14 bg-white/5 rounded-lg overflow-hidden border border-white/10 shadow-sm">
-                            <img src={row.desktopImage} alt="Desktop" className={`w-full h-full object-cover ${!row.isActive ? 'grayscale opacity-50' : ''}`} />
+                            {/* <-- NAYA CHANGE: Optimize Banner previews */}
+                            <img src={getOptimizedCloudinaryUrl(row.desktopImage)} alt="Desktop" className={`w-full h-full object-cover ${!row.isActive ? 'grayscale opacity-50' : ''}`} />
                           </div>
                           <span className="absolute -top-2 -right-2 bg-[#0B0F19] text-[7px] md:text-[9px] font-bold px-1 md:px-1.5 py-0.5 rounded text-gray-300 border border-white/10">Desktop</span>
                         </div>
@@ -129,7 +128,8 @@ const AdminTable = ({
                         {/* Mobile Preview */}
                         <div className="relative group/img">
                           <div className="w-10 md:w-14 h-10 md:h-14 bg-white/5 rounded-lg overflow-hidden border border-white/10 shadow-sm">
-                            <img src={row.mobileImage} alt="Mobile" className={`w-full h-full object-cover ${!row.isActive ? 'grayscale opacity-50' : ''}`} />
+                            {/* <-- NAYA CHANGE: Optimize Banner previews */}
+                            <img src={getOptimizedCloudinaryUrl(row.mobileImage)} alt="Mobile" className={`w-full h-full object-cover ${!row.isActive ? 'grayscale opacity-50' : ''}`} />
                           </div>
                           <span className="absolute -top-2 -right-2 bg-[#0B0F19] text-[7px] md:text-[9px] font-bold px-1 md:px-1.5 py-0.5 rounded text-gray-300 border border-white/10">Mobile</span>
                         </div>
@@ -205,7 +205,8 @@ const AdminTable = ({
                     <td className="px-4 md:px-6 py-3 md:py-4">
                       <div className="flex items-center gap-2 md:gap-4">
                         {row.images && row.images.length > 0 && row.images[0] ? (
-                          <img src={row.images[0]} alt="item" className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-white/5 object-cover border border-white/10 shadow-sm" />
+                          // <-- NAYA CHANGE: Optimize Item image
+                          <img src={getOptimizedCloudinaryUrl(row.images[0])} alt="item" className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-white/5 object-cover border border-white/10 shadow-sm" />
                         ) : (
                           <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-sm">
                             <Package className="w-4 h-4 md:w-5 md:h-5 text-gray-500" />
@@ -332,7 +333,6 @@ const AdminTable = ({
         </table>
       </div>
 
-      {/* CHANGED: Pagination Controls Footer */}
       {isPaginatedTab && totalPages > 1 && (
         <div className="flex items-center justify-between px-4 py-3 bg-[#0B0F19]/95 border border-t-0 border-white/5 rounded-b-xl md:rounded-b-2xl shrink-0">
           <p className="text-xs text-gray-500 font-medium">

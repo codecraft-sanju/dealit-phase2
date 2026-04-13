@@ -1,41 +1,61 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { Package, ChevronLeft, Edit2, Trash2, AlertCircle, Coins, Plus } from 'lucide-react';
+import { Package, ChevronLeft, Edit2, Trash2, AlertCircle, Coins, Plus, Loader2 } from 'lucide-react';
 import axios from 'axios';
+import { toast } from 'react-toastify';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'; // <-- NAYA: React Query imports
+import { getOptimizedCloudinaryUrl } from './HomePage'; // <-- NAYA: Cloudinary Optimizer import
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
 const DashboardPage = ({ user }) => {
-  const [myItems, setMyItems] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
   if (!user) return <Navigate to="/login" />;
 
-  const fetchMyItems = async () => {
-    try {
+  // <-- NAYA: Fetching my items using useQuery -->
+  const { data: myItems = [], isLoading: loading } = useQuery({
+    queryKey: ['myItems'],
+    queryFn: async () => {
       const response = await axios.get(`${API_URL}/items/me`, { withCredentials: true });
-      setMyItems(response.data.data || []);
-    } catch (error) {
-      console.error('Error fetching my items:', error);
-    } finally {
-      setLoading(false);
+      return response.data.data || [];
+    },
+  });
+
+  // <-- NAYA: Delete item using useMutation -->
+  const deleteItemMutation = useMutation({
+    mutationFn: async (itemId) => {
+      return await axios.delete(`${API_URL}/items/${itemId}`, { withCredentials: true });
+    },
+    onMutate: async (deletedItemId) => {
+      // Optimistic update
+      await queryClient.cancelQueries(['myItems']);
+      const previousItems = queryClient.getQueryData(['myItems']);
+      
+      queryClient.setQueryData(['myItems'], old => 
+        old?.filter(item => item._id !== deletedItemId)
+      );
+      
+      return { previousItems };
+    },
+    onError: (err, deletedItemId, context) => {
+      console.error('Error deleting item:', err);
+      toast.error(err.response?.data?.message || 'Failed to delete item');
+      // Revert back on error
+      queryClient.setQueryData(['myItems'], context.previousItems);
+    },
+    onSuccess: () => {
+      toast.success('Item deleted successfully');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries(['myItems']);
     }
-  };
+  });
 
-  useEffect(() => {
-    fetchMyItems();
-  }, []);
-
-  const handleDelete = async (itemId) => {
+  const handleDelete = (itemId) => {
     if (window.confirm("Are you sure you want to delete this item? This action cannot be undone.")) {
-      try {
-        await axios.delete(`${API_URL}/items/${itemId}`, { withCredentials: true });
-        setMyItems(myItems.filter(item => item._id !== itemId));
-      } catch (error) {
-        console.error('Error deleting item:', error);
-        alert(error.response?.data?.message || 'Failed to delete item');
-      }
+      deleteItemMutation.mutate(itemId);
     }
   };
 
@@ -109,8 +129,16 @@ const DashboardPage = ({ user }) => {
                   <Link to={`/edit-item/${item._id}`} className="bg-white hover:bg-gray-50 text-gray-600 p-1.5 rounded-full shadow-sm border border-gray-100 transition">
                     <Edit2 className="w-3.5 h-3.5" />
                   </Link>
-                  <button onClick={() => handleDelete(item._id)} className="bg-white hover:bg-red-50 text-gray-600 hover:text-red-500 p-1.5 rounded-full shadow-sm border border-gray-100 transition">
-                    <Trash2 className="w-3.5 h-3.5" />
+                  <button 
+                    onClick={() => handleDelete(item._id)} 
+                    disabled={deleteItemMutation.isPending && deleteItemMutation.variables === item._id}
+                    className="bg-white hover:bg-red-50 text-gray-600 hover:text-red-500 p-1.5 rounded-full shadow-sm border border-gray-100 transition disabled:opacity-50"
+                  >
+                    {deleteItemMutation.isPending && deleteItemMutation.variables === item._id ? (
+                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                       <Trash2 className="w-3.5 h-3.5" />
+                    )}
                   </button>
                 </div>
 
@@ -125,9 +153,10 @@ const DashboardPage = ({ user }) => {
                   </span>
                 </div>
 
-                <div className="h-32 w-full flex items-center justify-center mb-4 mt-8">
+                <div className="h-32 w-full flex items-center justify-center mb-4 mt-8 rounded-xl overflow-hidden bg-white/40">
                   {item.images && item.images.length > 0 && item.images[0] ? (
-                    <img src={item.images[0]} alt={item.title} className="max-h-full max-w-full object-contain mix-blend-multiply drop-shadow-md" />
+                    // <-- NAYA CHANGE: Optimization for Dashboard items -->
+                    <img src={getOptimizedCloudinaryUrl(item.images[0])} alt={item.title} className="w-full h-full object-cover mix-blend-multiply drop-shadow-sm transition-transform duration-300 hover:scale-105" />
                   ) : (
                     <Package className="w-10 h-10 text-[#A388E1]/40" />
                   )}

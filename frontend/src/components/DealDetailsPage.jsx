@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { Check, ArrowLeft, MessageSquare, Package, User, ShieldAlert, Phone, Calendar, Copy } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query'; // <-- NAYA: Imported React Query
+import { getOptimizedCloudinaryUrl } from './HomePage'; // <-- NAYA: Imported Cloudinary optimizer
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -9,29 +11,20 @@ const API_URL = `${API_BASE}/api`;
 const DealDetailsPage = ({ user }) => {
   const { id } = useParams();
   const navigate = useNavigate();
-  
-  const [deal, setDeal] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    const fetchDealDetails = async () => {
-      try {
-        const response = await axios.get(`${API_URL}/barter/${id}`, { withCredentials: true });
-        if (response.data.success) {
-          setDeal(response.data.data);
-        }
-      } catch (err) {
-        console.error('Error fetching deal:', err);
-        setError('Failed to load deal details.');
-      } finally {
-        setLoading(false);
+  // <-- NAYA: Fetching deal details with useQuery -->
+  const { data: deal, isLoading: loading, error } = useQuery({
+    queryKey: ['dealDetails', id],
+    queryFn: async () => {
+      const response = await axios.get(`${API_URL}/barter/${id}`, { withCredentials: true });
+      if (!response.data.success) {
+        throw new Error('Failed to load deal details.');
       }
-    };
-
-    fetchDealDetails();
-  }, [id]);
+      return response.data.data;
+    },
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+  });
 
   const handleCopyId = () => {
     if (deal) {
@@ -48,7 +41,7 @@ const DealDetailsPage = ({ user }) => {
   if (error || !deal) {
     return (
       <div className="min-h-screen bg-[#f4f2f9] flex flex-col items-center justify-center p-4">
-        <h2 className="text-xl font-bold text-red-500 mb-4">{error || 'Deal not found'}</h2>
+        <h2 className="text-xl font-bold text-red-500 mb-4">{error?.message || 'Deal not found'}</h2>
         <button onClick={() => navigate('/swaps')} className="bg-[#6B46C1] text-white px-6 py-2 rounded-xl font-bold">Go Back</button>
       </div>
     );
@@ -114,7 +107,12 @@ const DealDetailsPage = ({ user }) => {
           <div className="bg-[#fcfbff] rounded-2xl p-5 mb-6 text-left border border-[#f0eaff]">
             <div className="flex items-center gap-3 mb-4 border-b border-gray-100 pb-4">
               <div className="w-12 h-12 bg-[#EBE5F7] rounded-full flex items-center justify-center">
-                <User className="w-6 h-6 text-[#6B46C1]" />
+                {/* <-- NAYA: Optimized profile pic --> */}
+                {counterpart.profilePic ? (
+                  <img src={getOptimizedCloudinaryUrl(counterpart.profilePic)} alt="Owner" className="w-full h-full rounded-full object-cover" />
+                ) : (
+                  <User className="w-6 h-6 text-[#6B46C1]" />
+                )}
               </div>
               <div className="flex-1">
                 <p className="text-[11px] text-[#A388E1] font-extrabold uppercase tracking-wider mb-0.5">Your Partner</p>
@@ -133,7 +131,8 @@ const DealDetailsPage = ({ user }) => {
                 <p className="text-[10px] text-gray-400 font-bold uppercase mb-2 group-hover:text-purple-500">They are bringing</p>
                 <div className="h-24 w-full bg-gray-50 rounded-lg mb-2 overflow-hidden flex items-center justify-center">
                   {counterpartItem.images && counterpartItem.images.length > 0 ? (
-                    <img src={counterpartItem.images[0]} alt={counterpartItem.title} className="h-full w-full object-cover" />
+                    // <-- NAYA: Optimized image for counterpart item -->
+                    <img src={getOptimizedCloudinaryUrl(counterpartItem.images[0])} alt={counterpartItem.title} className="h-full w-full object-cover" />
                   ) : (
                     <Package className="w-8 h-8 text-gray-300" />
                   )}
@@ -145,7 +144,8 @@ const DealDetailsPage = ({ user }) => {
                 <p className="text-[10px] text-[#A388E1] font-bold uppercase mb-2 group-hover:text-purple-600">You are giving</p>
                 <div className="h-24 w-full bg-gray-50 rounded-lg mb-2 overflow-hidden flex items-center justify-center">
                   {myItem.images && myItem.images.length > 0 ? (
-                    <img src={myItem.images[0]} alt={myItem.title} className="h-full w-full object-cover" />
+                    // <-- NAYA: Optimized image for your item -->
+                    <img src={getOptimizedCloudinaryUrl(myItem.images[0])} alt={myItem.title} className="h-full w-full object-cover" />
                   ) : (
                     <Package className="w-8 h-8 text-gray-300" />
                   )}

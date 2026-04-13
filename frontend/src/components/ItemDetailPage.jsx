@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import ProductCard from './ProductCard'; 
+// <-- NAYA CHANGE: Import helper function from HomePage
+import { getOptimizedCloudinaryUrl } from './HomePage';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -178,7 +180,6 @@ const ItemDetailPage = ({ user }) => {
     }
   };
 
-  // NAYA: Buy Now Handler
   const handleBuyNow = () => {
     if (!user) {
       navigate('/login');
@@ -242,8 +243,9 @@ const ItemDetailPage = ({ user }) => {
               {item.images && item.images.length > 0 ? (
                 item.images.map((img, idx) => (
                   <div key={idx} className="w-full h-full flex-shrink-0 snap-center relative">
+                    {/* <-- NAYA CHANGE: Wrap img with getOptimizedCloudinaryUrl for Main Carousel --> */}
                     <img 
-                      src={img} 
+                      src={getOptimizedCloudinaryUrl(img)} 
                       alt={`${item.title} ${idx + 1}`} 
                       className="w-full h-full object-cover drop-shadow-sm" 
                     />
@@ -276,7 +278,8 @@ const ItemDetailPage = ({ user }) => {
                   onClick={() => handleThumbnailClick(idx)}
                   className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all bg-[#f8f9fb] ${activeIndex === idx ? 'border-[#6B46C1] shadow-sm scale-[0.98]' : 'border-slate-100 hover:border-slate-300'}`}
                 >
-                  <img src={img} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover mix-blend-multiply" />
+                  {/* <-- NAYA CHANGE: Wrap img with getOptimizedCloudinaryUrl for Thumbnails --> */}
+                  <img src={getOptimizedCloudinaryUrl(img)} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover mix-blend-multiply" />
                 </button>
               ))}
             </div>
@@ -353,7 +356,8 @@ const ItemDetailPage = ({ user }) => {
           <div className="bg-white border border-slate-100 rounded-2xl p-4 flex items-center gap-4 shadow-sm mb-6 lg:mb-8 hover:border-[#EBE5F7] hover:shadow-md transition-all cursor-default">
             <div className="w-12 h-12 bg-[#F8F6FF] rounded-full flex items-center justify-center overflow-hidden border border-[#EBE5F7] shrink-0">
               {item.owner?.profilePic ? (
-                <img src={item.owner.profilePic} alt="Owner" className="w-full h-full object-cover" />
+                // <-- NAYA CHANGE: Optimizing Owner's Profile Pic as well -->
+                <img src={getOptimizedCloudinaryUrl(item.owner.profilePic)} alt="Owner" className="w-full h-full object-cover" />
               ) : (
                 <User className="w-6 h-6 text-[#A388E1]" />
               )}
@@ -494,7 +498,8 @@ const ItemDetailPage = ({ user }) => {
                       >
                         <div className="aspect-square bg-[#f8f9fb] flex items-center justify-center overflow-hidden">
                           {myItem.images && myItem.images.length > 0 && myItem.images[0] ? (
-                            <img src={myItem.images[0]} alt={myItem.title} className="w-full h-full object-cover mix-blend-multiply" />
+                            // <-- NAYA CHANGE: Optimization for Trade Modal selection images -->
+                            <img src={getOptimizedCloudinaryUrl(myItem.images[0])} alt={myItem.title} className="w-full h-full object-cover mix-blend-multiply" />
                           ) : (
                             <Package className="w-8 h-8 text-[#A388E1]/40" />
                           )}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -14,59 +14,96 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import { formatDistanceToNow } from 'date-fns';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'; // <-- NAYA: React Query imports
 
 const API_URL = import.meta.env.VITE_BACKEND_API + '/api';
 
+// <-- NAYA: Shimmer Loading Component specifically designed for Notifications -->
+const NotificationsShimmer = () => {
+  return (
+    <div className="space-y-3">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div key={i} className="p-4 rounded-2xl bg-white border border-gray-100 shadow-sm flex gap-4 animate-pulse">
+          {/* Icon Skeleton */}
+          <div className="w-12 h-12 rounded-xl bg-gray-200 shrink-0"></div>
+          
+          {/* Text Skeleton */}
+          <div className="flex-1 pr-4 py-1">
+            <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+            <div className="h-3 bg-gray-200 rounded w-full mb-1"></div>
+            <div className="h-3 bg-gray-200 rounded w-5/6 mb-3"></div>
+            
+            {/* Date/Metadata Skeleton */}
+            <div className="flex justify-between items-center">
+              <div className="h-2.5 bg-gray-200 rounded w-1/4"></div>
+              {i % 2 === 0 && <div className="h-4 bg-gray-200 rounded-md w-12"></div>}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const NotificationsPage = () => {
-  const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const queryClient = useQueryClient();
 
-  // Fetch notifications on mount
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
-
-  const fetchNotifications = async () => {
-    try {
+  // <-- 1. Fetching notifications with useQuery -->
+  const { data: notifications = [], isLoading, isError, error } = useQuery({
+    queryKey: ['notifications'],
+    queryFn: async () => {
       const response = await axios.get(`${API_URL}/notifications`, { withCredentials: true });
-      if (response.data.success) {
-        setNotifications(response.data.data);
-      }
-    } catch (err) {
-      console.error("Error fetching notifications:", err);
-      setError("Failed to load notifications.");
-    } finally {
-      setLoading(false);
-    }
-  };
+      return response.data.success ? response.data.data : [];
+    },
+    staleTime: 1000 * 60, // Cache for 1 minute before refetching in background
+  });
 
-  const markAsRead = async (id) => {
-    // Optimistic UI update
-    setNotifications(prev => prev.map(notif => 
-      notif._id === id ? { ...notif, isRead: true } : notif
-    ));
-
-    try {
-      await axios.put(`${API_URL}/notifications/${id}/read`, {}, { withCredentials: true });
-    } catch (err) {
+  // <-- 2. Mark Single as Read with Optimistic Update -->
+  const markAsReadMutation = useMutation({
+    mutationFn: async (id) => {
+      return await axios.put(`${API_URL}/notifications/${id}/read`, {}, { withCredentials: true });
+    },
+    onMutate: async (id) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries(['notifications']);
+      // Snapshot the previous value
+      const previousNotifications = queryClient.getQueryData(['notifications']);
+      // Optimistically update to the new value
+      queryClient.setQueryData(['notifications'], old => 
+        old?.map(notif => notif._id === id ? { ...notif, isRead: true } : notif)
+      );
+      // Return a context object with the snapshotted value
+      return { previousNotifications };
+    },
+    // If the mutation fails, use the context returned from onMutate to roll back
+    onError: (err, id, context) => {
       console.error("Failed to mark as read:", err);
-      // Revert if API fails
-      setNotifications(prev => prev.map(notif => 
-        notif._id === id ? { ...notif, isRead: false } : notif
-      ));
-    }
-  };
+      queryClient.setQueryData(['notifications'], context.previousNotifications);
+    },
+  });
 
-  const markAllAsRead = async () => {
-    setNotifications(prev => prev.map(notif => ({ ...notif, isRead: true })));
-    try {
-      await axios.put(`${API_URL}/notifications/read-all`, {}, { withCredentials: true });
-    } catch (err) {
+  // <-- 3. Mark All as Read with Optimistic Update -->
+  const markAllAsReadMutation = useMutation({
+    mutationFn: async () => {
+      return await axios.put(`${API_URL}/notifications/read-all`, {}, { withCredentials: true });
+    },
+    onMutate: async () => {
+      await queryClient.cancelQueries(['notifications']);
+      const previousNotifications = queryClient.getQueryData(['notifications']);
+      queryClient.setQueryData(['notifications'], old => 
+        old?.map(notif => ({ ...notif, isRead: true }))
+      );
+      return { previousNotifications };
+    },
+    onError: (err, newTodo, context) => {
       console.error("Failed to mark all as read:", err);
-      fetchNotifications(); // Refresh from server on fail
-    }
-  };
+      queryClient.setQueryData(['notifications'], context.previousNotifications);
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure server sync
+      queryClient.invalidateQueries(['notifications']);
+    },
+  });
 
   // Helper to get right icon and color based on notification type
   const getIconData = (type) => {
@@ -102,10 +139,11 @@ const NotificationsPage = () => {
           </div>
           {notifications.some(n => !n.isRead) && (
             <button 
-              onClick={markAllAsRead}
-              className="text-xs font-semibold bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-full transition-colors active:scale-95"
+              onClick={() => markAllAsReadMutation.mutate()} // <-- Trigger mark all mutation
+              disabled={markAllAsReadMutation.isPending}
+              className="text-xs font-semibold bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-full transition-colors active:scale-95 disabled:opacity-50"
             >
-              Mark all read
+              {markAllAsReadMutation.isPending ? 'Marking...' : 'Mark all read'}
             </button>
           )}
         </div>
@@ -114,13 +152,12 @@ const NotificationsPage = () => {
       {/* 2. MAIN CONTENT (Added pt-24 to offset fixed header) */}
       <main className="flex-1 flex flex-col pt-24 pb-24 px-4 relative z-10 max-w-md mx-auto w-full">
         
-        {loading ? (
-          <div className="flex justify-center mt-20">
-            <div className="w-10 h-10 border-4 border-[#6B46C1]/20 border-t-[#6B46C1] rounded-full animate-spin"></div>
-          </div>
-        ) : error ? (
+        {/* <-- NAYA: Shimmer UI usage based on React Query isLoading state --> */}
+        {isLoading ? (
+          <NotificationsShimmer />
+        ) : isError ? (
           <div className="text-center mt-10 text-red-500 bg-red-100 p-4 rounded-xl border border-red-200 shadow-sm">
-            {error}
+            {error?.message || "Failed to load notifications."}
           </div>
         ) : notifications.length === 0 ? (
            <div className="flex flex-col items-center justify-center mt-20 text-center">
@@ -141,7 +178,9 @@ const NotificationsPage = () => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
-                    onClick={() => !notif.isRead && markAsRead(notif._id)}
+                    onClick={() => {
+                      if (!notif.isRead) markAsReadMutation.mutate(notif._id); // <-- Trigger mark read mutation
+                    }}
                     className={`p-4 rounded-2xl border transition-all cursor-pointer relative overflow-hidden
                       ${notif.isRead 
                         ? 'bg-white border-gray-100 shadow-sm opacity-75 hover:opacity-100' 

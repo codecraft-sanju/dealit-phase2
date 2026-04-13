@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery, useMutation } from '@tanstack/react-query'; 
 import { 
   Package, Coins, ChevronRight, Plus, UserCircle, Gift,
   Smartphone, Shirt, Watch, Home as HomeIcon, Gamepad2, 
@@ -10,6 +11,14 @@ import ProductCard from './ProductCard';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
+
+// <-- NAYA CHANGE: Helper function for Cloudinary Optimization -->
+export const getOptimizedCloudinaryUrl = (url) => {
+  if (!url || typeof url !== 'string' || !url.includes('cloudinary.com') || url.includes('q_auto')) {
+    return url;
+  }
+  return url.replace('/upload/', '/upload/q_auto,f_auto,w_800/');
+};
 
 const ICON_DICTIONARY = {
   'Package': Package,
@@ -39,121 +48,65 @@ const DUMMY_AVATARS = [
 ];
 
 const HomePage = ({ user, setUser }) => {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  
-  const [offers, setOffers] = useState([]);
-  const [loadingOffers, setLoadingOffers] = useState(true);
-
-  const [categories, setCategories] = useState([]);
-  const [loadingCategories, setLoadingCategories] = useState(true);
   const [activeCategory, setActiveCategory] = useState('All');
-
   const [showCelebration, setShowCelebration] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-
-  const [isClaiming, setIsClaiming] = useState(false);
-  const [bonusSettings, setBonusSettings] = useState({ enabled: true, amount: 50 });
 
   const scrollRef = useRef(null);
   const isDown = useRef(false);
   const startX = useRef(0);
   const scrollLeftPos = useRef(0);
 
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const res = await axios.get(`${API_URL}/admin/public-settings`);
-        if (res.data.success && res.data.data) {
-          setBonusSettings({
-            enabled: res.data.data.isWelcomeBonusEnabled ?? true,
-            amount: res.data.data.welcomeBonusAmount ?? 50
-          });
-        }
-      } catch (error) {
-        console.error('Error fetching settings:', error);
+  const { data: bonusSettings = { enabled: true, amount: 50 } } = useQuery({
+    queryKey: ['publicSettings'],
+    queryFn: async () => {
+      const res = await axios.get(`${API_URL}/admin/public-settings`);
+      if (res.data.success && res.data.data) {
+        return {
+          enabled: res.data.data.isWelcomeBonusEnabled ?? true,
+          amount: res.data.data.welcomeBonusAmount ?? 50
+        };
       }
-    };
-    fetchSettings();
-  }, []);
+      return { enabled: true, amount: 50 };
+    },
+    staleTime: 1000 * 60 * 5, 
+  });
 
-  useEffect(() => {
-    const fetchOffers = async () => {
-      try {
-        const response = await axios.get(`${API_URL}/offers`);
-        const activeOffers = response.data.data.filter(offer => offer.isActive);
-        setOffers(activeOffers);
-      } catch (error) {
-        console.error('Error fetching offers:', error);
-      } finally {
-        setLoadingOffers(false);
-      }
-    };
+  const { data: offers = [], isLoading: loadingOffers } = useQuery({
+    queryKey: ['offers'],
+    queryFn: async () => {
+      const response = await axios.get(`${API_URL}/offers`);
+      return response.data.data.filter(offer => offer.isActive);
+    },
+  });
 
-    const fetchCategories = async () => {
-      try {
-        const response = await axios.get(`${API_URL}/categories?activeOnly=true`);
-        if (response.data.success) {
-          setCategories(response.data.data);
-        }
-      } catch (error) {
-        console.error('Error fetching categories:', error);
-      } finally {
-        setLoadingCategories(false);
-      }
-    };
+  const { data: categories = [], isLoading: loadingCategories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const response = await axios.get(`${API_URL}/categories?activeOnly=true`);
+      return response.data.data;
+    },
+    staleTime: Infinity, 
+  });
 
-    fetchOffers();
-    fetchCategories(); 
-  }, []);
+  const { data: items = [], isLoading: loadingItems } = useQuery({
+    queryKey: ['items', activeCategory], 
+    queryFn: async () => {
+      const url = activeCategory === 'All' 
+        ? `${API_URL}/items?limit=20` 
+        : `${API_URL}/items?category=${activeCategory}&limit=20`;
+      const response = await axios.get(url);
+      return response.data.data;
+    },
+  });
 
-  useEffect(() => {
-    if (offers.length <= 1 || isHovered) return;
-
-    const interval = setInterval(() => {
-      if (scrollRef.current) {
-        const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
-        
-        if (scrollLeft + clientWidth >= scrollWidth - 10) {
-          scrollRef.current.scrollTo({ left: 0, behavior: 'smooth' });
-        } else {
-          scrollRef.current.scrollBy({ left: clientWidth, behavior: 'smooth' });
-        }
-      }
-    }, 3500);
-
-    return () => clearInterval(interval);
-  }, [offers, isHovered]);
-
-  useEffect(() => {
-    const fetchItems = async () => {
-      setLoading(true);
-      try {
-        const url = activeCategory === 'All' 
-          ? `${API_URL}/items?limit=20` 
-          : `${API_URL}/items?category=${activeCategory}&limit=20`;
-          
-        const response = await axios.get(url);
-        setItems(response.data.data);
-      } catch (error) {
-        console.error('Error fetching items:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchItems(); 
-  }, [activeCategory]);
-
-  const handleClaimBonus = async () => {
-    if (isClaiming) return;
-    setIsClaiming(true);
-
-    try {
-      const response = await axios.post(`${API_URL}/users/claim-bonus`, {}, { withCredentials: true });
-      
+  const claimBonusMutation = useMutation({
+    mutationFn: async () => {
+      return axios.post(`${API_URL}/users/claim-bonus`, {}, { withCredentials: true });
+    },
+    onSuccess: (response) => {
       if (response.data.success) {
         setShowCelebration(true);
-        
         setUser(prevUser => {
           const updatedUser = {
             ...prevUser,
@@ -164,33 +117,40 @@ const HomePage = ({ user, setUser }) => {
           return updatedUser;
         });
 
-        setTimeout(() => {
-          setShowCelebration(false);
-        }, 5500);
+        setTimeout(() => setShowCelebration(false), 5500);
       }
-    } catch (error) {
+    },
+    onError: (error) => {
       console.error('Error claiming bonus:', error);
-      
-      // Fix for users who already claimed but local storage wasn't updated
-      if (error.response && error.response.status === 400) {
+      if (error.response?.status === 400) {
         setUser(prevUser => {
-          const updatedUser = {
-            ...prevUser,
-            hasClaimedWelcomeBonus: true 
-          };
+          const updatedUser = { ...prevUser, hasClaimedWelcomeBonus: true };
           localStorage.setItem('dealit_user', JSON.stringify(updatedUser));
           return updatedUser;
         });
-        
-        // Optional alert to let them know
         alert(error.response.data.message || 'Bonus already claimed!');
       } else {
         alert('Failed to claim bonus. Please try again.');
       }
-    } finally {
-      setIsClaiming(false);
     }
-  };
+  });
+
+  useEffect(() => {
+    if (offers.length <= 1 || isHovered) return;
+
+    const interval = setInterval(() => {
+      if (scrollRef.current) {
+        const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+        if (scrollLeft + clientWidth >= scrollWidth - 10) {
+          scrollRef.current.scrollTo({ left: 0, behavior: 'smooth' });
+        } else {
+          scrollRef.current.scrollBy({ left: clientWidth, behavior: 'smooth' });
+        }
+      }
+    }, 3500);
+
+    return () => clearInterval(interval);
+  }, [offers, isHovered]);
 
   const handleMouseDown = (e) => {
     isDown.current = true;
@@ -279,11 +239,11 @@ const HomePage = ({ user, setUser }) => {
 
               {shouldShowClaimButton ? (
                 <button 
-                  onClick={handleClaimBonus}
-                  disabled={isClaiming}
+                  onClick={() => claimBonusMutation.mutate()} 
+                  disabled={claimBonusMutation.isPending}
                   className="bg-[#FFE28A] text-yellow-900 text-[9px] font-extrabold px-1 py-1.5 mt-1.5 rounded-lg flex items-center justify-center gap-0.5 shadow-sm transition hover:bg-yellow-300 z-10 whitespace-nowrap animate-pulse disabled:opacity-80 disabled:animate-none"
                 >
-                  {isClaiming ? 'Claiming...' : `Claim ${bonusSettings.amount}`} <Gift className="w-2.5 h-2.5" />
+                  {claimBonusMutation.isPending ? 'Claiming...' : `Claim ${bonusSettings.amount}`} <Gift className="w-2.5 h-2.5" />
                 </button>
               ) : (
                 <Link to="/wallet" className="bg-[#FFF4D2] text-[#8B70CA] text-[9px] font-bold px-1 py-1.5 mt-1.5 rounded-lg flex items-center justify-center gap-0.5 shadow-sm transition hover:bg-white z-10 whitespace-nowrap">
@@ -337,9 +297,10 @@ const HomePage = ({ user, setUser }) => {
                   className="w-full aspect-[5/2] md:aspect-[5/1] flex-shrink-0 snap-center rounded-2xl overflow-hidden shadow-sm border border-gray-100 relative bg-gray-50"
                 >
                   <picture className="w-full h-full block pointer-events-none">
-                    <source media="(min-width: 768px)" srcSet={offer.desktopImage} />
+                    {/* <-- NAYA CHANGE: Using getOptimizedCloudinaryUrl here --> */}
+                    <source media="(min-width: 768px)" srcSet={getOptimizedCloudinaryUrl(offer.desktopImage)} />
                     <img 
-                      src={offer.mobileImage} 
+                      src={getOptimizedCloudinaryUrl(offer.mobileImage)} 
                       alt="Special Offer" 
                       className="w-full h-full object-cover"
                     />
@@ -445,7 +406,7 @@ const HomePage = ({ user, setUser }) => {
           </Link>
         </div>
 
-        {loading ? (
+        {loadingItems ? (
           <div className="flex overflow-x-auto hide-scrollbar gap-3 pb-0">
             {[1, 2, 3, 4].map((i) => (
               <ProductCard key={i} isLoading={true} className="min-w-[120px] w-[120px] flex-shrink-0" />

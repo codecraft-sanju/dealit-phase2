@@ -1,14 +1,25 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Plus, ChevronLeft, Gift, Image as ImageIcon, Sparkles, Wand2, Scale, Box } from 'lucide-react'; // <-- NAYA CHANGE: Added Scale and Box icons
+import { X, Plus, ChevronLeft, Gift, Image as ImageIcon, Sparkles, Wand2, Scale, Box } from 'lucide-react';
 import axios from 'axios';
 import Cropper from 'react-easy-crop'; 
-import { toast } from 'react-toastify'; // <-- NEW CHANGE: Imported toast from react-toastify
+import { toast } from 'react-toastify'; 
 import { removeBackground } from '@imgly/background-removal';
-import { useQuery } from '@tanstack/react-query'; // <-- NAYA CHANGE: Imported React Query
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'; 
+
+// <-- NAYA CHANGE: Import browser-image-compression -->
+import imageCompression from 'browser-image-compression';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
+
+// <-- NAYA CHANGE: Helper function to optimize Cloudinary URLs for fast loading -->
+export const getOptimizedCloudinaryUrl = (url) => {
+  if (!url || typeof url !== 'string' || !url.includes('cloudinary.com') || url.includes('q_auto')) {
+    return url;
+  }
+  return url.replace('/upload/', '/upload/q_auto,f_auto,w_800/');
+};
 
 const blobToOriginalMap = new Map();
 
@@ -138,6 +149,7 @@ const ShimmerLoading = () => {
 
 const AddItemPage = ({ user, setUser }) => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -145,26 +157,21 @@ const AddItemPage = ({ user, setUser }) => {
     condition: '',
     preferred_item: '',
     estimated_value: '',
-    // <-- NAYA CHANGE: Weight & Dimensions states added
     weightCategory: '0.5', 
     exactWeight: '',
     dimensions: { length: 10, width: 10, height: 10 }
   });
   const [images, setImages] = useState([]);
-  const [loading, setLoading] = useState(false);
-  // <-- MODIFIED: Removed local error state to use react-toastify instead
   
-  // <-- NAYA CHANGE: Replaced useEffect and manual states with useQuery for Categories
   const { data: categories = [], isLoading: loadingCategories } = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
       const res = await axios.get(`${API_URL}/categories`);
       return res.data.success ? res.data.data : [];
     },
-    staleTime: 1000 * 60 * 30, // Cache for 30 minutes
+    staleTime: 1000 * 60 * 30,
   });
 
-  // <-- NAYA CHANGE: Replaced useEffect and manual states with useQuery for Settings
   const { data: systemSettings = {
     isCreditSystemEnabled: true,
     creditsPerListing: 50,
@@ -181,7 +188,7 @@ const AddItemPage = ({ user, setUser }) => {
         maxAllowedListings: 5 
       };
     },
-    staleTime: 1000 * 60 * 30, // Cache for 30 minutes
+    staleTime: 1000 * 60 * 30,
   });
 
   const [cropModalOpen, setCropModalOpen] = useState(false);
@@ -189,15 +196,8 @@ const AddItemPage = ({ user, setUser }) => {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
-  const [isProcessingCrop, setIsProcessingCrop] = useState(false);
 
-  // <-- NEW CHANGE: State to track which image is currently generating an AI background
   const [processingAIIndex, setProcessingAIIndex] = useState(null);
-
-  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
-  const [isAutoFilling, setIsAutoFilling] = useState(false);
-  
-  // <-- NAYA CHANGE: State for premium loading progress (0-100%)
   const [analyzeProgress, setAnalyzeProgress] = useState(0);
 
   const listedCount = user?.listedProductsCount || 0;
@@ -207,7 +207,6 @@ const AddItemPage = ({ user, setUser }) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // <-- NAYA CHANGE: Separate handler for dimensions
   const handleDimensionChange = (e) => {
     setFormData({
       ...formData,
@@ -218,14 +217,30 @@ const AddItemPage = ({ user, setUser }) => {
     });
   };
 
-  const handleImageSelect = (e) => {
+  // <-- NAYA CHANGE: Image Compression added before showing crop modal -->
+  const handleImageSelect = async (e) => {
     if (images.length >= 5) {
-      toast.error('You can only upload a maximum of 5 images.'); // <-- MODIFIED: Replaced setError with toast.error
+      toast.error('You can only upload a maximum of 5 images.');
       return;
     }
 
     if (e.target.files && e.target.files.length > 0) {
-      const file = e.target.files[0];
+      let imageFile = e.target.files[0];
+
+      const options = {
+        maxSizeMB: 0.8, // compress to max 800 KB
+        maxWidthOrHeight: 1920,
+        useWebWorker: true,
+      };
+
+      try {
+        imageFile = await imageCompression(imageFile, options);
+      } catch (error) {
+        console.error('Compression error:', error);
+        toast.error('Failed to optimize image. Please try another one.');
+        return;
+      }
+
       const reader = new FileReader();
       reader.addEventListener('load', () => {
         setImageToCrop(reader.result);
@@ -233,7 +248,7 @@ const AddItemPage = ({ user, setUser }) => {
         setZoom(1);
         setCropModalOpen(true);
       });
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(imageFile);
     }
     e.target.value = null; 
   };
@@ -242,11 +257,9 @@ const AddItemPage = ({ user, setUser }) => {
     setCroppedAreaPixels(croppedAreaPixels);
   };
 
-  const handleCropAndUpload = async () => {
-    setIsProcessingCrop(true);
-    try {
+  const uploadImageMutation = useMutation({
+    mutationFn: async () => {
       const croppedImageBlob = await getCroppedImg(imageToCrop, croppedAreaPixels);
-
       const data = new FormData();
       data.append('file', croppedImageBlob);
       data.append('upload_preset', 'salon_preset');
@@ -255,19 +268,18 @@ const AddItemPage = ({ user, setUser }) => {
         `https://api.cloudinary.com/v1_1/dvoenforj/image/upload`,
         data
       );
-      
-      const originalUrl = response.data.secure_url;
+      return response.data.secure_url;
+    },
+    onSuccess: (originalUrl) => {
       setImages([...images, originalUrl]);
-      
       setCropModalOpen(false);
       setImageToCrop(null);
-    } catch (err) {
+    },
+    onError: (err) => {
       console.error('Upload Error:', err);
-      toast.error('Failed to upload image. Please try again.'); // <-- MODIFIED: Replaced setError with toast.error
-    } finally {
-      setIsProcessingCrop(false);
+      toast.error('Failed to upload image. Please try again.');
     }
-  };
+  });
 
   const toggleAIBackground = async (index) => {
     setProcessingAIIndex(index);
@@ -315,38 +327,19 @@ const AddItemPage = ({ user, setUser }) => {
     };
   };
 
-  const handleAutoFillFromImages = async () => {
-    if (images.length === 0) {
-      toast.error("Please upload at least 1 image first so the AI can analyze your item."); // <-- MODIFIED: Replaced setError with toast.error
-      return;
-    }
-
-    setIsAutoFilling(true);
-    setAnalyzeProgress(0);
-
-    // Simulate progress uploading and scanning logic
-    const progressInterval = setInterval(() => {
-      setAnalyzeProgress(prev => {
-        if (prev >= 92) return prev; // Hold at 92% until actual API returns
-        const jump = Math.floor(Math.random() * 8) + 4; // Random jump between 4 and 11
-        return Math.min(92, prev + jump);
-      });
-    }, 350);
-
-    try {
+  const autoFillMutation = useMutation({
+    mutationFn: async () => {
       const response = await axios.post(
         `${API_URL}/ai/analyze-images`, 
         { imageUrls: images.slice(0, 3) },
         { withCredentials: true }
       );
-
-      clearInterval(progressInterval);
-      setAnalyzeProgress(100); // Shoot to 100% on success
-
-      if (response.data.success && response.data.data) {
-        const { title, category, description } = response.data.data;
-        
-        // Slight delay so the user clearly sees the 100% full bar before it hides
+      return response.data;
+    },
+    onSuccess: (data) => {
+      setAnalyzeProgress(100);
+      if (data.success && data.data) {
+        const { title, category, description } = data.data;
         setTimeout(() => {
           setFormData(prev => ({ 
             ...prev, 
@@ -354,17 +347,14 @@ const AddItemPage = ({ user, setUser }) => {
             category: category || prev.category,
             description: description || prev.description
           }));
-          setIsAutoFilling(false);
           setAnalyzeProgress(0);
         }, 600);
       } else {
-        setIsAutoFilling(false);
         setAnalyzeProgress(0);
       }
-    } catch (err) {
+    },
+    onError: (err) => {
       console.error("AI Vision failed:", err);
-      clearInterval(progressInterval);
-      
       const fallbackData = getFallbackVisionData();
       setFormData(prev => ({ 
         ...prev, 
@@ -372,11 +362,30 @@ const AddItemPage = ({ user, setUser }) => {
         category: prev.category || fallbackData.category,
         description: prev.description || fallbackData.description
       }));
-      
-      toast.warning("AI couldn't analyze the images right now. We filled in some generic details, please edit them manually."); // <-- MODIFIED: Replaced setError with toast.warning
-      setIsAutoFilling(false);
+      toast.warning("AI couldn't analyze the images right now. We filled in some generic details, please edit them manually.");
       setAnalyzeProgress(0);
     }
+  });
+
+  const handleAutoFillFromImages = () => {
+    if (images.length === 0) {
+      toast.error("Please upload at least 1 image first so the AI can analyze your item.");
+      return;
+    }
+
+    setAnalyzeProgress(0);
+    const progressInterval = setInterval(() => {
+      setAnalyzeProgress(prev => {
+        if (prev >= 92 || !autoFillMutation.isPending) {
+          clearInterval(progressInterval);
+          return prev;
+        }
+        const jump = Math.floor(Math.random() * 8) + 4;
+        return Math.min(92, prev + jump);
+      });
+    }, 350);
+
+    autoFillMutation.mutate();
   };
 
   const getFallbackDescription = (title, category, condition) => {
@@ -392,15 +401,8 @@ const AddItemPage = ({ user, setUser }) => {
     return templates[category] || templates.Other;
   };
 
-  const handleGenerateDescription = async () => {
-    if (!formData.title || !formData.category) {
-      toast.error("Please enter a Title and select a Category first so the AI knows what to write about."); // <-- MODIFIED: Replaced setError with toast.error
-      return;
-    }
-
-    setIsGeneratingAI(true);
-
-    try {
+  const generateDescMutation = useMutation({
+    mutationFn: async () => {
       const response = await axios.post(
         `${API_URL}/ai/generate-description`, 
         {
@@ -410,79 +412,86 @@ const AddItemPage = ({ user, setUser }) => {
         },
         { withCredentials: true }
       );
-
-      if (response.data.success && response.data.description) {
-        setFormData(prev => ({ ...prev, description: response.data.description }));
+      return response.data;
+    },
+    onSuccess: (data) => {
+      if (data.success && data.description) {
+        setFormData(prev => ({ ...prev, description: data.description }));
       }
-    } catch (err) {
+    },
+    onError: (err) => {
       console.error("AI Generation failed:", err);
       const fallbackText = getFallbackDescription(formData.title, formData.category, formData.condition);
       setFormData(prev => ({ ...prev, description: fallbackText }));
-      toast.warning("AI is currently busy. We added a basic template for you, feel free to edit it!"); // <-- MODIFIED: Replaced setError with toast.warning
-    } finally {
-      setIsGeneratingAI(false);
+      toast.warning("AI is currently busy. We added a basic template for you, feel free to edit it!");
     }
-  };
+  });
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (images.length < 3) {
-      toast.error('Please upload at least 3 images of your item.'); // <-- MODIFIED: Replaced setError with toast.error
+  const handleGenerateDescription = () => {
+    if (!formData.title || !formData.category) {
+      toast.error("Please enter a Title and select a Category first so the AI knows what to write about.");
       return;
     }
+    generateDescMutation.mutate();
+  };
 
-    // <-- NAYA CHANGE: Calculate final weight based on user selection
-    const finalWeight = formData.weightCategory === 'custom' 
-      ? parseFloat(formData.exactWeight) 
-      : parseFloat(formData.weightCategory);
-
-    if (formData.weightCategory === 'custom' && (!finalWeight || finalWeight <= 0)) {
-       toast.error("Please enter a valid custom weight in Kg."); // <-- MODIFIED: Replaced setError with toast.error
-       return;
-    }
-
-    setLoading(true);
-
-    try {
-      // <-- NAYA CHANGE: Send the properly formatted payload
-      const payload = {
-        title: formData.title,
-        description: formData.description,
-        category: formData.category,
-        condition: formData.condition,
-        preferred_item: formData.preferred_item,
-        estimated_value: formData.estimated_value,
-        images: images,
-        weight: finalWeight,
-        dimensions: formData.dimensions
-      };
-
+  const createItemMutation = useMutation({
+    mutationFn: async (payload) => {
       const response = await axios.post(
         `${API_URL}/items`,
         payload,
         { withCredentials: true }
       );
-
-      if (response.data.success) {
-        try {
-          const userRes = await axios.get(`${API_URL}/users/profile`, { withCredentials: true });
-          if (userRes.data.success && setUser) {
-            setUser(userRes.data.data);
-            localStorage.setItem('dealit_user', JSON.stringify(userRes.data.data));
-          }
-        } catch (e) {
-          console.error("Failed to update user profile locally", e);
+      return response.data;
+    },
+    onSuccess: async (data) => {
+      try {
+        const userRes = await axios.get(`${API_URL}/users/profile`, { withCredentials: true });
+        if (userRes.data.success && setUser) {
+          setUser(userRes.data.data);
+          localStorage.setItem('dealit_user', JSON.stringify(userRes.data.data));
         }
-
-        toast.success(response.data.message); // <-- MODIFIED: Replaced window.alert with toast.success
-        navigate('/dashboard'); 
+      } catch (e) {
+        console.error("Failed to update user profile locally", e);
       }
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to list item. Please try again.'); // <-- MODIFIED: Replaced setError with toast.error
-    } finally {
-      setLoading(false);
+      toast.success(data.message);
+      navigate('/dashboard'); 
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || 'Failed to list item. Please try again.');
     }
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    if (images.length < 3) {
+      toast.error('Please upload at least 3 images of your item.');
+      return;
+    }
+
+    const finalWeight = formData.weightCategory === 'custom' 
+      ? parseFloat(formData.exactWeight) 
+      : parseFloat(formData.weightCategory);
+
+    if (formData.weightCategory === 'custom' && (!finalWeight || finalWeight <= 0)) {
+       toast.error("Please enter a valid custom weight in Kg.");
+       return;
+    }
+
+    const payload = {
+      title: formData.title,
+      description: formData.description,
+      category: formData.category,
+      condition: formData.condition,
+      preferred_item: formData.preferred_item,
+      estimated_value: formData.estimated_value,
+      images: images,
+      weight: finalWeight,
+      dimensions: formData.dimensions
+    };
+
+    createItemMutation.mutate(payload);
   };
 
   if (loadingSettings || loadingCategories) {
@@ -550,8 +559,6 @@ const AddItemPage = ({ user, setUser }) => {
             </div>
           )}
 
-          {/* <-- MODIFIED: Removed the inline error rendering div since we are using toast notifications everywhere now --> */}
-
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
             
             <div className="pb-4 border-b border-purple-100 border-dashed">
@@ -568,8 +575,9 @@ const AddItemPage = ({ user, setUser }) => {
                     <div key={index} className="flex flex-col gap-1.5 w-20 sm:w-24">
                       {/* Image Thumbnail Container */}
                       <div className="relative w-full aspect-square rounded-2xl overflow-hidden shadow-sm border-2 border-white bg-gray-100 group shrink-0">
+                        {/* <-- NAYA CHANGE: Using getOptimizedCloudinaryUrl for fast rendering --> */}
                         <img 
-                          src={url} 
+                          src={getOptimizedCloudinaryUrl(url)} 
                           alt={`Upload ${index + 1}`} 
                           className="w-full h-full object-cover" 
                           onLoad={() => {
@@ -631,7 +639,7 @@ const AddItemPage = ({ user, setUser }) => {
                     <label className="w-full aspect-square bg-[#f8f6ff] border-2 border-[#e9d8ff] rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-[#f3edff] hover:border-[#d6bcfa] transition-all shadow-sm">
                       <Plus className="w-6 h-6 sm:w-8 sm:h-8 text-[#805ad5] mb-1" />
                       <span className="text-[10px] sm:text-xs font-semibold text-[#805ad5]">Add Photo</span>
-                      <input type="file" accept="image/*" onChange={handleImageSelect} disabled={isProcessingCrop} className="hidden" />
+                      <input type="file" accept="image/*" onChange={handleImageSelect} disabled={uploadImageMutation.isPending} className="hidden" />
                     </label>
                   </div>
                 )}
@@ -653,7 +661,7 @@ const AddItemPage = ({ user, setUser }) => {
                   </div>
 
                   <div className="relative z-10 w-full sm:w-auto shrink-0 flex items-center justify-end">
-                    {isAutoFilling ? (
+                    {autoFillMutation.isPending ? (
                        <div className="w-full sm:w-48 flex flex-col gap-2">
                          <div className="flex justify-between items-center text-[10px] sm:text-xs font-bold text-[#6B46C1]">
                            <span className="flex items-center gap-1.5 animate-pulse">
@@ -666,7 +674,6 @@ const AddItemPage = ({ user, setUser }) => {
                              className="h-full bg-gradient-to-r from-[#9F7AEA] via-[#805ad5] to-[#553C9A] rounded-full transition-all duration-300 ease-out relative"
                              style={{ width: `${analyzeProgress}%` }}
                            >
-                             {/* Glossy overlay effect for premium feel */}
                              <div className="absolute top-0 left-0 right-0 h-1/2 bg-white/20 rounded-t-full"></div>
                            </div>
                          </div>
@@ -675,10 +682,9 @@ const AddItemPage = ({ user, setUser }) => {
                        <button
                          type="button"
                          onClick={handleAutoFillFromImages}
-                         disabled={isGeneratingAI}
+                         disabled={autoFillMutation.isPending || generateDescMutation.isPending}
                          className="group relative flex items-center justify-center gap-2 text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-[#9F7AEA] via-[#805ad5] to-[#6B46C1] bg-[length:200%_auto] hover:bg-right hover:shadow-[0_4px_15px_rgba(128,90,213,0.4)] px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl transition-all duration-500 disabled:opacity-70 disabled:cursor-not-allowed w-full sm:w-auto overflow-hidden"
                        >
-                         {/* Shine effect on hover */}
                          <span className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out rounded-xl"></span>
                          <Sparkles className="w-4 h-4 relative z-10 group-hover:scale-110 transition-transform duration-300" />
                          <span className="relative z-10">Auto-Fill Details</span>
@@ -777,7 +783,6 @@ const AddItemPage = ({ user, setUser }) => {
                 </div>
               </div>
 
-              {/* <-- NAYA CHANGE: Shipping Details UI --> */}
               <div className="space-y-3 sm:space-y-4 pb-4 border-b border-purple-100 border-dashed">
                 <h3 className="text-xs sm:text-sm font-bold text-[#553c9a] flex items-center gap-1.5"><Box className="w-4 h-4" /> Shipping Details</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
@@ -831,11 +836,11 @@ const AddItemPage = ({ user, setUser }) => {
                   <button
                     type="button"
                     onClick={handleGenerateDescription}
-                    disabled={isGeneratingAI || isAutoFilling || isLimitReached}
+                    disabled={generateDescMutation.isPending || autoFillMutation.isPending || isLimitReached}
                     className="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs font-bold text-purple-700 bg-purple-100 hover:bg-purple-200 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Sparkles className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${isGeneratingAI ? 'animate-pulse' : ''}`} />
-                    {isGeneratingAI ? 'Writing...' : 'Write with AI'}
+                    <Sparkles className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${generateDescMutation.isPending ? 'animate-pulse' : ''}`} />
+                    {generateDescMutation.isPending ? 'Writing...' : 'Write with AI'}
                   </button>
                 </div>
                 <textarea 
@@ -855,14 +860,14 @@ const AddItemPage = ({ user, setUser }) => {
             <div className="pt-2 sm:pt-4">
               <button 
                 type="submit" 
-                disabled={loading || isProcessingCrop || isLimitReached} 
+                disabled={createItemMutation.isPending || uploadImageMutation.isPending || isLimitReached} 
                 className={`w-full font-bold text-sm sm:text-lg rounded-[1.25rem] px-4 py-3.5 sm:py-4 transition-all transform hover:scale-[1.01] active:scale-[0.99] ${
-                  loading || isProcessingCrop || isLimitReached
+                  createItemMutation.isPending || uploadImageMutation.isPending || isLimitReached
                     ? 'bg-[#b794f4] text-white cursor-not-allowed' 
                     : 'bg-gradient-to-r from-[#805ad5] to-[#6B46C1] hover:shadow-lg hover:shadow-purple-500/30 text-white'
                 }`}
               >
-                {loading ? 'Listing Item...' : 'Sell Item'}
+                {createItemMutation.isPending ? 'Listing Item...' : 'Sell Item'}
               </button>
               
               <p className="text-center text-[10px] sm:text-xs font-medium text-gray-500 mt-3 sm:mt-4">
@@ -918,11 +923,11 @@ const AddItemPage = ({ user, setUser }) => {
               <div className="flex gap-2 sm:gap-3 w-full justify-end mt-1 sm:mt-2">
                 <button type="button" onClick={() => setCropModalOpen(false)} className="px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm text-gray-400 hover:text-white transition-all">Cancel</button>
                 <button
-                  onClick={handleCropAndUpload}
-                  disabled={isProcessingCrop}
-                  className={`px-6 sm:px-8 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 w-full sm:w-auto ${isProcessingCrop ? 'bg-[#A388E1]/50 text-white/50 cursor-not-allowed' : 'bg-[#A388E1] hover:bg-[#8b70ca] text-white shadow-[0_0_15px_rgba(163,136,225,0.4)]'}`}
+                  onClick={() => uploadImageMutation.mutate()}
+                  disabled={uploadImageMutation.isPending}
+                  className={`px-6 sm:px-8 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 w-full sm:w-auto ${uploadImageMutation.isPending ? 'bg-[#A388E1]/50 text-white/50 cursor-not-allowed' : 'bg-[#A388E1] hover:bg-[#8b70ca] text-white shadow-[0_0_15px_rgba(163,136,225,0.4)]'}`}
                 >
-                  {isProcessingCrop ? 'Uploading...' : 'Crop & Upload'}
+                  {uploadImageMutation.isPending ? 'Uploading...' : 'Crop & Upload'}
                 </button>
               </div>
             </div>

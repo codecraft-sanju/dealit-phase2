@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { LogOut, User, Mail, Phone, MapPin, Calendar, Package, RefreshCw, Camera, Loader2, Coins, ChevronRight, ClipboardList, Archive, Tag, Heart, Wallet, Bell, HelpCircle, Edit2, X, Home, Hash,Truck  } from 'lucide-react'; // <-- NAYA 
+import { LogOut, User, Mail, Phone, MapPin, Calendar, Package, RefreshCw, Camera, Loader2, Coins, ChevronRight, ClipboardList, Archive, Tag, Heart, Wallet, Bell, HelpCircle, Edit2, X, Home, Hash, Truck } from 'lucide-react'; // <-- NAYA 
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
+// <-- CHANGED: Imported useQuery, useMutation, and useQueryClient -->
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'; 
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -10,15 +12,11 @@ const API_URL = `${API_BASE}/api`;
 const MotionLink = motion(Link);
 
 const ProfilePage = ({ user, onLogout }) => {
-  const [profileData, setProfileData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [uploadingImage, setUploadingImage] = useState(false);
+  // <-- CHANGED: Removed loading, profileData, uploadingImage, and isSavingProfile states. React query handles them now. -->
   const [showAccountDetails, setShowAccountDetails] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-
-
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  
   const [editForm, setEditForm] = useState({
     full_name: '',
     phone: '',
@@ -31,22 +29,23 @@ const ProfilePage = ({ user, onLogout }) => {
     }
   });
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        console.log("Fetching profile from:", `${API_URL}/users/profile`);
-        const response = await axios.get(`${API_URL}/users/profile`, { withCredentials: true });
-        console.log("Profile Data received:", response.data);
-        setProfileData(response.data.data);
-      } catch (error) {
-        console.error('Error fetching profile:', error);
-        alert(`Profile Fetch Error: ${error.message} | Status: ${error.response?.status}`);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProfile();
-  }, []);
+  // <-- CHANGED: Initialize queryClient to invalidate cache after updates -->
+  const queryClient = useQueryClient();
+
+  // <-- CHANGED: 1. Fetch Profile using useQuery -->
+  const { data: profileData, isLoading: loading } = useQuery({
+    queryKey: ['profile'],
+    queryFn: async () => {
+      console.log("Fetching profile from:", `${API_URL}/users/profile`);
+      const response = await axios.get(`${API_URL}/users/profile`, { withCredentials: true });
+      console.log("Profile Data received:", response.data);
+      return response.data.data;
+    },
+    onError: (error) => {
+      console.error('Error fetching profile:', error);
+      alert(`Profile Fetch Error: ${error.message} | Status: ${error.response?.status}`);
+    }
+  });
 
   useEffect(() => {
     const handleScroll = () => {
@@ -61,18 +60,9 @@ const ProfilePage = ({ user, onLogout }) => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    console.log("Selected file:", file);
-    
-    if (!file) {
-      alert("No file selected!"); 
-      return;
-    }
-
-    setUploadingImage(true);
-
-    try {
+  // <-- CHANGED: 2. Upload Image using useMutation -->
+  const uploadImageMutation = useMutation({
+    mutationFn: async (file) => {
       const formData = new FormData();
       formData.append('file', file);
       
@@ -82,6 +72,7 @@ const ProfilePage = ({ user, onLogout }) => {
       formData.append('upload_preset', uploadPreset);
       console.log("Uploading to Cloudinary...");
 
+      // Step 1: Upload to Cloudinary
       const cloudinaryRes = await axios.post(
         `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
         formData
@@ -91,26 +82,36 @@ const ProfilePage = ({ user, onLogout }) => {
       const uploadedUrl = cloudinaryRes.data.secure_url;
       console.log("Sending URL to backend:", uploadedUrl);
 
+      // Step 2: Save to Backend
       const response = await axios.put(
         `${API_URL}/users/profile-pic`,
         { profilePic: uploadedUrl },
         { withCredentials: true }
       );
-
       console.log("Backend response:", response.data);
-
-      if (response.data.success) {
-        setProfileData(prev => ({ ...prev, profilePic: uploadedUrl }));
-      }
-    } catch (error) {
+      return response.data;
+    },
+    onSuccess: () => {
+      // Refresh the profile data automatically
+      queryClient.invalidateQueries(['profile']);
+    },
+    onError: (error) => {
       console.error('Error uploading image:', error);
       alert(`Upload Failed: ${error.message}\nDetails: ${JSON.stringify(error.response?.data || 'No extra data')}`);
-    } finally {
-      setUploadingImage(false);
     }
+  });
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    console.log("Selected file:", file);
+    if (!file) {
+      alert("No file selected!"); 
+      return;
+    }
+    // <-- CHANGED: Trigger mutation -->
+    uploadImageMutation.mutate(file);
   };
 
-  // <-- NAYA CHANGE: Handlers for Edit Profile Submit -->
   const openEditModal = () => {
     setEditForm({
       full_name: profileData?.full_name || '',
@@ -126,22 +127,26 @@ const ProfilePage = ({ user, onLogout }) => {
     setIsEditModalOpen(true);
   };
 
-  const handleEditSubmit = async (e) => {
-    e.preventDefault();
-    setIsSavingProfile(true);
-    try {
-      const response = await axios.put(`${API_URL}/users/profile`, editForm, { withCredentials: true });
-      if (response.data.success) {
-        setProfileData(response.data.data);
-        setIsEditModalOpen(false);
-        alert('Profile updated successfully!');
-      }
-    } catch (error) {
+  // <-- CHANGED: 3. Edit Profile using useMutation -->
+  const editProfileMutation = useMutation({
+    mutationFn: async (updatedData) => {
+      return await axios.put(`${API_URL}/users/profile`, updatedData, { withCredentials: true });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['profile']);
+      setIsEditModalOpen(false);
+      alert('Profile updated successfully!');
+    },
+    onError: (error) => {
       console.error('Error updating profile:', error);
       alert('Failed to update profile.');
-    } finally {
-      setIsSavingProfile(false);
     }
+  });
+
+  const handleEditSubmit = (e) => {
+    e.preventDefault();
+    // <-- CHANGED: Trigger mutation -->
+    editProfileMutation.mutate(editForm);
   };
 
   if (!user) return <Navigate to="/login" />;
@@ -250,7 +255,8 @@ const ProfilePage = ({ user, onLogout }) => {
                     className="w-24 h-24 bg-white rounded-[1.5rem] p-1.5 shadow-sm border border-gray-100"
                   >
                     <div className="w-full h-full bg-[#f8f6ff] rounded-[1.2rem] flex items-center justify-center overflow-hidden">
-                      {uploadingImage ? (
+                      {/* <-- CHANGED: Read pending state from uploadImageMutation --> */}
+                      {uploadImageMutation.isPending ? (
                         <Loader2 className="w-8 h-8 text-[#A388E1] animate-spin" />
                       ) : profileData?.profilePic ? (
                         <motion.img 
@@ -276,7 +282,7 @@ const ProfilePage = ({ user, onLogout }) => {
                       accept="image/*" 
                       className="hidden" 
                       onChange={handleImageUpload} 
-                      disabled={uploadingImage}
+                      disabled={uploadImageMutation.isPending}
                     />
                   </motion.label>
                 </div>
@@ -488,8 +494,9 @@ const ProfilePage = ({ user, onLogout }) => {
 
               <div className="p-5 border-t border-gray-100 bg-[#f8f6ff] flex justify-end gap-3 shrink-0">
                 <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-5 py-2.5 rounded-xl font-bold text-gray-500 hover:bg-gray-200 transition-all text-sm">Cancel</button>
-                <button type="submit" form="editProfileForm" disabled={isSavingProfile} className={`px-6 py-2.5 rounded-xl font-bold transition-all text-sm flex items-center gap-2 ${isSavingProfile ? 'bg-[#6B46C1]/50 text-white cursor-not-allowed' : 'bg-[#6B46C1] hover:bg-[#5a3aa3] text-white shadow-md shadow-[#6B46C1]/20'}`}>
-                  {isSavingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Details'}
+                {/* <-- CHANGED: Check pending state of editProfileMutation --> */}
+                <button type="submit" form="editProfileForm" disabled={editProfileMutation.isPending} className={`px-6 py-2.5 rounded-xl font-bold transition-all text-sm flex items-center gap-2 ${editProfileMutation.isPending ? 'bg-[#6B46C1]/50 text-white cursor-not-allowed' : 'bg-[#6B46C1] hover:bg-[#5a3aa3] text-white shadow-md shadow-[#6B46C1]/20'}`}>
+                  {editProfileMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Details'}
                 </button>
               </div>
             </motion.div>
