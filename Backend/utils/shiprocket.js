@@ -1,7 +1,8 @@
 // utils/shiprocket.js
 const axios = require('axios');
 
-const SHIPROCKET_BASE_URL = 'https://apiv2.shiprocket.in/v1/payload';
+// CHANGED: Updated Base URL from 'payload' to 'external'
+const SHIPROCKET_BASE_URL = 'https://apiv2.shiprocket.in/v1/external';
 
 /**
  * Shiprocket API se auth token generate karta hai.
@@ -9,7 +10,8 @@ const SHIPROCKET_BASE_URL = 'https://apiv2.shiprocket.in/v1/payload';
  */
 const getShiprocketToken = async () => {
   try {
-    const response = await axios.post(`${SHIPROCKET_BASE_URL}/user/login/`, {
+    // CHANGED: Updated endpoint from '/user/login/' to '/auth/login'
+    const response = await axios.post(`${SHIPROCKET_BASE_URL}/auth/login`, {
       email: process.env.SHIPROCKET_EMAIL,
       password: process.env.SHIPROCKET_PASSWORD
     });
@@ -77,7 +79,7 @@ const checkServiceability = async (pickupPincode, deliveryPincode, weight, dimen
   }
 };
 
-// <-- NAYA CHANGE: Order create karne ka naya function -->
+
 const createShiprocketOrder = async (orderData) => {
   try {
     const token = await getShiprocketToken();

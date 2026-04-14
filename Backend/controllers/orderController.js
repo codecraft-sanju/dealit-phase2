@@ -5,7 +5,6 @@ const CreditSetting = require('../models/CreditSetting');
 const Transaction = require('../models/Transaction'); 
 const crypto = require('crypto'); 
 const { checkServiceability, createShiprocketOrder } = require('../utils/shiprocket');
-// CHANGED: Notification model import kiya
 const Notification = require('../models/Notification');
 
 const calculateShippingCost = async (req, res) => {
