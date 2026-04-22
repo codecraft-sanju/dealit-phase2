@@ -7,38 +7,37 @@ const jwt = require('jsonwebtoken');
 const sendEmail = require('../utils/sendEmail');
 
 const sendTokenResponse = (user, statusCode, res, message) => {
-  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-    expiresIn: '7d' 
-  });
+  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+    expiresIn: '36500d' 
+  });
 
-  const isProduction = process.env.NODE_ENV === 'production';
+  const isProduction = process.env.NODE_ENV === 'production';
 
-  const options = {
-    expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    httpOnly: true, 
-    secure: isProduction, 
-    sameSite: isProduction ? 'none' : 'lax' 
-  };
+  const options = {
+    expires: new Date(Date.now() + 36500 * 24 * 60 * 60 * 1000),
+    httpOnly: true, 
+    secure: isProduction, 
+    sameSite: isProduction ? 'none' : 'lax' 
+  };
 
-  console.log('[DEBUG] Setting token cookie for user:', user.email);
-  
-  res.status(statusCode).cookie('token', token, options).json({
-    success: true,
-    message,
-    token: token, 
-    user: { 
-      id: user._id, 
-      full_name: user.full_name, 
-      email: user.email, 
-      role: user.role,
-      account_credits: user.account_credits,
-      hasClaimedWelcomeBonus: user.hasClaimedWelcomeBonus, 
-      referralCode: user.referralCode,
-      totalReferrals: user.totalReferrals 
-    }
-  });
+  console.log('[DEBUG] Setting token cookie for user:', user.email);
+  
+  res.status(statusCode).cookie('token', token, options).json({
+    success: true,
+    message,
+    token: token, 
+    user: { 
+      id: user._id, 
+      full_name: user.full_name, 
+      email: user.email, 
+      role: user.role,
+      account_credits: user.account_credits,
+      hasClaimedWelcomeBonus: user.hasClaimedWelcomeBonus, 
+      referralCode: user.referralCode,
+      totalReferrals: user.totalReferrals 
+    }
+  });
 };
-
 const generateUniqueReferralCode = async (name) => {
   let isUnique = false;
   let code = '';

@@ -1,22 +1,15 @@
 // utils/shiprocket.js
 const axios = require('axios');
-
-// CHANGED: Updated Base URL from 'payload' to 'external'
 const SHIPROCKET_BASE_URL = 'https://apiv2.shiprocket.in/v1/external';
 
-/**
- * Shiprocket API se auth token generate karta hai.
- * Yeh token har aage aane wali request me chahiye hoga.
- */
 const getShiprocketToken = async () => {
   try {
-    // CHANGED: Updated endpoint from '/user/login/' to '/auth/login'
+
     const response = await axios.post(`${SHIPROCKET_BASE_URL}/auth/login`, {
       email: process.env.SHIPROCKET_EMAIL,
       password: process.env.SHIPROCKET_PASSWORD
     });
     
-    // Return token
     return response.data.token;
   } catch (error) {
     console.error('Shiprocket Login Error:', error.response?.data || error.message);
@@ -24,9 +17,6 @@ const getShiprocketToken = async () => {
   }
 };
 
-/**
- * Pincode aur weight ke hisab se estimated cost calculate karta hai.
- */
 const checkServiceability = async (pickupPincode, deliveryPincode, weight, dimensions) => {
   try {
     const token = await getShiprocketToken();
@@ -35,7 +25,6 @@ const checkServiceability = async (pickupPincode, deliveryPincode, weight, dimen
       headers: { Authorization: `Bearer ${token}` }
     };
 
-    // Calculate volumetric weight
     const length = dimensions?.length || 10;
     const width = dimensions?.width || 10;
     const height = dimensions?.height || 10;
@@ -47,7 +36,7 @@ const checkServiceability = async (pickupPincode, deliveryPincode, weight, dimen
       pickup_postcode: pickupPincode,
       delivery_postcode: deliveryPincode,
       weight: finalWeight,
-      cod: 0 // Hum prepaid le rahe hain Razorpay se
+      cod: 0 
     };
 
     const response = await axios.get(
@@ -57,18 +46,15 @@ const checkServiceability = async (pickupPincode, deliveryPincode, weight, dimen
 
     const data = response.data;
     
-    // Agar route serviceable nahi hai
     if (data.status === 404 || !data.data || !data.data.available_courier_companies) {
       throw new Error('Shipping not available for this route.');
     }
 
-    // Sabse sasta courier option dhoondo
     const couriers = data.data.available_courier_companies;
     const sortedCouriers = couriers.sort((a, b) => a.rate - b.rate);
     
     const cheapestRate = sortedCouriers[0].rate;
     
-    // Total cost return karo (thoda buffer margin add karna better hota hai + GST)
     const finalCost = Math.ceil(cheapestRate * 1.18); 
 
     return finalCost;
@@ -79,6 +65,42 @@ const checkServiceability = async (pickupPincode, deliveryPincode, weight, dimen
   }
 };
 
+const addPickupLocation = async (seller) => {
+  try {
+    const token = await getShiprocketToken();
+    const config = { 
+      headers: { 
+        'Content-Type': 'application/json', 
+        Authorization: `Bearer ${token}` 
+      } 
+    };
+
+    const locationName = `SEL_${seller._id.toString().substring(0, 8)}_${Date.now().toString().slice(-4)}`;
+
+    const payload = {
+      pickup_location: locationName,
+      name: seller.full_name,
+      email: seller.email,
+      phone: seller.phone,
+      address: seller.pickupAddress.addressLine,
+      city: seller.pickupAddress.city,
+      state: seller.pickupAddress.state,
+      country: "India",
+      pin_code: seller.pickupAddress.pincode
+    };
+
+    const response = await axios.post(`${SHIPROCKET_BASE_URL}/settings/company/addpickup`, payload, config);
+    
+    if (response.data && response.data.pickup_id) {
+      return locationName; 
+    }
+    return "Primary"; 
+  } catch (error) {
+    console.error('Shiprocket Add Pickup Location Error:', error.response?.data || error.message);
+    return "Primary"; 
+  }
+};
+// <-- NAYA CHANGE END -->
 
 const createShiprocketOrder = async (orderData) => {
   try {
@@ -107,5 +129,6 @@ const createShiprocketOrder = async (orderData) => {
 module.exports = {
   getShiprocketToken,
   checkServiceability,
-  createShiprocketOrder 
+  createShiprocketOrder,
+  addPickupLocation 
 };

@@ -4,7 +4,8 @@ const User = require('../models/User');
 const CreditSetting = require('../models/CreditSetting');
 const Transaction = require('../models/Transaction'); 
 const crypto = require('crypto'); 
-const { checkServiceability, createShiprocketOrder } = require('../utils/shiprocket');
+// <-- NAYA CHANGE: addPickupLocation import kiya -->
+const { checkServiceability, createShiprocketOrder, addPickupLocation } = require('../utils/shiprocket');
 const Notification = require('../models/Notification');
 
 const calculateShippingCost = async (req, res) => {
@@ -174,6 +175,9 @@ const createOrder = async (req, res) => {
 
     // <-- NAYA CHANGE: PUSH TO SHIPROCKET AFTER SUCCESSFUL DB SAVE -->
     try {
+      // <-- NAYA CHANGE: Pehle pickup location register karwao -->
+      const dynamicPickupLocation = await addPickupLocation(item.owner);
+
       const orderDate = new Date().toISOString().slice(0, 19).replace('T', ' '); // YYYY-MM-DD HH:MM:SS
       const weight = item.weight || 0.5;
       const dimensions = item.dimensions || { length: 10, width: 10, height: 10 };
@@ -181,10 +185,10 @@ const createOrder = async (req, res) => {
       const shiprocketPayload = {
         order_id: order._id.toString(), // Hamara unique order ID
         order_date: orderDate,
-        pickup_location: "Primary", // Agar multiple pickup locations hain toh seller ka ID bhejna hoga
+        pickup_location: dynamicPickupLocation, // <-- NAYA CHANGE: Yahan dynamic location pass kiya
         channel_id: "", 
         billing_customer_name: shippingAddress.fullName,
-        billing_last_name: "",
+        billing_last_name: "User", // <-- NAYA CHANGE: Dummy last name, Shiprocket validation ke liye
         billing_address: shippingAddress.addressLine,
         billing_city: shippingAddress.city,
         billing_pincode: shippingAddress.pincode,
