@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { LogOut, User, Mail, Phone, MapPin, Calendar, Package, RefreshCw, Camera, Loader2, Coins, ChevronRight, ClipboardList, Archive, Tag, Heart, Wallet, Bell, HelpCircle, Edit2, X, Home, Hash, Truck } from 'lucide-react'; // <-- NAYA 
+import { LogOut, User, Mail, Phone, MapPin, Calendar, Package, RefreshCw, Camera, Loader2, Coins, ChevronRight, ClipboardList, Archive, Tag, Heart, Wallet, Bell, HelpCircle, Edit2, X, Home, Hash, Truck, Shield, Star } from 'lucide-react'; // <-- NAYA CHANGE: Added Star icon
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-// <-- CHANGED: Imported useQuery, useMutation, and useQueryClient -->
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'; 
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
@@ -290,15 +290,52 @@ const ProfilePage = ({ user, onLogout }) => {
                 <h2 className="text-xl font-bold text-gray-900 leading-tight">{profileData?.full_name}</h2>
                 <p className="text-sm text-gray-500 font-medium mb-3">{profileData?.email}</p>
 
-                <div className="flex items-center gap-2 justify-center w-full mt-2">
-                  <span className="bg-[#EBE5F7] text-[#6B46C1] text-[10px] font-bold px-3 py-1.5 rounded-full uppercase tracking-wider">
+                {/* <-- NAYA CHANGE: Aura Points, Credits, and Build Aura Banner layout --> */}
+                <div className="mt-1 w-full flex flex-col items-center">
+                  
+                  {/* Role Badge */}
+                  <span className="bg-[#F4F0FF] text-[#6B46C1] text-[11px] font-bold px-4 py-1.5 rounded-full uppercase tracking-wider mb-5">
                     {profileData?.role || 'USER'}
                   </span>
-                  <span className="bg-[#FFF4D2] border border-[#FFE28A]/50 px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm">
-                    <Coins className="w-3.5 h-3.5 text-yellow-600" />
-                    <span className="text-[11px] font-bold text-gray-900">{profileData?.account_credits || 0} Credits</span>
-                  </span>
+
+                  {/* Credits & Aura Row */}
+                  <div className="flex w-full gap-3 mb-4">
+                    {/* Credits */}
+                    <div className="flex-1 bg-[#FFF9E6] rounded-xl py-3 px-2 flex items-center justify-center gap-2 border border-[#FFF0C2]/50 shadow-sm">
+                      <Coins className="w-5 h-5 text-[#EAB308]" />
+                      <span className="font-bold text-gray-800 text-sm">{profileData?.account_credits || 0} Credits</span>
+                    </div>
+
+                    {/* Aura Points */}
+                    <div className="flex-1 bg-[#F5F0FF] rounded-xl py-3 px-2 flex items-center justify-center gap-2 border border-[#E9DFFF]/50 shadow-sm">
+                      <Shield className="w-5 h-5 text-[#6B46C1] fill-[#6B46C1]/20" />
+                      <span className="font-bold text-gray-800 text-sm">{profileData?.aura_points || 0} Aura Points</span>
+                      <div className="w-4 h-4 bg-[#6B46C1] rounded-full flex items-center justify-center">
+                        <Star className="w-2.5 h-2.5 text-white fill-white" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Build your Aura Banner */}
+                  {/* <-- NAYA CHANGE: Wrapped banner in Link to route to /aura --> */}
+                  <Link to="/aura" className="w-full bg-white border border-gray-100 rounded-2xl p-4 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow cursor-pointer block">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-[#6B46C1] p-3 rounded-xl flex-shrink-0 shadow-sm border border-[#5a3aa3]">
+                        <Star className="w-6 h-6 text-white fill-white" />
+                      </div>
+                      <div className="text-left">
+                        <h3 className="font-bold text-gray-900 text-[14px]">Build your Aura!</h3>
+                        <p className="text-[11px] text-gray-500 font-medium mt-0.5 leading-snug">
+                          Complete trades, get good reviews<br />& be active to increase your Aura.
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                  </Link>
+
                 </div>
+                {/* <-- END NAYA CHANGE --> */}
+
               </motion.div>
 
               <motion.div variants={itemVariants} className="md:col-span-2 flex flex-col gap-4">
@@ -381,6 +418,7 @@ const ProfilePage = ({ user, onLogout }) => {
                 
                     { to: "/wishlist", icon: Heart, title: "Wishlist", subtitle: "Saved Items", iconClass: "fill-[#6B46C1]" },
                     { to: "/wallet", icon: Wallet, title: "My Wallet", subtitle: "Credit Balance & Purchases" },
+                    /* <-- NAYA CHANGE: Removed the Aura Score list item from here --> */
                     { to: "#", icon: Bell, title: "Notifications", subtitle: "Alert Settings", iconClass: "fill-[#6B46C1]" },      
                     { to: "#", icon: HelpCircle, title: "Help & Support", subtitle: "Get Assistance", iconClass: "fill-[#6B46C1]/20", noBorder: true }
                   ].map((item, index) => (

@@ -16,6 +16,7 @@ const IosInstallPopup = lazy(() => import('./components/IosInstallPopup'));
 const DesktopLandingPage = lazy(() => import('./Desktop/DesktopLandingPage'));
 
 const PrivacyPage = lazy(() => import('./components/PrivacyPage'));
+const AuraPage = lazy(() => import('./components/AuraPage'));
 const AuthPage = lazy(() => import('./components/AuthPage'));
 const SearchPage = lazy(() => import('./components/SearchPage'));
 const AdminPanel = lazy(() => import('./components/AdminPanel'));
@@ -384,6 +385,7 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
                 <ItemDetailPage user={user} />
               </>
             } />
+            <Route path="/aura" element={user ? <AuraPage user={user} /> : <Navigate to="/login" />} />
             
             <Route path="/swaps" element={user ? <SwapsPage user={user} /> : <Navigate to="/login" />} />
             <Route path="/chat/:barterId" element={user ? <ChatPage user={user} /> : <Navigate to="/login" />} />
