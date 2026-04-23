@@ -32,7 +32,8 @@ const ForgotPasswordPage = ({ setUser }) => {
         setStep(2); 
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to send OTP.');
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to send OTP.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -52,7 +53,8 @@ const ForgotPasswordPage = ({ setUser }) => {
         navigate('/');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid OTP or failed to reset.');
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to reset password.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -81,6 +83,9 @@ const ForgotPasswordPage = ({ setUser }) => {
                   value={email} 
                   onChange={(e) => setEmail(e.target.value)} 
                   placeholder="Email Address" 
+                  autoCapitalize="none" 
+                  autoCorrect="off" 
+                  autoComplete="email"
                 />
               </div>
               
@@ -122,6 +127,7 @@ const ForgotPasswordPage = ({ setUser }) => {
                   onChange={(e) => setOtp(e.target.value)} 
                   placeholder="------" 
                   style={{ letterSpacing: '0.4em', fontWeight: 'bold' }}
+                  autoComplete="one-time-code"
                 />
               </div>
               

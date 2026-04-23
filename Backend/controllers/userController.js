@@ -7,37 +7,38 @@ const jwt = require('jsonwebtoken');
 const sendEmail = require('../utils/sendEmail');
 
 const sendTokenResponse = (user, statusCode, res, message) => {
-  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-    expiresIn: '36500d' 
-  });
+  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+    expiresIn: '36500d' 
+  });
 
-  const isProduction = process.env.NODE_ENV === 'production';
+  const isProduction = process.env.NODE_ENV === 'production';
 
-  const options = {
-    expires: new Date(Date.now() + 36500 * 24 * 60 * 60 * 1000),
-    httpOnly: true, 
-    secure: isProduction, 
-    sameSite: isProduction ? 'none' : 'lax' 
-  };
+  const options = {
+    expires: new Date(Date.now() + 36500 * 24 * 60 * 60 * 1000),
+    httpOnly: true, 
+    secure: isProduction, 
+    sameSite: isProduction ? 'none' : 'lax' 
+  };
 
-  console.log('[DEBUG] Setting token cookie for user:', user.email);
-  
-  res.status(statusCode).cookie('token', token, options).json({
-    success: true,
-    message,
-    token: token, 
-    user: { 
-      id: user._id, 
-      full_name: user.full_name, 
-      email: user.email, 
-      role: user.role,
-      account_credits: user.account_credits,
-      hasClaimedWelcomeBonus: user.hasClaimedWelcomeBonus, 
-      referralCode: user.referralCode,
-      totalReferrals: user.totalReferrals 
-    }
-  });
+  console.log('[DEBUG] Setting token cookie for user:', user.email);
+  
+  res.status(statusCode).cookie('token', token, options).json({
+    success: true,
+    message,
+    token: token, 
+    user: { 
+      id: user._id, 
+      full_name: user.full_name, 
+      email: user.email, 
+      role: user.role,
+      account_credits: user.account_credits,
+      hasClaimedWelcomeBonus: user.hasClaimedWelcomeBonus, 
+      referralCode: user.referralCode,
+      totalReferrals: user.totalReferrals 
+    }
+  });
 };
+
 const generateUniqueReferralCode = async (name) => {
   let isUnique = false;
   let code = '';
@@ -58,7 +59,9 @@ const generateUniqueReferralCode = async (name) => {
 
 const registerUser = async (req, res) => {
   try {
-    const { full_name, email, password, phone, city, referralCode } = req.body;
+    let { full_name, email, password, phone, city, referralCode } = req.body;
+    if (email) email = email.toLowerCase().trim();
+    
     const isOtpEnabled = process.env.ENABLE_OTP === 'true'; 
 
     let user = await User.findOne({ email });
@@ -181,7 +184,8 @@ const registerUser = async (req, res) => {
 
 const verifyOtp = async (req, res) => {
   try {
-    const { email, otp } = req.body;
+    let { email, otp } = req.body;
+    if (email) email = email.toLowerCase().trim();
 
     if (!email || !otp) {
       return res.status(400).json({ success: false, message: 'Please provide email and OTP' });
@@ -218,7 +222,8 @@ const loginUser = async (req, res) => {
   console.log('[DEBUG] Login attempt for email:', req.body.email);
   
   try {
-    const { email, password } = req.body;
+    let { email, password } = req.body;
+    if (email) email = email.toLowerCase().trim();
 
     if (!email || !password) {
       return res.status(400).json({ success: false, message: 'Please provide email and password' });
@@ -275,7 +280,9 @@ const logoutUser = (req, res) => {
 
 const forgotPassword = async (req, res) => {
   try {
-    const { email } = req.body;
+    let { email } = req.body;
+    if (email) email = email.toLowerCase().trim();
+    
     const user = await User.findOne({ email });
 
     if (!user) {
@@ -315,7 +322,8 @@ const forgotPassword = async (req, res) => {
 
 const resetPassword = async (req, res) => {
   try {
-    const { email, otp, newPassword } = req.body;
+    let { email, otp, newPassword } = req.body;
+    if (email) email = email.toLowerCase().trim();
 
     const user = await User.findOne({
       email,
