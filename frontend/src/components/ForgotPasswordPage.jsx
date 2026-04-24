@@ -32,8 +32,15 @@ const ForgotPasswordPage = ({ setUser }) => {
         setStep(2); 
       }
     } catch (err) {
-      const errorMessage = err.response?.data?.message || err.message || 'Failed to send OTP.';
-      setError(errorMessage);
+      console.error("[DEBUG] Send OTP Error:", err);
+      // ⚡ iOS Debugging Logic
+      if (err.response) {
+        setError(err.response.data.message || 'Failed to send OTP.');
+      } else if (err.request) {
+        setError('Network Error: Cannot reach server. Please check internet connection.');
+      } else {
+        setError('Error: ' + err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -45,16 +52,26 @@ const ForgotPasswordPage = ({ setUser }) => {
     try {
       const response = await axios.post(`${API_URL}/users/resetpassword`, 
         { email, otp, newPassword },
-        { withCredentials: true }
+        { withCredentials: true } // ⚡ iOS blocks this sometimes if CORS isn't perfect
       );
       if (response.data.success) {
         setUser(response.data.user);
         localStorage.setItem('dealit_user', JSON.stringify(response.data.user));
+        if(response.data.token) {
+          localStorage.setItem('dealit_token', response.data.token);
+        }
         navigate('/');
       }
     } catch (err) {
-      const errorMessage = err.response?.data?.message || err.message || 'Failed to reset password.';
-      setError(errorMessage);
+      console.error("[DEBUG] Reset Password Error:", err);
+      // ⚡ iOS Debugging Logic
+      if (err.response) {
+        setError(err.response.data.message || 'Invalid OTP or Password.');
+      } else if (err.request) {
+        setError('Network Error: Cannot reach server (Blocked by Apple Security).');
+      } else {
+        setError('Error: ' + err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -73,7 +90,12 @@ const ForgotPasswordPage = ({ setUser }) => {
               <h2 className="form__title">Reset Password</h2>
               <p className="form__text">Don't worry! It happens. Please enter the email associated with your account.</p>
               
-              {error && step === 1 && <div className="error-message">{error}</div>}
+              {/* ⚡ Error Display Improvement */}
+              {error && step === 1 && (
+                <div className="error-message bg-red-100 text-red-600 p-3 rounded-lg text-xs mb-3 font-bold w-full max-w-[380px]">
+                  {error}
+                </div>
+              )}
               
               <div className="form__input-field">
                 <Mail />
@@ -110,9 +132,15 @@ const ForgotPasswordPage = ({ setUser }) => {
                 We sent a 6-digit code to <strong>{email}</strong>
               </p>
               
-              {error && step === 2 && <div className="error-message">{error}</div>}
+              {/* ⚡ Error Display Improvement */}
+              {error && step === 2 && (
+                <div className="error-message bg-red-100 text-red-600 p-3 rounded-lg text-xs mb-3 font-bold w-full max-w-[380px]">
+                  {error}
+                </div>
+              )}
+              
               {message && step === 2 && (
-                <div style={{color: '#10b981', background: '#d1fae5', padding: '10px', borderRadius: '10px', fontSize: '0.9rem', textAlign: 'center', marginBottom: '10px', width: '100%', maxWidth: '380px'}}>
+                <div style={{color: '#10b981', background: '#d1fae5', padding: '10px', borderRadius: '10px', fontSize: '0.9rem', textAlign: 'center', marginBottom: '10px', width: '100%', maxWidth: '380px', fontWeight: 'bold'}}>
                   {message}
                 </div>
               )}
@@ -128,6 +156,8 @@ const ForgotPasswordPage = ({ setUser }) => {
                   placeholder="------" 
                   style={{ letterSpacing: '0.4em', fontWeight: 'bold' }}
                   autoComplete="one-time-code"
+                  inputMode="numeric" // ⚡ iOS FIX: Forces Apple keyboard to show Numbers only
+                  pattern="[0-9]*" // ⚡ iOS FIX: Extra strict numeric enforce
                 />
               </div>
               

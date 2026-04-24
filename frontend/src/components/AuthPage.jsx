@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom'; // ⚡ ADDED Link
 import axios from 'axios';
 import { User, Lock, Mail, Phone, MapPin, CheckCircle, Gift } from 'lucide-react';
 import './AuthPage.css'; 
@@ -72,7 +72,15 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
         navigate('/');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid email or password.');
+      console.error("[DEBUG] Login Error Details:", err);
+      // ⚡ NAYA LOGIC: iOS ke network errors ko pakadne ke liye
+      if (err.response) {
+        setError(err.response.data.message || 'Invalid email or password.');
+      } else if (err.request) {
+        setError('Network Error: Cannot reach server. Please check your internet or HTTP/HTTPS settings.');
+      } else {
+        setError('Error: ' + err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -101,7 +109,14 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
         }
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Something went wrong during signup.');
+      console.error("[DEBUG] Signup Error Details:", err);
+      if (err.response) {
+        setError(err.response.data.message || 'Something went wrong during signup.');
+      } else if (err.request) {
+        setError('Network Error: Cannot reach server.');
+      } else {
+        setError('Error: ' + err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -129,7 +144,11 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
         navigate('/');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid or expired OTP.');
+      if (err.response) {
+        setError(err.response.data.message || 'Invalid or expired OTP.');
+      } else {
+        setError('Network Error: Cannot reach server.');
+      }
     } finally {
       setLoading(false);
     }
@@ -144,11 +163,12 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
             
             <form onSubmit={handleLogin} className="auth-form-wrap form__sign-in">
               <h2 className="form__title">Sign In</h2>
-              {error && !isSignUpMode && <div className="error-message">{error}</div>}
+              {error && !isSignUpMode && <div className="error-message bg-red-100 text-red-600 p-3 rounded-lg text-xs mb-3 font-bold">{error}</div>}
               
               <div className="form__input-field">
                 <Mail />
-                <input type="email" name="email" placeholder="Email Address" required value={formData.email} onChange={handleChange} />
+                {/* ⚡ iOS FIX: autoCapitalize aur autoCorrect band kiya */}
+                <input type="email" name="email" placeholder="Email Address" required value={formData.email} onChange={handleChange} autoCapitalize="none" autoCorrect="off" />
               </div>
               
               <div className="form__input-field">
@@ -159,7 +179,8 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
               <input type="submit" className="form__submit" value={loading ? "Signing In..." : "Sign In"} disabled={loading} />
               
               <p className="form__footer-text">
-                <a href="/forgot-password">Forgot your password?</a>
+                {/* ⚡ FIXED: <a> tag removed, <Link> used to prevent page reload */}
+                <Link to="/forgot-password">Forgot your password?</Link>
               </p>
             </form>
 
@@ -168,7 +189,7 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
               {!showOtp ? (
                 <>
                   <h2 className="form__title">Sign Up</h2>
-                  {error && isSignUpMode && <div className="error-message">{error}</div>}
+                  {error && isSignUpMode && <div className="error-message bg-red-100 text-red-600 p-3 rounded-lg text-xs mb-3 font-bold">{error}</div>}
                   
                   <div className="form__input-field">
                     <User />
@@ -177,7 +198,7 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                   
                   <div className="form__input-field">
                     <Mail />
-                    <input type="email" name="email" placeholder="Email Address" required value={formData.email} onChange={handleChange} />
+                    <input type="email" name="email" placeholder="Email Address" required value={formData.email} onChange={handleChange} autoCapitalize="none" autoCorrect="off" />
                   </div>
                   
                   <div className="form__input-field">
@@ -198,7 +219,7 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                   {appSettings.isReferralSystemEnabled && (
                     <div className="form__input-field">
                       <Gift />
-                      <input type="text" name="referralCode" placeholder="Referral Code (Optional)" value={formData.referralCode} onChange={handleChange} style={{textTransform: 'uppercase'}} />
+                      <input type="text" name="referralCode" placeholder="Referral Code (Optional)" value={formData.referralCode} onChange={handleChange} style={{textTransform: 'uppercase'}} autoCapitalize="characters" />
                     </div>
                   )}
 
@@ -211,7 +232,7 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                     We sent a 6-digit code to <strong>{registeredEmail}</strong>
                   </p>
                   
-                  {error && isSignUpMode && <div className="error-message">{error}</div>}
+                  {error && isSignUpMode && <div className="error-message bg-red-100 text-red-600 p-3 rounded-lg text-xs mb-3 font-bold">{error}</div>}
                   
                   <div className="form__input-field" style={{ gridTemplateColumns: "15% 85%" }}>
                     <CheckCircle />
@@ -223,13 +244,14 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                       onChange={(e) => setOtp(e.target.value)} 
                       placeholder="------" 
                       style={{ letterSpacing: '0.4em', fontWeight: 'bold' }}
+                      inputMode="numeric"
                     />
                   </div>
                   
                   <input type="submit" className="form__submit" value={loading ? "Verifying..." : "Verify & Login"} disabled={loading || otp.length < 6} />
                   
                   <p className="form__footer-text">
-                    Wrong email? <span onClick={() => setShowOtp(false)} className="go-back-btn">Go back</span>
+                    Wrong email? <span onClick={() => setShowOtp(false)} className="go-back-btn" style={{cursor:'pointer', color:'#6B46C1', fontWeight:'bold'}}>Go back</span>
                   </p>
                 </>
               )}
@@ -238,6 +260,7 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
           </div>
         </div>
 
+        {/* ... Rest of the panels remain exactly the same ... */}
         <div className="auth-container__panels">
           <div className="panel panel__left">
             <div className="panel__content">
