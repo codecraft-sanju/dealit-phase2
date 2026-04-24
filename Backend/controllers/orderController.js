@@ -4,9 +4,9 @@ const User = require('../models/User');
 const CreditSetting = require('../models/CreditSetting');
 const Transaction = require('../models/Transaction'); 
 const crypto = require('crypto'); 
-// <-- NAYA CHANGE: addPickupLocation import kiya -->
 const { checkServiceability, createShiprocketOrder, addPickupLocation } = require('../utils/shiprocket');
 const Notification = require('../models/Notification');
+const AuraLog = require('../models/AuraLog'); // <-- ⚡ NAYA CHANGE: AuraLog import kiya
 
 const calculateShippingCost = async (req, res) => {
   try {
@@ -155,7 +155,6 @@ const createOrder = async (req, res) => {
       }
     });
 
-    // CHANGED: Buyer ko credit deduction ki notification
     await Notification.create({
       user: buyerId,
       type: 'CREDIT_DEDUCTED',
@@ -164,7 +163,6 @@ const createOrder = async (req, res) => {
       metadata: { amount: itemPrice, reason: 'item_purchase', referenceId: order._id }
     });
 
-    // CHANGED: Seller ko naye order ki notification
     await Notification.create({
       user: item.owner._id,
       type: 'ORDER_UPDATE',
@@ -173,22 +171,20 @@ const createOrder = async (req, res) => {
       metadata: { referenceId: order._id }
     });
 
-    // <-- NAYA CHANGE: PUSH TO SHIPROCKET AFTER SUCCESSFUL DB SAVE -->
     try {
-      // <-- NAYA CHANGE: Pehle pickup location register karwao -->
       const dynamicPickupLocation = await addPickupLocation(item.owner);
 
-      const orderDate = new Date().toISOString().slice(0, 19).replace('T', ' '); // YYYY-MM-DD HH:MM:SS
+      const orderDate = new Date().toISOString().slice(0, 19).replace('T', ' '); 
       const weight = item.weight || 0.5;
       const dimensions = item.dimensions || { length: 10, width: 10, height: 10 };
       
       const shiprocketPayload = {
-        order_id: order._id.toString(), // Hamara unique order ID
+        order_id: order._id.toString(), 
         order_date: orderDate,
-        pickup_location: dynamicPickupLocation, // <-- NAYA CHANGE: Yahan dynamic location pass kiya
+        pickup_location: dynamicPickupLocation, 
         channel_id: "", 
         billing_customer_name: shippingAddress.fullName,
-        billing_last_name: "User", // <-- NAYA CHANGE: Dummy last name, Shiprocket validation ke liye
+        billing_last_name: "User", 
         billing_address: shippingAddress.addressLine,
         billing_city: shippingAddress.city,
         billing_pincode: shippingAddress.pincode,
@@ -202,7 +198,7 @@ const createOrder = async (req, res) => {
             name: item.title,
             sku: item._id.toString(),
             units: 1,
-            selling_price: itemPrice > 0 ? itemPrice : 100, // Shiprocket needs a valid price
+            selling_price: itemPrice > 0 ? itemPrice : 100, 
             discount: 0,
             tax: 0,
             hsn: ""
@@ -229,7 +225,6 @@ const createOrder = async (req, res) => {
 
     } catch (shiprocketError) {
       console.error("Order saved but failed to push to Shiprocket:", shiprocketError);
-      // Order DB me save ho gaya hai par Shiprocket me fail hua. Ise baad me admin retry kar sakta hai.
     }
 
     res.status(201).json({
@@ -298,17 +293,28 @@ const updateOrderStatus = async (req, res) => {
       const seller = await User.findById(order.seller);
       if (seller) {
         seller.account_credits += order.itemPrice; 
+        
+        // ⚡ NAYA CHANGE: Aura Increase for Successful Trade
+        seller.aura_points = (seller.aura_points || 0) + 50; 
+        
         await seller.save();
         
         order.isSellerPaid = true;
 
-        // CHANGED: Seller ko payment receive hone ki notification
         await Notification.create({
           user: seller._id,
           type: 'CREDIT_ADDED',
           title: 'Payment Released! 💰',
           message: `Order delivered! ${order.itemPrice} credits aapke wallet me add kar diye gaye hain.`,
           metadata: { amount: order.itemPrice, reason: 'escrow_release', referenceId: order._id }
+        });
+
+        // ⚡ NAYA CHANGE: Log creation for Aura
+        await AuraLog.create({
+          user: seller._id,
+          reason: "Successful Trade Delivered",
+          points: 50,
+          type: "positive"
         });
 
         if(order.item) {
@@ -328,7 +334,6 @@ const updateOrderStatus = async (req, res) => {
         
         order.paymentStatus = 'refunded';
 
-        // CHANGED: Buyer ko refund ki notification
         await Notification.create({
           user: buyer._id,
           type: 'CREDIT_ADDED',
@@ -337,6 +342,20 @@ const updateOrderStatus = async (req, res) => {
           metadata: { amount: order.itemPrice, reason: 'order_refund', referenceId: order._id }
         });
         
+        // ⚡ NAYA CHANGE: Penalty to Seller for Cancelled Deal
+        const seller = await User.findById(order.seller);
+        if (seller) {
+          seller.aura_points = Math.max(0, (seller.aura_points || 0) - 50); // Optional: Math.max ensures it doesn't drop below 0
+          await seller.save();
+
+          await AuraLog.create({
+            user: seller._id,
+            reason: "Cancelled deal after accepting",
+            points: -50,
+            type: "negative"
+          });
+        }
+
         if(order.item) {
            order.item.status = 'active';
            await order.item.save();
@@ -354,10 +373,9 @@ const updateOrderStatus = async (req, res) => {
   }
 };
 
-// <-- NAYA CHANGE: Shiprocket Webhook Handler -->
+// Shiprocket Webhook Handler
 const handleShiprocketWebhook = async (req, res) => {
   try {
-    // Shiprocket sends payload here
     const { awb, current_status } = req.body;
 
     if (!awb || !current_status) {
@@ -380,17 +398,28 @@ const handleShiprocketWebhook = async (req, res) => {
         const seller = await User.findById(order.seller);
         if (seller) {
           seller.account_credits += order.itemPrice; 
+          
+          // ⚡ NAYA CHANGE: Auto Aura Increase from Webhook
+          seller.aura_points = (seller.aura_points || 0) + 50; 
+
           await seller.save();
           
           order.isSellerPaid = true;
 
-          // CHANGED: Webhook se auto-release par seller ko notification
           await Notification.create({
             user: seller._id,
             type: 'CREDIT_ADDED',
             title: 'Payment Released! 💰',
             message: `Order successfully delivered! ${order.itemPrice} credits aapke account me aagaye hain.`,
             metadata: { amount: order.itemPrice, reason: 'escrow_release', referenceId: order._id }
+          });
+
+          // ⚡ NAYA CHANGE: Log creation for Aura
+          await AuraLog.create({
+            user: seller._id,
+            reason: "Successful Trade Delivered",
+            points: 50,
+            type: "positive"
           });
 
           if(order.item) {

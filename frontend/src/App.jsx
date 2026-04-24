@@ -17,6 +17,8 @@ const DesktopLandingPage = lazy(() => import('./Desktop/DesktopLandingPage'));
 
 const PrivacyPage = lazy(() => import('./components/PrivacyPage'));
 const AuraPage = lazy(() => import('./components/AuraPage'));
+const AuraLeadershipPage = lazy(() => import('./components/AuraLeadershipPage'));
+
 const AuthPage = lazy(() => import('./components/AuthPage'));
 const SearchPage = lazy(() => import('./components/SearchPage'));
 const AdminPanel = lazy(() => import('./components/AdminPanel'));
@@ -386,6 +388,9 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
               </>
             } />
             <Route path="/aura" element={user ? <AuraPage user={user} /> : <Navigate to="/login" />} />
+            
+            {/* CHANGED HERE: Added Route for the leadership page */}
+            <Route path="/aura-leadership" element={user ? <AuraLeadershipPage user={user} /> : <Navigate to="/login" />} />
             
             <Route path="/swaps" element={user ? <SwapsPage user={user} /> : <Navigate to="/login" />} />
             <Route path="/chat/:barterId" element={user ? <ChatPage user={user} /> : <Navigate to="/login" />} />

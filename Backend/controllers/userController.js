@@ -1,7 +1,7 @@
 const User = require('../models/User');
 const CreditSetting = require('../models/CreditSetting'); 
-
 const Notification = require('../models/Notification');
+const AuraLog = require('../models/AuraLog'); 
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const sendEmail = require('../utils/sendEmail');
@@ -32,6 +32,7 @@ const sendTokenResponse = (user, statusCode, res, message) => {
       email: user.email, 
       role: user.role,
       account_credits: user.account_credits,
+      aura_points: user.aura_points, 
       hasClaimedWelcomeBonus: user.hasClaimedWelcomeBonus, 
       referralCode: user.referralCode,
       totalReferrals: user.totalReferrals 
@@ -117,26 +118,42 @@ const registerUser = async (req, res) => {
 
               if (referrer.totalReferrals === 1) {
                 referrer.account_credits += setting.referralRewardCredits;
+                referrer.aura_points = (referrer.aura_points || 0) + 20; // ⚡ NAYA: +20 Aura for successful referral
                 
-                // CHANGED: Referral notification add kiya
                 await Notification.create({
                   user: referrer._id,
                   type: 'CREDIT_ADDED',
-                  title: 'Referral Bonus! 🎉',
+                  title: 'Referral Bonus! ',
                   message: `Aapke code se naya user join hua. Aapko ${setting.referralRewardCredits} credits mile hain.`,
                   metadata: { amount: setting.referralRewardCredits, reason: 'referral_bonus' }
                 });
 
+           
+                await AuraLog.create({
+                  user: referrer._id,
+                  reason: "Successful Referral",
+                  points: 20,
+                  type: "positive"
+                });
+
               } else if (referrer.totalReferrals === setting.maxReferralLimit) {
                 referrer.account_credits += setting.milestoneReferralReward;
+                referrer.aura_points = (referrer.aura_points || 0) + 50; // ⚡ NAYA: +50 Aura for Milestone
                 
-                // CHANGED: Milestone notification add kiya
                 await Notification.create({
                   user: referrer._id,
                   type: 'CREDIT_ADDED',
                   title: 'Milestone Unlocked! 🚀',
                   message: `Aapne max referrals complete kar liye. ${setting.milestoneReferralReward} bonus credits added.`,
                   metadata: { amount: setting.milestoneReferralReward, reason: 'milestone_bonus' }
+                });
+
+                // ⚡ NAYA: Aura Log for Milestone
+                await AuraLog.create({
+                  user: referrer._id,
+                  reason: "Referral Milestone Unlocked",
+                  points: 50,
+                  type: "positive"
                 });
               }
 
@@ -374,7 +391,6 @@ const getUserProfile = async (req, res) => {
   }
 };
 
-// <-- NAYA CHANGE: User profile update karne ka function (pickupAddress save karne ke liye) -->
 const updateUserProfile = async (req, res) => {
   try {
     const { full_name, phone, city, pickupAddress } = req.body;
@@ -506,11 +522,12 @@ const claimWelcomeBonus = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Welcome bonus is currently disabled by Admin' });
     }
 
+    // Credits & Aura Update
     user.account_credits += amount;
+    user.aura_points = (user.aura_points || 0) + 50; // ⚡ NAYA: Welcome bonus par +50 Aura
     user.hasClaimedWelcomeBonus = true;
     await user.save();
 
-    // CHANGED: Welcome bonus notification add kiya
     await Notification.create({
       user: user._id,
       type: 'CREDIT_ADDED',
@@ -519,11 +536,20 @@ const claimWelcomeBonus = async (req, res) => {
       metadata: { amount: amount, reason: 'signup_bonus' }
     });
 
+    // ⚡ NAYA: Aura Log Create karna
+    await AuraLog.create({
+      user: user._id,
+      reason: "Welcome Bonus Claimed",
+      points: 50,
+      type: "positive"
+    });
+
     res.status(200).json({
       success: true,
       message: `Successfully claimed ${amount} credits!`,
       data: {
         account_credits: user.account_credits,
+        aura_points: user.aura_points,
         hasClaimedWelcomeBonus: user.hasClaimedWelcomeBonus
       }
     });

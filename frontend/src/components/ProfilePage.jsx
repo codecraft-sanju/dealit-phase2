@@ -290,7 +290,7 @@ const ProfilePage = ({ user, onLogout }) => {
                 <h2 className="text-xl font-bold text-gray-900 leading-tight">{profileData?.full_name}</h2>
                 <p className="text-sm text-gray-500 font-medium mb-3">{profileData?.email}</p>
 
-                {/* <-- NAYA CHANGE: Aura Points, Credits, and Build Aura Banner layout --> */}
+               
                 <div className="mt-1 w-full flex flex-col items-center">
                   
                   {/* Role Badge */}
@@ -310,9 +310,7 @@ const ProfilePage = ({ user, onLogout }) => {
                     <div className="flex-1 bg-[#F5F0FF] rounded-xl py-3 px-2 flex items-center justify-center gap-2 border border-[#E9DFFF]/50 shadow-sm">
                       <Shield className="w-5 h-5 text-[#6B46C1] fill-[#6B46C1]/20" />
                       <span className="font-bold text-gray-800 text-sm">{profileData?.aura_points || 0} Aura</span>
-                      <div className="w-4 h-4 bg-[#6B46C1] rounded-full flex items-center justify-center">
-                        <Star className="w-2.5 h-2.5 text-white fill-white" />
-                      </div>
+                    
                     </div>
                   </div>
 

@@ -23,6 +23,9 @@ const userSchema = new mongoose.Schema({
   },
   
   account_credits: { type: Number, default: 0 },
+  
+  aura_points: { type: Number, default: 100 }, 
+  
   listedProductsCount: { type: Number, default: 0 },
   hasClaimedWelcomeBonus: { type: Boolean, default: false },
   referralCode: { type: String, unique: true, sparse: true },
@@ -36,8 +39,6 @@ const userSchema = new mongoose.Schema({
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now }
 });
-
-// ⚡ PERFORMANCE INDEXES ADDED HERE ⚡
 
 // 1. Text Index for fast searching by Admin
 userSchema.index({ full_name: 'text', email: 'text', phone: 'text', city: 'text' });
