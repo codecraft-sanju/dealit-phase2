@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Trophy, Medal, Star, TrendingUp, TrendingDown, Minus, Crown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// DUMMY DATA FOR LEADERBOARD (Mixed with 10+ users to test logic)
+// DUMMY DATA FOR LEADERBOARD
 const dummyLeaderboard = [
   { id: 'u1', name: 'Alex Hunter', username: '@alex_h', score: 9850, tier: 'Aura God', rank: 1, trend: 'up', avatarColor: 'bg-amber-500' },
   { id: 'u2', name: 'Sarah Connor', username: '@sarah_c', score: 8420, tier: 'Legend', rank: 2, trend: 'same', avatarColor: 'bg-slate-500' },
@@ -15,7 +15,7 @@ const dummyLeaderboard = [
   { id: 'u8', name: 'Rahul Sharma', username: '@rahul_s', score: 5200, tier: 'Trader', rank: 8, trend: 'down', avatarColor: 'bg-indigo-500' },
   { id: 'u9', name: 'Amit Kumar', username: '@amit_k', score: 4800, tier: 'Trader', rank: 9, trend: 'up', avatarColor: 'bg-teal-500' },
   { id: 'u10', name: 'Neha Gupta', username: '@neha_g', score: 4100, tier: 'Rising Star', rank: 10, trend: 'same', avatarColor: 'bg-orange-500' },
-  // Your profile (Assuming rank is outside top 10 or inside, logic will handle)
+  // Your profile
   { id: 'u_me', name: 'Sanjay Choudhary', username: '@sanjay_c', score: 2850, tier: 'Starter', rank: 54, trend: 'up', avatarColor: 'bg-[#6B46C1]', isCurrentUser: true },
 ];
 
@@ -27,28 +27,16 @@ const AuraLeadershipPage = ({ user }) => {
   // Profile Page Scroll Logic
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 40) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
-      }
+      setIsScrolled(window.scrollY > 30);
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // LOGIC: Explicitly show ONLY Top 10 + Current User
-  // Sort data just in case, though it's already sorted by score
   const sortedData = [...dummyLeaderboard].sort((a, b) => b.score - a.score);
-  
-  // 1. Top 10 Users Only
   const top10Users = sortedData.slice(0, 10);
-  
-  // 2. Extract Top 3 for Podium and 4-10 for the List
   const top3 = top10Users.slice(0, 3);
   const restOfList = top10Users.slice(3, 10);
-  
-  // 3. Current User Data (Search in full data)
   const currentUserData = sortedData.find(u => u.isCurrentUser) || dummyLeaderboard.find(u => u.isCurrentUser);
 
   const containerVariants = {
@@ -68,9 +56,9 @@ const AuraLeadershipPage = ({ user }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f2f9] pb-32 font-sans relative overflow-x-hidden selection:bg-[#6B46C1]/30">
+    <div className="min-h-screen bg-[#f4f2f9] font-sans relative overflow-x-hidden selection:bg-[#6B46C1]/30">
       
-      {/* 1. HEADER (Matches Profile Page perfectly) */}
+      {/* 1. HEADER */}
       <header 
         className={`fixed top-0 left-0 right-0 z-50 bg-[#6B46C1] transition-all duration-300 ease-in-out shadow-md ${
           isScrolled ? 'py-3' : 'py-5'
@@ -80,7 +68,7 @@ const AuraLeadershipPage = ({ user }) => {
           <div className="flex items-center gap-4">
             <button 
               onClick={() => navigate(-1)} 
-              className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-all active:scale-95 border border-white/20 backdrop-blur-sm"
+              className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-all active:scale-95 border border-white/20"
             >
               <ArrowLeft className="w-5 h-5 text-white" />
             </button>
@@ -97,7 +85,6 @@ const AuraLeadershipPage = ({ user }) => {
               </p>
             </div>
           </div>
-          {/* Trophy Icon on right side */}
           <div className="bg-white/10 p-2.5 rounded-full border border-white/20">
             <Trophy className="w-5 h-5 text-[#FFF0C2]" />
           </div>
@@ -109,11 +96,11 @@ const AuraLeadershipPage = ({ user }) => {
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
-        className="absolute top-0 left-0 right-0 bg-[#6B46C1] h-52 rounded-b-[2rem] z-0"
+        className="absolute top-0 left-0 right-0 bg-[#6B46C1] h-[260px] rounded-b-[2.5rem] z-0"
       />
 
-      {/* 3. MAIN CONTENT AREA */}
-      <div className="max-w-md mx-auto px-5 pt-32 relative z-20">
+      {/* 3. MAIN CONTENT AREA (pt-28 prevents header overlap, pb-48 leaves room for both footers) */}
+      <div className="max-w-md mx-auto px-4 pt-28 pb-48 relative z-20">
         <AnimatePresence mode="wait">
           <motion.div 
             key="content"
@@ -123,8 +110,8 @@ const AuraLeadershipPage = ({ user }) => {
             className="flex flex-col gap-5"
           >
             
-            {/* TABS - Tightly integrated over curve */}
-            <motion.div variants={itemVariants} className="bg-black/15 backdrop-blur-sm p-1 rounded-full flex border border-white/20 mx-4 shadow-sm">
+            {/* TABS */}
+            <motion.div variants={itemVariants} className="bg-black/15 backdrop-blur-sm p-1 rounded-full flex border border-white/20 shadow-sm mx-2">
               {['weekly', 'monthly', 'all-time'].map((tab) => (
                 <button
                   key={tab}
@@ -141,7 +128,7 @@ const AuraLeadershipPage = ({ user }) => {
             </motion.div>
 
             {/* PODIUM CARD (Top 3) */}
-            <motion.div variants={itemVariants} className="bg-white rounded-3xl shadow-sm border border-gray-100 p-5 pt-8 flex items-end justify-center gap-1.5 relative overflow-hidden">
+            <motion.div variants={itemVariants} className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-4 pt-8 flex items-end justify-center gap-1.5 relative overflow-hidden">
               
               {/* Rank 2 */}
               <div className="flex flex-col items-center w-1/3 pb-2 z-10">
@@ -161,7 +148,7 @@ const AuraLeadershipPage = ({ user }) => {
               <div className="flex flex-col items-center w-1/3 relative z-20 pb-6">
                 <Crown className="w-8 h-8 text-[#EAB308] mb-1 drop-shadow-md" />
                 <div className="relative mb-2">
-                  <div className="w-20 h-20 rounded-[1.5rem] bg-gradient-to-b from-[#FFF0C2] to-[#EAB308] p-1 shadow-md">
+                  <div className="w-[84px] h-[84px] rounded-[1.5rem] bg-gradient-to-b from-[#FFF0C2] to-[#EAB308] p-1 shadow-md">
                     <div className={`w-full h-full ${top3[0].avatarColor} rounded-[1.3rem] flex items-center justify-center text-white font-black text-3xl border-2 border-white`}>
                       {top3[0].name.charAt(0)}
                     </div>
@@ -192,9 +179,8 @@ const AuraLeadershipPage = ({ user }) => {
             </motion.div>
 
             {/* LIST CARD (Ranks 4-10) */}
-            <motion.div variants={itemVariants} className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex flex-col mb-4">
+            <motion.div variants={itemVariants} className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
               {restOfList.map((player, index) => {
-                // If current user is in Top 10, highlight them
                 const isMe = player.isCurrentUser;
                 return (
                   <div 
@@ -240,12 +226,15 @@ const AuraLeadershipPage = ({ user }) => {
         </AnimatePresence>
       </div>
 
-      {/* 4. CURRENT USER BOTTOM FOOTER (Shows your exact rank, even if it is 54) */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-xl border-t border-gray-100 pb-safe">
-        <div className="max-w-md mx-auto p-4 pb-6">
-          <div className="flex items-center justify-between bg-white border border-[#EBE5F7] p-3.5 rounded-2xl shadow-[0_4px_20px_rgba(107,70,193,0.08)]">
+      {/* 4. CURRENT USER FOOTER (Sits ABOVE the global BottomNav) 
+          - App.jsx's BottomNav is 16 units tall (bottom-0).
+          - We put this footer at bottom-16 so they perfectly stack. 
+      */}
+      <div className="fixed bottom-16 md:bottom-0 left-0 right-0 z-40 bg-white/85 backdrop-blur-xl border-t border-gray-200 px-4 py-3 shadow-[0_-5px_15px_rgba(0,0,0,0.03)]">
+        <div className="max-w-md mx-auto">
+          <div className="flex items-center justify-between bg-white border border-[#EBE5F7] p-3 rounded-2xl shadow-[0_2px_12px_rgba(107,70,193,0.06)]">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 bg-[#6B46C1] rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-md border border-[#5a3aa3]">
+              <div className="w-11 h-11 bg-[#6B46C1] rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-sm border border-[#5a3aa3]">
                 {currentUserData.name.charAt(0)}
               </div>
               <div className="flex flex-col">
