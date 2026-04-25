@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { LogOut, User, Mail, Phone, MapPin, Calendar, Package, RefreshCw, Camera, Loader2, Coins, ChevronRight, ClipboardList, Archive, Tag, Heart, Wallet, Bell, HelpCircle, Edit2, X, Home, Hash, Truck, Shield, Star } from 'lucide-react'; // <-- NAYA CHANGE: Added Star icon
+import { LogOut, User, Mail, Phone, MapPin, Calendar, Package, RefreshCw, Camera, Loader2, Coins, ChevronRight, ClipboardList, Archive, Tag, Heart, Wallet, Bell, HelpCircle, Edit2, X, Home, Hash, Truck, Shield, Star } from 'lucide-react'; 
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -29,10 +29,9 @@ const ProfilePage = ({ user, onLogout }) => {
     }
   });
 
-  // <-- CHANGED: Initialize queryClient to invalidate cache after updates -->
+
   const queryClient = useQueryClient();
 
-  // <-- CHANGED: 1. Fetch Profile using useQuery -->
   const { data: profileData, isLoading: loading } = useQuery({
     queryKey: ['profile'],
     queryFn: async () => {
