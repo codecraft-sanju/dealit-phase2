@@ -18,8 +18,13 @@ const app = express();
 
 connectDB();
 
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL, 
+  origin: [
+    process.env.FRONTEND_URL, 
+    'https://dealit.xyz', 
+    'https://www.dealit.xyz'
+  ], 
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization'], 
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
