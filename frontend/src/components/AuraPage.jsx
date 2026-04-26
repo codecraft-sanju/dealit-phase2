@@ -8,13 +8,32 @@ import axios from 'axios';
 const API_BASE = import.meta.env.VITE_BACKEND_API || 'http://localhost:5000';
 const API_URL = `${API_BASE}/api`;
 
+const getDynamicTier = (score) => {
+  if (score >= 800) return 'Legend';
+  if (score >= 500) return 'Elite';
+  if (score >= 200) return 'Pro';
+  return 'Newbie';
+};
+
+// MODIFIED: Created a configuration that matches your backend userController.js logic
+// If your backend starts sending 'rules' in the API, it will override this automatically.
+const defaultRules = {
+  earn: [
+    { id: 1, text: 'Claim Welcome Bonus', points: 50 },
+    { id: 2, text: 'Successful Referral', points: 20 },
+    { id: 3, text: 'Milestone Unlocked (Max Referrals)', points: 50 }
+  ],
+  drop: [
+    { id: 1, text: 'Cancelling deals after accepting', points: 50 },
+    { id: 2, text: 'Failing to fulfill shipped orders', points: 80 }
+  ]
+};
+
 const AuraPage = ({ user }) => {
   const navigate = useNavigate();
   
-  // 1. DUMMY FALLBACK DATA 
-  const fallbackLogs = [];
+  const fallbackLogs = user?.recent_activity || [];
 
-  // 2. TANSTACK QUERY FOR AURA DATA
   const { data: auraData, isLoading } = useQuery({
     queryKey: ['aura-details'],
     queryFn: async () => {
@@ -22,13 +41,21 @@ const AuraPage = ({ user }) => {
         const res = await axios.get(`${API_URL}/users/aura`, { 
           withCredentials: true 
         });
-        return res.data.data;
+        
+        // MODIFIED: Merging default rules in case backend doesn't provide them yet
+        return {
+          ...res.data.data,
+          tier: res.data.data.tier || getDynamicTier(res.data.data.score),
+          rules: res.data.data.rules || defaultRules
+        };
       } catch (error) {
         console.error("Failed to fetch aura data", error);
+        const fallbackScore = user?.aura_points || 0;
         return { 
-          score: user?.aura_points || 0, 
-          tier: 'Newbie', 
-          logs: fallbackLogs 
+          score: fallbackScore, 
+          tier: getDynamicTier(fallbackScore), 
+          logs: fallbackLogs,
+          rules: defaultRules 
         };
       }
     },
@@ -265,15 +292,12 @@ const AuraPage = ({ user }) => {
                           <TrendingUp className="w-4 h-4" /> How to Earn Aura
                         </h5>
                         <ul className="space-y-2 text-xs font-medium text-emerald-700/80">
-                          <li className="flex items-start gap-2">
-                            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" /> Refer friends using your code (+20 Aura)
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" /> Hit milestone referrals (+50 Aura)
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" /> Complete successful item deliveries (+50 Aura)
-                          </li>
+                          {/* MODIFIED: Dynamically rendering earn rules */}
+                          {auraData?.rules?.earn.map((rule) => (
+                            <li key={rule.id} className="flex items-start gap-2">
+                              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" /> {rule.text} (+{rule.points} Aura)
+                            </li>
+                          ))}
                         </ul>
                       </div>
 
@@ -282,12 +306,12 @@ const AuraPage = ({ user }) => {
                           <TrendingDown className="w-4 h-4" /> What Drops Aura
                         </h5>
                         <ul className="space-y-2 text-xs font-medium text-red-700/80">
-                          <li className="flex items-start gap-2">
-                            <AlertCircle className="w-4 h-4 shrink-0 text-red-500" /> Cancelling deals after accepting (-50 Aura)
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <AlertCircle className="w-4 h-4 shrink-0 text-red-500" /> Failing to fulfill shipped orders
-                          </li>
+                          {/* MODIFIED: Dynamically rendering drop rules */}
+                          {auraData?.rules?.drop.map((rule) => (
+                            <li key={rule.id} className="flex items-start gap-2">
+                              <AlertCircle className="w-4 h-4 shrink-0 text-red-500" /> {rule.text} (-{rule.points} Aura)
+                            </li>
+                          ))}
                         </ul>
                       </div>
                     </div>
