@@ -21,10 +21,13 @@ const createItem = async (req, res) => {
     
     const maxLimit = setting.maxAllowedListings !== undefined ? setting.maxAllowedListings : 5;
 
-    if (user.listedProductsCount >= maxLimit) {
+    // Real-time count of items directly from the database
+    const actualItemCount = await Item.countDocuments({ owner: req.user._id });
+
+    if (actualItemCount >= maxLimit) {
       return res.status(400).json({ 
         success: false, 
-        message: `Aap maximum ${maxLimit} products hi list kar sakte hain.` 
+        message: `You can list a maximum of ${maxLimit} products.` 
       });
     }
 
@@ -47,14 +50,15 @@ const createItem = async (req, res) => {
 
     const savedItem = await newItem.save();
 
-    user.listedProductsCount += 1;
+    // Auto-heal the profile count to sync with the database
+    user.listedProductsCount = actualItemCount + 1;
     await user.save();
 
     await Notification.create({
       user: req.user._id,
       type: 'SYSTEM',
       title: 'Item Submitted! 📦',
-      message: `Aapka item "${title}" review ke liye chala gaya hai. Approve hone par aapko credits milenge.`,
+      message: `Your item "${title}" has been submitted for review. You will receive credits upon approval.`,
       metadata: { reason: 'item_pending_review', referenceId: savedItem._id }
     });
 
@@ -73,7 +77,7 @@ const createItem = async (req, res) => {
 
     res.status(201).json({ 
       success: true, 
-      message: 'Product successfully list ho gaya! Admin ke approve karne par aapko credits mil jayenge.', 
+      message: 'Product listed successfully! You will receive credits once the admin approves it.', 
       data: savedItem 
     });
   } catch (error) {
@@ -177,7 +181,7 @@ const deleteItem = async (req, res) => {
 
     await item.deleteOne();
 
-    // AUTO-HEAL LOGIC: Item delete hone ke baad sahi count sync karna
+    // AUTO-HEAL LOGIC: Sync the correct count after an item is deleted
     const user = await User.findById(req.user._id);
     if (user) {
       const actualItemCount = await Item.countDocuments({ owner: req.user._id });
