@@ -85,12 +85,12 @@ const verifyPayment = async (req, res) => {
         { new: true }
       ).select('-password'); 
 
-      // CHANGED: Wallet recharge ki notification add ki
+      
       await Notification.create({
         user: userId,
         type: 'CREDIT_ADDED',
         title: 'Wallet Recharged! 💳',
-        message: `Aapke account me ${actualAmountInINR} credits successfully add ho gaye hain.`,
+       message: `₹${actualAmountInINR} credits have been successfully added to your account.`,
         metadata: { 
           amount: actualAmountInINR, 
           reason: 'wallet_recharge',
