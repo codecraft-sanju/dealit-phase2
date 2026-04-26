@@ -4,6 +4,7 @@ const CreditSetting = require('../models/CreditSetting');
 const mongoose = require('mongoose');
 const Notification = require('../models/Notification');
 const sendEmail = require('../utils/sendEmail');
+const AuraLog = require('../models/AuraLog'); // ⚡ NAYA CHANGE
 
 const createItem = async (req, res) => {
   try {
@@ -155,6 +156,32 @@ const updateItem = async (req, res) => {
 
     req.body.updated_at = Date.now();
 
+    // ⚡ NAYA CHANGE: Admin Approval & Aura Point Logic Start
+    if (req.body.status === 'active' && item.status !== 'active') {
+      const owner = await User.findById(item.owner);
+      
+      if (owner) {
+        owner.aura_points = (owner.aura_points || 0) + 10;
+        await owner.save();
+
+        await AuraLog.create({
+          user: owner._id,
+          reason: "Item Approved by Admin",
+          points: 10,
+          type: "positive"
+        });
+
+        await Notification.create({
+          user: owner._id,
+          type: 'AURA_UPDATE',
+          title: 'Item Approved! ',
+          message: `Your item "${item.title}" has been approved by admin. You received 10 Aura points!`,
+          metadata: { reason: 'item_approved', referenceId: item._id }
+        });
+      }
+    }
+  
+
     item = await Item.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true
@@ -181,7 +208,7 @@ const deleteItem = async (req, res) => {
 
     await item.deleteOne();
 
-    // AUTO-HEAL LOGIC: Sync the correct count after an item is deleted
+  
     const user = await User.findById(req.user._id);
     if (user) {
       const actualItemCount = await Item.countDocuments({ owner: req.user._id });

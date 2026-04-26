@@ -15,13 +15,13 @@ const getDynamicTier = (score) => {
   return 'Newbie';
 };
 
-// MODIFIED: Created a configuration that matches your backend userController.js logic
-// If your backend starts sending 'rules' in the API, it will override this automatically.
+// MODIFIED: Created a configuration that matches your backend logic
 const defaultRules = {
   earn: [
     { id: 1, text: 'Claim Welcome Bonus', points: 50 },
     { id: 2, text: 'Successful Referral', points: 20 },
-    { id: 3, text: 'Milestone Unlocked (Max Referrals)', points: 50 }
+    { id: 3, text: 'Milestone Unlocked (Max Referrals)', points: 50 },
+    { id: 4, text: 'Item Approved by Admin', points: 10 } // ⚡ NAYA CHANGE: Added Admin Approval Rule
   ],
   drop: [
     { id: 1, text: 'Cancelling deals after accepting', points: 50 },
@@ -350,7 +350,7 @@ const AuraPage = ({ user }) => {
                           <TrendingDown className="w-4 h-4" /> What Drops Aura
                         </h5>
                         <ul className="space-y-2 text-xs font-medium text-red-700/80">
-                          {/* MODIFIED: Dynamically rendering drop rules */}
+                          
                           {auraData?.rules?.drop.map((rule) => (
                             <li key={rule.id} className="flex items-start gap-2">
                               <AlertCircle className="w-4 h-4 shrink-0 text-red-500" /> {rule.text} (-{rule.points} Aura)

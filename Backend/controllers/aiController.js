@@ -1,11 +1,10 @@
 const Groq = require('groq-sdk');
-// NAYA CHANGE: Imported Gemini SDK and axios for fetching images
+
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const axios = require('axios');
 
-// Initialize Groq with the key from your .env file
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-// NAYA CHANGE: Initialize Gemini with the key from your .env file
+
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const generateItemDescription = async (req, res) => {
