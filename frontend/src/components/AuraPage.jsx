@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Shield, TrendingUp, TrendingDown, Activity, Star, Zap, Loader2, CheckCircle2, AlertCircle, Trophy, ChevronRight } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useSpring, useTransform } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 
@@ -27,6 +27,17 @@ const defaultRules = {
     { id: 1, text: 'Cancelling deals after accepting', points: 50 },
     { id: 2, text: 'Failing to fulfill shipped orders', points: 80 }
   ]
+};
+
+const AnimatedNumber = ({ value }) => {
+  const spring = useSpring(value, { stiffness: 100, damping: 20 });
+  const display = useTransform(spring, (current) => Math.round(current));
+
+  useEffect(() => {
+    spring.set(value);
+  }, [value, spring]);
+
+  return <motion.span>{display}</motion.span>;
 };
 
 const AuraPage = ({ user }) => {
@@ -67,6 +78,25 @@ const AuraPage = ({ user }) => {
   const circumference = 2 * Math.PI * radius;
   const safeScore = auraData?.score || 0;
   const strokeDashoffset = circumference - (Math.min(Math.max(safeScore, 0), maxScore) / maxScore) * circumference;
+
+  const [prevScore, setPrevScore] = useState(user?.aura_points || 0);
+  const [floatData, setFloatData] = useState({ show: false, diff: 0, type: 'up' });
+
+  useEffect(() => {
+    if (auraData?.score !== undefined) {
+      if (auraData.score > prevScore) {
+        setFloatData({ show: true, diff: auraData.score - prevScore, type: 'up' });
+        const timer = setTimeout(() => setFloatData({ show: false, diff: 0, type: 'up' }), 2500);
+        setPrevScore(auraData.score);
+        return () => clearTimeout(timer);
+      } else if (auraData.score < prevScore) {
+        setFloatData({ show: true, diff: prevScore - auraData.score, type: 'down' });
+        const timer = setTimeout(() => setFloatData({ show: false, diff: 0, type: 'down' }), 2500);
+        setPrevScore(auraData.score);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [auraData?.score, prevScore]);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -186,13 +216,27 @@ const AuraPage = ({ user }) => {
 
               {/* Center Data - TEXT SIZE REDUCED */}
               <div className="absolute flex flex-col items-center justify-center text-center">
+                <AnimatePresence>
+                  {floatData.show && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.5 }}
+                      animate={{ opacity: 1, y: -45, scale: 1.2 }}
+                      exit={{ opacity: 0, y: -60, filter: "blur(4px)" }}
+                      transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                      className={`absolute font-black text-xl z-50 drop-shadow-md tracking-tighter ${floatData.type === 'up' ? 'text-emerald-500' : 'text-red-500'}`}
+                    >
+                      {floatData.type === 'up' ? '+' : '-'}{floatData.diff}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
                 <motion.div
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.6, type: "spring" }}
+                  className="flex flex-col items-center relative z-40"
                 >
                   <h2 className="text-4xl font-black text-gray-900 tracking-tighter drop-shadow-sm leading-none">
-                    {auraData?.score}
+                    <AnimatedNumber value={safeScore} />
                   </h2>
                   <p className="text-[8px] font-bold text-[#A388E1] uppercase tracking-[0.25em] mt-1.5">Platform Aura</p>
                 </motion.div>
