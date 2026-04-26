@@ -124,7 +124,7 @@ const registerUser = async (req, res) => {
                   user: referrer._id,
                   type: 'CREDIT_ADDED',
                   title: 'Referral Bonus! ',
-                  message: `Aapke code se naya user join hua. Aapko ${setting.referralRewardCredits} credits mile hain.`,
+                  message: `A new user joined using your code. You have received ${setting.referralRewardCredits} credits and 20 Aura points.`,
                   metadata: { amount: setting.referralRewardCredits, reason: 'referral_bonus' }
                 });
 
@@ -144,7 +144,7 @@ const registerUser = async (req, res) => {
                   user: referrer._id,
                   type: 'CREDIT_ADDED',
                   title: 'Milestone Unlocked! 🚀',
-                  message: `Aapne max referrals complete kar liye. ${setting.milestoneReferralReward} bonus credits added.`,
+                  message: `You have completed max referrals. ${setting.milestoneReferralReward} bonus credits and 50 Aura points added.`,
                   metadata: { amount: setting.milestoneReferralReward, reason: 'milestone_bonus' }
                 });
 
@@ -524,19 +524,19 @@ const claimWelcomeBonus = async (req, res) => {
 
     // Credits & Aura Update
     user.account_credits += amount;
-    user.aura_points = (user.aura_points || 0) + 50; // ⚡ NAYA: Welcome bonus par +50 Aura
+    user.aura_points = (user.aura_points || 0) + 50; //  NAYA: Welcome bonus par +50 Aura
     user.hasClaimedWelcomeBonus = true;
     await user.save();
 
     await Notification.create({
       user: user._id,
       type: 'CREDIT_ADDED',
-      title: 'Welcome Bonus! 🎉',
-      message: `Aapko Dealit join karne par ${amount} credits mile hain. Start exploring!`,
+      title: 'Welcome Bonus! ',
+      message: `You have received ${amount} credits and 50 Aura points for joining Dealit. Start exploring!`,
       metadata: { amount: amount, reason: 'signup_bonus' }
     });
 
-    // ⚡ NAYA: Aura Log Create karna
+   
     await AuraLog.create({
       user: user._id,
       reason: "Welcome Bonus Claimed",

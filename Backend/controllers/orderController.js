@@ -159,7 +159,7 @@ const createOrder = async (req, res) => {
       user: buyerId,
       type: 'CREDIT_DEDUCTED',
       title: 'Order Confirmed! 🛒',
-      message: `Aapne "${item.title}" successfully purchase kar liya hai. ${itemPrice} credits deduct hue.`,
+      message: `You have successfully purchased "${item.title}". ${itemPrice} credits were deducted.`,
       metadata: { amount: itemPrice, reason: 'item_purchase', referenceId: order._id }
     });
 
@@ -167,7 +167,7 @@ const createOrder = async (req, res) => {
       user: item.owner._id,
       type: 'ORDER_UPDATE',
       title: 'New Order Received! 🎉',
-      message: `Kisi ne aapka item "${item.title}" kharid liya hai. Please pack the item!`,
+      message: `Someone has purchased your item "${item.title}". Please pack the item!`,
       metadata: { referenceId: order._id }
     });
 
@@ -305,7 +305,7 @@ const updateOrderStatus = async (req, res) => {
           user: seller._id,
           type: 'CREDIT_ADDED',
           title: 'Payment Released! 💰',
-          message: `Order delivered! ${order.itemPrice} credits aapke wallet me add kar diye gaye hain.`,
+          message: `Order delivered! ${order.itemPrice} credits and +50 Aura have been added to your wallet.`,
           metadata: { amount: order.itemPrice, reason: 'escrow_release', referenceId: order._id }
         });
 
@@ -338,7 +338,7 @@ const updateOrderStatus = async (req, res) => {
           user: buyer._id,
           type: 'CREDIT_ADDED',
           title: 'Order Cancelled & Refunded 🔄',
-          message: `Order cancel ho gaya hai. Aapke ${order.itemPrice} credits refund kar diye gaye hain.`,
+          message: `The order has been cancelled. Your ${order.itemPrice} credits have been refunded.`,
           metadata: { amount: order.itemPrice, reason: 'order_refund', referenceId: order._id }
         });
         
@@ -353,6 +353,14 @@ const updateOrderStatus = async (req, res) => {
             reason: "Cancelled deal after accepting",
             points: -50,
             type: "negative"
+          });
+
+          await Notification.create({
+            user: seller._id,
+            type: 'AURA_UPDATE', 
+            title: 'Aura Penalty ⚠️',
+            message: `50 Aura points have been deducted due to the cancelled deal.`,
+            metadata: { reason: 'aura_penalty', referenceId: order._id }
           });
         }
 
@@ -410,7 +418,7 @@ const handleShiprocketWebhook = async (req, res) => {
             user: seller._id,
             type: 'CREDIT_ADDED',
             title: 'Payment Released! 💰',
-            message: `Order successfully delivered! ${order.itemPrice} credits aapke account me aagaye hain.`,
+            message: `Order successfully delivered! ${order.itemPrice} credits and +50 Aura have been credited to your account.`,
             metadata: { amount: order.itemPrice, reason: 'escrow_release', referenceId: order._id }
           });
 
