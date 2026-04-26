@@ -10,34 +10,42 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
 
-const PromoAlert = lazy(() => import('./popup/PromoAlert'));
-const IosInstallPopup = lazy(() => import('./components/IosInstallPopup'));
+// SMART LAZY LOADER: Chunk error ko catch karke page reload karega
+const smartLazy = (importFunc) => {
+  return lazy(() =>
+    importFunc().catch((error) => {
+      console.error('Chunk load error, automatically refreshing page...', error);
+      window.location.reload();
+      return { default: () => <div className="text-center mt-20 text-white animate-pulse">Loading latest version...</div> };
+    })
+  );
+};
 
-const DesktopLandingPage = lazy(() => import('./Desktop/DesktopLandingPage'));
-
-const PrivacyPage = lazy(() => import('./components/PrivacyPage'));
-const AuraPage = lazy(() => import('./components/AuraPage'));
-const AuraLeadershipPage = lazy(() => import('./components/AuraLeadershipPage'));
-
-const AuthPage = lazy(() => import('./components/AuthPage'));
-const SearchPage = lazy(() => import('./components/SearchPage'));
-const AdminPanel = lazy(() => import('./components/AdminPanel'));
-const ItemDetailPage = lazy(() => import('./components/ItemDetailPage'));
-const ChatPage = lazy(() => import('./components/ChatPage'));
-const WalletPage = lazy(() => import('./components/WalletPage'));
-const HomePage = lazy(() => import('./components/HomePage'));
-const ProfilePage = lazy(() => import('./components/ProfilePage'));
-const SwapsPage = lazy(() => import('./components/SwapsPage'));
-const ForgotPasswordPage = lazy(() => import('./components/ForgotPasswordPage'));
-const AddItemPage = lazy(() => import('./components/AddItemPage'));
-const ItemsPage = lazy(() => import('./components/ItemsPage'));
-const DashboardPage = lazy(() => import('./components/DashboardPage'));
-const DealDetailsPage = lazy(() => import('./components/DealDetailsPage'));
-const WishlistPage = lazy(() => import('./components/WishlistPage'));
-const CheckoutPage = lazy(() => import('./components/CheckoutPage'));
-const OrdersPage = lazy(() => import('./components/OrdersPage'));
-const DeleteAccountPage = lazy(() => import('./components/DeleteAccountPage'));
-const NotificationsPage = lazy(() => import('./notification/NotificationsPage'));
+const PromoAlert = smartLazy(() => import('./popup/PromoAlert'));
+const IosInstallPopup = smartLazy(() => import('./components/IosInstallPopup'));
+const DesktopLandingPage = smartLazy(() => import('./Desktop/DesktopLandingPage'));
+const PrivacyPage = smartLazy(() => import('./components/PrivacyPage'));
+const AuraPage = smartLazy(() => import('./components/AuraPage'));
+const AuraLeadershipPage = smartLazy(() => import('./components/AuraLeadershipPage'));
+const AuthPage = smartLazy(() => import('./components/AuthPage'));
+const SearchPage = smartLazy(() => import('./components/SearchPage'));
+const AdminPanel = smartLazy(() => import('./components/AdminPanel'));
+const ItemDetailPage = smartLazy(() => import('./components/ItemDetailPage'));
+const ChatPage = smartLazy(() => import('./components/ChatPage'));
+const WalletPage = smartLazy(() => import('./components/WalletPage'));
+const HomePage = smartLazy(() => import('./components/HomePage'));
+const ProfilePage = smartLazy(() => import('./components/ProfilePage'));
+const SwapsPage = smartLazy(() => import('./components/SwapsPage'));
+const ForgotPasswordPage = smartLazy(() => import('./components/ForgotPasswordPage'));
+const AddItemPage = smartLazy(() => import('./components/AddItemPage'));
+const ItemsPage = smartLazy(() => import('./components/ItemsPage'));
+const DashboardPage = smartLazy(() => import('./components/DashboardPage'));
+const DealDetailsPage = smartLazy(() => import('./components/DealDetailsPage'));
+const WishlistPage = smartLazy(() => import('./components/WishlistPage'));
+const CheckoutPage = smartLazy(() => import('./components/CheckoutPage'));
+const OrdersPage = smartLazy(() => import('./components/OrdersPage'));
+const DeleteAccountPage = smartLazy(() => import('./components/DeleteAccountPage'));
+const NotificationsPage = smartLazy(() => import('./notification/NotificationsPage'));
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -324,7 +332,6 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
   const [hasZeroPriceIssue, setHasZeroPriceIssue] = useState(null);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth > 1024);
 
-  // <-- SCREEN RESIZE LISTENER -->
   useEffect(() => {
     const handleResize = () => {
       setIsDesktop(window.innerWidth > 1024);
@@ -336,7 +343,6 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
   const hideNavbarRoutes = ['/login', '/signup', '/forgot-password'];
   const shouldShowBottomNav = !hideNavbarRoutes.includes(location.pathname) && !location.pathname.startsWith('/admin');
 
-  // <-- SMART ROUTING LOGIC: Desktop par Landing Page dikhao jab tak route admin ya login na ho -->
   if (isDesktop && !location.pathname.startsWith('/admin') && location.pathname !== '/login') {
     return (
       <Suspense fallback={<PremiumLoader />}>
@@ -345,12 +351,10 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
     );
   }
 
-  // Mobile App or Desktop Admin/Login View
   return (
     <div className={`min-h-screen bg-gray-900 font-sans selection:bg-emerald-500/30 ${shouldShowBottomNav ? 'pb-16 md:pb-0' : ''}`}> 
       <ZeroPriceAlert user={user} onCheckComplete={setHasZeroPriceIssue} />
       
-      {/* NAYA CHANGE: Yahan component use kiya gaya hai */}
       <Suspense fallback={null}>
         <PromoAlert user={user} hasZeroPriceIssue={hasZeroPriceIssue} />
         <IosInstallPopup />
@@ -371,7 +375,10 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
             <Route path="/forgot-password" element={user ? <Navigate to="/" replace /> : <ForgotPasswordPage setUser={setUser} />} />
           
             <Route path="/profile" element={user ? <ProfilePage user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-            <Route path="/dashboard" element={user ? <DashboardPage user={user} /> : <Navigate to="/login" />} />
+            
+            {/* DASHBOARD ROUTE UPDATED: Added setUser prop here */}
+            <Route path="/dashboard" element={user ? <DashboardPage user={user} setUser={setUser} /> : <Navigate to="/login" />} />
+            
             <Route path="/edit-item/:id" element={user ? <EditItemPage /> : <Navigate to="/login" />} />
             <Route path="/wishlist" element={user ? <WishlistPage user={user} /> : <Navigate to="/login" />} />
             <Route path="/privacy" element={<PrivacyPage />} />
@@ -388,10 +395,7 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
               </>
             } />
             <Route path="/aura" element={user ? <AuraPage user={user} /> : <Navigate to="/login" />} />
-            
-            {/* CHANGED HERE: Added Route for the leadership page */}
             <Route path="/aura-leadership" element={user ? <AuraLeadershipPage user={user} /> : <Navigate to="/login" />} />
-            
             <Route path="/swaps" element={user ? <SwapsPage user={user} /> : <Navigate to="/login" />} />
             <Route path="/chat/:barterId" element={user ? <ChatPage user={user} /> : <Navigate to="/login" />} />
             <Route path="/wallet" element={user ? <WalletPage user={user} setUser={setUser} /> : <Navigate to="/login" />} />

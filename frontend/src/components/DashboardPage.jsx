@@ -3,18 +3,17 @@ import { Link, Navigate } from 'react-router-dom';
 import { Package, ChevronLeft, Edit2, Trash2, AlertCircle, Coins, Plus, Loader2 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'; // <-- NAYA: React Query imports
-import { getOptimizedCloudinaryUrl } from './HomePage'; // <-- NAYA: Cloudinary Optimizer import
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'; 
+import { getOptimizedCloudinaryUrl } from './HomePage'; 
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
-const DashboardPage = ({ user }) => {
+const DashboardPage = ({ user, setUser }) => {
   const queryClient = useQueryClient();
 
   if (!user) return <Navigate to="/login" />;
 
-  // <-- NAYA: Fetching my items using useQuery -->
   const { data: myItems = [], isLoading: loading } = useQuery({
     queryKey: ['myItems'],
     queryFn: async () => {
@@ -23,13 +22,11 @@ const DashboardPage = ({ user }) => {
     },
   });
 
-  // <-- NAYA: Delete item using useMutation -->
   const deleteItemMutation = useMutation({
     mutationFn: async (itemId) => {
       return await axios.delete(`${API_URL}/items/${itemId}`, { withCredentials: true });
     },
     onMutate: async (deletedItemId) => {
-      // Optimistic update
       await queryClient.cancelQueries(['myItems']);
       const previousItems = queryClient.getQueryData(['myItems']);
       
@@ -42,11 +39,20 @@ const DashboardPage = ({ user }) => {
     onError: (err, deletedItemId, context) => {
       console.error('Error deleting item:', err);
       toast.error(err.response?.data?.message || 'Failed to delete item');
-      // Revert back on error
       queryClient.setQueryData(['myItems'], context.previousItems);
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success('Item deleted successfully');
+      // UPDATE: Fetching latest profile so the frontend gets the accurate item count
+      try {
+        const userRes = await axios.get(`${API_URL}/users/profile`, { withCredentials: true });
+        if (userRes.data.success && setUser) {
+          setUser(userRes.data.data);
+          localStorage.setItem('dealit_user', JSON.stringify(userRes.data.data));
+        }
+      } catch (e) {
+        console.error("Failed to update user profile locally", e);
+      }
     },
     onSettled: () => {
       queryClient.invalidateQueries(['myItems']);
@@ -155,7 +161,6 @@ const DashboardPage = ({ user }) => {
 
                 <div className="h-32 w-full flex items-center justify-center mb-4 mt-8 rounded-xl overflow-hidden bg-white/40">
                   {item.images && item.images.length > 0 && item.images[0] ? (
-                    // <-- NAYA CHANGE: Optimization for Dashboard items -->
                     <img src={getOptimizedCloudinaryUrl(item.images[0])} alt={item.title} className="w-full h-full object-cover mix-blend-multiply drop-shadow-sm transition-transform duration-300 hover:scale-105" />
                   ) : (
                     <Package className="w-10 h-10 text-[#A388E1]/40" />

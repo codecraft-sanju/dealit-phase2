@@ -2,14 +2,11 @@ const Item = require('../models/Item');
 const User = require('../models/User'); 
 const CreditSetting = require('../models/CreditSetting'); 
 const mongoose = require('mongoose');
-// CHANGED: Notification model import kiya
 const Notification = require('../models/Notification');
-// <-- NAYA CHANGE: sendEmail utility import kiya -->
 const sendEmail = require('../utils/sendEmail');
 
 const createItem = async (req, res) => {
   try {
-    // <-- NAYA CHANGE: Added weight and dimensions in destructuring
     const { title, description, category, condition, images, preferred_item, estimated_value, weight, dimensions } = req.body;
 
     const user = await User.findById(req.user._id);
@@ -42,11 +39,8 @@ const createItem = async (req, res) => {
       preferred_item,
       status: 'pending', 
       estimated_value: estimated_value || 0,
-      
-      // <-- NAYA CHANGE: Save weight and dimensions
       weight: weight || 0.5,
       dimensions: dimensions || { length: 10, width: 10, height: 10 },
-      
       created_at: Date.now(),
       updated_at: Date.now()
     });
@@ -56,7 +50,6 @@ const createItem = async (req, res) => {
     user.listedProductsCount += 1;
     await user.save();
 
-    // CHANGED: Item submit hone par system notification add ki
     await Notification.create({
       user: req.user._id,
       type: 'SYSTEM',
@@ -65,7 +58,6 @@ const createItem = async (req, res) => {
       metadata: { reason: 'item_pending_review', referenceId: savedItem._id }
     });
 
-    // <-- NAYA CHANGE: Admin ko email bhejna start -->
     try {
       const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_USER; 
       const emailMessage = `A new item "${title}" has been submitted for review.\n\nCategory: ${category}\nCondition: ${condition}\nEstimated Value: ${estimated_value || 0}\n\nPlease login to the admin panel to accept or reject this item.`;
@@ -78,7 +70,6 @@ const createItem = async (req, res) => {
     } catch (emailError) {
       console.error('Error sending email to admin:', emailError);
     }
-    // <-- NAYA CHANGE: Admin ko email bhejna end -->
 
     res.status(201).json({ 
       success: true, 
@@ -185,6 +176,14 @@ const deleteItem = async (req, res) => {
     }
 
     await item.deleteOne();
+
+    // AUTO-HEAL LOGIC: Item delete hone ke baad sahi count sync karna
+    const user = await User.findById(req.user._id);
+    if (user) {
+      const actualItemCount = await Item.countDocuments({ owner: req.user._id });
+      user.listedProductsCount = actualItemCount;
+      await user.save();
+    }
 
     res.status(200).json({ success: true, message: 'Item removed' });
   } catch (error) {
