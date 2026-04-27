@@ -2,7 +2,6 @@ const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const User = require('../models/User'); 
 const Transaction = require('../models/Transaction');
-// CHANGED: Notification model import kiya
 const Notification = require('../models/Notification');
 
 // Razorpay instance initialize karna
@@ -112,7 +111,42 @@ const verifyPayment = async (req, res) => {
   }
 };
 
+const razorpayWebhook = async (req, res) => {
+  try {
+    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+    const signature = req.headers['x-razorpay-signature'];
+
+    const expectedSignature = crypto
+      .createHmac('sha256', webhookSecret)
+      .update(JSON.stringify(req.body))
+      .digest('hex');
+
+    if (expectedSignature !== signature) {
+      return res.status(400).json({ success: false, message: 'Invalid webhook signature' });
+    }
+
+    const event = req.body.event;
+
+    if (event === 'payment.captured') {
+      const paymentEntity = req.body.payload.payment.entity;
+      const orderId = paymentEntity.order_id;
+      
+      const existingTransaction = await Transaction.findOne({ razorpay_order_id: orderId });
+      
+      if (!existingTransaction) {
+         console.log('Order verified via webhook:', orderId);
+      }
+    }
+
+    res.status(200).send('OK');
+  } catch (error) {
+    console.error('Webhook error:', error);
+    res.status(500).send('Webhook Error');
+  }
+};
+
 module.exports = {
   createOrder,
-  verifyPayment
+  verifyPayment,
+  razorpayWebhook
 };
