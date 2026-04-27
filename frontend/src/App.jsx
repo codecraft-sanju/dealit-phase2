@@ -350,13 +350,17 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
   const hideNavbarRoutes = ['/login', '/signup', '/forgot-password'];
   const shouldShowBottomNav = !hideNavbarRoutes.includes(location.pathname) && !location.pathname.startsWith('/admin');
 
-  if (isDesktop && !location.pathname.startsWith('/admin') && location.pathname !== '/login') {
+  /* NEW CHANGES: Updated desktop check so policy pages show correctly on desktop */
+  const publicDesktopRoutes = ['/login', '/privacy', '/terms', '/refund-policy', '/cancellation-policy'];
+
+  if (isDesktop && !location.pathname.startsWith('/admin') && !publicDesktopRoutes.includes(location.pathname)) {
     return (
       <Suspense fallback={<PremiumLoader />}>
         <DesktopLandingPage user={user} />
       </Suspense>
     );
   }
+  /* END NEW CHANGES */
 
   return (
     <div className={`min-h-screen bg-gray-900 font-sans selection:bg-emerald-500/30 ${shouldShowBottomNav ? 'pb-16 md:pb-0' : ''}`}> 
@@ -394,7 +398,7 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/refund-policy" element={<RefundPolicyPage />} />
             <Route path="/cancellation-policy" element={<CancellationPolicyPage />} />
-            /* END NEW CHANGES */
+            {/* END NEW CHANGES */}
 
             <Route path="/admin" element={<AdminPanel user={user} />} />
             <Route path="/checkout/:itemId" element={user ? <CheckoutPage user={user} setUser={setUser} /> : <Navigate to="/login" />} />
