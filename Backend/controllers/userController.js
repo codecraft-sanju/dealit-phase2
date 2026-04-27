@@ -35,7 +35,8 @@ const sendTokenResponse = (user, statusCode, res, message) => {
       aura_points: user.aura_points, 
       hasClaimedWelcomeBonus: user.hasClaimedWelcomeBonus, 
       referralCode: user.referralCode,
-      totalReferrals: user.totalReferrals 
+      totalReferrals: user.totalReferrals ,
+      listedProductsCount: user.listedProductsCount || 0
     }
   });
 };

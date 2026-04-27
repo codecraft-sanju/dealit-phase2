@@ -13,7 +13,8 @@ const notificationSchema = new mongoose.Schema({
       'CREDIT_DEDUCTED', 
       'TRADE_ALERT', 
       'ORDER_UPDATE',
-      'SYSTEM'
+      'SYSTEM',
+      'AURA_UPDATE' 
     ], 
     required: true 
   },
@@ -25,11 +26,10 @@ const notificationSchema = new mongoose.Schema({
     type: String, 
     required: true 
   },
-  // Metadata taaki frontend par specific details dikha sakein (jaise kitne credits, kis wajah se)
   metadata: {
     amount: { type: Number, default: 0 },
-    reason: { type: String }, // e.g., 'signup_bonus', 'item_listed', 'order_placed'
-    referenceId: { type: mongoose.Schema.Types.ObjectId } // Kisi Item ya Order ki ID link karne ke liye
+    reason: { type: String }, 
+    referenceId: { type: mongoose.Schema.Types.ObjectId } 
   },
   isRead: { 
     type: Boolean, 
@@ -40,7 +40,6 @@ const notificationSchema = new mongoose.Schema({
     default: Date.now 
   }
 });
-
 
 notificationSchema.index({ user: 1, created_at: -1 });
 

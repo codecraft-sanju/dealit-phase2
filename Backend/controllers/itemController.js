@@ -4,7 +4,7 @@ const CreditSetting = require('../models/CreditSetting');
 const mongoose = require('mongoose');
 const Notification = require('../models/Notification');
 const sendEmail = require('../utils/sendEmail');
-const AuraLog = require('../models/AuraLog'); // ⚡ NAYA CHANGE
+const AuraLog = require('../models/AuraLog'); 
 
 const createItem = async (req, res) => {
   try {
@@ -22,7 +22,6 @@ const createItem = async (req, res) => {
     
     const maxLimit = setting.maxAllowedListings !== undefined ? setting.maxAllowedListings : 5;
 
-    // Real-time count of items directly from the database
     const actualItemCount = await Item.countDocuments({ owner: req.user._id });
 
     if (actualItemCount >= maxLimit) {
@@ -51,7 +50,6 @@ const createItem = async (req, res) => {
 
     const savedItem = await newItem.save();
 
-    // Auto-heal the profile count to sync with the database
     user.listedProductsCount = actualItemCount + 1;
     await user.save();
 
@@ -158,29 +156,33 @@ const updateItem = async (req, res) => {
 
     // ⚡ NAYA CHANGE: Admin Approval & Aura Point Logic Start
     if (req.body.status === 'active' && item.status !== 'active') {
-      const owner = await User.findById(item.owner);
-      
-      if (owner) {
-        owner.aura_points = (owner.aura_points || 0) + 10;
-        await owner.save();
+      try {
+        const owner = await User.findById(item.owner);
+        
+        if (owner) {
+          owner.aura_points = (owner.aura_points || 0) + 10;
+          await owner.save();
 
-        await AuraLog.create({
-          user: owner._id,
-          reason: "Item Approved by Admin",
-          points: 10,
-          type: "positive"
-        });
+          await AuraLog.create({
+            user: owner._id,
+            reason: "Item Approved by Admin",
+            points: 10,
+            type: "positive"
+          });
 
-        await Notification.create({
-          user: owner._id,
-          type: 'AURA_UPDATE',
-          title: 'Item Approved! ',
-          message: `Your item "${item.title}" has been approved by admin. You received 10 Aura points!`,
-          metadata: { reason: 'item_approved', referenceId: item._id }
-        });
+          await Notification.create({
+            user: owner._id,
+            type: 'AURA_UPDATE',
+            title: 'Item Approved! 🎉',
+            message: `Your item "${item.title}" has been approved by admin. You received 10 Aura points!`,
+            metadata: { reason: 'item_approved', referenceId: item._id }
+          });
+        }
+      } catch (auraError) {
+        console.error("Error giving Aura points: ", auraError);
       }
     }
-  
+    // ⚡ NAYA CHANGE END
 
     item = await Item.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
@@ -208,7 +210,6 @@ const deleteItem = async (req, res) => {
 
     await item.deleteOne();
 
-  
     const user = await User.findById(req.user._id);
     if (user) {
       const actualItemCount = await Item.countDocuments({ owner: req.user._id });
