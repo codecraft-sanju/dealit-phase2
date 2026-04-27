@@ -1,5 +1,5 @@
 const Category = require('../models/Category');
-const Item = require('../models/Item'); // NAYA: Item model import kiya taaki distinct categories nikal sakein
+const Item = require('../models/Item'); 
 
 const getCategories = async (req, res) => {
   try {
@@ -44,9 +44,12 @@ const createCategory = async (req, res) => {
     const trimmedName = name.trim();
     const formattedName = trimmedName.charAt(0).toUpperCase() + trimmedName.slice(1).toLowerCase();
 
+    const escapeRegex = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const safeName = escapeRegex(formattedName);
+
     // Case-insensitive check (regex use karke)
     const categoryExists = await Category.findOne({ 
-      name: { $regex: new RegExp(`^${formattedName}$`, 'i') } 
+      name: { $regex: new RegExp(`^${safeName}$`, 'i') } 
     });
 
     if (categoryExists) {

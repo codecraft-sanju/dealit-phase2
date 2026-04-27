@@ -13,16 +13,19 @@ const razorpayInstance = new Razorpay({
 // 1. Order Create karne ki API
 const createOrder = async (req, res) => {
   try {
-    const { amount } = req.body; // Amount Rupees mein aayega
+    const { amount } = req.body; 
 
     if (!amount) {
       return res.status(400).json({ success: false, message: 'Amount is required' });
     }
 
     const options = {
-      amount: amount * 100, // Razorpay paise mein amount leta hai, isliye 100 se multiply kiya
+      amount: amount * 100, 
       currency: 'INR',
       receipt: `receipt_order_${Date.now()}`,
+      notes: {
+        userId: req.user._id.toString()
+      }
     };
 
     const order = await razorpayInstance.orders.create(options);
@@ -41,6 +44,11 @@ const verifyPayment = async (req, res) => {
   try {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
     const userId = req.user._id; 
+
+    const existingTransaction = await Transaction.findOne({ razorpay_payment_id });
+    if (existingTransaction) {
+      return res.status(400).json({ success: false, message: 'Payment already processed.' });
+    }
 
     const body = razorpay_order_id + "|" + razorpay_payment_id;
     const expectedSignature = crypto
@@ -130,11 +138,40 @@ const razorpayWebhook = async (req, res) => {
     if (event === 'payment.captured') {
       const paymentEntity = req.body.payload.payment.entity;
       const orderId = paymentEntity.order_id;
+      const paymentId = paymentEntity.id;
+      const actualAmountInINR = paymentEntity.amount / 100;
+      const userId = paymentEntity.notes ? paymentEntity.notes.userId : null;
       
-      const existingTransaction = await Transaction.findOne({ razorpay_order_id: orderId });
+      const existingTransaction = await Transaction.findOne({ razorpay_payment_id: paymentId });
       
-      if (!existingTransaction) {
-         console.log('Order verified via webhook:', orderId);
+      if (!existingTransaction && userId) {
+         const newTransaction = new Transaction({
+           user: userId,
+           amount: actualAmountInINR,
+           razorpay_order_id: orderId,
+           razorpay_payment_id: paymentId,
+           razorpay_signature: 'verified_via_webhook',
+           status: 'success',
+           transactionType: 'wallet_recharge'
+         });
+         await newTransaction.save();
+
+         await User.findByIdAndUpdate(
+           userId,
+           { $inc: { account_credits: actualAmountInINR } }
+         );
+
+         await Notification.create({
+           user: userId,
+           type: 'CREDIT_ADDED',
+           title: 'Wallet Recharged! 💳',
+           message: `₹${actualAmountInINR} credits have been successfully added to your account via webhook.`,
+           metadata: { 
+             amount: actualAmountInINR, 
+             reason: 'wallet_recharge',
+             referenceId: newTransaction._id 
+           }
+         });
       }
     }
 

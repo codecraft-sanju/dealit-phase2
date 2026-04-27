@@ -227,25 +227,25 @@ const updateSwapStatus = async (req, res) => {
       const offeredValue = barter.offered_item.estimated_value || 0;
       const requiredCredits = Math.max(0, targetValue - offeredValue);
 
-      // Credits deduct karne ke liye requester ka pura document nikalna hoga
-      const requesterDoc = await User.findById(barter.requester._id);
-      
       if (requiredCredits > 0) {
-        if (requesterDoc.account_credits < requiredCredits) {
+        const updatedRequester = await User.findOneAndUpdate(
+          { _id: barter.requester._id, account_credits: { $gte: requiredCredits } },
+          { $inc: { account_credits: -requiredCredits } },
+          { new: true }
+        );
+
+        if (!updatedRequester) {
           return res.status(400).json({ 
             success: false, 
             message: 'Cannot accept swap. The requester no longer has enough credits.' 
           });
         }
-        
-        requesterDoc.account_credits -= requiredCredits;
-        await requesterDoc.save();
 
         // CHANGED: Agar credit diff tha, toh requester ko deduction ki notification
         await Notification.create({
           user: barter.requester._id,
           type: 'CREDIT_DEDUCTED',
-          title: 'Trade Accepted! 🎉',
+          title: 'Trade Accepted! ',
           message: `Aapka trade offer accept ho gaya hai. Difference cover karne ke liye ${requiredCredits} credits deduct hue.`,
           metadata: { amount: requiredCredits, reason: 'trade_difference', referenceId: barter._id }
         });
@@ -254,7 +254,7 @@ const updateSwapStatus = async (req, res) => {
          await Notification.create({
           user: barter.requester._id,
           type: 'TRADE_ALERT',
-          title: 'Trade Accepted! 🎉',
+          title: 'Trade Accepted! ',
           message: `Aapka offer accept ho gaya hai! Deal lock karke chat start karein.`,
           metadata: { reason: 'trade_accepted', referenceId: barter._id }
         });
@@ -263,6 +263,18 @@ const updateSwapStatus = async (req, res) => {
       // 2. 'swapped' ki jagah 'reserved' status set karo taaki deal process me dikhe
       await Item.findByIdAndUpdate(barter.item._id, { status: 'reserved' });
       await Item.findByIdAndUpdate(barter.offered_item._id, { status: 'reserved' });
+
+      await BarterRequest.updateMany(
+        {
+          _id: { $ne: barter._id },
+          status: 'PENDING',
+          $or: [
+            { item: { $in: [barter.item._id, barter.offered_item._id] } },
+            { offered_item: { $in: [barter.item._id, barter.offered_item._id] } }
+          ]
+        },
+        { status: 'CANCELLED', updated_at: Date.now() }
+      );
 
       // 3. Frontend ke liye WhatsApp contact data taiyar karo
       matchData = {
@@ -282,7 +294,7 @@ const updateSwapStatus = async (req, res) => {
       await Notification.create({
         user: barter.requester._id,
         type: 'TRADE_ALERT',
-        title: 'Offer Declined 😔',
+        title: 'Offer Declined ',
         message: `Aapka offer "${barter.item.title}" ke liye decline kar diya gaya hai.`,
         metadata: { reason: 'trade_rejected', referenceId: barter._id }
       });
@@ -296,7 +308,7 @@ const updateSwapStatus = async (req, res) => {
       success: true, 
       message: status === 'ACCEPTED' ? 'Deal Locked Successfully! You can now chat on WhatsApp.' : `Swap ${status.toLowerCase()} successfully`, 
       data: barter,
-      matchData: matchData // Yeh frontend par bhej diya
+      matchData: matchData 
     });
 
   } catch (error) {
