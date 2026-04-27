@@ -19,8 +19,6 @@ const sendTokenResponse = (user, statusCode, res, message) => {
     secure: isProduction, 
     sameSite: isProduction ? 'none' : 'lax' 
   };
-
-  console.log('[DEBUG] Setting token cookie for user:', user.email);
   
   res.status(statusCode).cookie('token', token, options).json({
     success: true,
@@ -195,7 +193,6 @@ const registerUser = async (req, res) => {
     }
 
   } catch (error) {
-    console.error(error);
     res.status(500).json({ success: false, message: 'Server Error during registration' });
   }
 };
@@ -231,14 +228,11 @@ const verifyOtp = async (req, res) => {
     sendTokenResponse(user, 200, res, 'Account verified and logged in successfully!');
 
   } catch (error) {
-    console.error(error);
     res.status(500).json({ success: false, message: 'Server Error during OTP verification' });
   }
 };
 
 const loginUser = async (req, res) => {
-  console.log('[DEBUG] Login attempt for email:', req.body.email);
-  
   try {
     let { email, password } = req.body;
     if (email) email = email.toLowerCase().trim();
@@ -276,15 +270,12 @@ const loginUser = async (req, res) => {
     sendTokenResponse(user, 200, res, 'Login successful!');
 
   } catch (error) {
-    console.error(error);
     res.status(500).json({ success: false, message: 'Server Error during login' });
   }
 };
 
 const logoutUser = (req, res) => {
   const isProduction = process.env.NODE_ENV === 'production';
-
-  console.log('[DEBUG] Logging out user, clearing cookie');
 
   res.cookie('token', 'none', {
     expires: new Date(Date.now() + 10 * 1000),
@@ -329,11 +320,9 @@ const forgotPassword = async (req, res) => {
       user.resetPasswordOtpExpiry = undefined;
       await user.save({ validateBeforeSave: false });
 
-      console.error(error);
       return res.status(500).json({ success: false, message: 'Email could not be sent' });
     }
   } catch (error) {
-    console.error(error);
     res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
@@ -362,7 +351,6 @@ const resetPassword = async (req, res) => {
 
     sendTokenResponse(user, 200, res, 'Password reset successful. You are now logged in.');
   } catch (error) {
-    console.error(error);
     res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
@@ -387,7 +375,6 @@ const getUserProfile = async (req, res) => {
     
     res.status(200).json({ success: true, data: user });
   } catch (error) {
-    console.error('[DEBUG] Error in getUserProfile:', error);
     res.status(500).json({ success: false, message: 'Server Error fetching profile' });
   }
 };
@@ -422,7 +409,6 @@ const updateUserProfile = async (req, res) => {
 
     res.status(200).json({ success: true, message: 'Profile updated successfully', data: user });
   } catch (error) {
-    console.error('Error in updateUserProfile:', error);
     res.status(500).json({ success: false, message: 'Server Error updating profile' });
   }
 };
@@ -451,7 +437,6 @@ const updateProfilePic = async (req, res) => {
 
     res.status(200).json({ success: true, message: 'Profile picture updated', data: user });
   } catch (error) {
-    console.error('[DEBUG] Error in updateProfilePic:', error);
     res.status(500).json({ success: false, message: 'Server Error updating profile pic' });
   }
 };
@@ -477,7 +462,6 @@ const toggleWishlist = async (req, res) => {
       return res.status(200).json({ success: true, message: 'Removed from wishlist', isWishlisted: false });
     }
   } catch (error) {
-    console.error('[DEBUG] Error in toggleWishlist:', error);
     res.status(500).json({ success: false, message: 'Server Error toggling wishlist' });
   }
 };
@@ -498,7 +482,6 @@ const getWishlist = async (req, res) => {
 
     res.status(200).json({ success: true, count: activeWishlist.length, data: activeWishlist });
   } catch (error) {
-    console.error('[DEBUG] Error in getWishlist:', error);
     res.status(500).json({ success: false, message: 'Server Error fetching wishlist' });
   }
 };
@@ -556,7 +539,6 @@ const claimWelcomeBonus = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('[DEBUG] Error in claimWelcomeBonus:', error);
     res.status(500).json({ success: false, message: 'Server Error while claiming bonus' });
   }
 };
