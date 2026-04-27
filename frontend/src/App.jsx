@@ -25,6 +25,13 @@ const PromoAlert = smartLazy(() => import('./popup/PromoAlert'));
 const IosInstallPopup = smartLazy(() => import('./components/IosInstallPopup'));
 const DesktopLandingPage = smartLazy(() => import('./Desktop/DesktopLandingPage'));
 const PrivacyPage = smartLazy(() => import('./components/PrivacyPage'));
+
+/* NEW CHANGES: Added policy page imports */
+const TermsPage = smartLazy(() => import('./components/TermsPage'));
+const RefundPolicyPage = smartLazy(() => import('./components/RefundPolicyPage'));
+const CancellationPolicyPage = smartLazy(() => import('./components/CancellationPolicyPage'));
+/* END NEW CHANGES */
+
 const AuraPage = smartLazy(() => import('./components/AuraPage'));
 const AuraLeadershipPage = smartLazy(() => import('./components/AuraLeadershipPage'));
 const AuthPage = smartLazy(() => import('./components/AuthPage'));
@@ -382,6 +389,13 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
             <Route path="/edit-item/:id" element={user ? <EditItemPage /> : <Navigate to="/login" />} />
             <Route path="/wishlist" element={user ? <WishlistPage user={user} /> : <Navigate to="/login" />} />
             <Route path="/privacy" element={<PrivacyPage />} />
+
+            {/* NEW CHANGES: Added policy routes */}
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/refund-policy" element={<RefundPolicyPage />} />
+            <Route path="/cancellation-policy" element={<CancellationPolicyPage />} />
+            /* END NEW CHANGES */
+
             <Route path="/admin" element={<AdminPanel user={user} />} />
             <Route path="/checkout/:itemId" element={user ? <CheckoutPage user={user} setUser={setUser} /> : <Navigate to="/login" />} />
             <Route path="/orders" element={user ? <OrdersPage user={user} /> : <Navigate to="/login" />} />
