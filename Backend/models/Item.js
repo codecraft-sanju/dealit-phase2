@@ -46,4 +46,6 @@ itemSchema.index({ status: 1, created_at: -1 });
 // 3. Index for fast lookup of a user's items
 itemSchema.index({ owner: 1 });
 
+itemSchema.index({ status: 1, estimated_value: 1, category: 1 });
+
 module.exports = mongoose.model('Item', itemSchema);

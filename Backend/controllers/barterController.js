@@ -98,13 +98,28 @@ const formatRequestsForFrontend = (requests) => {
 
 const getReceivedRequests = async (req, res) => {
   try {
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+
+    const total = await BarterRequest.countDocuments({ owner: req.user._id });
+
     const requests = await BarterRequest.find({ owner: req.user._id })
       .populate('requester', 'full_name email phone') // UPDATE: Phone number add kiya
       .populate('item')
       .populate('offered_item')
-      .sort({ created_at: -1 });
+      .sort({ created_at: -1 })
+      .skip(skip)
+      .limit(limit);
 
-    res.status(200).json({ success: true, count: requests.length, data: formatRequestsForFrontend(requests) });
+    res.status(200).json({ 
+      success: true, 
+      count: requests.length, 
+      total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      data: formatRequestsForFrontend(requests) 
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: 'Server Error' });
@@ -113,13 +128,28 @@ const getReceivedRequests = async (req, res) => {
 
 const getSentRequests = async (req, res) => {
   try {
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+
+    const total = await BarterRequest.countDocuments({ requester: req.user._id });
+
     const requests = await BarterRequest.find({ requester: req.user._id })
       .populate('owner', 'full_name email phone') // UPDATE: Phone number add kiya
       .populate('item')
       .populate('offered_item')
-      .sort({ created_at: -1 });
+      .sort({ created_at: -1 })
+      .skip(skip)
+      .limit(limit);
 
-    res.status(200).json({ success: true, count: requests.length, data: formatRequestsForFrontend(requests) });
+    res.status(200).json({ 
+      success: true, 
+      count: requests.length, 
+      total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      data: formatRequestsForFrontend(requests) 
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: 'Server Error' });

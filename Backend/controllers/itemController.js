@@ -87,7 +87,10 @@ const createItem = async (req, res) => {
 
 const getItems = async (req, res) => {
   try {
-    const { category, limit } = req.query;
+    const { category } = req.query;
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 20;
+    const skip = (page - 1) * limit;
 
     let queryCondition = { 
       status: 'active',
@@ -98,17 +101,22 @@ const getItems = async (req, res) => {
       queryCondition.category = category;
     }
 
-    let itemsQuery = Item.find(queryCondition)
+    const total = await Item.countDocuments(queryCondition);
+
+    const items = await Item.find(queryCondition)
       .populate('owner', 'full_name city email')
-      .sort({ created_at: -1 });
-
-    if (limit) {
-      itemsQuery = itemsQuery.limit(parseInt(limit, 10));
-    }
-
-    const items = await itemsQuery;
+      .sort({ created_at: -1 })
+      .skip(skip)
+      .limit(limit);
     
-    res.status(200).json({ success: true, count: items.length, data: items });
+    res.status(200).json({ 
+      success: true, 
+      count: items.length, 
+      total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      data: items 
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: 'Server Error' });
