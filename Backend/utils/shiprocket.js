@@ -2,15 +2,25 @@
 const axios = require('axios');
 const SHIPROCKET_BASE_URL = 'https://apiv2.shiprocket.in/v1/external';
 
-const getShiprocketToken = async () => {
-  try {
+let cachedToken = null;
+let tokenExpiry = null;
 
+const getShiprocketToken = async () => {
+  const currentTime = Date.now();
+  if (cachedToken && tokenExpiry && currentTime < tokenExpiry) {
+    return cachedToken;
+  }
+
+  try {
     const response = await axios.post(`${SHIPROCKET_BASE_URL}/auth/login`, {
       email: process.env.SHIPROCKET_EMAIL,
       password: process.env.SHIPROCKET_PASSWORD
     });
     
-    return response.data.token;
+    cachedToken = response.data.token;
+    tokenExpiry = currentTime + (9 * 24 * 60 * 60 * 1000);
+
+    return cachedToken;
   } catch (error) {
     console.error('Shiprocket Login Error:', error.response?.data || error.message);
     throw new Error('Failed to connect to shipping partner.');
