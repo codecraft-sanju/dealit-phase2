@@ -12,7 +12,6 @@ import ProductCard from './ProductCard';
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
-// <-- NAYA CHANGE: Helper function for Cloudinary Optimization -->
 export const getOptimizedCloudinaryUrl = (url) => {
   if (!url || typeof url !== 'string' || !url.includes('cloudinary.com') || url.includes('q_auto')) {
     return url;
@@ -56,6 +55,18 @@ const HomePage = ({ user, setUser }) => {
   const isDown = useRef(false);
   const startX = useRef(0);
   const scrollLeftPos = useRef(0);
+
+  // --- NEW CHANGE: Listen for the custom event from PromoAlert to trigger animation ---
+  useEffect(() => {
+    const handleBonusClaimedEvent = () => {
+      setShowCelebration(true);
+      setTimeout(() => setShowCelebration(false), 5500);
+    };
+
+    window.addEventListener('bonusClaimedSuccess', handleBonusClaimedEvent);
+    return () => window.removeEventListener('bonusClaimedSuccess', handleBonusClaimedEvent);
+  }, []);
+  // -----------------------------------------------------------------------------------
 
   const { data: bonusSettings = { enabled: true, amount: 50 } } = useQuery({
     queryKey: ['publicSettings'],
@@ -297,7 +308,6 @@ const HomePage = ({ user, setUser }) => {
                   className="w-full aspect-[5/2] md:aspect-[5/1] flex-shrink-0 snap-center rounded-2xl overflow-hidden shadow-sm border border-gray-100 relative bg-gray-50"
                 >
                   <picture className="w-full h-full block pointer-events-none">
-                    {/* <-- NAYA CHANGE: Using getOptimizedCloudinaryUrl here --> */}
                     <source media="(min-width: 768px)" srcSet={getOptimizedCloudinaryUrl(offer.desktopImage)} />
                     <img 
                       src={getOptimizedCloudinaryUrl(offer.mobileImage)} 

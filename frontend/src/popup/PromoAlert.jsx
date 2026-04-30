@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Package, X, Gift, Sparkles, Coins, Plus } from 'lucide-react';
+import { Package, X, Gift, Sparkles, Coins, Plus, ArrowRight, Loader2 } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
-const PromoAlert = ({ user, hasZeroPriceIssue }) => {
+const PromoAlert = ({ user, setUser, hasZeroPriceIssue }) => {
   const [show, setShow] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [settings, setSettings] = useState(null);
+  const [isClaiming, setIsClaiming] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -31,7 +32,9 @@ const PromoAlert = ({ user, hasZeroPriceIssue }) => {
           isCreditSystemEnabled: true,
           creditsPerListing: 50,
           isReferralSystemEnabled: true,
-          referralRewardCredits: 40
+          referralRewardCredits: 40,
+          isWelcomeBonusEnabled: true,
+          welcomeBonusAmount: 50
         };
 
         if (res.data.success && res.data.data) {
@@ -40,11 +43,13 @@ const PromoAlert = ({ user, hasZeroPriceIssue }) => {
             isCreditSystemEnabled: fetchedSettings.isCreditSystemEnabled ?? true,
             creditsPerListing: fetchedSettings.creditsPerListing || 50,
             isReferralSystemEnabled: fetchedSettings.isReferralSystemEnabled ?? true,
-            referralRewardCredits: fetchedSettings.referralRewardCredits || 40
+            referralRewardCredits: fetchedSettings.referralRewardCredits || 40,
+            isWelcomeBonusEnabled: fetchedSettings.isWelcomeBonusEnabled ?? true,
+            welcomeBonusAmount: fetchedSettings.welcomeBonusAmount || 50
           };
         }
 
-        if (!finalSettings.isCreditSystemEnabled && !finalSettings.isReferralSystemEnabled) {
+        if (!finalSettings.isCreditSystemEnabled && !finalSettings.isReferralSystemEnabled && !finalSettings.isWelcomeBonusEnabled) {
           return;
         }
 
@@ -57,7 +62,9 @@ const PromoAlert = ({ user, hasZeroPriceIssue }) => {
           isCreditSystemEnabled: true,
           creditsPerListing: 50,
           isReferralSystemEnabled: true,
-          referralRewardCredits: 40
+          referralRewardCredits: 40,
+          isWelcomeBonusEnabled: true,
+          welcomeBonusAmount: 50
         });
         setShow(true);
         sessionStorage.setItem('promo_shown', 'true');
@@ -78,8 +85,48 @@ const PromoAlert = ({ user, hasZeroPriceIssue }) => {
     }, 300);
   };
 
+  const handleClaimBonus = async () => {
+    if (isClaiming) return;
+    setIsClaiming(true);
+    try {
+      const res = await axios.post(`${API_URL}/users/claim-bonus`, {}, { withCredentials: true });
+      if (res.data.success) {
+        if (typeof setUser === 'function') {
+          setUser(prevUser => {
+            const updatedUser = {
+              ...prevUser,
+              account_credits: res.data.data.account_credits,
+              hasClaimedWelcomeBonus: res.data.data.hasClaimedWelcomeBonus
+            };
+            localStorage.setItem('dealit_user', JSON.stringify(updatedUser));
+            return updatedUser;
+          });
+        }
+        
+        // --- NEW CHANGE: Dispatch event to trigger animation on HomePage ---
+        window.dispatchEvent(new Event('bonusClaimedSuccess'));
+        
+        handleClose();
+      }
+    } catch (error) {
+      console.error('Error claiming bonus:', error);
+      if (error.response?.status === 400 && typeof setUser === 'function') {
+        setUser(prevUser => {
+          const updatedUser = { ...prevUser, hasClaimedWelcomeBonus: true };
+          localStorage.setItem('dealit_user', JSON.stringify(updatedUser));
+          return updatedUser;
+        });
+      }
+      handleClose();
+    } finally {
+      setIsClaiming(false);
+    }
+  };
+
   if (!show || !settings) return null;
-  if (!settings.isCreditSystemEnabled && !settings.isReferralSystemEnabled) return null;
+  if (!settings.isCreditSystemEnabled && !settings.isReferralSystemEnabled && !settings.isWelcomeBonusEnabled) return null;
+
+  const hasUnclaimedBonus = user && !user.hasClaimedWelcomeBonus && settings.isWelcomeBonusEnabled;
 
   return (
     <div 
@@ -111,6 +158,31 @@ const PromoAlert = ({ user, hasZeroPriceIssue }) => {
 
           <div className="space-y-3 mb-8">
             
+            {hasUnclaimedBonus && (
+              <div 
+                onClick={handleClaimBonus}
+                className={`bg-gradient-to-r from-emerald-500/20 to-teal-500/10 p-4 rounded-2xl border border-emerald-500/40 flex items-center gap-4 text-left shadow-[0_0_15px_rgba(16,185,129,0.15)] transition-all group relative overflow-hidden ${isClaiming ? 'cursor-wait opacity-80' : 'cursor-pointer hover:bg-emerald-500/30'}`}
+              >
+                <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-[2rem] pointer-events-none"></div>
+                <div className="bg-emerald-500/20 p-2.5 rounded-xl border border-emerald-500/30 shrink-0 relative z-10">
+                  {isClaiming ? (
+                    <Loader2 className="w-6 h-6 text-emerald-400 animate-spin" />
+                  ) : (
+                    <Gift className="w-6 h-6 text-emerald-400" />
+                  )}
+                </div>
+                <div className="flex-1 relative z-10">
+                  <p className="text-white font-bold text-sm flex items-center gap-1.5">
+                    {isClaiming ? 'Claiming Bonus...' : 'Free Welcome Bonus!'} <Sparkles className="w-3.5 h-3.5 text-yellow-400 animate-pulse" />
+                  </p>
+                  <p className="text-gray-300 text-xs mt-0.5">
+                    {isClaiming ? 'Please wait...' : <>You have <strong className="text-emerald-400">{settings.welcomeBonusAmount} credits</strong> waiting. Tap to claim!</>}
+                  </p>
+                </div>
+                {!isClaiming && <ArrowRight className="w-4 h-4 text-emerald-400 opacity-0 group-hover:opacity-100 transition-all transform translate-x-[-10px] group-hover:translate-x-0 relative z-10" />}
+              </div>
+            )}
+
             {settings.isCreditSystemEnabled && (
               <div className="bg-gray-800/80 p-4 rounded-2xl border border-gray-700 flex items-center gap-4 text-left shadow-inner">
                 <div className="bg-blue-500/20 p-2.5 rounded-xl border border-blue-500/30 shrink-0">

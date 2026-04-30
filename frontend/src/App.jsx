@@ -367,7 +367,8 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
       <ZeroPriceAlert user={user} onCheckComplete={setHasZeroPriceIssue} />
       
       <Suspense fallback={null}>
-        <PromoAlert user={user} hasZeroPriceIssue={hasZeroPriceIssue} />
+        {/* --- NEW CHANGE: Added setUser={setUser} here so PromoAlert can update the global user state --- */}
+        <PromoAlert user={user} setUser={setUser} hasZeroPriceIssue={hasZeroPriceIssue} />
         <IosInstallPopup />
       </Suspense>
       
