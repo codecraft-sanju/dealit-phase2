@@ -1,7 +1,6 @@
 const BarterRequest = require('../models/BarterRequest');
 const Item = require('../models/Item');
 const User = require('../models/User'); 
-// CHANGED: Notification model import kiya
 const Notification = require('../models/Notification');
 
 const createBarterRequest = async (req, res) => {

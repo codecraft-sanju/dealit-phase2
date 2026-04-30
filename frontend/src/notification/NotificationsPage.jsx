@@ -14,11 +14,11 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import { formatDistanceToNow } from 'date-fns';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'; // <-- NAYA: React Query imports
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'; 
 
 const API_URL = import.meta.env.VITE_BACKEND_API + '/api';
 
-// <-- NAYA: Shimmer Loading Component specifically designed for Notifications -->
+
 const NotificationsShimmer = () => {
   return (
     <div className="space-y-3">
