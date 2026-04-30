@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react'; // ADDED: Imported useEffect
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -105,6 +105,19 @@ const NotificationsPage = () => {
     },
   });
 
+  // NEW CODE START: Auto-mark notifications as read when the page loads
+  useEffect(() => {
+    if (!isLoading && notifications.length > 0) {
+      const hasUnread = notifications.some(n => !n.isRead);
+      if (hasUnread) {
+        // Trigger the mutation in the background automatically
+        markAllAsReadMutation.mutate();
+      }
+    }
+    // We intentionally do not add markAllAsReadMutation to the dependency array to avoid loop triggers
+  }, [isLoading, notifications]);
+  // NEW CODE END
+
   // Helper to get right icon and color based on notification type
   const getIconData = (type) => {
     switch (type) {
@@ -137,15 +150,7 @@ const NotificationsPage = () => {
               Notifications
             </h1>
           </div>
-          {notifications.some(n => !n.isRead) && (
-            <button 
-              onClick={() => markAllAsReadMutation.mutate()} // <-- Trigger mark all mutation
-              disabled={markAllAsReadMutation.isPending}
-              className="text-xs font-semibold bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-full transition-colors active:scale-95 disabled:opacity-50"
-            >
-              {markAllAsReadMutation.isPending ? 'Marking...' : 'Mark all read'}
-            </button>
-          )}
+          {/* CHANGED: Removed the "Mark all read" button since it now happens automatically */}
         </div>
       </header>
 
@@ -178,12 +183,10 @@ const NotificationsPage = () => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
-                    onClick={() => {
-                      if (!notif.isRead) markAsReadMutation.mutate(notif._id); // <-- Trigger mark read mutation
-                    }}
-                    className={`p-4 rounded-2xl border transition-all cursor-pointer relative overflow-hidden
+                    // CHANGED: Removed the onClick handler since it's no longer needed for marking as read
+                    className={`p-4 rounded-2xl border transition-all relative overflow-hidden
                       ${notif.isRead 
-                        ? 'bg-white border-gray-100 shadow-sm opacity-75 hover:opacity-100' 
+                        ? 'bg-white border-gray-100 shadow-sm' 
                         : 'bg-white border-[#6B46C1]/30 shadow-md ring-1 ring-[#6B46C1]/10'}`}
                   >
                     {/* Unread dot indicator */}
