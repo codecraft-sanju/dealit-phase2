@@ -182,8 +182,48 @@ const razorpayWebhook = async (req, res) => {
   }
 };
 
+// NAYA: Backend Pagination & Filtering Logic
+const getUserTransactions = async (req, res) => {
+  try {
+    const userId = req.user._id; 
+    
+    // Pagination aur Filters req.query se aayenge
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const type = req.query.type || 'all';
+    
+    const skip = (page - 1) * limit;
+
+    let query = { user: userId };
+    if (type !== 'all') {
+      query.transactionType = type;
+    }
+
+    const totalTransactions = await Transaction.countDocuments(query);
+
+    const transactions = await Transaction.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    res.status(200).json({
+      success: true,
+      count: transactions.length,
+      total: totalTransactions,
+      currentPage: page,
+      totalPages: Math.ceil(totalTransactions / limit),
+      hasMore: page < Math.ceil(totalTransactions / limit),
+      data: transactions
+    });
+  } catch (error) {
+    console.error('Error fetching transactions:', error);
+    res.status(500).json({ success: false, message: 'Server Error fetching transactions' });
+  }
+};
+
 module.exports = {
   createOrder,
   verifyPayment,
-  razorpayWebhook
+  razorpayWebhook,
+  getUserTransactions
 };
