@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'; // ADDED: Imported useEffect
+import React, { useEffect, useRef } from 'react'; // ADDED: useRef
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -10,30 +10,25 @@ import {
   Sparkles,
   Package,
   ShoppingBag,
-  Info
+  Info,
+  Loader2 // ADDED: A spinner icon for the bottom loader
 } from 'lucide-react';
 import axios from 'axios';
 import { formatDistanceToNow } from 'date-fns';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'; 
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'; // CHANGED: useQuery to useInfiniteQuery
 
 const API_URL = import.meta.env.VITE_BACKEND_API + '/api';
-
 
 const NotificationsShimmer = () => {
   return (
     <div className="space-y-3">
       {[1, 2, 3, 4, 5].map((i) => (
         <div key={i} className="p-4 rounded-2xl bg-white border border-gray-100 shadow-sm flex gap-4 animate-pulse">
-          {/* Icon Skeleton */}
           <div className="w-12 h-12 rounded-xl bg-gray-200 shrink-0"></div>
-          
-          {/* Text Skeleton */}
           <div className="flex-1 pr-4 py-1">
             <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
             <div className="h-3 bg-gray-200 rounded w-full mb-1"></div>
             <div className="h-3 bg-gray-200 rounded w-5/6 mb-3"></div>
-            
-            {/* Date/Metadata Skeleton */}
             <div className="flex justify-between items-center">
               <div className="h-2.5 bg-gray-200 rounded w-1/4"></div>
               {i % 2 === 0 && <div className="h-4 bg-gray-200 rounded-md w-12"></div>}
@@ -47,78 +42,127 @@ const NotificationsShimmer = () => {
 
 const NotificationsPage = () => {
   const queryClient = useQueryClient();
+  const observerTarget = useRef(null); // Reference for the element at the bottom of the list
 
-  // <-- 1. Fetching notifications with useQuery -->
-  const { data: notifications = [], isLoading, isError, error } = useQuery({
+  // <-- 1. Fetching notifications with useInfiniteQuery -->
+  const { 
+    data, 
+    isLoading, 
+    isError, 
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage
+  } = useInfiniteQuery({
     queryKey: ['notifications'],
-    queryFn: async () => {
-      const response = await axios.get(`${API_URL}/notifications`, { withCredentials: true });
-      return response.data.success ? response.data.data : [];
+    initialPageParam: 1,
+    queryFn: async ({ pageParam = 1 }) => {
+      // Pushing the pageParam to your backend
+      const response = await axios.get(`${API_URL}/notifications?page=${pageParam}&limit=15`, { withCredentials: true });
+      return response.data; // We return the whole object because we need totalPages
     },
-    staleTime: 1000 * 60, // Cache for 1 minute before refetching in background
+    getNextPageParam: (lastPage) => {
+      // Tell React Query how to get the next page number
+      if (lastPage.currentPage < lastPage.totalPages) {
+        return lastPage.currentPage + 1;
+      }
+      return undefined; // No more pages left
+    },
+    staleTime: 1000 * 60,
   });
 
-  // <-- 2. Mark Single as Read with Optimistic Update -->
+  // Flatten the pages array into a single continuous list of notifications
+  const notifications = data?.pages.flatMap(page => page.data) || [];
+
+  // <-- Intersection Observer to trigger fetchNextPage when scrolling to bottom -->
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 0.1 } // Trigger when 10% of the target is visible
+    );
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => {
+      if (observerTarget.current) {
+        observer.unobserve(observerTarget.current);
+      }
+    };
+  }, [observerTarget, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // <-- 2. Mark Single as Read with Optimistic Update (Updated for Infinite Query structure) -->
   const markAsReadMutation = useMutation({
     mutationFn: async (id) => {
       return await axios.put(`${API_URL}/notifications/${id}/read`, {}, { withCredentials: true });
     },
     onMutate: async (id) => {
-      // Cancel any outgoing refetches
       await queryClient.cancelQueries(['notifications']);
-      // Snapshot the previous value
-      const previousNotifications = queryClient.getQueryData(['notifications']);
-      // Optimistically update to the new value
-      queryClient.setQueryData(['notifications'], old => 
-        old?.map(notif => notif._id === id ? { ...notif, isRead: true } : notif)
-      );
-      // Return a context object with the snapshotted value
-      return { previousNotifications };
+      const previousData = queryClient.getQueryData(['notifications']);
+      
+      queryClient.setQueryData(['notifications'], oldData => {
+        if (!oldData) return oldData;
+        return {
+          ...oldData,
+          pages: oldData.pages.map(page => ({
+            ...page,
+            data: page.data.map(notif => notif._id === id ? { ...notif, isRead: true } : notif)
+          }))
+        };
+      });
+      return { previousData };
     },
-    // If the mutation fails, use the context returned from onMutate to roll back
     onError: (err, id, context) => {
       console.error("Failed to mark as read:", err);
-      queryClient.setQueryData(['notifications'], context.previousNotifications);
+      queryClient.setQueryData(['notifications'], context.previousData);
     },
   });
 
-  // <-- 3. Mark All as Read with Optimistic Update -->
+  // <-- 3. Mark All as Read with Optimistic Update (Updated for Infinite Query structure) -->
   const markAllAsReadMutation = useMutation({
     mutationFn: async () => {
       return await axios.put(`${API_URL}/notifications/read-all`, {}, { withCredentials: true });
     },
     onMutate: async () => {
       await queryClient.cancelQueries(['notifications']);
-      const previousNotifications = queryClient.getQueryData(['notifications']);
-      queryClient.setQueryData(['notifications'], old => 
-        old?.map(notif => ({ ...notif, isRead: true }))
-      );
-      return { previousNotifications };
+      const previousData = queryClient.getQueryData(['notifications']);
+      
+      queryClient.setQueryData(['notifications'], oldData => {
+        if (!oldData) return oldData;
+        return {
+          ...oldData,
+          pages: oldData.pages.map(page => ({
+            ...page,
+            data: page.data.map(notif => ({ ...notif, isRead: true }))
+          }))
+        };
+      });
+      return { previousData };
     },
     onError: (err, newTodo, context) => {
       console.error("Failed to mark all as read:", err);
-      queryClient.setQueryData(['notifications'], context.previousNotifications);
+      queryClient.setQueryData(['notifications'], context.previousData);
     },
     onSettled: () => {
-      // Always refetch after error or success to ensure server sync
       queryClient.invalidateQueries(['notifications']);
     },
   });
 
-  // NEW CODE START: Auto-mark notifications as read when the page loads
+  // Auto-mark notifications as read when the page loads
   useEffect(() => {
     if (!isLoading && notifications.length > 0) {
       const hasUnread = notifications.some(n => !n.isRead);
       if (hasUnread) {
-        // Trigger the mutation in the background automatically
         markAllAsReadMutation.mutate();
       }
     }
-    // We intentionally do not add markAllAsReadMutation to the dependency array to avoid loop triggers
   }, [isLoading, notifications]);
-  // NEW CODE END
 
-  // Helper to get right icon and color based on notification type
   const getIconData = (type) => {
     switch (type) {
       case 'CREDIT_ADDED':
@@ -139,7 +183,6 @@ const NotificationsPage = () => {
   return (
     <div className="min-h-screen bg-[#f4f2f9] font-sans relative overflow-x-hidden flex flex-col">
       
-      {/* 1. HEADER (Fixed at top) */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-[#6B46C1] shadow-lg py-4">
         <div className="max-w-md mx-auto md:max-w-7xl px-5 flex justify-between items-center text-white">
           <div className="flex items-center gap-3">
@@ -150,14 +193,11 @@ const NotificationsPage = () => {
               Notifications
             </h1>
           </div>
-          {/* CHANGED: Removed the "Mark all read" button since it now happens automatically */}
         </div>
       </header>
 
-      {/* 2. MAIN CONTENT (Added pt-24 to offset fixed header) */}
       <main className="flex-1 flex flex-col pt-24 pb-24 px-4 relative z-10 max-w-md mx-auto w-full">
         
-        {/* <-- NAYA: Shimmer UI usage based on React Query isLoading state --> */}
         {isLoading ? (
           <NotificationsShimmer />
         ) : isError ? (
@@ -183,13 +223,11 @@ const NotificationsPage = () => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
-                    // CHANGED: Removed the onClick handler since it's no longer needed for marking as read
                     className={`p-4 rounded-2xl border transition-all relative overflow-hidden
                       ${notif.isRead 
                         ? 'bg-white border-gray-100 shadow-sm' 
                         : 'bg-white border-[#6B46C1]/30 shadow-md ring-1 ring-[#6B46C1]/10'}`}
                   >
-                    {/* Unread dot indicator */}
                     {!notif.isRead && (
                       <div className="absolute top-4 right-4 w-2.5 h-2.5 rounded-full bg-[#6B46C1] shadow-[0_0_8px_rgba(107,70,193,0.6)]"></div>
                     )}
@@ -212,7 +250,6 @@ const NotificationsPage = () => {
                              {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true })}
                           </span>
                           
-                          {/* Show metadata amount if exists */}
                           {notif.metadata?.amount > 0 && (
                             <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${notif.type === 'CREDIT_ADDED' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
                               {notif.type === 'CREDIT_ADDED' ? '+' : '-'}{notif.metadata.amount} 🪙
@@ -225,6 +262,16 @@ const NotificationsPage = () => {
                 );
               })}
             </AnimatePresence>
+
+            {/* Invisible element to trigger the Intersection Observer */}
+            <div ref={observerTarget} className="h-10 w-full" />
+            
+            {/* Loading spinner for when fetching the next page */}
+            {isFetchingNextPage && (
+              <div className="flex justify-center py-4">
+                <Loader2 className="w-6 h-6 text-[#6B46C1] animate-spin" />
+              </div>
+            )}
           </div>
         )}
       </main>
