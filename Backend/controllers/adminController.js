@@ -4,10 +4,8 @@ const CreditSetting = require('../models/CreditSetting');
 const Transaction = require('../models/Transaction');
 const Order = require('../models/Order');
 const BarterRequest = require('../models/BarterRequest');
-// <-- NAYA CHANGE: Notification model import kiya -->
 const Notification = require('../models/Notification');
 
-// CHANGED: Added search logic for Pending Items
 const getPendingItems = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
@@ -157,7 +155,7 @@ const updateItemStatus = async (req, res) => {
       }
 
       if (setting.isCreditSystemEnabled) {
-      
+       
         const activeItemsCount = await Item.countDocuments({ owner: item.owner, status: 'active' });
 
         if (activeItemsCount <= setting.maxListingsRewarded) {
@@ -531,6 +529,20 @@ const getDashboardStats = async (req, res) => {
     const deliveredOrders = await Order.countDocuments({ orderStatus: 'delivered' });
     const pendingOrders = await Order.countDocuments({ orderStatus: 'pending' });
 
+    // CALCULATION FOR SHIPROCKET TRACKING
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const endOfMonth = new Date(startOfMonth);
+    endOfMonth.setMonth(endOfMonth.getMonth() + 1);
+    endOfMonth.setDate(0);
+    endOfMonth.setHours(23, 59, 59, 999);
+
+    const currentMonthOrders = await Order.countDocuments({
+      created_at: { $gte: startOfMonth, $lte: endOfMonth }
+    });
+
     const successfulTxns = await Transaction.find({ status: 'success' });
     const totalRevenue = successfulTxns.reduce((sum, txn) => sum + txn.amount, 0);
 
@@ -622,7 +634,7 @@ const getDashboardStats = async (req, res) => {
       data: {
         users: { total: totalUsers, verified: verifiedUsers },
         items: { total: totalItems, active: activeItems, pending: pendingItems, swapped: swappedItems },
-        orders: { total: totalOrders, delivered: deliveredOrders, pending: pendingOrders },
+        orders: { total: totalOrders, delivered: deliveredOrders, pending: pendingOrders, currentMonth: currentMonthOrders }, // ADDED currentMonth HERE
         revenue: totalRevenue,
         recentUsers,
         performanceData, 
@@ -647,7 +659,7 @@ module.exports = {
   updateCreditSettings,
   getPublicCreditSettings,
   getAllTransactions,
-  getAllOrders,             
+  getAllOrders,              
   updateAdminOrderStatus    ,
   getDashboardStats
 };

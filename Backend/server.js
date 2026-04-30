@@ -41,6 +41,17 @@ app.get('/', (req, res) => {
   });
 });
 
+// <-- NAYA CHANGE: Health check route add kiya -->
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    success: true, 
+    status: 'UP',
+    message: 'Server is healthy and running smoothly!',
+    timestamp: new Date().toISOString()
+  });
+});
+// <-- NAYA CHANGE END -->
+
 app.use('/api/users', userRoutes);
 app.use('/api/items', itemRoutes);
 app.use('/api/barter', barterRoutes);

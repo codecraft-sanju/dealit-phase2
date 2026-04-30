@@ -1,11 +1,13 @@
-import React from 'react';
-import { Users, Package, ShoppingBag, IndianRupee, TrendingUp, Activity, CheckCircle, AlertCircle, Tag, RefreshCw, Zap } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { Users, Package, ShoppingBag, IndianRupee, TrendingUp, Activity, CheckCircle, AlertCircle, Tag, RefreshCw, Zap, TrendingDown, Info, Rocket, ServerCrash } from 'lucide-react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell 
 } from 'recharts';
 
 const COLORS = ['#34d399', '#c084fc', '#60a5fa', '#fbbf24', '#f43f5e', '#0ea5e9'];
+const API_BASE = import.meta.env.VITE_BACKEND_API || 'http://localhost:5000';
 
 // --- Time Formatting Helper Function ---
 const timeAgo = (dateInput) => {
@@ -46,6 +48,35 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 const DashboardOverview = ({ data }) => {
+  // Dynamic System Health State
+  const [systemHealth, setSystemHealth] = useState({ status: 'checking', percent: '...' });
+
+  // Fetch Live System Health
+  useEffect(() => {
+    let isMounted = true;
+    const checkHealth = async () => {
+      try {
+        const response = await axios.get(`${API_BASE}/health`, { timeout: 5000 });
+        if (isMounted && response.data.success) {
+          setSystemHealth({ status: 'online', percent: '100%' });
+        }
+      } catch (error) {
+        if (isMounted) {
+          setSystemHealth({ status: 'offline', percent: '0%' });
+          console.error("System health check failed:", error.message);
+        }
+      }
+    };
+
+    checkHealth();
+    // Auto-refresh health every 60 seconds
+    const interval = setInterval(checkHealth, 60000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
   if (!data || !data.users) return null;
 
   const { 
@@ -60,6 +91,48 @@ const DashboardOverview = ({ data }) => {
   } = data;
   
   const calcPercent = (part, total) => total > 0 ? Math.round((part / total) * 100) : 0;
+
+  // --- SHIPROCKET SMART ADVISOR LOGIC ---
+  const currentOrders = orders.currentMonth || 0;
+  
+  // Math Logic: 
+  // Lite = ₹66 per order. Business = ₹199 + ₹59 per order.
+  // Break-even: 29 orders. (29 * 66 = 1914) vs (199 + 29*59 = 1910). At 29, Business saves ₹4.
+  const isBusinessProfitable = currentOrders >= 29;
+  const isRefundEligible = currentOrders >= 100;
+
+  let advisorState = {};
+  if (isRefundEligible) {
+    advisorState = {
+      title: "Goal Reached: 100% Free Plan! 🎉",
+      color: "text-emerald-400",
+      bg: "bg-emerald-500/10 border-emerald-500/30",
+      icon: <CheckCircle className="w-5 h-5 text-emerald-400 mt-0.5" />,
+      message: `Aapne 100 orders cross kar liye hain! Aapko Shiprocket se ₹199 ka full refund mil jayega. Plan effectively FREE ho chuka hai.`,
+      progress: 100,
+      targetText: "Goal Completed"
+    };
+  } else if (isBusinessProfitable) {
+    advisorState = {
+      title: "Switch to Business Plan Now! 🚀",
+      color: "text-blue-400",
+      bg: "bg-blue-500/10 border-blue-500/30",
+      icon: <TrendingDown className="w-5 h-5 text-blue-400 mt-0.5" />,
+      message: `Aapke orders 28 cross kar gaye hain. Ab Business Plan (₹199) lene par apki per-shipment cost ₹66 se ghat kar ₹59 ho jayegi, jo ki overall sasta padega.`,
+      progress: (currentOrders / 100) * 100,
+      targetText: `${100 - currentOrders} orders left for ₹199 Refund`
+    };
+  } else {
+    advisorState = {
+      title: "Stay on Lite (Free) Plan 🛡️",
+      color: "text-yellow-400",
+      bg: "bg-yellow-500/10 border-yellow-500/30",
+      icon: <AlertCircle className="w-5 h-5 text-yellow-400 mt-0.5" />,
+      message: `Jab tak mahine ke orders 28 cross nahi karte, tab tak Lite plan par hi rehna profit mein hai (No fixed monthly fee).`,
+      progress: (currentOrders / 29) * 100,
+      targetText: `${29 - currentOrders} orders left to unlock Business Plan`
+    };
+  }
 
   return (
     <div className="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto admin-scroll relative">
@@ -250,17 +323,53 @@ const DashboardOverview = ({ data }) => {
         <div className="bg-white/[0.02] p-5 md:p-6 lg:p-8 rounded-2xl md:rounded-3xl border border-white/5 shadow-lg backdrop-blur-md flex flex-col justify-between">
           <div>
             <h3 className="text-base md:text-lg font-black text-white mb-5 md:mb-6 flex items-center gap-2 tracking-tight">
-              <Zap className="w-4 h-4 md:w-5 md:h-5 text-yellow-400" /> Conversion Metrics
+              <Zap className="w-4 h-4 md:w-5 md:h-5 text-yellow-400" /> System Metrics
             </h3>
             
             <div className="space-y-5 md:space-y-6">
-              <div>
-                <div className="flex justify-between text-[10px] md:text-xs font-bold mb-1.5 md:mb-2">
-                  <span className="text-gray-400 uppercase tracking-widest">Item Swapped Ratio</span>
-                  <span className="text-emerald-400">{calcPercent(items.swapped, items.total)}%</span>
+              
+              {/* SMART SHIPROCKET ADVISOR - REPLACES SIMPLE PROGRESS BAR */}
+              <div className="p-4 md:p-5 rounded-xl border border-white/5 bg-white/[0.02] flex flex-col gap-4 shadow-sm relative overflow-hidden">
+                <div className="flex justify-between items-center border-b border-white/5 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Rocket className="w-4 h-4 text-[#A388E1]" />
+                    <span className="text-gray-200 font-bold text-[10px] md:text-xs uppercase tracking-widest">Shiprocket Advisor</span>
+                  </div>
+                  <span className="text-white text-[9px] md:text-[10px] font-bold bg-white/10 px-2 py-1 rounded-md border border-white/10 shadow-inner">
+                    {currentOrders} Orders
+                  </span>
                 </div>
-                <div className="w-full bg-black/40 rounded-full h-2 md:h-3 border border-white/5 shadow-inner">
-                  <div className="bg-gradient-to-r from-emerald-600 to-emerald-400 h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(52,211,153,0.5)]" style={{ width: `${calcPercent(items.swapped, items.total)}%` }}></div>
+
+                <div className="flex items-start gap-3">
+                  {advisorState.icon}
+                  <div className="flex-1">
+                    <p className={`${advisorState.color} text-sm md:text-base font-black mb-1 tracking-tight`}>
+                      {advisorState.title}
+                    </p>
+                    <p className="text-gray-400 text-[10px] md:text-xs leading-relaxed mb-3">
+                      {advisorState.message}
+                    </p>
+                    
+                    {/* Math Explaination Tooltip/Box */}
+                    {!isBusinessProfitable && (
+                      <div className="bg-black/30 border border-white/5 rounded-md p-2 mb-3 text-[9px] text-gray-500 font-mono">
+                        💡 Math: At 29 orders, savings (29 * ₹7) = ₹203. This covers the ₹199 monthly fee!
+                      </div>
+                    )}
+
+                    {/* Progress Bar inside Advisor */}
+                    <div className="w-full bg-black/40 rounded-full h-1.5 md:h-2 shadow-inner border border-white/5 relative">
+                      <div 
+                        className={`h-full rounded-full transition-all duration-1000 ${
+                          isRefundEligible ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' :
+                          isBusinessProfitable ? 'bg-blue-400 shadow-[0_0_10px_rgba(96,165,250,0.5)]' :
+                          'bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.5)]'
+                        }`}
+                        style={{ width: `${Math.min(advisorState.progress, 100)}%` }}
+                      ></div>
+                    </div>
+                    <p className="text-[9px] md:text-[10px] text-right mt-1 font-bold text-gray-500">{advisorState.targetText}</p>
+                  </div>
                 </div>
               </div>
 
@@ -273,27 +382,45 @@ const DashboardOverview = ({ data }) => {
                   <div className="bg-gradient-to-r from-indigo-600 to-indigo-400 h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(99,102,241,0.5)]" style={{ width: `${calcPercent(orders.delivered, orders.total)}%` }}></div>
                 </div>
               </div>
+
             </div>
           </div>
-
+          
+          {/* Status Chips with DYNAMIC Health */}
           <div className="grid grid-cols-2 gap-2.5 md:gap-3 mt-6 md:mt-8 pt-5 md:pt-6 border-t border-white/5">
             <div className="bg-yellow-500/5 p-3 md:p-4 rounded-xl md:rounded-2xl border border-yellow-500/10 text-center">
-              <p className="text-[8px] md:text-[9px] text-yellow-500/80 font-bold uppercase tracking-widest mb-1">Pending</p>
+              <p className="text-[8px] md:text-[9px] text-yellow-500/80 font-bold uppercase tracking-widest mb-1">Pending Items</p>
               <div className="flex items-center justify-center gap-1.5 md:gap-2 text-yellow-400 font-black text-lg md:text-xl tracking-tight">
                 <AlertCircle className="w-3.5 h-3.5 md:w-4 md:h-4" /> {items.pending}
               </div>
             </div>
-            <div className="bg-emerald-500/5 p-3 md:p-4 rounded-xl md:rounded-2xl border border-emerald-500/10 text-center">
-              <p className="text-[8px] md:text-[9px] text-emerald-500/80 font-bold uppercase tracking-widest mb-1">System</p>
-              <div className="flex items-center justify-center gap-1.5 md:gap-2 text-emerald-400 font-black text-lg md:text-xl tracking-tight">
-                <CheckCircle className="w-3.5 h-3.5 md:w-4 md:h-4" /> 100%
+            
+            <div className={`p-3 md:p-4 rounded-xl md:rounded-2xl border text-center transition-colors ${
+              systemHealth.status === 'checking' ? 'bg-gray-500/5 border-gray-500/10' :
+              systemHealth.status === 'online' ? 'bg-emerald-500/5 border-emerald-500/10' : 
+              'bg-red-500/5 border-red-500/10'
+            }`}>
+              <p className={`text-[8px] md:text-[9px] font-bold uppercase tracking-widest mb-1 ${
+                systemHealth.status === 'checking' ? 'text-gray-500/80' :
+                systemHealth.status === 'online' ? 'text-emerald-500/80' : 'text-red-500/80'
+              }`}>System Health</p>
+              
+              <div className={`flex items-center justify-center gap-1.5 md:gap-2 font-black text-lg md:text-xl tracking-tight ${
+                systemHealth.status === 'checking' ? 'text-gray-400' :
+                systemHealth.status === 'online' ? 'text-emerald-400' : 'text-red-400'
+              }`}>
+                {systemHealth.status === 'checking' ? <RefreshCw className="w-3.5 h-3.5 md:w-4 md:h-4 animate-spin" /> :
+                 systemHealth.status === 'online' ? <CheckCircle className="w-3.5 h-3.5 md:w-4 md:h-4" /> : 
+                 <ServerCrash className="w-3.5 h-3.5 md:w-4 md:h-4" />}
+                {systemHealth.percent}
               </div>
             </div>
+            
           </div>
         </div>
 
         {/* 2. DYNAMIC: Live Activity Feed */}
-        <div className="bg-white/[0.02] p-5 md:p-6 lg:p-8 rounded-2xl md:rounded-3xl border border-white/5 shadow-lg backdrop-blur-md flex flex-col h-[320px] md:h-[380px]">
+        <div className="bg-white/[0.02] p-5 md:p-6 lg:p-8 rounded-2xl md:rounded-3xl border border-white/5 shadow-lg backdrop-blur-md flex flex-col h-[320px] md:h-[400px]">
           <h3 className="text-base md:text-lg font-black text-white mb-4 md:mb-6 tracking-tight flex items-center justify-between shrink-0">
             <span className="flex items-center gap-2"><RefreshCw className="w-4 h-4 md:w-5 md:h-5 text-pink-400" /> Live Activity</span>
             {recentActivity.length > 0 && (
@@ -321,7 +448,7 @@ const DashboardOverview = ({ data }) => {
         </div>
 
         {/* 3. Recent Signups Feed */}
-        <div className="bg-white/[0.02] p-5 md:p-6 lg:p-8 rounded-2xl md:rounded-3xl border border-white/5 shadow-lg backdrop-blur-md flex flex-col h-[320px] md:h-[380px]">
+        <div className="bg-white/[0.02] p-5 md:p-6 lg:p-8 rounded-2xl md:rounded-3xl border border-white/5 shadow-lg backdrop-blur-md flex flex-col h-[320px] md:h-[400px]">
           <h3 className="text-base md:text-lg font-black text-white mb-4 md:mb-6 tracking-tight flex items-center gap-2 shrink-0">
             <Users className="w-4 h-4 md:w-5 md:h-5 text-blue-400" /> Recent Users
           </h3>
