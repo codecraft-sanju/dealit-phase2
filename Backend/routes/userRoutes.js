@@ -15,7 +15,9 @@ const {
   getWishlist,
   claimWelcomeBonus 
 } = require('../controllers/userController');
-const { getUserAura, getLeaderboard } = require('../controllers/auraLogController');
+
+
+const { getUserAura, getLeaderboard, getAuraHistory } = require('../controllers/auraLogController');
 
 const { protect } = require('../middleware/authMiddleware');
 
@@ -35,8 +37,11 @@ router.put('/profile-pic', protect, updateProfilePic);
 router.post('/wishlist/:itemId', protect, toggleWishlist);
 router.get('/wishlist', protect, getWishlist);
 router.post('/claim-bonus', protect, claimWelcomeBonus);
-router.get('/aura', protect, getUserAura);
-router.get('/leaderboard', protect, getLeaderboard);
 
+
+router.get('/aura', protect, getUserAura);
+
+router.get('/aura/history', protect, getAuraHistory);
+router.get('/leaderboard', protect, getLeaderboard);
 
 module.exports = router;

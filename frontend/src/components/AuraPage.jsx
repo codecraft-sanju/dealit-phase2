@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Shield, TrendingUp, TrendingDown, Activity, Star, Zap, Loader2, CheckCircle2, AlertCircle, Trophy, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Shield, TrendingUp, TrendingDown, Activity, Star, Zap, Loader2, CheckCircle2, AlertCircle, Trophy, ChevronRight, X, Filter, List } from 'lucide-react';
 import { motion, AnimatePresence, useSpring, useTransform } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
@@ -78,8 +78,16 @@ const AuraPage = ({ user }) => {
   const strokeDashoffset = circumference - (Math.min(Math.max(safeScore, 0), maxScore) / maxScore) * circumference;
 
   const [prevScore, setPrevScore] = useState(user?.aura_points || 0);
-  
   const [floatData, setFloatData] = useState({ show: false, diff: 0, type: 'up', id: 0 });
+
+  // History Modal States
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [historyLogs, setHistoryLogs] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [filterType, setFilterType] = useState('all');
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     if (auraData?.score !== undefined && auraData.score !== prevScore) {
@@ -98,6 +106,56 @@ const AuraPage = ({ user }) => {
       return () => clearTimeout(timer);
     }
   }, [auraData?.score, prevScore]);
+
+  // History Fetching Logic
+  const fetchHistory = async (pageNum, currentType, isLoadMore = false) => {
+    if (isLoadMore) {
+      setLoadingMore(true);
+    } else {
+      setHistoryLoading(true);
+      setHistoryLogs([]);
+    }
+
+    try {
+      const res = await axios.get(`${API_URL}/users/aura/history`, { 
+        params: { page: pageNum, limit: 10, type: currentType },
+        withCredentials: true 
+      });
+      
+      if (res.data.success) {
+        if (isLoadMore) {
+          setHistoryLogs(prev => [...prev, ...res.data.data]);
+        } else {
+          setHistoryLogs(res.data.data);
+        }
+        setHasMore(res.data.hasMore);
+        setPage(pageNum);
+      }
+    } catch (error) {
+      console.log("Error fetching aura history", error);
+    } finally {
+      setHistoryLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  const openHistoryModal = () => {
+    setShowHistoryModal(true);
+    setFilterType('all');
+    fetchHistory(1, 'all', false);
+  };
+
+  const handleFilterChange = (newType) => {
+    if (filterType === newType) return;
+    setFilterType(newType);
+    fetchHistory(1, newType, false);
+  };
+
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMore) {
+      fetchHistory(page + 1, filterType, true);
+    }
+  };
 
   // ⚡ AWWWARDS STYLE STAGGER & BLUR REVEALS
   const containerVariants = {
@@ -335,7 +393,12 @@ const AuraPage = ({ user }) => {
           {isLoading ? (
             <Loader2 className="w-4 h-4 text-[#A388E1] animate-spin" />
           ) : (
-            <div className="h-1.5 w-10 bg-gray-200 rounded-full"></div>
+            <button
+              onClick={openHistoryModal}
+              className="text-[11px] font-bold text-[#A388E1] uppercase tracking-wider hover:text-[#6B46C1] transition-colors bg-[#F5F0FF] hover:bg-[#EBE5F7] px-3 py-1.5 rounded-full"
+            >
+              See All
+            </button>
           )}
         </div>
 
@@ -417,7 +480,7 @@ const AuraPage = ({ user }) => {
                 ) : (
                   auraData?.logs.map((log) => (
                     <motion.div 
-                      layout // ⚡ layout prop gives fluid snap when list changes
+                      layout 
                       variants={itemVariants}
                       key={log.id} 
                       whileHover={{ scale: 1.01, backgroundColor: "#ffffff" }}
@@ -448,6 +511,133 @@ const AuraPage = ({ user }) => {
         </div>
       </div>
 
+      {/* ⚡ AURA HISTORY MODAL ⚡ */}
+      <AnimatePresence>
+        {showHistoryModal && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm"
+          >
+            <motion.div 
+              initial={{ y: "100%", opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: "100%", opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="bg-white w-full md:max-w-lg rounded-t-3xl md:rounded-3xl overflow-hidden shadow-2xl flex flex-col min-h-[85vh] max-h-[85vh] md:min-h-[80vh] md:max-h-[80vh] relative"
+            >
+              
+              <div className="absolute top-0 w-full flex justify-center pt-3 pb-1 md:hidden">
+                <div className="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+              </div>
+
+              <div className="p-5 pt-8 md:pt-5 border-b border-gray-100 flex justify-between items-center bg-[#f8f6ff] shrink-0">
+                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-[#6B46C1]" /> Aura History
+                </h2>
+                <button 
+                  onClick={() => setShowHistoryModal(false)} 
+                  className="text-gray-400 hover:text-gray-600 p-2 bg-white rounded-full shadow-sm active:scale-95 transition-all"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="px-5 py-3 border-b border-gray-100 bg-white shrink-0 flex gap-2 overflow-x-auto hide-scrollbar flex-nowrap">
+                <button 
+                  onClick={() => handleFilterChange('all')}
+                  className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap flex-shrink-0 transition-all flex items-center gap-1.5 ${filterType === 'all' ? 'bg-[#6B46C1] text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                >
+                  <List className="w-3.5 h-3.5" /> All Activity
+                </button>
+                <button 
+                  onClick={() => handleFilterChange('earned')}
+                  className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap flex-shrink-0 transition-all flex items-center gap-1.5 ${filterType === 'earned' ? 'bg-emerald-500 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                >
+                  <TrendingUp className="w-3.5 h-3.5" /> Earned
+                </button>
+                <button 
+                  onClick={() => handleFilterChange('dropped')}
+                  className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap flex-shrink-0 transition-all flex items-center gap-1.5 ${filterType === 'dropped' ? 'bg-red-500 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                >
+                  <TrendingDown className="w-3.5 h-3.5" /> Dropped
+                </button>
+              </div>
+
+              <div className="p-5 overflow-y-auto flex-1 bg-gray-50 admin-scroll">
+                {historyLoading ? (
+                  <div className="flex flex-col items-center justify-center h-full space-y-3 pt-10">
+                    <div className="w-8 h-8 border-4 border-[#A388E1] border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-sm font-bold text-gray-500">Loading history...</p>
+                  </div>
+                ) : historyLogs.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center pt-10">
+                    <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center shadow-sm mb-4">
+                      <Filter className="w-8 h-8 text-gray-300" />
+                    </div>
+                    <h3 className="font-bold text-gray-900 mb-1">No Records Found</h3>
+                    <p className="text-sm text-gray-500">No aura changes match your current filter.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 pb-6">
+                    <AnimatePresence mode="popLayout">
+                      {historyLogs.map((log) => (
+                        <motion.div 
+                          key={log.id}
+                          layout
+                          initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
+                          transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                          className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2.5 rounded-xl ${log.type === 'positive' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                              {log.type === 'positive' ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
+                            </div>
+                            <div>
+                              <p className="font-bold text-gray-900 text-sm capitalize">
+                                {log.reason}
+                              </p>
+                              <p className="text-[11px] text-gray-500 font-medium mt-0.5">
+                                {log.date}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          <div className="text-right">
+                            <p className={`font-black text-sm ${log.type === 'positive' ? 'text-emerald-600' : 'text-red-500'}`}>
+                              {log.type === 'positive' ? '+' : '-'}{log.points}
+                            </p>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-0.5">
+                              Aura
+                            </p>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+
+                    {hasMore && (
+                      <div className="flex justify-center pt-4 pb-2">
+                        <button 
+                          onClick={handleLoadMore} 
+                          disabled={loadingMore}
+                          className="flex items-center gap-2 px-6 py-2.5 bg-white border border-[#EBE5F7] rounded-full text-sm font-bold text-[#6B46C1] hover:bg-[#F8F6FF] transition-colors shadow-sm disabled:opacity-50 active:scale-95"
+                        >
+                          {loadingMore ? <Loader2 className="w-4 h-4 animate-spin" /> : <ChevronRight className="w-4 h-4 rotate-90" />}
+                          {loadingMore ? 'Loading...' : 'Load More'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <style>{`
         .admin-scroll::-webkit-scrollbar {
           width: 4px;
@@ -458,6 +648,13 @@ const AuraPage = ({ user }) => {
         }
         .admin-scroll::-webkit-scrollbar-track {
           background: transparent;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .hide-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
         }
       `}</style>
 

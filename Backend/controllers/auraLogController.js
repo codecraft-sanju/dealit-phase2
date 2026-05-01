@@ -14,6 +14,25 @@ const avatarColors = [
   'bg-teal-500', 'bg-orange-500'
 ];
 
+// Helper for consistent date formatting
+const formatDate = (dateString) => {
+  const dateObj = new Date(dateString);
+  const today = new Date();
+  
+  const isToday = dateObj.toDateString() === today.toDateString();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday = dateObj.toDateString() === yesterday.toDateString();
+  
+  if (isToday) {
+    return `Today, ${dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
+  } else if (isYesterday) {
+    return `Yesterday, ${dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
+  } else {
+    return dateObj.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+};
+
 // Main function to fetch User's Aura Data
 const getUserAura = async (req, res) => {
   try {
@@ -30,32 +49,13 @@ const getUserAura = async (req, res) => {
       .sort({ created_at: -1 })
       .limit(15);
 
-    const formattedLogs = logs.map(log => {
-      const dateObj = new Date(log.created_at);
-      const today = new Date();
-      
-      const isToday = dateObj.toDateString() === today.toDateString();
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-      const isYesterday = dateObj.toDateString() === yesterday.toDateString();
-      
-      let dateString = '';
-      if (isToday) {
-        dateString = `Today, ${dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
-      } else if (isYesterday) {
-        dateString = `Yesterday, ${dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
-      } else {
-        dateString = dateObj.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
-      }
-
-      return {
-        id: log._id,
-        reason: log.reason,
-        points: Math.abs(log.points), 
-        type: log.type,
-        date: dateString
-      };
-    });
+    const formattedLogs = logs.map(log => ({
+      id: log._id,
+      reason: log.reason,
+      points: Math.abs(log.points), 
+      type: log.type,
+      date: formatDate(log.created_at)
+    }));
 
     res.status(200).json({
       success: true,
@@ -72,7 +72,55 @@ const getUserAura = async (req, res) => {
   }
 };
 
-// NEW CONTROLLER: Fetch Dynamic Leaderboard
+// NEW CONTROLLER: Fetch Paginated Aura History
+const getAuraHistory = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const filterType = req.query.type || 'all'; // 'all', 'earned', 'dropped'
+
+    // Build the query
+    const query = { user: userId };
+
+    if (filterType === 'earned') {
+      query.type = 'positive';
+    } else if (filterType === 'dropped') {
+      query.type = 'negative';
+    }
+
+    const skip = (page - 1) * limit;
+
+    const logs = await AuraLog.find(query)
+      .sort({ created_at: -1 }) // Newest first
+      .skip(skip)
+      .limit(limit);
+
+    // Check if there are more records for the "Load More" button
+    const totalLogs = await AuraLog.countDocuments(query);
+    const hasMore = skip + logs.length < totalLogs;
+
+    const formattedLogs = logs.map(log => ({
+      id: log._id,
+      reason: log.reason,
+      points: Math.abs(log.points),
+      type: log.type,
+      date: formatDate(log.created_at)
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: formattedLogs,
+      hasMore: hasMore
+    });
+
+  } catch (error) {
+    console.error("Error in getAuraHistory:", error);
+    res.status(500).json({ success: false, message: 'Server Error fetching Aura history' });
+  }
+};
+
+// Fetch Dynamic Leaderboard
 const getLeaderboard = async (req, res) => {
   try {
     const { timeframe = 'all-time' } = req.query;
@@ -220,5 +268,6 @@ const getLeaderboard = async (req, res) => {
 
 module.exports = {
   getUserAura,
-  getLeaderboard 
+  getLeaderboard,
+  getAuraHistory
 };
