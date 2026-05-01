@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react'; // ADDED: useRef
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom'; // MODIFIED: Added useNavigate
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, 
@@ -43,6 +43,7 @@ const NotificationsShimmer = () => {
 const NotificationsPage = () => {
   const queryClient = useQueryClient();
   const observerTarget = useRef(null); // Reference for the element at the bottom of the list
+  const navigate = useNavigate(); // MODIFIED: Initialized navigate
 
   // <-- 1. Fetching notifications with useInfiniteQuery -->
   const { 
@@ -163,6 +164,46 @@ const NotificationsPage = () => {
     }
   }, [isLoading, notifications]);
 
+  // MODIFIED: Added handleNotificationClick logic based on the schema
+  const handleNotificationClick = (notif) => {
+    const refId = notif.metadata?.referenceId;
+
+    switch (notif.type) {
+      case 'CREDIT_ADDED':
+      case 'CREDIT_DEDUCTED':
+        navigate('/wallet');
+        break;
+      
+      case 'TRADE_ALERT':
+        if (refId) {
+          navigate(`/deal/${refId}`);
+        } else {
+          navigate('/swaps');
+        }
+        break;
+
+      case 'ORDER_UPDATE':
+        if (refId) {
+          navigate(`/orders`);
+        } else {
+          navigate('/orders');
+        }
+        break;
+
+      case 'AURA_UPDATE':
+        navigate('/aura');
+        break;
+
+      case 'SYSTEM':
+        navigate('/dashboard');
+        break;
+
+      default:
+        navigate('/');
+        break;
+    }
+  };
+
   const getIconData = (type) => {
     switch (type) {
       case 'CREDIT_ADDED':
@@ -173,6 +214,8 @@ const NotificationsPage = () => {
         return { icon: RefreshCw, color: 'text-blue-500', bg: 'bg-blue-500/10' };
       case 'ORDER_UPDATE':
         return { icon: ShoppingBag, color: 'text-purple-500', bg: 'bg-purple-500/10' };
+      case 'AURA_UPDATE': // MODIFIED: Added AURA_UPDATE icon case
+        return { icon: Sparkles, color: 'text-amber-500', bg: 'bg-amber-500/10' };
       case 'SYSTEM':
         return { icon: Package, color: 'text-yellow-500', bg: 'bg-yellow-500/10' };
       default:
@@ -223,7 +266,8 @@ const NotificationsPage = () => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
-                    className={`p-4 rounded-2xl border transition-all relative overflow-hidden
+                    onClick={() => handleNotificationClick(notif)} // MODIFIED: Added onClick event
+                    className={`p-4 rounded-2xl border transition-all relative overflow-hidden cursor-pointer hover:shadow-md // MODIFIED: Added cursor pointer classes
                       ${notif.isRead 
                         ? 'bg-white border-gray-100 shadow-sm' 
                         : 'bg-white border-[#6B46C1]/30 shadow-md ring-1 ring-[#6B46C1]/10'}`}
