@@ -4,7 +4,6 @@ const SHIPROCKET_BASE_URL = 'https://apiv2.shiprocket.in/v1/external';
 
 const getShiprocketToken = async () => {
   try {
-
     const response = await axios.post(`${SHIPROCKET_BASE_URL}/auth/login`, {
       email: process.env.SHIPROCKET_EMAIL,
       password: process.env.SHIPROCKET_PASSWORD
@@ -16,6 +15,19 @@ const getShiprocketToken = async () => {
     throw new Error('Failed to connect to shipping partner.');
   }
 };
+
+// <-- NAYA CHANGE START: Shiprocket connection verify karne ka function -->
+const verifyShiprocketConnection = async () => {
+  try {
+    await getShiprocketToken();
+    console.log('Shiprocket Connected Successfully');
+    return true;
+  } catch (error) {
+    console.error('Shiprocket Connection Failed:', error.message);
+    return false;
+  }
+};
+// <-- NAYA CHANGE END -->
 
 const checkServiceability = async (pickupPincode, deliveryPincode, weight, dimensions) => {
   try {
@@ -130,5 +142,6 @@ module.exports = {
   getShiprocketToken,
   checkServiceability,
   createShiprocketOrder,
-  addPickupLocation 
+  addPickupLocation,
+  verifyShiprocketConnection 
 };

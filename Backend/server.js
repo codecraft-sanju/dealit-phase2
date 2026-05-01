@@ -14,6 +14,10 @@ const categoryRoutes = require('./routes/categoryRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const aiRoutes = require('./routes/aiRoutes')
 const notificationRoutes = require('./routes/notificationRoutes');
+
+const { verifyShiprocketConnection } = require('./utils/shiprocket');
+const { verifyRazorpayConnection } = require('./controllers/paymentController');
+
 const app = express();
 
 connectDB();
@@ -41,7 +45,7 @@ app.get('/', (req, res) => {
   });
 });
 
-// <-- NAYA CHANGE: Health check route add kiya -->
+
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     success: true, 
@@ -66,6 +70,9 @@ app.use('/api/notifications', notificationRoutes);
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`Server is running on port ${PORT}`);
+  
+  verifyRazorpayConnection();
+  await verifyShiprocketConnection();
 });

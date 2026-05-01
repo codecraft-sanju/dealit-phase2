@@ -38,7 +38,6 @@ const WalletPage = ({ user, setUser }) => {
   const [showCelebration, setShowCelebration] = useState(false);
   const [addedAmount, setAddedAmount] = useState(0);
 
-  // NAYA: Pagination & History States
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [transactions, setTransactions] = useState([]);
   const [txLoading, setTxLoading] = useState(false);
@@ -76,13 +75,12 @@ const WalletPage = ({ user, setUser }) => {
     fetchData();
   }, [user]);
 
-  // API Call Function for Transactions
   const fetchTransactions = async (pageNum, currentType, isLoadMore = false) => {
     if (isLoadMore) {
       setLoadingMore(true);
     } else {
       setTxLoading(true);
-      setTransactions([]); // Reset on new filter
+      setTransactions([]);
     }
 
     try {
@@ -317,11 +315,7 @@ const WalletPage = ({ user, setUser }) => {
             </div>
           </div>
 
-          <div className="mx-5 md:mx-0">
-            <button onClick={openHistoryModal} className="w-full bg-white border border-gray-200 py-3.5 rounded-2xl flex justify-center items-center gap-2 font-bold text-gray-700 shadow-sm hover:bg-gray-50 hover:border-[#A388E1]/50 transition-all active:scale-[0.98]">
-              <History className="w-5 h-5 text-[#A388E1]" /> View Transaction History
-            </button>
-          </div>
+          {/* CHANGED: Removed the separate history button div from here */}
 
           <div className="px-5 md:px-0 mt-6">
             <h2 className="text-lg font-bold text-gray-900 mb-4">Ways to Earn Credits</h2>
@@ -427,21 +421,30 @@ const WalletPage = ({ user, setUser }) => {
             </div>
 
             <div className="bg-[#F8F6FF] rounded-3xl p-5 relative overflow-hidden mb-4 border border-[#EBE5F7] hover:shadow-md transition-shadow">
-              <div className="w-2/3 relative z-10">
+              <div className="w-full relative z-10">
                 <h3 className="font-bold text-gray-900 mb-1">Buy Credits</h3>
-                <p className="text-xs text-gray-500 font-medium mb-4">
+                <p className="text-xs text-gray-500 font-medium mb-4 w-2/3">
                   Get credits instantly by buying them with real money.
                 </p>
                 <div className="inline-block bg-white border border-[#EBE5F7] px-3 py-1.5 rounded-full text-xs font-bold text-gray-700 shadow-sm mb-4">
                   ₹ 1 = 1 credit
                 </div>
-                <br/>
-                <button 
-                  onClick={() => setShowPaymentForm(!showPaymentForm)}
-                  className="bg-[#A388E1] text-white px-5 py-2.5 rounded-full text-sm font-bold inline-flex items-center gap-1.5 shadow-sm hover:bg-[#8b70ca] transition"
-                >
-                  <Coins className="w-4 h-4" /> Add Credits
-                </button>
+                
+                {/* CHANGED: Brought the transaction history button inside this block alongside the add credits button */}
+                <div className="flex flex-row items-center gap-3">
+                  <button 
+                    onClick={() => setShowPaymentForm(!showPaymentForm)}
+                    className="bg-[#A388E1] text-white px-5 py-2.5 rounded-full text-sm font-bold inline-flex items-center gap-1.5 shadow-sm hover:bg-[#8b70ca] hover:-translate-y-0.5 transition-all duration-300"
+                  >
+                    <Coins className="w-4 h-4" /> Add Credits
+                  </button>
+                  <button 
+                    onClick={openHistoryModal} 
+                    className="bg-white border border-[#EBE5F7] text-[#A388E1] px-5 py-2.5 rounded-full text-sm font-bold inline-flex items-center gap-1.5 shadow-sm hover:bg-[#F0ECF9] hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 active:scale-95"
+                  >
+                    <History className="w-4 h-4" /> History
+                  </button>
+                </div>
               </div>
 
               {showPaymentForm && (
@@ -475,7 +478,7 @@ const WalletPage = ({ user, setUser }) => {
                 </form>
               )}
 
-              <div className="absolute right-[-10px] top-[10px] w-24 h-24 bg-[#EBE5F7] rounded-full opacity-50 flex items-center justify-center">
+              <div className="absolute right-[-10px] top-[10px] w-24 h-24 bg-[#EBE5F7] rounded-full opacity-50 flex items-center justify-center pointer-events-none">
                 <CreditCard className="w-10 h-10 text-[#A388E1]" />
               </div>
             </div>
@@ -515,7 +518,6 @@ const WalletPage = ({ user, setUser }) => {
               className="bg-white w-full md:max-w-lg rounded-t-3xl md:rounded-3xl overflow-hidden shadow-2xl flex flex-col min-h-[85vh] max-h-[85vh] md:min-h-[80vh] md:max-h-[80vh] relative"
             >
               
-              {/* Drag Handle Indicator */}
               <div className="absolute top-0 w-full flex justify-center pt-3 pb-1 md:hidden">
                 <div className="w-12 h-1.5 bg-gray-300 rounded-full"></div>
               </div>
@@ -618,7 +620,6 @@ const WalletPage = ({ user, setUser }) => {
                       })}
                     </AnimatePresence>
 
-                    {/* NAYA: Load More Button */}
                     {hasMore && (
                       <div className="flex justify-center pt-4 pb-2">
                         <button 

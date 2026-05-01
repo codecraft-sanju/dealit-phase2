@@ -10,6 +10,18 @@ const razorpayInstance = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
+// <-- NAYA CHANGE START: Razorpay keys check karne ka function -->
+const verifyRazorpayConnection = () => {
+  if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+    console.log('Razorpay Connected Successfully');
+    return true;
+  } else {
+    console.error('Razorpay Connection Failed: Missing Keys in .env');
+    return false;
+  }
+};
+// <-- NAYA CHANGE END -->
+
 // 1. Order Create karne ki API
 const createOrder = async (req, res) => {
   try {
@@ -97,7 +109,7 @@ const verifyPayment = async (req, res) => {
         user: userId,
         type: 'CREDIT_ADDED',
         title: 'Wallet Recharged! 💳',
-       message: `₹${actualAmountInINR} credits have been successfully added to your account.`,
+        message: `₹${actualAmountInINR} credits have been successfully added to your account.`,
         metadata: { 
           amount: actualAmountInINR, 
           reason: 'wallet_recharge',
@@ -225,5 +237,6 @@ module.exports = {
   createOrder,
   verifyPayment,
   razorpayWebhook,
-  getUserTransactions
+  getUserTransactions,
+  verifyRazorpayConnection 
 };
