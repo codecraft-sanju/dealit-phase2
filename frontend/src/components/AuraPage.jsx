@@ -33,7 +33,7 @@ const premiumEase = [0.16, 1, 0.3, 1];
 
 const AnimatedNumber = ({ value }) => {
   // ⚡ Tighter spring for that snappy number roll
-  const spring = useSpring(value, { stiffness: 150, damping: 15, mass: 0.8 });
+  const spring = useSpring(value, { stiffness: 45, damping: 15, mass: 1 });
   const display = useTransform(spring, (current) => Math.round(current));
 
   useEffect(() => {
@@ -48,32 +48,28 @@ const AuraPage = ({ user }) => {
   
   const fallbackLogs = user?.recent_activity || [];
 
-  const { data: auraData, isLoading } = useQuery({
+  const { data: fetchedAuraData, isLoading, isError } = useQuery({
     queryKey: ['aura-details'],
     queryFn: async () => {
-      try {
-        const res = await axios.get(`${API_URL}/users/aura`, { 
-          withCredentials: true 
-        });
-        
-        return {
-          ...res.data.data,
-          tier: res.data.data.tier || getDynamicTier(res.data.data.score),
-          rules: res.data.data.rules || defaultRules
-        };
-      } catch (error) {
-        console.error("Failed to fetch aura data", error);
-        const fallbackScore = user?.aura_points || 0;
-        return { 
-          score: fallbackScore, 
-          tier: getDynamicTier(fallbackScore), 
-          logs: fallbackLogs,
-          rules: defaultRules 
-        };
-      }
+      const res = await axios.get(`${API_URL}/users/aura`, { 
+        withCredentials: true 
+      });
+      
+      return {
+        ...res.data.data,
+        tier: res.data.data.tier || getDynamicTier(res.data.data.score),
+        rules: res.data.data.rules || defaultRules
+      };
     },
     staleTime: 1000 * 60 * 5 
   });
+
+  const auraData = isError ? {
+    score: user?.aura_points || 0,
+    tier: getDynamicTier(user?.aura_points || 0),
+    logs: fallbackLogs,
+    rules: defaultRules
+  } : fetchedAuraData;
 
   const maxScore = 1000;
   const radius = 85; 
@@ -86,18 +82,20 @@ const AuraPage = ({ user }) => {
   const [floatData, setFloatData] = useState({ show: false, diff: 0, type: 'up', id: 0 });
 
   useEffect(() => {
-    if (auraData?.score !== undefined) {
-      if (auraData.score > prevScore) {
-        setFloatData({ show: true, diff: auraData.score - prevScore, type: 'up', id: Date.now() });
-        const timer = setTimeout(() => setFloatData(prev => ({ ...prev, show: false })), 2500);
-        setPrevScore(auraData.score);
-        return () => clearTimeout(timer);
-      } else if (auraData.score < prevScore) {
-        setFloatData({ show: true, diff: prevScore - auraData.score, type: 'down', id: Date.now() });
-        const timer = setTimeout(() => setFloatData(prev => ({ ...prev, show: false })), 2500);
-        setPrevScore(auraData.score);
-        return () => clearTimeout(timer);
-      }
+    if (auraData?.score !== undefined && auraData.score !== prevScore) {
+      const difference = auraData.score - prevScore;
+      
+      setFloatData({ 
+        show: true, 
+        diff: Math.abs(difference), 
+        type: difference > 0 ? 'up' : 'down', 
+        id: Date.now() 
+      });
+      
+      const timer = setTimeout(() => setFloatData(prev => ({ ...prev, show: false })), 2500);
+      setPrevScore(auraData.score);
+      
+      return () => clearTimeout(timer);
     }
   }, [auraData?.score, prevScore]);
 
@@ -138,6 +136,7 @@ const AuraPage = ({ user }) => {
             whileHover={{ scale: 1.05, backgroundColor: "rgba(255,255,255,0.2)" }}
             whileTap={{ scale: 0.95 }}
             onClick={() => navigate(-1)} 
+            aria-label="Go back"
             className="p-2.5 bg-white/10 rounded-full transition-colors border border-white/10 backdrop-blur-md"
           >
             <ArrowLeft className="w-5 h-5 text-white" />
@@ -451,7 +450,13 @@ const AuraPage = ({ user }) => {
 
       <style>{`
         .admin-scroll::-webkit-scrollbar {
-          width: 0px;
+          width: 4px;
+        }
+        .admin-scroll::-webkit-scrollbar-thumb {
+          background-color: rgba(107, 70, 193, 0.2);
+          border-radius: 10px;
+        }
+        .admin-scroll::-webkit-scrollbar-track {
           background: transparent;
         }
       `}</style>
