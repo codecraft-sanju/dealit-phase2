@@ -16,7 +16,9 @@ const userSchema = new mongoose.Schema({
   wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item' }],
   
   pickupAddress: {
-    addressLine: { type: String },
+    houseNo: { type: String },
+    areaStreet: { type: String },
+    landmark: { type: String },
     city: { type: String },
     state: { type: String },
     pincode: { type: String }

@@ -138,7 +138,7 @@ const CheckoutPage = ({ user, setUser }) => {
         setUser(updatedUser);
         localStorage.setItem('dealit_user', JSON.stringify(updatedUser));
 
-        alert('Order Placed Successfully! 🎉');
+        alert('Order Placed Successfully! ');
         navigate('/orders'); 
       }
     } catch (err) {

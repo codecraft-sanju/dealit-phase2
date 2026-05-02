@@ -345,7 +345,9 @@ const dispatchOrder = async (req, res) => {
       channel_id: "", 
       billing_customer_name: shippingAddress.fullName,
       billing_last_name: "User", 
-      billing_address: shippingAddress.addressLine,
+      // CHANGED: Merged new schema fields for billing address
+      billing_address: `${shippingAddress.houseNo}, ${shippingAddress.areaStreet}`,
+      billing_address_2: shippingAddress.landmark || "",
       billing_city: shippingAddress.city,
       billing_pincode: shippingAddress.pincode,
       billing_state: shippingAddress.state,

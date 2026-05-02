@@ -127,7 +127,7 @@ const registerUser = async (req, res) => {
                   metadata: { amount: setting.referralRewardCredits, reason: 'referral_bonus' }
                 });
 
-           
+            
                 await AuraLog.create({
                   user: referrer._id,
                   reason: "Successful Referral",
@@ -395,9 +395,13 @@ const updateUserProfile = async (req, res) => {
     if (full_name) user.full_name = full_name;
     if (phone) user.phone = phone;
     if (city) user.city = city;
+    
+    // <-- CHANGED: Update to save the new address structure correctly
     if (pickupAddress) {
       user.pickupAddress = {
-        addressLine: pickupAddress.addressLine || user.pickupAddress?.addressLine,
+        houseNo: pickupAddress.houseNo || user.pickupAddress?.houseNo,
+        areaStreet: pickupAddress.areaStreet || user.pickupAddress?.areaStreet,
+        landmark: pickupAddress.landmark || user.pickupAddress?.landmark,
         city: pickupAddress.city || user.pickupAddress?.city,
         state: pickupAddress.state || user.pickupAddress?.state,
         pincode: pickupAddress.pincode || user.pickupAddress?.pincode,

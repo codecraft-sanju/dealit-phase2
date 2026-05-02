@@ -86,7 +86,9 @@ const addPickupLocation = async (seller) => {
       name: seller.full_name,
       email: seller.email,
       phone: seller.phone,
-      address: seller.pickupAddress.addressLine,
+      // CHANGED: Restructured to force Shiprocket to accept the address
+      address: `${seller.pickupAddress.houseNo}, ${seller.pickupAddress.areaStreet}`,
+      address_2: seller.pickupAddress.landmark || "",
       city: seller.pickupAddress.city,
       state: seller.pickupAddress.state,
       country: "India",
@@ -107,7 +109,7 @@ const addPickupLocation = async (seller) => {
 
 const createShiprocketOrder = async (orderData) => {
   if (IS_TEST_MODE) {
-    console.log("🛠️ TEST MODE ON: Skipping real Shiprocket order creation.");
+    console.log(" TEST MODE ON: Skipping real Shiprocket order creation.");
     return {
       order_id: "TEST_ORD_" + Date.now(),
       shipment_id: "TEST_SHIP_" + Date.now(),
@@ -129,7 +131,6 @@ const createShiprocketOrder = async (orderData) => {
   }
 };
 
-// <-- NAYA CHANGE: AWB Generate Function -->
 const generateAWB = async (shipment_id) => {
   if (IS_TEST_MODE) {
     return { awb_code: "TEST_AWB_987654321", courier_name: "Test Express" };
@@ -149,7 +150,7 @@ const generateAWB = async (shipment_id) => {
   }
 };
 
-// <-- NAYA CHANGE: Label PDF Generate Function -->
+
 const generateLabel = async (shipment_id) => {
   if (IS_TEST_MODE) {
     return "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"; // Dummy PDF link

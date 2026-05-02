@@ -12,7 +12,10 @@ const orderSchema = new mongoose.Schema({
   shippingAddress: {
     fullName: { type: String, required: true },
     phone: { type: String, required: true },
-    addressLine: { type: String, required: true },
+    // CHANGED: Replaced addressLine with specific fields to satisfy Shiprocket
+    houseNo: { type: String, required: true },
+    areaStreet: { type: String, required: true },
+    landmark: { type: String, default: '' },
     city: { type: String, required: true },
     state: { type: String, required: true },
     pincode: { type: String, required: true }

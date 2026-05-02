@@ -17,12 +17,15 @@ const ProfilePage = ({ user, onLogout }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   
+  // <-- CHANGED: Updated initial state for new address structure
   const [editForm, setEditForm] = useState({
     full_name: '',
     phone: '',
     city: '',
     pickupAddress: {
-      addressLine: '',
+      houseNo: '',
+      areaStreet: '',
+      landmark: '',
       city: '',
       state: '',
       pincode: ''
@@ -112,12 +115,15 @@ const ProfilePage = ({ user, onLogout }) => {
   };
 
   const openEditModal = () => {
+    // <-- CHANGED: Mapped new address fields from profileData
     setEditForm({
       full_name: profileData?.full_name || '',
       phone: profileData?.phone || '',
       city: profileData?.city || '',
       pickupAddress: {
-        addressLine: profileData?.pickupAddress?.addressLine || '',
+        houseNo: profileData?.pickupAddress?.houseNo || '',
+        areaStreet: profileData?.pickupAddress?.areaStreet || '',
+        landmark: profileData?.pickupAddress?.landmark || '',
         city: profileData?.pickupAddress?.city || '',
         state: profileData?.pickupAddress?.state || '',
         pincode: profileData?.pickupAddress?.pincode || ''
@@ -380,7 +386,14 @@ const ProfilePage = ({ user, onLogout }) => {
                             { icon: Mail, label: 'Email Address', value: profileData?.email },
                             { icon: Phone, label: 'Phone Number', value: profileData?.phone },
                             { icon: MapPin, label: 'Location', value: profileData?.city, capitalize: true },
-                            { icon: Truck, label: 'Pickup Address', value: profileData?.pickupAddress?.addressLine ? `${profileData.pickupAddress.addressLine}, ${profileData.pickupAddress.city}, ${profileData.pickupAddress.pincode}` : 'Not provided (Needed for selling)' }, // <-- NAYA CHANGE
+                            // <-- CHANGED: Displaying new address format nicely
+                            { 
+                              icon: Truck, 
+                              label: 'Pickup Address', 
+                              value: profileData?.pickupAddress?.houseNo 
+                                ? `${profileData.pickupAddress.houseNo}, ${profileData.pickupAddress.areaStreet}${profileData.pickupAddress.landmark ? `, ${profileData.pickupAddress.landmark}` : ''}, ${profileData.pickupAddress.city}, ${profileData.pickupAddress.pincode}` 
+                                : 'Not provided (Needed for selling)' 
+                            },
                             { icon: Calendar, label: 'Member Since', value: profileData?.created_at ? new Date(profileData.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Recently' }
                           ].map((item, idx) => (
                             <motion.div 
@@ -497,13 +510,26 @@ const ProfilePage = ({ user, onLogout }) => {
                       <span className="text-[10px] bg-yellow-100 text-yellow-700 px-2 py-1 rounded font-bold">Needed for Sellers</span>
                     </div>
                     
-                    <div className="relative">
-                      <Home className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
-                      <textarea placeholder="House No, Area, Street..." required rows="2" value={editForm.pickupAddress.addressLine} onChange={(e) => setEditForm({...editForm, pickupAddress: {...editForm.pickupAddress, addressLine: e.target.value}})}
-                        className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3 focus:border-[#6B46C1] focus:bg-white outline-none transition-all text-sm font-medium resize-none"></textarea>
+                    {/* <-- CHANGED: Splitted single textarea into three dedicated inputs --> */}
+                    <div className="space-y-3">
+                      <div className="relative">
+                        <Home className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
+                        <input type="text" placeholder="House No. / Flat No. / Road No." required value={editForm.pickupAddress.houseNo} onChange={(e) => setEditForm({...editForm, pickupAddress: {...editForm.pickupAddress, houseNo: e.target.value}})}
+                          className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3 focus:border-[#6B46C1] focus:bg-white outline-none transition-all text-sm font-medium" />
+                      </div>
+                      <div className="relative">
+                        <MapPin className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
+                        <input type="text" placeholder="Area, Street, Sector" required value={editForm.pickupAddress.areaStreet} onChange={(e) => setEditForm({...editForm, pickupAddress: {...editForm.pickupAddress, areaStreet: e.target.value}})}
+                          className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3 focus:border-[#6B46C1] focus:bg-white outline-none transition-all text-sm font-medium" />
+                      </div>
+                      <div className="relative">
+                        <MapPin className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400 opacity-50" />
+                        <input type="text" placeholder="Landmark (Optional)" value={editForm.pickupAddress.landmark} onChange={(e) => setEditForm({...editForm, pickupAddress: {...editForm.pickupAddress, landmark: e.target.value}})}
+                          className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3 focus:border-[#6B46C1] focus:bg-white outline-none transition-all text-sm font-medium" />
+                      </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-4 mt-2">
                       <input type="text" placeholder="City" required value={editForm.pickupAddress.city} onChange={(e) => {
                         setEditForm({
                           ...editForm, 
