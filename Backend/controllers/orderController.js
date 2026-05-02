@@ -206,7 +206,8 @@ const getSellerOrders = async (req, res) => {
 const updateOrderStatus = async (req, res) => {
   try {
     const { orderId } = req.params;
-    const { status } = req.body; 
+    // CHANGED: Added cancellationReason destructuring
+    const { status, cancellationReason } = req.body; 
 
     const order = await Order.findById(orderId).populate('item');
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
@@ -216,6 +217,12 @@ const updateOrderStatus = async (req, res) => {
     }
 
     order.orderStatus = status;
+    
+    // CHANGED: Set cancellation reason if status is cancelled
+    if (status === 'cancelled') {
+      order.cancellationReason = cancellationReason || 'No reason provided';
+    }
+
     order.updated_at = Date.now();
 
     if (status === 'delivered' && order.isSellerPaid === false) {
@@ -257,11 +264,12 @@ const updateOrderStatus = async (req, res) => {
         
         order.paymentStatus = 'refunded';
 
+        // CHANGED: Added reason to buyer notification
         await Notification.create({
           user: buyer._id,
           type: 'CREDIT_ADDED',
           title: 'Order Cancelled & Refunded 🔄',
-          message: `The order has been cancelled. Your ${order.itemPrice} credits have been refunded.`,
+          message: `The order has been cancelled. Reason: ${order.cancellationReason}. Your ${order.itemPrice} credits have been refunded.`,
           metadata: { amount: order.itemPrice, reason: 'order_refund', referenceId: order._id }
         });
         
@@ -388,7 +396,6 @@ const dispatchOrder = async (req, res) => {
   }
 };
 
-// <-- NAYA CHANGE: PDF Label API Endpoint -->
 const getShippingLabel = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -404,7 +411,6 @@ const getShippingLabel = async (req, res) => {
 
     const shipmentId = order.trackingDetails.shiprocket_shipment_id;
 
-    // Step 1: Assign AWB Code if not already assigned
     if (!order.trackingDetails.awb_code || order.trackingDetails.awb_code === '') {
        const awbData = await generateAWB(shipmentId);
        order.trackingDetails.awb_code = awbData.awb_code;
@@ -412,7 +418,6 @@ const getShippingLabel = async (req, res) => {
        await order.save();
     }
 
-    // Step 2: Fetch Label URL
     const labelUrl = await generateLabel(shipmentId);
 
     res.status(200).json({ success: true, labelUrl, awb_code: order.trackingDetails.awb_code });

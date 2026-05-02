@@ -139,7 +139,7 @@ const CheckoutPage = ({ user, setUser }) => {
         localStorage.setItem('dealit_user', JSON.stringify(updatedUser));
 
         alert('Order Placed Successfully! 🎉');
-        navigate('/dashboard'); 
+        navigate('/orders'); 
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Order creation failed. Please contact support.');

@@ -32,10 +32,14 @@ const orderSchema = new mongoose.Schema({
     type: Boolean, 
     default: false 
   },
+  
+  cancellationReason: {
+    type: String,
+    default: ''
+  },
 
   razorpay_order_id: { type: String },
   razorpay_payment_id: { type: String },
-
 
   trackingDetails: {
     shiprocket_order_id: { type: String },

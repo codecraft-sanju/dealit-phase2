@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Truck, CheckCircle, Clock, MapPin, Phone, User, ArrowLeft, Coins, Package, ExternalLink, X, FileText, Loader2 } from 'lucide-react'; // <-- NAYA CHANGE: 'FileText' and 'Loader2' import kiye label button ke liye
+import { ShoppingBag, Truck, CheckCircle, Clock, MapPin, Phone, User, ArrowLeft, Coins, Package, ExternalLink, X, FileText, Loader2, AlertCircle } from 'lucide-react'; 
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -7,7 +7,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
-// --- Professional Shimmer/Skeleton Component ---
 const OrderSkeleton = () => (
   <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm p-5 md:p-6 mb-6">
     <div className="flex justify-between items-center mb-6">
@@ -39,15 +38,18 @@ const OrdersPage = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [isScrolled, setIsScrolled] = useState(false);
   
-  // <-- NAYA CHANGE: Dispatch modal states -->
   const [showDispatchModal, setShowDispatchModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [dispatchData, setDispatchData] = useState({ weight: 0.5, length: 10, width: 10, height: 10 });
   const [dispatching, setDispatching] = useState(false);
 
-  // <-- NAYA CHANGE: Label Downloading State -->
   const [downloadingLabelFor, setDownloadingLabelFor] = useState(null);
   
+  // CHANGED: New states for cancellation modal
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelling, setCancelling] = useState(false);
+
   const navigate = useNavigate();
 
   const fetchOrders = async () => {
@@ -82,9 +84,13 @@ const OrdersPage = ({ user }) => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleUpdateStatus = async (orderId, newStatus) => {
+  // CHANGED: Update status now accepts an optional reason parameter
+  const handleUpdateStatus = async (orderId, newStatus, reason = '') => {
     try {
-      const res = await axios.put(`${API_URL}/orders/${orderId}/status`, { status: newStatus }, { withCredentials: true });
+      const res = await axios.put(`${API_URL}/orders/${orderId}/status`, 
+        { status: newStatus, cancellationReason: reason }, 
+        { withCredentials: true }
+      );
       if (res.data.success) {
         fetchOrders();
         alert(`Order marked as ${newStatus}`);
@@ -94,7 +100,6 @@ const OrdersPage = ({ user }) => {
     }
   };
 
-  // <-- NAYA CHANGE: Dispatch Order API Call logic -->
   const handleDispatchOrder = async (e) => {
     e.preventDefault();
     if (!selectedOrder) return;
@@ -118,7 +123,6 @@ const OrdersPage = ({ user }) => {
     }
   };
 
-  // <-- NAYA CHANGE: Download Label logic -->
   const handleDownloadLabel = async (orderId) => {
     setDownloadingLabelFor(orderId);
     try {
@@ -130,7 +134,6 @@ const OrdersPage = ({ user }) => {
 
       if (res.data.success && res.data.labelUrl) {
          window.open(res.data.labelUrl, '_blank');
-         // We re-fetch so that the UI can update if the AWB was freshly assigned in this call.
          fetchOrders(); 
       }
     } catch (err) {
@@ -139,6 +142,20 @@ const OrdersPage = ({ user }) => {
     } finally {
        setDownloadingLabelFor(null);
     }
+  };
+
+  // CHANGED: Logic to handle submitting the cancel form
+  const submitCancelOrder = async (e) => {
+    e.preventDefault();
+    if (!cancelReason.trim()) {
+      alert('Please provide a reason for cancellation.');
+      return;
+    }
+    setCancelling(true);
+    await handleUpdateStatus(selectedOrder._id, 'cancelled', cancelReason);
+    setShowCancelModal(false);
+    setCancelReason('');
+    setCancelling(false);
   };
 
   const containerVariants = {
@@ -161,7 +178,6 @@ const OrdersPage = ({ user }) => {
   return (
     <div className="min-h-screen bg-[#f4f2f9] pb-20 font-sans relative overflow-x-hidden">
       
-      {/* Header */}
       <header 
         className={`fixed top-0 left-0 right-0 z-50 bg-[#6B46C1] transition-all duration-300 ease-in-out shadow-md ${
           isScrolled ? 'py-3' : 'py-5'
@@ -191,7 +207,6 @@ const OrdersPage = ({ user }) => {
         </div>
       </header>
 
-      {/* Background swoosh */}
       <motion.div 
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -201,7 +216,6 @@ const OrdersPage = ({ user }) => {
 
       <div className="max-w-md mx-auto md:max-w-4xl px-5 md:px-8 pt-28 relative z-20">
         
-        {/* Tabs */}
         <div className="flex bg-white p-1.5 rounded-2xl mb-8 border border-gray-100 shadow-sm relative z-20">
           {['purchases', 'sales'].map((tab) => {
             const isActive = activeTab === tab;
@@ -279,13 +293,13 @@ const OrdersPage = ({ user }) => {
                   className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm"
                   style={{ willChange: 'transform, opacity' }}
                 >
-                  {/* Status Bar */}
                   <div className="bg-[#f8f6ff] px-5 py-4 flex justify-between items-center border-b border-gray-100">
                     <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Order ID: #{order._id.slice(-6)}</span>
                     <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase shadow-sm border ${
                       order.orderStatus === 'delivered' ? 'bg-[#f0fdf4] text-emerald-700 border-emerald-100' : 
                       order.orderStatus === 'shipped' ? 'bg-blue-50 text-blue-700 border-blue-100' : 
                       order.orderStatus === 'processing' ? 'bg-purple-50 text-purple-700 border-purple-100' : 
+                      order.orderStatus === 'cancelled' ? 'bg-red-50 text-red-700 border-red-100' : 
                       'bg-[#FFF4D2] text-yellow-800 border-[#FFE28A]/50'
                     }`}>
                       <Clock className="w-3.5 h-3.5" /> {order.orderStatus}
@@ -294,7 +308,6 @@ const OrdersPage = ({ user }) => {
 
                   <div className="p-5 md:p-6">
                     <div className="flex flex-col md:flex-row gap-6">
-                      {/* Item Info */}
                       <div className="flex gap-4 md:w-1/2">
                         <div className="w-24 h-24 bg-[#f8f6ff] rounded-[1.2rem] overflow-hidden shrink-0 border border-gray-100">
                           <img 
@@ -314,7 +327,6 @@ const OrdersPage = ({ user }) => {
                         </div>
                       </div>
 
-                      {/* Shipping Address */}
                       <div className="bg-[#f8f6ff] p-5 rounded-2xl border border-gray-100 md:w-1/2">
                         <h4 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
                           <MapPin className="w-3.5 h-3.5 text-[#A388E1]" /> Shipping Address
@@ -331,8 +343,18 @@ const OrdersPage = ({ user }) => {
                       </div>
                     </div>
 
-                    {/* Tracking Details Box */}
-                    {order.trackingDetails && order.trackingDetails.shiprocket_order_id && (
+                    {/* CHANGED: Display Cancellation Reason if cancelled */}
+                    {order.orderStatus === 'cancelled' && order.cancellationReason && (
+                      <div className="mt-5 bg-red-50 border border-red-100 p-4 rounded-2xl flex items-start gap-3">
+                        <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="text-[10px] font-bold text-red-700 uppercase tracking-widest mb-1">Cancellation Reason</h4>
+                          <p className="text-sm font-semibold text-gray-800">{order.cancellationReason}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {order.trackingDetails && order.trackingDetails.shiprocket_order_id && order.orderStatus !== 'cancelled' && (
                       <div className="mt-5 bg-white border border-[#e9d8ff] p-4 rounded-2xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative overflow-hidden">
                         <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#6B46C1]"></div>
                         <div className="pl-2">
@@ -363,7 +385,6 @@ const OrdersPage = ({ user }) => {
                              </a>
                            )}
                            
-                           {/* <-- NAYA CHANGE: Label Download Button for Seller --> */}
                            {activeTab === 'sales' && order.orderStatus === 'processing' && (
                              <button
                                onClick={() => handleDownloadLabel(order._id)}
@@ -382,7 +403,7 @@ const OrdersPage = ({ user }) => {
                     )}
 
                     {/* Actions for Seller */}
-                    {activeTab === 'sales' && order.orderStatus !== 'delivered' && order.orderStatus !== 'shipped' && (
+                    {activeTab === 'sales' && order.orderStatus !== 'delivered' && order.orderStatus !== 'shipped' && order.orderStatus !== 'cancelled' && (
                       <div className="mt-6 flex flex-wrap gap-3 pt-5 border-t border-gray-100">
                         {order.orderStatus === 'pending' && (
                           <button 
@@ -396,9 +417,13 @@ const OrdersPage = ({ user }) => {
                           </button>
                         )}
                         
+                        {/* CHANGED: Now opens the Cancel Reason Modal */}
                         {order.orderStatus === 'pending' && (
                           <button 
-                            onClick={() => handleUpdateStatus(order._id, 'cancelled')}
+                            onClick={() => {
+                              setSelectedOrder(order);
+                              setShowCancelModal(true);
+                            }}
                             className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 px-6 py-2.5 rounded-xl font-bold text-sm transition-colors active:scale-95"
                           >
                             Cancel Order
@@ -420,7 +445,7 @@ const OrdersPage = ({ user }) => {
                     )}
                     
                     {/* Info for Buyer */}
-                    {activeTab === 'purchases' && (
+                    {activeTab === 'purchases' && order.orderStatus !== 'cancelled' && (
                       <div className="mt-6 flex items-center gap-3 text-gray-600 text-sm font-medium bg-[#f8f6ff] p-3.5 rounded-xl border border-gray-100">
                         <Truck className="w-5 h-5 text-[#6B46C1]" />
                         <span>{order.orderStatus === 'pending' ? 'Waiting for the seller to pack and dispatch your item.' : `Your item is currently ${order.orderStatus}. Tracking will update automatically.`}</span>
@@ -434,7 +459,7 @@ const OrdersPage = ({ user }) => {
         </AnimatePresence>
       </div>
 
-      {/* <-- Dispatch Modal UI --> */}
+      {/* Dispatch Modal UI */}
       {showDispatchModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-gray-900/60 backdrop-blur-sm">
           <motion.div 
@@ -499,6 +524,49 @@ const OrdersPage = ({ user }) => {
                 className="w-full bg-[#6B46C1] hover:bg-[#5a3aa3] text-white font-bold py-3.5 rounded-xl mt-4 transition-all shadow-md shadow-[#6B46C1]/20 disabled:opacity-70 flex justify-center items-center gap-2"
               >
                 {dispatching ? 'Scheduling...' : 'Confirm Dispatch'}
+              </button>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* CHANGED: New Cancel Reason Modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-gray-900/60 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-[2rem] p-6 max-w-sm w-full shadow-2xl relative"
+          >
+            <button 
+              onClick={() => setShowCancelModal(false)}
+              className="absolute top-4 right-4 p-2 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-500 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            
+            <h3 className="text-xl font-black text-gray-900 mb-1">Cancel Order</h3>
+            <p className="text-xs text-gray-500 font-medium mb-6">Please provide a reason. This will be shared with the buyer.</p>
+            
+            <form onSubmit={submitCancelOrder} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">Reason for Cancellation</label>
+                <textarea 
+                  required 
+                  rows="3"
+                  placeholder="E.g., Item is currently out of stock or damaged..."
+                  value={cancelReason} 
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  className="w-full bg-[#f8f6ff] border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 font-medium resize-none" 
+                ></textarea>
+              </div>
+              
+              <button 
+                type="submit" 
+                disabled={cancelling}
+                className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3.5 rounded-xl mt-4 transition-all shadow-md shadow-red-500/20 disabled:opacity-70 flex justify-center items-center gap-2"
+              >
+                {cancelling ? 'Cancelling...' : 'Confirm Cancellation'}
               </button>
             </form>
           </motion.div>
