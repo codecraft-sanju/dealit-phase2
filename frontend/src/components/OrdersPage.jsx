@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Truck, CheckCircle, Clock, MapPin, Phone, User, ArrowLeft, Coins, Package, ExternalLink } from 'lucide-react'; // <-- NAYA CHANGE: ExternalLink import kiya
+import { ShoppingBag, Truck, CheckCircle, Clock, MapPin, Phone, User, ArrowLeft, Coins, Package, ExternalLink, X, FileText, Loader2 } from 'lucide-react'; // <-- NAYA CHANGE: 'FileText' and 'Loader2' import kiye label button ke liye
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -38,6 +38,16 @@ const OrdersPage = ({ user }) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isScrolled, setIsScrolled] = useState(false);
+  
+  // <-- NAYA CHANGE: Dispatch modal states -->
+  const [showDispatchModal, setShowDispatchModal] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [dispatchData, setDispatchData] = useState({ weight: 0.5, length: 10, width: 10, height: 10 });
+  const [dispatching, setDispatching] = useState(false);
+
+  // <-- NAYA CHANGE: Label Downloading State -->
+  const [downloadingLabelFor, setDownloadingLabelFor] = useState(null);
+  
   const navigate = useNavigate();
 
   const fetchOrders = async () => {
@@ -81,6 +91,53 @@ const OrdersPage = ({ user }) => {
       }
     } catch (err) {
       alert('Failed to update status');
+    }
+  };
+
+  // <-- NAYA CHANGE: Dispatch Order API Call logic -->
+  const handleDispatchOrder = async (e) => {
+    e.preventDefault();
+    if (!selectedOrder) return;
+    
+    setDispatching(true);
+    try {
+      const res = await axios.post(
+        `${API_URL}/orders/${selectedOrder._id}/dispatch`, 
+        dispatchData, 
+        { withCredentials: true }
+      );
+      if (res.data.success) {
+        alert('Order Dispatched! Shiprocket pickup scheduled.');
+        setShowDispatchModal(false);
+        fetchOrders();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to dispatch order');
+    } finally {
+      setDispatching(false);
+    }
+  };
+
+  // <-- NAYA CHANGE: Download Label logic -->
+  const handleDownloadLabel = async (orderId) => {
+    setDownloadingLabelFor(orderId);
+    try {
+      const res = await axios.post(
+        `${API_URL}/orders/${orderId}/generate-label`,
+        {},
+        { withCredentials: true }
+      );
+
+      if (res.data.success && res.data.labelUrl) {
+         window.open(res.data.labelUrl, '_blank');
+         // We re-fetch so that the UI can update if the AWB was freshly assigned in this call.
+         fetchOrders(); 
+      }
+    } catch (err) {
+       console.error("Label Error:", err);
+       alert(err.response?.data?.message || 'Failed to generate shipping label. Try again later.');
+    } finally {
+       setDownloadingLabelFor(null);
     }
   };
 
@@ -228,6 +285,7 @@ const OrdersPage = ({ user }) => {
                     <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase shadow-sm border ${
                       order.orderStatus === 'delivered' ? 'bg-[#f0fdf4] text-emerald-700 border-emerald-100' : 
                       order.orderStatus === 'shipped' ? 'bg-blue-50 text-blue-700 border-blue-100' : 
+                      order.orderStatus === 'processing' ? 'bg-purple-50 text-purple-700 border-purple-100' : 
                       'bg-[#FFF4D2] text-yellow-800 border-[#FFE28A]/50'
                     }`}>
                       <Clock className="w-3.5 h-3.5" /> {order.orderStatus}
@@ -273,7 +331,7 @@ const OrdersPage = ({ user }) => {
                       </div>
                     </div>
 
-                    {/* <-- NAYA CHANGE: Tracking Details Box --> */}
+                    {/* Tracking Details Box */}
                     {order.trackingDetails && order.trackingDetails.shiprocket_order_id && (
                       <div className="mt-5 bg-white border border-[#e9d8ff] p-4 rounded-2xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative overflow-hidden">
                         <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#6B46C1]"></div>
@@ -293,52 +351,71 @@ const OrdersPage = ({ user }) => {
                           )}
                         </div>
                         
-                        {order.trackingDetails.awb_code && (
-                          <a
-                            href={`https://shiprocket.co/tracking/${order.trackingDetails.awb_code}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="bg-[#f8f6ff] border border-[#e9d8ff] text-[#6B46C1] hover:bg-[#6B46C1] hover:text-white hover:border-[#6B46C1] px-5 py-2.5 rounded-xl font-bold text-xs transition-all duration-300 flex items-center gap-2"
-                          >
-                            Track Package <ExternalLink className="w-3.5 h-3.5" />
-                          </a>
-                        )}
+                        <div className="flex gap-2 w-full sm:w-auto">
+                           {order.trackingDetails.awb_code && (
+                             <a
+                               href={`https://shiprocket.co/tracking/${order.trackingDetails.awb_code}`}
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               className="bg-[#f8f6ff] border border-[#e9d8ff] text-[#6B46C1] hover:bg-[#6B46C1] hover:text-white hover:border-[#6B46C1] px-4 py-2.5 rounded-xl font-bold text-xs transition-all duration-300 flex items-center justify-center gap-2 flex-1 sm:flex-none"
+                             >
+                               Track <ExternalLink className="w-3.5 h-3.5" />
+                             </a>
+                           )}
+                           
+                           {/* <-- NAYA CHANGE: Label Download Button for Seller --> */}
+                           {activeTab === 'sales' && order.orderStatus === 'processing' && (
+                             <button
+                               onClick={() => handleDownloadLabel(order._id)}
+                               disabled={downloadingLabelFor === order._id}
+                               className={`bg-[#6B46C1] text-white hover:bg-[#5a3aa3] px-4 py-2.5 rounded-xl font-bold text-xs transition-all duration-300 flex items-center justify-center gap-2 flex-1 sm:flex-none shadow-sm disabled:opacity-70 ${downloadingLabelFor === order._id ? 'cursor-not-allowed' : ''}`}
+                             >
+                               {downloadingLabelFor === order._id ? (
+                                  <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating...</>
+                               ) : (
+                                  <><FileText className="w-3.5 h-3.5" /> Download Slip</>
+                               )}
+                             </button>
+                           )}
+                        </div>
                       </div>
                     )}
 
                     {/* Actions for Seller */}
-                    {activeTab === 'sales' && order.orderStatus !== 'delivered' && (
+                    {activeTab === 'sales' && order.orderStatus !== 'delivered' && order.orderStatus !== 'shipped' && (
                       <div className="mt-6 flex flex-wrap gap-3 pt-5 border-t border-gray-100">
                         {order.orderStatus === 'pending' && (
                           <button 
-                            onClick={() => handleUpdateStatus(order._id, 'processing')}
-                            className="bg-[#6B46C1] hover:bg-[#5a3aa3] text-white px-6 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm active:scale-95"
+                            onClick={() => {
+                              setSelectedOrder(order);
+                              setShowDispatchModal(true);
+                            }}
+                            className="bg-[#6B46C1] hover:bg-[#5a3aa3] text-white px-6 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm active:scale-95 flex items-center gap-2"
                           >
-                            Accept & Process
+                            <Package className="w-4 h-4" /> Ready to Dispatch
                           </button>
                         )}
+                        
+                        {order.orderStatus === 'pending' && (
+                          <button 
+                            onClick={() => handleUpdateStatus(order._id, 'cancelled')}
+                            className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 px-6 py-2.5 rounded-xl font-bold text-sm transition-colors active:scale-95"
+                          >
+                            Cancel Order
+                          </button>
+                        )}
+
                         {order.orderStatus === 'processing' && (
-                          <button 
-                            onClick={() => handleUpdateStatus(order._id, 'shipped')}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm active:scale-95"
-                          >
-                            Mark as Shipped
-                          </button>
+                          <div className="text-sm font-bold text-purple-600 flex flex-col gap-1 w-full bg-purple-50 rounded-xl border border-purple-100 p-4">
+                             <div className="flex items-center gap-2">
+                                <Clock className="w-4 h-4" /> 
+                                <span>Waiting for Courier Pickup. Status will update automatically.</span>
+                             </div>
+                             <p className="text-xs text-purple-500 font-medium pl-6">
+                               Please download the shipping slip, print it, and attach it to the package.
+                             </p>
+                          </div>
                         )}
-                        {order.orderStatus === 'shipped' && (
-                          <button 
-                            onClick={() => handleUpdateStatus(order._id, 'delivered')}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm flex items-center gap-2 active:scale-95"
-                          >
-                            <CheckCircle className="w-4 h-4" /> Delivered (Get Credits)
-                          </button>
-                        )}
-                        <button 
-                          onClick={() => handleUpdateStatus(order._id, 'cancelled')}
-                          className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 px-6 py-2.5 rounded-xl font-bold text-sm transition-colors active:scale-95"
-                        >
-                          Cancel Order
-                        </button>
                       </div>
                     )}
                     
@@ -346,7 +423,7 @@ const OrdersPage = ({ user }) => {
                     {activeTab === 'purchases' && (
                       <div className="mt-6 flex items-center gap-3 text-gray-600 text-sm font-medium bg-[#f8f6ff] p-3.5 rounded-xl border border-gray-100">
                         <Truck className="w-5 h-5 text-[#6B46C1]" />
-                        <span>{order.orderStatus === 'pending' ? 'Waiting for the seller to process and ship your item.' : `Your item is currently ${order.orderStatus}.`}</span>
+                        <span>{order.orderStatus === 'pending' ? 'Waiting for the seller to pack and dispatch your item.' : `Your item is currently ${order.orderStatus}. Tracking will update automatically.`}</span>
                       </div>
                     )}
                   </div>
@@ -356,6 +433,78 @@ const OrdersPage = ({ user }) => {
           )}
         </AnimatePresence>
       </div>
+
+      {/* <-- Dispatch Modal UI --> */}
+      {showDispatchModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-gray-900/60 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-[2rem] p-6 max-w-sm w-full shadow-2xl relative"
+          >
+            <button 
+              onClick={() => setShowDispatchModal(false)}
+              className="absolute top-4 right-4 p-2 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-500 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            
+            <h3 className="text-xl font-black text-gray-900 mb-1">Package Details</h3>
+            <p className="text-xs text-gray-500 font-medium mb-6">Enter actual box size for accurate courier assignment.</p>
+            
+            <form onSubmit={handleDispatchOrder} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">Weight (kg)</label>
+                <input 
+                  type="number" step="0.1" required 
+                  value={dispatchData.weight} 
+                  onChange={(e) => setDispatchData({...dispatchData, weight: parseFloat(e.target.value)})}
+                  className="w-full bg-[#f8f6ff] border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:border-[#6B46C1] focus:ring-1 focus:ring-[#6B46C1] font-medium" 
+                />
+              </div>
+              
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">L (cm)</label>
+                  <input 
+                    type="number" required 
+                    value={dispatchData.length} 
+                    onChange={(e) => setDispatchData({...dispatchData, length: parseInt(e.target.value)})}
+                    className="w-full bg-[#f8f6ff] border border-gray-200 rounded-xl px-3 py-3 text-gray-900 focus:outline-none focus:border-[#6B46C1] font-medium text-center" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">W (cm)</label>
+                  <input 
+                    type="number" required 
+                    value={dispatchData.width} 
+                    onChange={(e) => setDispatchData({...dispatchData, width: parseInt(e.target.value)})}
+                    className="w-full bg-[#f8f6ff] border border-gray-200 rounded-xl px-3 py-3 text-gray-900 focus:outline-none focus:border-[#6B46C1] font-medium text-center" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">H (cm)</label>
+                  <input 
+                    type="number" required 
+                    value={dispatchData.height} 
+                    onChange={(e) => setDispatchData({...dispatchData, height: parseInt(e.target.value)})}
+                    className="w-full bg-[#f8f6ff] border border-gray-200 rounded-xl px-3 py-3 text-gray-900 focus:outline-none focus:border-[#6B46C1] font-medium text-center" 
+                  />
+                </div>
+              </div>
+              
+              <button 
+                type="submit" 
+                disabled={dispatching}
+                className="w-full bg-[#6B46C1] hover:bg-[#5a3aa3] text-white font-bold py-3.5 rounded-xl mt-4 transition-all shadow-md shadow-[#6B46C1]/20 disabled:opacity-70 flex justify-center items-center gap-2"
+              >
+                {dispatching ? 'Scheduling...' : 'Confirm Dispatch'}
+              </button>
+            </form>
+          </motion.div>
+        </div>
+      )}
+      
     </div>
   );
 };

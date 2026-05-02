@@ -4,7 +4,7 @@ const User = require('../models/User');
 const CreditSetting = require('../models/CreditSetting');
 const Transaction = require('../models/Transaction'); 
 const crypto = require('crypto'); 
-const { checkServiceability, createShiprocketOrder, addPickupLocation } = require('../utils/shiprocket');
+const { checkServiceability, createShiprocketOrder, addPickupLocation, generateAWB, generateLabel } = require('../utils/shiprocket'); 
 const Notification = require('../models/Notification');
 const AuraLog = require('../models/AuraLog'); 
 
@@ -20,14 +20,14 @@ const calculateShippingCost = async (req, res) => {
 
     if (setting) {
       if (setting.shippingMethod === 'dynamic') {
-      
+        
         const pickupPincode = item.owner.pickupAddress?.pincode;
         if (!pickupPincode) {
           return res.status(400).json({ success: false, message: 'Seller pickup pincode missing.' });
         }
         
         const weight = item.weight || 0.5;
-      
+        
         const dimensions = item.dimensions || { length: 10, width: 10, height: 10 }; 
         
         finalCost = await checkServiceability(pickupPincode, pincode, weight, dimensions);
@@ -44,7 +44,6 @@ const calculateShippingCost = async (req, res) => {
   }
 };
 
-// 1. CREATE ORDER (Buy Now via Credits + Real Money Shipping)
 const createOrder = async (req, res) => {
   try {
     const { itemId, shippingAddress, paymentDetails } = req.body;
@@ -61,9 +60,8 @@ const createOrder = async (req, res) => {
       return res.status(400).json({ success: false, message: 'You cannot buy your own item' });
     }
 
-    // 2. Fetch Settings aur Cost dubara calculate karo fraud rokne ke liye
     let setting = await CreditSetting.findOne();
-    let shippingCost = 60; // default
+    let shippingCost = 60; 
 
     if (setting) {
       if (setting.shippingMethod === 'dynamic') {
@@ -79,7 +77,6 @@ const createOrder = async (req, res) => {
 
     let razorpay_order_id, razorpay_payment_id;
 
-    // --- STEP 1: Verify Razorpay Payment for Shipping (Only if shipping is not free) ---
     if (shippingCost > 0) {
       if (!paymentDetails || !paymentDetails.razorpay_payment_id) {
         return res.status(400).json({ success: false, message: 'Shipping payment details missing' });
@@ -89,7 +86,6 @@ const createOrder = async (req, res) => {
       razorpay_payment_id = paymentDetails.razorpay_payment_id;
       const { razorpay_signature } = paymentDetails;
 
-      // Signature verify karna (Security check)
       const body = razorpay_order_id + "|" + razorpay_payment_id;
       const expectedSignature = crypto
         .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
@@ -114,7 +110,6 @@ const createOrder = async (req, res) => {
 
     const itemPrice = item.estimated_value || 0;
 
-    // 4. Check Buyer's Wallet Balance (ONLY FOR ITEM PRICE)
     const buyer = await User.findById(buyerId);
     if (buyer.account_credits < itemPrice) {
       return res.status(400).json({ 
@@ -125,15 +120,12 @@ const createOrder = async (req, res) => {
       });
     }
 
-    // 5. Deduct Credits from Buyer (ONLY ITEM PRICE)
     buyer.account_credits -= itemPrice;
     await buyer.save();
 
-    // 6. Update Item Status so nobody else can buy it
     item.status = 'reserved'; 
     await item.save();
 
-    // 7. Create the Order in MongoDB
     const order = await Order.create({
       buyer: buyerId,
       seller: item.owner._id,
@@ -171,65 +163,9 @@ const createOrder = async (req, res) => {
       metadata: { referenceId: order._id }
     });
 
-    try {
-      const dynamicPickupLocation = await addPickupLocation(item.owner);
-
-      const orderDate = new Date().toISOString().slice(0, 19).replace('T', ' '); 
-      const weight = item.weight || 0.5;
-      const dimensions = item.dimensions || { length: 10, width: 10, height: 10 };
-      
-      const shiprocketPayload = {
-        order_id: order._id.toString(), 
-        order_date: orderDate,
-        pickup_location: dynamicPickupLocation, 
-        channel_id: "", 
-        billing_customer_name: shippingAddress.fullName,
-        billing_last_name: "User", 
-        billing_address: shippingAddress.addressLine,
-        billing_city: shippingAddress.city,
-        billing_pincode: shippingAddress.pincode,
-        billing_state: shippingAddress.state,
-        billing_country: "India",
-        billing_email: buyer.email,
-        billing_phone: shippingAddress.phone,
-        shipping_is_billing: true,
-        order_items: [
-          {
-            name: item.title,
-            sku: item._id.toString(),
-            units: 1,
-            selling_price: itemPrice > 0 ? itemPrice : 100, 
-            discount: 0,
-            tax: 0,
-            hsn: ""
-          }
-        ],
-        payment_method: "Prepaid",
-        sub_total: itemPrice > 0 ? itemPrice : 100,
-        length: dimensions.length,
-        breadth: dimensions.width,
-        height: dimensions.height,
-        weight: weight
-      };
-
-      const shiprocketRes = await createShiprocketOrder(shiprocketPayload);
-      
-      // Update our order with Shiprocket Details
-      order.trackingDetails = {
-        shiprocket_order_id: shiprocketRes.order_id,
-        shiprocket_shipment_id: shiprocketRes.shipment_id,
-        awb_code: '', 
-        courier_company: ''
-      };
-      await order.save();
-
-    } catch (shiprocketError) {
-      console.error("Order saved but failed to push to Shiprocket:", shiprocketError);
-    }
-
     res.status(201).json({
       success: true,
-      message: 'Order placed successfully! Credits deducted and shipping processed.',
+      message: 'Order placed successfully! Please wait for the seller to dispatch the item.',
       data: order
     });
 
@@ -239,7 +175,6 @@ const createOrder = async (req, res) => {
   }
 };
 
-// 2. GET BUYER ORDERS (Purchase History)
 const getMyOrders = async (req, res) => {
   try {
     const orders = await Order.find({ buyer: req.user._id })
@@ -254,7 +189,6 @@ const getMyOrders = async (req, res) => {
   }
 };
 
-// 3. GET SELLER ORDERS (Sales History to fulfill)
 const getSellerOrders = async (req, res) => {
   try {
     const orders = await Order.find({ seller: req.user._id })
@@ -269,18 +203,14 @@ const getSellerOrders = async (req, res) => {
   }
 };
 
-// 4. UPDATE ORDER STATUS (Escrow Logic Release)
 const updateOrderStatus = async (req, res) => {
   try {
     const { orderId } = req.params;
     const { status } = req.body; 
 
     const order = await Order.findById(orderId).populate('item');
-    if (!order) {
-      return res.status(404).json({ success: false, message: 'Order not found' });
-    }
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
-    // Security: Only Admin or Seller should update status
     if (order.seller.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Not authorized to update this order' });
     }
@@ -288,15 +218,11 @@ const updateOrderStatus = async (req, res) => {
     order.orderStatus = status;
     order.updated_at = Date.now();
 
-    // --- ESCROW RELEASE LOGIC ---
     if (status === 'delivered' && order.isSellerPaid === false) {
       const seller = await User.findById(order.seller);
       if (seller) {
         seller.account_credits += order.itemPrice; 
-        
-        // ⚡ NAYA CHANGE: Aura Increase for Successful Trade
         seller.aura_points = (seller.aura_points || 0) + 50; 
-        
         await seller.save();
         
         order.isSellerPaid = true;
@@ -309,7 +235,6 @@ const updateOrderStatus = async (req, res) => {
           metadata: { amount: order.itemPrice, reason: 'escrow_release', referenceId: order._id }
         });
 
-        // ⚡ NAYA CHANGE: Log creation for Aura
         await AuraLog.create({
           user: seller._id,
           reason: "Successful Trade Delivered",
@@ -324,11 +249,9 @@ const updateOrderStatus = async (req, res) => {
       }
     }
 
-    // --- CANCELLATION REFUND LOGIC ---
     if (status === 'cancelled' && order.paymentStatus === 'paid') {
       const buyer = await User.findById(order.buyer);
       if (buyer) {
-        // Refund only the item credits
         buyer.account_credits += order.itemPrice;
         await buyer.save();
         
@@ -342,10 +265,9 @@ const updateOrderStatus = async (req, res) => {
           metadata: { amount: order.itemPrice, reason: 'order_refund', referenceId: order._id }
         });
         
-        // ⚡ NAYA CHANGE: Penalty to Seller for Cancelled Deal
         const seller = await User.findById(order.seller);
         if (seller) {
-          seller.aura_points = Math.max(0, (seller.aura_points || 0) - 50); // Optional: Math.max ensures it doesn't drop below 0
+          seller.aura_points = Math.max(0, (seller.aura_points || 0) - 50); 
           await seller.save();
 
           await AuraLog.create({
@@ -372,7 +294,6 @@ const updateOrderStatus = async (req, res) => {
     }
 
     await order.save();
-
     res.status(200).json({ success: true, message: `Order marked as ${status}`, data: order });
 
   } catch (error) {
@@ -381,35 +302,144 @@ const updateOrderStatus = async (req, res) => {
   }
 };
 
-// Shiprocket Webhook Handler
+const dispatchOrder = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { weight, length, width, height } = req.body;
+
+    const order = await Order.findById(orderId).populate({
+      path: 'item', populate: { path: 'owner' }
+    }).populate('buyer');
+    
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+    if (order.seller.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Not authorized to dispatch this order' });
+    }
+    if (order.orderStatus !== 'pending') {
+      return res.status(400).json({ success: false, message: 'Only pending orders can be dispatched' });
+    }
+
+    const item = order.item;
+    const buyer = order.buyer;
+    const shippingAddress = order.shippingAddress;
+    const itemPrice = order.itemPrice;
+
+    const dynamicPickupLocation = await addPickupLocation(item.owner);
+    const orderDate = new Date().toISOString().slice(0, 19).replace('T', ' '); 
+    
+    let cleanPhone = shippingAddress.phone.replace(/\D/g, ''); 
+    if (cleanPhone.length > 10) cleanPhone = cleanPhone.slice(-10);
+
+    const shiprocketPayload = {
+      order_id: order._id.toString(), 
+      order_date: orderDate,
+      pickup_location: dynamicPickupLocation, 
+      channel_id: "", 
+      billing_customer_name: shippingAddress.fullName,
+      billing_last_name: "User", 
+      billing_address: shippingAddress.addressLine,
+      billing_city: shippingAddress.city,
+      billing_pincode: shippingAddress.pincode,
+      billing_state: shippingAddress.state,
+      billing_country: "India",
+      billing_email: buyer.email,
+      billing_phone: cleanPhone,
+      shipping_is_billing: true,
+      order_items: [
+        {
+          name: item.title,
+          sku: item._id.toString(),
+          units: 1,
+          selling_price: itemPrice > 0 ? itemPrice : 100, 
+          discount: 0,
+          tax: 0,
+          hsn: ""
+        }
+      ],
+      payment_method: "Prepaid",
+      sub_total: itemPrice > 0 ? itemPrice : 100,
+      length: length || item.dimensions?.length || 10,
+      breadth: width || item.dimensions?.width || 10,
+      height: height || item.dimensions?.height || 10,
+      weight: weight || item.weight || 0.5
+    };
+
+    const shiprocketRes = await createShiprocketOrder(shiprocketPayload);
+    
+    order.trackingDetails = {
+      shiprocket_order_id: shiprocketRes.order_id,
+      shiprocket_shipment_id: shiprocketRes.shipment_id,
+      awb_code: '', 
+      courier_company: ''
+    };
+    
+    order.orderStatus = 'processing';
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Order dispatched successfully. Shiprocket pickup scheduled.',
+      data: order
+    });
+
+  } catch (error) {
+    console.error('Error dispatching order:', error);
+    res.status(500).json({ success: false, message: 'Server error dispatching order' });
+  }
+};
+
+// <-- NAYA CHANGE: PDF Label API Endpoint -->
+const getShippingLabel = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const order = await Order.findById(orderId);
+
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+    if (order.seller.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Not authorized to download this label' });
+    }
+    if (!order.trackingDetails || !order.trackingDetails.shiprocket_shipment_id) {
+       return res.status(400).json({ success: false, message: 'Shipment ID not found. Dispatch order first.' });
+    }
+
+    const shipmentId = order.trackingDetails.shiprocket_shipment_id;
+
+    // Step 1: Assign AWB Code if not already assigned
+    if (!order.trackingDetails.awb_code || order.trackingDetails.awb_code === '') {
+       const awbData = await generateAWB(shipmentId);
+       order.trackingDetails.awb_code = awbData.awb_code;
+       order.trackingDetails.courier_company = awbData.courier_name;
+       await order.save();
+    }
+
+    // Step 2: Fetch Label URL
+    const labelUrl = await generateLabel(shipmentId);
+
+    res.status(200).json({ success: true, labelUrl, awb_code: order.trackingDetails.awb_code });
+
+  } catch (error) {
+     console.error('Error generating label:', error);
+     res.status(500).json({ success: false, message: error.message || 'Server error generating label' });
+  }
+};
+
 const handleShiprocketWebhook = async (req, res) => {
   try {
     const { awb, current_status } = req.body;
+    if (!awb || !current_status) return res.status(400).json({ success: false, message: 'Invalid payload' });
 
-    if (!awb || !current_status) {
-      return res.status(400).json({ success: false, message: 'Invalid payload' });
-    }
-
-    // Find order by AWB code
     const order = await Order.findOne({ 'trackingDetails.awb_code': awb }).populate('item');
-    if (!order) {
-      return res.status(404).json({ success: false, message: 'Order not found' });
-    }
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
-    // If Shiprocket status is DELIVERED
     if (current_status === 'DELIVERED' && order.orderStatus !== 'delivered') {
       order.orderStatus = 'delivered';
       order.updated_at = Date.now();
 
-      // --- ESCROW RELEASE LOGIC (Automatic) ---
       if (order.isSellerPaid === false) {
         const seller = await User.findById(order.seller);
         if (seller) {
           seller.account_credits += order.itemPrice; 
-          
-          // ⚡ NAYA CHANGE: Auto Aura Increase from Webhook
           seller.aura_points = (seller.aura_points || 0) + 50; 
-
           await seller.save();
           
           order.isSellerPaid = true;
@@ -422,7 +452,6 @@ const handleShiprocketWebhook = async (req, res) => {
             metadata: { amount: order.itemPrice, reason: 'escrow_release', referenceId: order._id }
           });
 
-          // ⚡ NAYA CHANGE: Log creation for Aura
           await AuraLog.create({
             user: seller._id,
             reason: "Successful Trade Delivered",
@@ -438,15 +467,12 @@ const handleShiprocketWebhook = async (req, res) => {
       }
       await order.save();
     } 
-    // Status update for SHIPPED or IN TRANSIT
     else if ((current_status === 'SHIPPED' || current_status === 'IN TRANSIT') && order.orderStatus === 'processing') {
       order.orderStatus = 'shipped';
       await order.save();
     }
 
-    // Must return 200 OK so Shiprocket knows we received it
     res.status(200).json({ success: true, message: 'Webhook processed successfully' });
-
   } catch (error) {
     console.error('Shiprocket Webhook Error:', error);
     res.status(500).json({ success: false, message: 'Server error processing webhook' });
@@ -459,5 +485,7 @@ module.exports = {
   getMyOrders,
   getSellerOrders,
   updateOrderStatus,
+  dispatchOrder, 
+  getShippingLabel, 
   handleShiprocketWebhook 
 };

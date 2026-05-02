@@ -1,6 +1,9 @@
-// utils/shiprocket.js
 const axios = require('axios');
 const SHIPROCKET_BASE_URL = 'https://apiv2.shiprocket.in/v1/external';
+
+// <-- NAYA CHANGE: TEST MODE FLAG -->
+// Agar .env mein SHIPROCKET_TEST_MODE=true hai, toh real order place nahi hoga.
+const IS_TEST_MODE = process.env.SHIPROCKET_TEST_MODE === 'true'; 
 
 const getShiprocketToken = async () => {
   try {
@@ -16,7 +19,6 @@ const getShiprocketToken = async () => {
   }
 };
 
-// <-- NAYA CHANGE START: Shiprocket connection verify karne ka function -->
 const verifyShiprocketConnection = async () => {
   try {
     await getShiprocketToken();
@@ -27,15 +29,13 @@ const verifyShiprocketConnection = async () => {
     return false;
   }
 };
-// <-- NAYA CHANGE END -->
 
 const checkServiceability = async (pickupPincode, deliveryPincode, weight, dimensions) => {
+  if (IS_TEST_MODE) return 60; // Dummy price for testing
+
   try {
     const token = await getShiprocketToken();
-    
-    const config = {
-      headers: { Authorization: `Bearer ${token}` }
-    };
+    const config = { headers: { Authorization: `Bearer ${token}` } };
 
     const length = dimensions?.length || 10;
     const width = dimensions?.width || 10;
@@ -51,11 +51,7 @@ const checkServiceability = async (pickupPincode, deliveryPincode, weight, dimen
       cod: 0 
     };
 
-    const response = await axios.get(
-      `${SHIPROCKET_BASE_URL}/courier/serviceability/`,
-      { params: payload, ...config }
-    );
-
+    const response = await axios.get(`${SHIPROCKET_BASE_URL}/courier/serviceability/`, { params: payload, ...config });
     const data = response.data;
     
     if (data.status === 404 || !data.data || !data.data.available_courier_companies) {
@@ -64,13 +60,10 @@ const checkServiceability = async (pickupPincode, deliveryPincode, weight, dimen
 
     const couriers = data.data.available_courier_companies;
     const sortedCouriers = couriers.sort((a, b) => a.rate - b.rate);
-    
     const cheapestRate = sortedCouriers[0].rate;
-    
     const finalCost = Math.ceil(cheapestRate * 1.18); 
 
     return finalCost;
-
   } catch (error) {
     console.error('Shiprocket Serviceability Error:', error.response?.data || error.message);
     throw new Error('Failed to calculate shipping cost. Check pincodes.');
@@ -78,13 +71,12 @@ const checkServiceability = async (pickupPincode, deliveryPincode, weight, dimen
 };
 
 const addPickupLocation = async (seller) => {
+  if (IS_TEST_MODE) return "Primary"; // Skip adding location in test mode
+
   try {
     const token = await getShiprocketToken();
     const config = { 
-      headers: { 
-        'Content-Type': 'application/json', 
-        Authorization: `Bearer ${token}` 
-      } 
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } 
     };
 
     const locationName = `SEL_${seller._id.toString().substring(0, 8)}_${Date.now().toString().slice(-4)}`;
@@ -112,29 +104,68 @@ const addPickupLocation = async (seller) => {
     return "Primary"; 
   }
 };
-// <-- NAYA CHANGE END -->
 
 const createShiprocketOrder = async (orderData) => {
+  if (IS_TEST_MODE) {
+    console.log("🛠️ TEST MODE ON: Skipping real Shiprocket order creation.");
+    return {
+      order_id: "TEST_ORD_" + Date.now(),
+      shipment_id: "TEST_SHIP_" + Date.now(),
+      status: "NEW"
+    };
+  }
+
   try {
     const token = await getShiprocketToken();
-    
     const config = {
-      headers: { 
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}` 
-      }
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
     };
 
-    const response = await axios.post(
-      `${SHIPROCKET_BASE_URL}/orders/create/adhoc`,
-      orderData,
-      config
-    );
-
+    const response = await axios.post(`${SHIPROCKET_BASE_URL}/orders/create/adhoc`, orderData, config);
     return response.data;
   } catch (error) {
     console.error('Shiprocket Create Order Error:', error.response?.data || error.message);
     throw new Error('Failed to create order on Shiprocket.');
+  }
+};
+
+// <-- NAYA CHANGE: AWB Generate Function -->
+const generateAWB = async (shipment_id) => {
+  if (IS_TEST_MODE) {
+    return { awb_code: "TEST_AWB_987654321", courier_name: "Test Express" };
+  }
+
+  try {
+    const token = await getShiprocketToken();
+    const response = await axios.post(
+      `${SHIPROCKET_BASE_URL}/courier/assign/awb`,
+      { shipment_id: shipment_id },
+      { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } }
+    );
+    return response.data.response.data; // Contains awb_code, courier_name, etc.
+  } catch (error) {
+    console.error('Shiprocket Generate AWB Error:', error.response?.data || error.message);
+    throw new Error('Failed to generate AWB tracking number.');
+  }
+};
+
+// <-- NAYA CHANGE: Label PDF Generate Function -->
+const generateLabel = async (shipment_id) => {
+  if (IS_TEST_MODE) {
+    return "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"; // Dummy PDF link
+  }
+
+  try {
+    const token = await getShiprocketToken();
+    const response = await axios.post(
+      `${SHIPROCKET_BASE_URL}/courier/generate/label`,
+      { shipment_id: [shipment_id] }, // Shiprocket expects an array of shipment IDs
+      { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } }
+    );
+    return response.data.label_url; // Returns the URL to download the PDF
+  } catch (error) {
+    console.error('Shiprocket Generate Label Error:', error.response?.data || error.message);
+    throw new Error('Failed to generate Shipping Label.');
   }
 };
 
@@ -143,5 +174,7 @@ module.exports = {
   checkServiceability,
   createShiprocketOrder,
   addPickupLocation,
-  verifyShiprocketConnection 
+  verifyShiprocketConnection,
+  generateAWB,
+  generateLabel
 };
