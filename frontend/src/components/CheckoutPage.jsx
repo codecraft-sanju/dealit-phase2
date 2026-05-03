@@ -28,9 +28,12 @@ const CheckoutPage = ({ user, setUser }) => {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [shippingCost, setShippingCost] = useState(60); 
-  const [isCalculatingShipping, setIsCalculatingShipping] = useState(false); // <-- NAYA CHANGE
+  const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   
+  // CHANGED: New state for dynamic autoCancelHours
+  const [autoCancelHours, setAutoCancelHours] = useState(24);
+
   const [formData, setFormData] = useState({
     fullName: user?.full_name || '',
     phone: user?.phone || '',
@@ -66,10 +69,14 @@ const CheckoutPage = ({ user, setUser }) => {
           setItem(itemRes.data.data);
         }
 
-        // Default flat cost fallback
-        const settingsRes = await axios.get(`${API_URL}/admin/public-settings`);
+        // Fetch settings for shipping and auto-cancel time
+        const settingsRes = await axios.get(`${API_URL}/admin/public-credit-settings`);
         if (settingsRes.data.success) {
           setShippingCost(settingsRes.data.data.flatShippingCost !== undefined ? settingsRes.data.data.flatShippingCost : 60);
+          // CHANGED: Update the autoCancelHours state
+          if (settingsRes.data.data.autoCancelHours) {
+            setAutoCancelHours(settingsRes.data.data.autoCancelHours);
+          }
         }
       } catch (err) {
         setError('Failed to load checkout details.');
@@ -82,7 +89,6 @@ const CheckoutPage = ({ user, setUser }) => {
     fetchCheckoutData();
   }, [itemId]);
 
-  // <-- NAYA CHANGE: Pincode enter hone par live cost fetch karna -->
   useEffect(() => {
     const fetchDynamicShippingCost = async () => {
       if (formData.pincode && formData.pincode.length >= 6) {
@@ -106,7 +112,7 @@ const CheckoutPage = ({ user, setUser }) => {
 
     const timeoutId = setTimeout(() => {
       fetchDynamicShippingCost();
-    }, 800); // 800ms debounce taaki baar baar API hit na ho type karte waqt
+    }, 800);
 
     return () => clearTimeout(timeoutId);
   }, [formData.pincode, itemId]);
@@ -156,7 +162,6 @@ const CheckoutPage = ({ user, setUser }) => {
     e.preventDefault();
     if (!hasEnoughCredits) return;
 
-    // CHANGED: Check for at least one digit in house number
     if (!/\d/.test(formData.houseNo)) {
       setError('Please include at least one number in your House No. (e.g., Flat 4B, Plot 12)');
       return;
@@ -318,11 +323,13 @@ const CheckoutPage = ({ user, setUser }) => {
           <form onSubmit={handlePlaceOrder} className="space-y-4 md:space-y-6">
             
             <motion.div variants={itemVariants} className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm space-y-5">
-              <div className="flex items-center gap-3 border-b border-gray-50 pb-4">
-                <div className="bg-[#EBE5F7] p-2 rounded-xl text-[#6B46C1]">
-                  <Truck className="w-5 h-5" />
+              <div className="flex items-center justify-between border-b border-gray-50 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="bg-[#EBE5F7] p-2 rounded-xl text-[#6B46C1]">
+                    <Truck className="w-5 h-5" />
+                  </div>
+                  <h3 className="font-bold text-lg text-gray-800">Shipping Details</h3>
                 </div>
-                <h3 className="font-bold text-lg text-gray-800">Shipping Details</h3>
               </div>
 
               <div className="space-y-4">
@@ -388,7 +395,6 @@ const CheckoutPage = ({ user, setUser }) => {
                 </div>
                 <div className="flex justify-between items-center">
                   <span>Shipping Fee {shippingCost > 0 ? '(Pay via Razorpay)' : ''}</span>
-                  {/* <-- NAYA CHANGE: Show Calculating text when API is running --> */}
                   <span className={`flex items-center gap-1 font-bold ${isCalculatingShipping ? 'text-gray-400' : shippingCost === 0 ? 'text-emerald-500' : 'text-gray-900'}`}>
                     {isCalculatingShipping ? 'Calculating...' : shippingCost === 0 ? 'FREE' : `₹ ${shippingCost}`}
                   </span>
@@ -398,6 +404,17 @@ const CheckoutPage = ({ user, setUser }) => {
                   <span className="font-black text-[#6B46C1]">
                     {isCalculatingShipping ? '...' : shippingCost === 0 ? 'FREE' : `₹ ${shippingCost}`}
                   </span>
+                </div>
+              </div>
+
+              {/* CHANGED: Dynamic Notice before order placement */}
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-xl flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+                <div>
+                   <p className="text-xs text-blue-800 font-medium leading-relaxed">
+                     <span className="font-bold text-blue-900 block mb-1">Buyer Protection Guarantee</span> 
+                     If the seller fails to dispatch your item within <span className="font-bold">{autoCancelHours} hours</span>, your order will be automatically cancelled, and your credits will be fully refunded to your wallet.
+                   </p>
                 </div>
               </div>
 

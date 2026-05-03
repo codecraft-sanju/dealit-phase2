@@ -100,7 +100,13 @@ const addPickupLocation = async (seller) => {
     return "Primary"; 
   } catch (error) {
     console.error('Shiprocket Add Pickup Location Error:', error.response?.data || error.message);
-    return "Primary"; 
+    
+    // CHANGED: Yahan hum ab silently "Primary" return karne ki jagah error throw kar rahe hain
+    if (error.response && error.response.data && error.response.data.message) {
+      const apiMsg = error.response.data.message;
+      throw new Error(typeof apiMsg === 'string' ? apiMsg : JSON.stringify(apiMsg));
+    }
+    throw new Error('Failed to add pickup location. Please check your pickup address details.');
   }
 };
 
@@ -116,6 +122,12 @@ const createShiprocketOrder = async (orderData) => {
     return response.data;
   } catch (error) {
     console.error('Shiprocket Create Order Error:', error.response?.data || error.message);
+    
+    // CHANGED: Specific error frontend ke liye bhejna
+    if (error.response && error.response.data && error.response.data.message) {
+      const apiMsg = error.response.data.message;
+      throw new Error(typeof apiMsg === 'string' ? apiMsg : JSON.stringify(apiMsg));
+    }
     throw new Error('Failed to create order on Shiprocket.');
   }
 };
@@ -127,11 +139,10 @@ const generateAWB = async (shipment_id) => {
     const token = await getShiprocketToken();
     const response = await axios.post(
       `${SHIPROCKET_BASE_URL}/courier/assign/awb`,
-      { shipment_id: parseInt(shipment_id) }, // CHANGED: Forced to integer
+      { shipment_id: parseInt(shipment_id) }, 
       { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } }
     );
     
-    // CHANGED: Strict error checking for Shiprocket internal failures
     if (response.data.awb_assign_status === 0 || !response.data.response?.data) {
       console.error("Shiprocket AWB Assignment Failed internally:", response.data);
       throw new Error(response.data.message || 'Shiprocket could not assign AWB. Low wallet balance or invalid route.');
@@ -151,11 +162,10 @@ const generateLabel = async (shipment_id) => {
     const token = await getShiprocketToken();
     const response = await axios.post(
       `${SHIPROCKET_BASE_URL}/courier/generate/label`,
-      { shipment_id: [parseInt(shipment_id)] }, // CHANGED: Array of integers
+      { shipment_id: [parseInt(shipment_id)] }, 
       { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } }
     );
 
-    // CHANGED: Strict check. If Shiprocket gives 200 OK but no URL, throw error!
     if (response.data.label_created === 0 || !response.data.label_url) {
       console.error("Shiprocket Label generation failed internally:", response.data);
       throw new Error(response.data.response || 'Shiprocket is still processing the label. Please try again in 1-2 minutes.');

@@ -206,7 +206,6 @@ const getSellerOrders = async (req, res) => {
 const updateOrderStatus = async (req, res) => {
   try {
     const { orderId } = req.params;
-    // CHANGED: Added cancellationReason destructuring
     const { status, cancellationReason } = req.body; 
 
     const order = await Order.findById(orderId).populate('item');
@@ -218,7 +217,6 @@ const updateOrderStatus = async (req, res) => {
 
     order.orderStatus = status;
     
-    // CHANGED: Set cancellation reason if status is cancelled
     if (status === 'cancelled') {
       order.cancellationReason = cancellationReason || 'No reason provided';
     }
@@ -264,7 +262,6 @@ const updateOrderStatus = async (req, res) => {
         
         order.paymentStatus = 'refunded';
 
-        // CHANGED: Added reason to buyer notification
         await Notification.create({
           user: buyer._id,
           type: 'CREDIT_ADDED',
@@ -393,7 +390,35 @@ const dispatchOrder = async (req, res) => {
 
   } catch (error) {
     console.error('Error dispatching order:', error);
-    res.status(500).json({ success: false, message: 'Server error dispatching order' });
+
+    // CHANGED: Yahan JSON error ko parse karke theek message nikal rahe hain
+    let frontendMessage = 'Failed to dispatch order. Please try again.';
+
+    try {
+      let rawError = error.message;
+
+      if (typeof rawError === 'string' && rawError.includes('{') && rawError.includes('}')) {
+        const jsonStart = rawError.indexOf('{');
+        const jsonEnd = rawError.lastIndexOf('}') + 1;
+        const jsonString = rawError.substring(jsonStart, jsonEnd);
+        
+        const parsedError = JSON.parse(jsonString);
+        
+        if (typeof parsedError === 'object' && !Array.isArray(parsedError)) {
+          // Object ke errors nikal kar array banayega
+          const errorDetails = Object.values(parsedError).flat().join(' | ');
+          frontendMessage = `Validation Error: ${errorDetails}`;
+        } else {
+          frontendMessage = rawError;
+        }
+      } else {
+        frontendMessage = rawError || frontendMessage;
+      }
+    } catch (e) {
+      frontendMessage = error.message || frontendMessage;
+    }
+
+    res.status(400).json({ success: false, message: frontendMessage });
   }
 };
 
@@ -422,7 +447,6 @@ const getShippingLabel = async (req, res) => {
 
     const labelUrl = await generateLabel(shipmentId);
     
-    // CHANGED: Explicit check before sending response
     if (!labelUrl) {
       return res.status(400).json({ success: false, message: 'Label is not ready yet. Try again later.' });
     }
@@ -491,6 +515,7 @@ const handleShiprocketWebhook = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error processing webhook' });
   }
 };
+
 const autoCancelOverdueOrders = async () => {
   try {
     let setting = await CreditSetting.findOne();
@@ -558,5 +583,5 @@ module.exports = {
   dispatchOrder, 
   getShippingLabel, 
   handleShiprocketWebhook ,
-autoCancelOverdueOrders
+  autoCancelOverdueOrders
 };

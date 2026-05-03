@@ -42,15 +42,30 @@ const OrdersPage = ({ user }) => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [dispatchData, setDispatchData] = useState({ weight: 0.5, length: 10, width: 10, height: 10 });
   const [dispatching, setDispatching] = useState(false);
+  
+  // NAYA CHANGE: Error show karne ke liye state
+  const [dispatchError, setDispatchError] = useState(''); 
 
   const [downloadingLabelFor, setDownloadingLabelFor] = useState(null);
   
-  // CHANGED: New states for cancellation modal
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
 
+  const [autoCancelHours, setAutoCancelHours] = useState(24);
+
   const navigate = useNavigate();
+
+  const fetchSettings = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/admin/public-credit-settings`);
+      if (res.data.success && res.data.data.autoCancelHours) {
+        setAutoCancelHours(res.data.data.autoCancelHours);
+      }
+    } catch (err) {
+      console.error('Error fetching settings:', err);
+    }
+  };
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -69,6 +84,7 @@ const OrdersPage = ({ user }) => {
 
   useEffect(() => {
     fetchOrders();
+    fetchSettings(); 
   }, [activeTab]);
 
   useEffect(() => {
@@ -84,7 +100,6 @@ const OrdersPage = ({ user }) => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // CHANGED: Update status now accepts an optional reason parameter
   const handleUpdateStatus = async (orderId, newStatus, reason = '') => {
     try {
       const res = await axios.put(`${API_URL}/orders/${orderId}/status`, 
@@ -105,6 +120,8 @@ const OrdersPage = ({ user }) => {
     if (!selectedOrder) return;
     
     setDispatching(true);
+    setDispatchError(''); // NAYA CHANGE: Purana error clear karna
+
     try {
       const res = await axios.post(
         `${API_URL}/orders/${selectedOrder._id}/dispatch`, 
@@ -117,7 +134,8 @@ const OrdersPage = ({ user }) => {
         fetchOrders();
       }
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to dispatch order');
+      // NAYA CHANGE: Alert ki jagah modal me error state set kar rahe hain
+      setDispatchError(err.response?.data?.message || 'Failed to dispatch order. Please check details.');
     } finally {
       setDispatching(false);
     }
@@ -156,6 +174,7 @@ const OrdersPage = ({ user }) => {
        setDownloadingLabelFor(null);
     }
   };
+
   const submitCancelOrder = async (e) => {
     e.preventDefault();
     if (!cancelReason.trim()) {
@@ -354,7 +373,6 @@ const OrdersPage = ({ user }) => {
                       </div>
                     </div>
 
-                    {/* CHANGED: Display Cancellation Reason if cancelled */}
                     {order.orderStatus === 'cancelled' && order.cancellationReason && (
                       <div className="mt-5 bg-red-50 border border-red-100 p-4 rounded-2xl flex items-start gap-3">
                         <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
@@ -415,51 +433,73 @@ const OrdersPage = ({ user }) => {
 
                     {/* Actions for Seller */}
                     {activeTab === 'sales' && order.orderStatus !== 'delivered' && order.orderStatus !== 'shipped' && order.orderStatus !== 'cancelled' && (
-                      <div className="mt-6 flex flex-wrap gap-3 pt-5 border-t border-gray-100">
-                        {order.orderStatus === 'pending' && (
-                          <button 
-                            onClick={() => {
-                              setSelectedOrder(order);
-                              setShowDispatchModal(true);
-                            }}
-                            className="bg-[#6B46C1] hover:bg-[#5a3aa3] text-white px-6 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm active:scale-95 flex items-center gap-2"
-                          >
-                            <Package className="w-4 h-4" /> Ready to Dispatch
-                          </button>
-                        )}
+                      <div className="mt-6 pt-5 border-t border-gray-100">
                         
-                  
                         {order.orderStatus === 'pending' && (
-                          <button 
-                            onClick={() => {
-                              setSelectedOrder(order);
-                              setShowCancelModal(true);
-                            }}
-                            className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 px-6 py-2.5 rounded-xl font-bold text-sm transition-colors active:scale-95"
-                          >
-                            Cancel Order
-                          </button>
-                        )}
-
-                        {order.orderStatus === 'processing' && (
-                          <div className="text-sm font-bold text-purple-600 flex flex-col gap-1 w-full bg-purple-50 rounded-xl border border-purple-100 p-4">
-                             <div className="flex items-center gap-2">
-                                <Clock className="w-4 h-4" /> 
-                                <span>Waiting for Courier Pickup. Status will update automatically.</span>
-                             </div>
-                             <p className="text-xs text-purple-500 font-medium pl-6">
-                               Please download the shipping slip, print it, and attach it to the package.
-                             </p>
+                          <div className="bg-orange-50 border border-orange-100 p-3.5 rounded-xl mb-4 flex items-start gap-3 shadow-sm">
+                            <AlertCircle className="w-5 h-5 text-orange-500 mt-0.5 shrink-0" />
+                            <p className="text-xs text-orange-800 font-medium leading-relaxed">
+                              <span className="font-bold text-orange-900 block mb-1">Action Required:</span> 
+                              Please dispatch this order within <span className="font-bold">{autoCancelHours} hours</span> of receiving it. Failure to dispatch will result in automatic cancellation and a <span className="font-bold text-red-600">50 Aura point penalty</span>.
+                            </p>
                           </div>
                         )}
+                        
+                        <div className="flex flex-wrap gap-3">
+                          {order.orderStatus === 'pending' && (
+                            <button 
+                              onClick={() => {
+                                setSelectedOrder(order);
+                                setDispatchError(''); // Modal open hone par error reset karo
+                                setShowDispatchModal(true);
+                              }}
+                              className="bg-[#6B46C1] hover:bg-[#5a3aa3] text-white px-6 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm active:scale-95 flex items-center gap-2"
+                            >
+                              <Package className="w-4 h-4" /> Ready to Dispatch
+                            </button>
+                          )}
+                          
+                          {order.orderStatus === 'pending' && (
+                            <button 
+                              onClick={() => {
+                                setSelectedOrder(order);
+                                setShowCancelModal(true);
+                              }}
+                              className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 px-6 py-2.5 rounded-xl font-bold text-sm transition-colors active:scale-95"
+                            >
+                              Cancel Order
+                            </button>
+                          )}
+
+                          {order.orderStatus === 'processing' && (
+                            <div className="text-sm font-bold text-purple-600 flex flex-col gap-1 w-full bg-purple-50 rounded-xl border border-purple-100 p-4">
+                               <div className="flex items-center gap-2">
+                                  <Clock className="w-4 h-4" /> 
+                                  <span>Waiting for Courier Pickup. Status will update automatically.</span>
+                               </div>
+                               <p className="text-xs text-purple-500 font-medium pl-6">
+                                 Please download the shipping slip, print it, and attach it to the package.
+                               </p>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                     
                     {/* Info for Buyer */}
                     {activeTab === 'purchases' && order.orderStatus !== 'cancelled' && (
-                      <div className="mt-6 flex items-center gap-3 text-gray-600 text-sm font-medium bg-[#f8f6ff] p-3.5 rounded-xl border border-gray-100">
-                        <Truck className="w-5 h-5 text-[#6B46C1]" />
-                        <span>{order.orderStatus === 'pending' ? 'Waiting for the seller to pack and dispatch your item.' : `Your item is currently ${order.orderStatus}. Tracking will update automatically.`}</span>
+                      <div className="mt-6 flex flex-col gap-2">
+                        <div className="flex items-center gap-3 text-gray-600 text-sm font-medium bg-[#f8f6ff] p-3.5 rounded-xl border border-gray-100">
+                          <Truck className="w-5 h-5 text-[#6B46C1]" />
+                          <span>{order.orderStatus === 'pending' ? 'Waiting for the seller to pack and dispatch your item.' : `Your item is currently ${order.orderStatus}. Tracking will update automatically.`}</span>
+                        </div>
+                        
+                        {order.orderStatus === 'pending' && (
+                          <p className="text-[11px] text-gray-500 px-2 flex items-center gap-1.5 font-medium mt-1">
+                            <Clock className="w-3.5 h-3.5" /> 
+                            If the seller doesn't dispatch within {autoCancelHours} hours, the order will auto-cancel and you'll be fully refunded.
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
@@ -486,7 +526,15 @@ const OrdersPage = ({ user }) => {
             </button>
             
             <h3 className="text-xl font-black text-gray-900 mb-1">Package Details</h3>
-            <p className="text-xs text-gray-500 font-medium mb-6">Enter actual box size for accurate courier assignment.</p>
+            <p className="text-xs text-gray-500 font-medium mb-4">Enter actual box size for accurate courier assignment.</p>
+
+            {/* NAYA CHANGE: Error Display UI in Modal */}
+            {dispatchError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                <p className="text-xs text-red-700 font-bold leading-relaxed">{dispatchError}</p>
+              </div>
+            )}
             
             <form onSubmit={handleDispatchOrder} className="space-y-4">
               <div>
@@ -541,7 +589,6 @@ const OrdersPage = ({ user }) => {
         </div>
       )}
 
-      {/* CHANGED: New Cancel Reason Modal */}
       {showCancelModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-gray-900/60 backdrop-blur-sm">
           <motion.div 
