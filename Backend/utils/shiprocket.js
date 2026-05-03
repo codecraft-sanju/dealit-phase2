@@ -79,17 +79,24 @@ const addPickupLocation = async (seller) => {
 
     const locationName = `SEL_${seller._id.toString().substring(0, 8)}_${Date.now().toString().slice(-4)}`;
 
+    let cleanPhone = seller.phone ? seller.phone.replace(/\D/g, '') : '';
+    if (cleanPhone.length > 10) cleanPhone = cleanPhone.slice(-10);
+
+    const houseNo = seller.pickupAddress?.houseNo || '';
+    const areaStreet = seller.pickupAddress?.areaStreet || '';
+    const finalAddress = `${houseNo} ${areaStreet}`.trim();
+
     const payload = {
       pickup_location: locationName,
       name: seller.full_name,
       email: seller.email,
-      phone: seller.phone,
-      address: `${seller.pickupAddress.houseNo}, ${seller.pickupAddress.areaStreet}`,
-      address_2: seller.pickupAddress.landmark || "",
-      city: seller.pickupAddress.city,
-      state: seller.pickupAddress.state,
+      phone: cleanPhone,
+      address: finalAddress || "Not Provided",
+      address_2: seller.pickupAddress?.landmark || "",
+      city: seller.pickupAddress?.city || "",
+      state: seller.pickupAddress?.state || "",
       country: "India",
-      pin_code: seller.pickupAddress.pincode
+      pin_code: seller.pickupAddress?.pincode || ""
     };
 
     const response = await axios.post(`${SHIPROCKET_BASE_URL}/settings/company/addpickup`, payload, config);
@@ -102,9 +109,15 @@ const addPickupLocation = async (seller) => {
     console.error('Shiprocket Add Pickup Location Error:', error.response?.data || error.message);
     
     // CHANGED: Yahan hum ab silently "Primary" return karne ki jagah error throw kar rahe hain
-    if (error.response && error.response.data && error.response.data.message) {
-      const apiMsg = error.response.data.message;
-      throw new Error(typeof apiMsg === 'string' ? apiMsg : JSON.stringify(apiMsg));
+    if (error.response && error.response.data) {
+      if (error.response.data.errors) {
+        const errorDetails = Object.values(error.response.data.errors).flat().join(' | ');
+        throw new Error(`Validation Error: ${errorDetails}`);
+      }
+      if (error.response.data.message) {
+        const apiMsg = error.response.data.message;
+        throw new Error(typeof apiMsg === 'string' ? apiMsg : JSON.stringify(apiMsg));
+      }
     }
     throw new Error('Failed to add pickup location. Please check your pickup address details.');
   }
