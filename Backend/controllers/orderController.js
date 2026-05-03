@@ -540,7 +540,8 @@ const autoCancelOverdueOrders = async () => {
       order.orderStatus = 'cancelled';
       order.cancellationReason = `System Auto-Cancel: Seller failed to dispatch within ${cancelHours} hours.`;
       order.paymentStatus = 'refunded';
-      await order.save();
+
+      await order.save({ validateBeforeSave: false });
 
       const buyer = order.buyer;
       buyer.account_credits += order.itemPrice;
