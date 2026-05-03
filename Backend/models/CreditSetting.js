@@ -21,8 +21,10 @@ const creditSettingSchema = new mongoose.Schema({
   
   isReferralSystemEnabled: { type: Boolean, default: true },
   referralRewardCredits: { type: Number, default: 40 }, 
-  maxReferralLimit: { type: Number, default: 5 },    
+  maxReferralLimit: { type: Number, default: 5 },   
   milestoneReferralReward: { type: Number, default: 100 }, 
+  auraReward: { type: Number, default: 50 },
+  auraPenalty: { type: Number, default: 50 },
   updated_at: { type: Date, default: Date.now }
 });
 

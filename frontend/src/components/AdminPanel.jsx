@@ -106,7 +106,9 @@ const AdminPanel = ({ user }) => {
     maxReferralLimit: 5,
     milestoneReferralReward: 100,
     shippingMethod: 'flat',
-    flatShippingCost: 60
+    flatShippingCost: 60,
+    auraReward: 50, // NAYA CHANGE
+    auraPenalty: 50 // NAYA CHANGE
   });
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -223,7 +225,6 @@ const AdminPanel = ({ user }) => {
 
   const handleApprove = async (id) => {
     try {
-      // CHANGED: Updated endpoint to hit itemController updateItem function
       await axios.put(`${API_URL}/items/${id}`, { status: 'active' }, { withCredentials: true });
       setData(Array.isArray(data) ? data.filter(item => item._id !== id) : data);
       toast.success('Item approved successfully! 🎉'); 
@@ -242,7 +243,6 @@ const AdminPanel = ({ user }) => {
   const handleRejectSubmit = async (e) => {
     e.preventDefault();
     try {
-      // CHANGED: Updated endpoint to hit itemController updateItem function
       await axios.put(
         `${API_URL}/items/${rejectingItemId}`, 
         { status: 'rejected', rejection_reason: rejectionReason }, 

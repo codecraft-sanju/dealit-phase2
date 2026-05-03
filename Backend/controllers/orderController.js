@@ -223,11 +223,15 @@ const updateOrderStatus = async (req, res) => {
 
     order.updated_at = Date.now();
 
+    let setting = await CreditSetting.findOne();
+    const auraRewardAmount = setting && setting.auraReward !== undefined ? setting.auraReward : 50;
+    const auraPenaltyAmount = setting && setting.auraPenalty !== undefined ? setting.auraPenalty : 50;
+
     if (status === 'delivered' && order.isSellerPaid === false) {
       const seller = await User.findById(order.seller);
       if (seller) {
         seller.account_credits += order.itemPrice; 
-        seller.aura_points = (seller.aura_points || 0) + 50; 
+        seller.aura_points = (seller.aura_points || 0) + auraRewardAmount; 
         await seller.save();
         
         order.isSellerPaid = true;
@@ -236,14 +240,14 @@ const updateOrderStatus = async (req, res) => {
           user: seller._id,
           type: 'CREDIT_ADDED',
           title: 'Payment Released! 💰',
-          message: `Order delivered! ${order.itemPrice} credits and +50 Aura have been added to your wallet.`,
+          message: `Order delivered! ${order.itemPrice} credits and +${auraRewardAmount} Aura have been added to your wallet.`,
           metadata: { amount: order.itemPrice, reason: 'escrow_release', referenceId: order._id }
         });
 
         await AuraLog.create({
           user: seller._id,
           reason: "Successful Trade Delivered",
-          points: 50,
+          points: auraRewardAmount,
           type: "positive"
         });
 
@@ -272,13 +276,13 @@ const updateOrderStatus = async (req, res) => {
         
         const seller = await User.findById(order.seller);
         if (seller) {
-          seller.aura_points = Math.max(0, (seller.aura_points || 0) - 50); 
+          seller.aura_points = Math.max(0, (seller.aura_points || 0) - auraPenaltyAmount); 
           await seller.save();
 
           await AuraLog.create({
             user: seller._id,
             reason: "Cancelled deal after accepting",
-            points: -50,
+            points: -auraPenaltyAmount,
             type: "negative"
           });
 
@@ -286,7 +290,7 @@ const updateOrderStatus = async (req, res) => {
             user: seller._id,
             type: 'AURA_UPDATE', 
             title: 'Aura Penalty ⚠️',
-            message: `50 Aura points have been deducted due to the cancelled deal.`,
+            message: `${auraPenaltyAmount} Aura points have been deducted due to the cancelled deal.`,
             metadata: { reason: 'aura_penalty', referenceId: order._id }
           });
         }
@@ -468,6 +472,9 @@ const handleShiprocketWebhook = async (req, res) => {
     const order = await Order.findOne({ 'trackingDetails.awb_code': awb }).populate('item');
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
+    let setting = await CreditSetting.findOne();
+    const auraRewardAmount = setting && setting.auraReward !== undefined ? setting.auraReward : 50;
+
     if (current_status === 'DELIVERED' && order.orderStatus !== 'delivered') {
       order.orderStatus = 'delivered';
       order.updated_at = Date.now();
@@ -476,7 +483,7 @@ const handleShiprocketWebhook = async (req, res) => {
         const seller = await User.findById(order.seller);
         if (seller) {
           seller.account_credits += order.itemPrice; 
-          seller.aura_points = (seller.aura_points || 0) + 50; 
+          seller.aura_points = (seller.aura_points || 0) + auraRewardAmount; 
           await seller.save();
           
           order.isSellerPaid = true;
@@ -485,14 +492,14 @@ const handleShiprocketWebhook = async (req, res) => {
             user: seller._id,
             type: 'CREDIT_ADDED',
             title: 'Payment Released! 💰',
-            message: `Order successfully delivered! ${order.itemPrice} credits and +50 Aura have been credited to your account.`,
+            message: `Order successfully delivered! ${order.itemPrice} credits and +${auraRewardAmount} Aura have been credited to your account.`,
             metadata: { amount: order.itemPrice, reason: 'escrow_release', referenceId: order._id }
           });
 
           await AuraLog.create({
             user: seller._id,
             reason: "Successful Trade Delivered",
-            points: 50,
+            points: auraRewardAmount,
             type: "positive"
           });
 
@@ -520,6 +527,8 @@ const autoCancelOverdueOrders = async () => {
   try {
     let setting = await CreditSetting.findOne();
     const cancelHours = setting && setting.autoCancelHours ? setting.autoCancelHours : 24;
+    const auraPenaltyAmount = setting && setting.auraPenalty !== undefined ? setting.auraPenalty : 50;
+    
     const cancelThreshold = new Date(Date.now() - cancelHours * 60 * 60 * 1000);
 
     const overdueOrders = await Order.find({
@@ -546,13 +555,13 @@ const autoCancelOverdueOrders = async () => {
       });
 
       const seller = order.seller;
-      seller.aura_points = Math.max(0, (seller.aura_points || 0) - 50);
+      seller.aura_points = Math.max(0, (seller.aura_points || 0) - auraPenaltyAmount);
       await seller.save();
 
       await AuraLog.create({
         user: seller._id,
         reason: "Auto-cancelled: Failed to dispatch order on time",
-        points: -50,
+        points: -auraPenaltyAmount,
         type: "negative"
       });
 
@@ -560,7 +569,7 @@ const autoCancelOverdueOrders = async () => {
         user: seller._id,
         type: 'AURA_UPDATE',
         title: 'Aura Penalty ⚠️',
-        message: `50 Aura points deducted. You failed to dispatch the order within ${cancelHours} hours.`,
+        message: `${auraPenaltyAmount} Aura points deducted. You failed to dispatch the order within ${cancelHours} hours.`,
         metadata: { reason: 'auto_cancel_penalty', referenceId: order._id }
       });
 

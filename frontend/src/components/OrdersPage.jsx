@@ -53,14 +53,22 @@ const OrdersPage = ({ user }) => {
   const [cancelling, setCancelling] = useState(false);
 
   const [autoCancelHours, setAutoCancelHours] = useState(24);
+  const [auraPenalty, setAuraPenalty] = useState(50); // NAYA CHANGE: Added state for dynamic penalty
 
   const navigate = useNavigate();
 
   const fetchSettings = async () => {
     try {
-      const res = await axios.get(`${API_URL}/admin/public-credit-settings`);
-      if (res.data.success && res.data.data.autoCancelHours) {
-        setAutoCancelHours(res.data.data.autoCancelHours);
+      // CHANGED: Fixed the API endpoint to match the backend route
+      const res = await axios.get(`${API_URL}/admin/public-settings`);
+      if (res.data.success) {
+        if (res.data.data.autoCancelHours) {
+          setAutoCancelHours(res.data.data.autoCancelHours);
+        }
+        // NAYA CHANGE: Backend se aayi hui aura penalty state me set karna
+        if (res.data.data.auraPenalty !== undefined) {
+          setAuraPenalty(res.data.data.auraPenalty);
+        }
       }
     } catch (err) {
       console.error('Error fetching settings:', err);
@@ -440,7 +448,7 @@ const OrdersPage = ({ user }) => {
                             <AlertCircle className="w-5 h-5 text-orange-500 mt-0.5 shrink-0" />
                             <p className="text-xs text-orange-800 font-medium leading-relaxed">
                               <span className="font-bold text-orange-900 block mb-1">Action Required:</span> 
-                              Please dispatch this order within <span className="font-bold">{autoCancelHours} hours</span> of receiving it. Failure to dispatch will result in automatic cancellation and a <span className="font-bold text-red-600">50 Aura point penalty</span>.
+                              Please dispatch this order within <span className="font-bold">{autoCancelHours} hours</span> of receiving it. Failure to dispatch will result in automatic cancellation and a <span className="font-bold text-red-600">{auraPenalty} Aura point penalty</span>.
                             </p>
                           </div>
                         )}
@@ -450,7 +458,7 @@ const OrdersPage = ({ user }) => {
                             <button 
                               onClick={() => {
                                 setSelectedOrder(order);
-                                setDispatchError(''); // Modal open hone par error reset karo
+                                setDispatchError(''); 
                                 setShowDispatchModal(true);
                               }}
                               className="bg-[#6B46C1] hover:bg-[#5a3aa3] text-white px-6 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm active:scale-95 flex items-center gap-2"

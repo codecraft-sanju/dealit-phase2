@@ -155,7 +155,7 @@ const updateItemStatus = async (req, res) => {
       }
 
       if (setting.isCreditSystemEnabled) {
-       
+        
         const activeItemsCount = await Item.countDocuments({ owner: item.owner, status: 'active' });
 
         if (activeItemsCount <= setting.maxListingsRewarded) {
@@ -336,14 +336,16 @@ const updateCreditSettings = async (req, res) => {
       maxListingsRewarded, 
       maxAllowedListings,
       isWelcomeBonusEnabled, 
-      welcomeBonusAmount,    
+      welcomeBonusAmount,   
       shippingMethod,        
       flatShippingCost,      
       isReferralSystemEnabled,
       referralRewardCredits,
       maxReferralLimit,
       milestoneReferralReward,
-      autoCancelHours // CHANGE: Added autoCancelHours in destructuring
+      autoCancelHours,
+      auraReward,
+      auraPenalty
     } = req.body;
     
     let setting = await CreditSetting.findOne();
@@ -368,8 +370,10 @@ const updateCreditSettings = async (req, res) => {
     if (maxReferralLimit !== undefined) setting.maxReferralLimit = maxReferralLimit;
     if (milestoneReferralReward !== undefined) setting.milestoneReferralReward = milestoneReferralReward;
     
-    // CHANGE: Added assignment for autoCancelHours
     if (autoCancelHours !== undefined) setting.autoCancelHours = autoCancelHours;
+
+    if (auraReward !== undefined) setting.auraReward = auraReward;
+    if (auraPenalty !== undefined) setting.auraPenalty = auraPenalty;
 
     setting.updated_at = Date.now();
 
@@ -388,9 +392,8 @@ const updateCreditSettings = async (req, res) => {
 
 const getPublicCreditSettings = async (req, res) => {
   try {
-    // CHANGED: Added autoCancelHours to the .select() query
     let setting = await CreditSetting.findOne().select(
-      'isReferralSystemEnabled referralRewardCredits maxAllowedListings maxReferralLimit milestoneReferralReward isWelcomeBonusEnabled welcomeBonusAmount shippingMethod flatShippingCost autoCancelHours'
+      'isReferralSystemEnabled referralRewardCredits maxAllowedListings maxReferralLimit milestoneReferralReward isWelcomeBonusEnabled welcomeBonusAmount shippingMethod flatShippingCost autoCancelHours auraReward auraPenalty'
     );
     
     if (!setting) {
@@ -404,7 +407,9 @@ const getPublicCreditSettings = async (req, res) => {
         welcomeBonusAmount: 50,
         shippingMethod: 'flat', 
         flatShippingCost: 60,
-        autoCancelHours: 24
+        autoCancelHours: 24,
+        auraReward: 50,
+        auraPenalty: 50
       };
     }
     res.status(200).json({ success: true, data: setting });
@@ -535,7 +540,7 @@ const getDashboardStats = async (req, res) => {
     const deliveredOrders = await Order.countDocuments({ orderStatus: 'delivered' });
     const pendingOrders = await Order.countDocuments({ orderStatus: 'pending' });
 
-    // CALCULATION FOR SHIPROCKET TRACKING
+    
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
@@ -644,7 +649,7 @@ const getDashboardStats = async (req, res) => {
         revenue: totalRevenue,
         recentUsers,
         performanceData, 
-        categoryData,    
+        categoryData,   
         recentActivity   
       }
     });
