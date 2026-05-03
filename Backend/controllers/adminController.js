@@ -342,7 +342,8 @@ const updateCreditSettings = async (req, res) => {
       isReferralSystemEnabled,
       referralRewardCredits,
       maxReferralLimit,
-      milestoneReferralReward
+      milestoneReferralReward,
+      autoCancelHours // CHANGE: Added autoCancelHours in destructuring
     } = req.body;
     
     let setting = await CreditSetting.findOne();
@@ -367,6 +368,9 @@ const updateCreditSettings = async (req, res) => {
     if (maxReferralLimit !== undefined) setting.maxReferralLimit = maxReferralLimit;
     if (milestoneReferralReward !== undefined) setting.milestoneReferralReward = milestoneReferralReward;
     
+    // CHANGE: Added assignment for autoCancelHours
+    if (autoCancelHours !== undefined) setting.autoCancelHours = autoCancelHours;
+
     setting.updated_at = Date.now();
 
     await setting.save();
@@ -384,8 +388,9 @@ const updateCreditSettings = async (req, res) => {
 
 const getPublicCreditSettings = async (req, res) => {
   try {
+    // CHANGED: Added autoCancelHours to the .select() query
     let setting = await CreditSetting.findOne().select(
-      'isReferralSystemEnabled referralRewardCredits maxAllowedListings maxReferralLimit milestoneReferralReward isWelcomeBonusEnabled welcomeBonusAmount shippingMethod flatShippingCost'
+      'isReferralSystemEnabled referralRewardCredits maxAllowedListings maxReferralLimit milestoneReferralReward isWelcomeBonusEnabled welcomeBonusAmount shippingMethod flatShippingCost autoCancelHours'
     );
     
     if (!setting) {
@@ -398,7 +403,8 @@ const getPublicCreditSettings = async (req, res) => {
         isWelcomeBonusEnabled: true, 
         welcomeBonusAmount: 50,
         shippingMethod: 'flat', 
-        flatShippingCost: 60
+        flatShippingCost: 60,
+        autoCancelHours: 24
       };
     }
     res.status(200).json({ success: true, data: setting });

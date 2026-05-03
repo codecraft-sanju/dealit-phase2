@@ -428,7 +428,7 @@ const OrdersPage = ({ user }) => {
                           </button>
                         )}
                         
-                        {/* CHANGED: Now opens the Cancel Reason Modal */}
+                  
                         {order.orderStatus === 'pending' && (
                           <button 
                             onClick={() => {

@@ -491,6 +491,63 @@ const handleShiprocketWebhook = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error processing webhook' });
   }
 };
+const autoCancelOverdueOrders = async () => {
+  try {
+    let setting = await CreditSetting.findOne();
+    const cancelHours = setting && setting.autoCancelHours ? setting.autoCancelHours : 24;
+    const cancelThreshold = new Date(Date.now() - cancelHours * 60 * 60 * 1000);
+
+    const overdueOrders = await Order.find({
+      orderStatus: 'pending',
+      created_at: { $lt: cancelThreshold }
+    }).populate('buyer seller item');
+
+    for (const order of overdueOrders) {
+      order.orderStatus = 'cancelled';
+      order.cancellationReason = `System Auto-Cancel: Seller failed to dispatch within ${cancelHours} hours.`;
+      order.paymentStatus = 'refunded';
+      await order.save();
+
+      const buyer = order.buyer;
+      buyer.account_credits += order.itemPrice;
+      await buyer.save();
+
+      await Notification.create({
+        user: buyer._id,
+        type: 'CREDIT_ADDED',
+        title: 'Order Auto-Cancelled & Refunded 🔄',
+        message: `The seller failed to dispatch your order on time. Your ${order.itemPrice} credits have been refunded.`,
+        metadata: { amount: order.itemPrice, reason: 'auto_cancel_refund', referenceId: order._id }
+      });
+
+      const seller = order.seller;
+      seller.aura_points = Math.max(0, (seller.aura_points || 0) - 50);
+      await seller.save();
+
+      await AuraLog.create({
+        user: seller._id,
+        reason: "Auto-cancelled: Failed to dispatch order on time",
+        points: -50,
+        type: "negative"
+      });
+
+      await Notification.create({
+        user: seller._id,
+        type: 'AURA_UPDATE',
+        title: 'Aura Penalty ⚠️',
+        message: `50 Aura points deducted. You failed to dispatch the order within ${cancelHours} hours.`,
+        metadata: { reason: 'auto_cancel_penalty', referenceId: order._id }
+      });
+
+      if (order.item) {
+        order.item.status = 'active';
+        await order.item.save();
+      }
+    }
+  } catch (error) {
+    console.error(error);
+  }
+};
 
 module.exports = {
   calculateShippingCost, 
@@ -500,5 +557,6 @@ module.exports = {
   updateOrderStatus,
   dispatchOrder, 
   getShippingLabel, 
-  handleShiprocketWebhook 
+  handleShiprocketWebhook ,
+autoCancelOverdueOrders
 };

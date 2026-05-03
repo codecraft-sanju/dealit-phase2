@@ -21,7 +21,6 @@ router.get('/my-orders', protect, getMyOrders);     // For Buyer
 router.get('/seller-orders', protect, getSellerOrders); // For Seller
 router.post('/:orderId/dispatch', protect, dispatchOrder); 
 router.post('/:orderId/generate-label', protect, getShippingLabel); 
-
 router.put('/:orderId/status', protect, updateOrderStatus); 
 
 module.exports = router;

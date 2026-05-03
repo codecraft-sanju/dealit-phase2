@@ -18,6 +18,9 @@ const notificationRoutes = require('./routes/notificationRoutes');
 const { verifyShiprocketConnection } = require('./utils/shiprocket');
 const { verifyRazorpayConnection } = require('./controllers/paymentController');
 
+const cron = require('node-cron');
+const { autoCancelOverdueOrders } = require('./controllers/orderController');
+
 const app = express();
 
 connectDB();
@@ -54,7 +57,7 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
-// <-- NAYA CHANGE END -->
+
 
 app.use('/api/users', userRoutes);
 app.use('/api/items', itemRoutes);
@@ -75,4 +78,10 @@ app.listen(PORT, async () => {
   
   verifyRazorpayConnection();
   await verifyShiprocketConnection();
+
+  //Added cron job to run autoCancelOverdueOrders every hour
+  cron.schedule('0 * * * *', async () => {
+    console.log('Running auto-cancel overdue orders cron job...');
+    await autoCancelOverdueOrders();
+  });
 });

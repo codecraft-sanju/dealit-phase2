@@ -1,5 +1,5 @@
 import React from 'react';
-import { Coins, ToggleRight, ToggleLeft, Package, List, Gift, Users, Target, Truck, Zap ,IndianRupee} from 'lucide-react';
+import { Coins, ToggleRight, ToggleLeft, Package, List, Gift, Users, Target, Truck, Zap, IndianRupee, Clock } from 'lucide-react';
 
 const SettingsPanel = ({ creditSettings, setCreditSettings, handleSaveSettings, updating }) => {
   return (
@@ -281,6 +281,40 @@ const SettingsPanel = ({ creditSettings, setCreditSettings, handleSaveSettings, 
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+
+          <hr className="border-white/5" />
+
+          {/* ORDER MANAGEMENT SECTION */}
+          <div className="bg-white/[0.02] p-5 md:p-6 sm:p-8 rounded-2xl md:rounded-3xl border border-white/5 flex flex-col justify-between mt-6">
+            <div className="mb-5 md:mb-6">
+              <p className="font-bold text-white text-base md:text-lg tracking-tight">Order Management</p>
+              <p className="text-[10px] md:text-xs text-gray-400 mt-0.5 md:mt-1 max-w-md leading-relaxed">Configure automated rules for orders on the platform.</p>
+            </div>
+
+            <div className="bg-white/[0.01] p-4 md:p-6 rounded-xl md:rounded-2xl border border-white/5 shadow-inner">
+              <div className="space-y-2 md:space-y-3 max-w-sm">
+                <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                  <Clock className="w-3.5 h-3.5 text-red-400" /> Auto-Cancel Timer (Hours)
+                </label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
+                    <span className="text-gray-400 text-xs font-bold group-focus-within:text-red-400 transition-colors">Hr</span>
+                  </div>
+                  <input 
+                    type="number" 
+                    required 
+                    min="1" 
+                    value={creditSettings.autoCancelHours !== undefined ? creditSettings.autoCancelHours : 24} 
+                    onChange={(e) => setCreditSettings({...creditSettings, autoCancelHours: Number(e.target.value)})} 
+                    className="w-full bg-black/20 border border-white/10 rounded-xl pl-10 md:pl-12 pr-3 md:pr-4 py-3 md:py-3.5 text-white text-xs md:text-sm font-bold focus:outline-none focus:border-red-500/50 focus:bg-black/40 transition-all shadow-inner" 
+                  />
+                </div>
+                <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider mt-1.5 md:mt-2 leading-relaxed">
+                  Pending orders older than this will be auto-cancelled, buyer refunded, and seller penalized. Default is 24.
+                </p>
+              </div>
             </div>
           </div>
 

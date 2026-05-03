@@ -24,6 +24,7 @@
     "groq-sdk": "^1.1.2",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.3.3",
+    "node-cron": "^4.2.1",
     "nodemailer": "^8.0.4",
     "razorpay": "^2.9.6"
   }

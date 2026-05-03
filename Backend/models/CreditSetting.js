@@ -13,6 +13,10 @@ const creditSettingSchema = new mongoose.Schema({
     enum: ['flat', 'dynamic'], 
     default: 'flat' 
   },
+  autoCancelHours: { 
+    type: Number, 
+    default: 24 
+  },
   flatShippingCost: { type: Number, default: 60 },
   
   isReferralSystemEnabled: { type: Boolean, default: true },
