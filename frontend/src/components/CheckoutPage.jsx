@@ -34,7 +34,9 @@ const CheckoutPage = ({ user, setUser }) => {
   const [formData, setFormData] = useState({
     fullName: user?.full_name || '',
     phone: user?.phone || '',
-    addressLine: user?.addressLine || '',
+    houseNo: '',
+    areaStreet: '',
+    landmark: '',
     city: user?.city || '',
     state: user?.state || '',
     pincode: user?.pincode || ''
@@ -128,7 +130,9 @@ const CheckoutPage = ({ user, setUser }) => {
         const updatedUser = {
           ...user,
           account_credits: user.account_credits - itemPrice,
-          addressLine: formData.addressLine,
+          houseNo: formData.houseNo,
+          areaStreet: formData.areaStreet,
+          landmark: formData.landmark,
           city: formData.city,
           state: formData.state,
           pincode: formData.pincode,
@@ -151,6 +155,12 @@ const CheckoutPage = ({ user, setUser }) => {
   const handlePlaceOrder = async (e) => {
     e.preventDefault();
     if (!hasEnoughCredits) return;
+
+    // CHANGED: Check for at least one digit in house number
+    if (!/\d/.test(formData.houseNo)) {
+      setError('Please include at least one number in your House No. (e.g., Flat 4B, Plot 12)');
+      return;
+    }
     
     setProcessing(true);
     setError('');
@@ -328,10 +338,22 @@ const CheckoutPage = ({ user, setUser }) => {
                     className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-gray-800 placeholder-gray-400 font-medium" />
                 </div>
 
-                <div className="relative">
-                  <Home className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
-                  <textarea name="addressLine" placeholder="House No, Area, Street..." required rows="2" value={formData.addressLine} onChange={handleInputChange}
-                    className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-gray-800 placeholder-gray-400 font-medium resize-none"></textarea>
+                <div className="space-y-3">
+                  <div className="relative">
+                    <Home className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
+                    <input type="text" name="houseNo" placeholder="House No. / Flat No. / Road No." required value={formData.houseNo} onChange={handleInputChange}
+                      className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-gray-800 placeholder-gray-400 font-medium" />
+                  </div>
+                  <div className="relative">
+                    <MapPin className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
+                    <input type="text" name="areaStreet" placeholder="Area, Street, Sector" required value={formData.areaStreet} onChange={handleInputChange}
+                      className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-gray-800 placeholder-gray-400 font-medium" />
+                  </div>
+                  <div className="relative">
+                    <MapPin className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400 opacity-50" />
+                    <input type="text" name="landmark" placeholder="Landmark (Optional)" value={formData.landmark} onChange={handleInputChange}
+                      className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-gray-800 placeholder-gray-400 font-medium" />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

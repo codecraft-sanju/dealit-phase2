@@ -396,7 +396,7 @@ const updateUserProfile = async (req, res) => {
     if (phone) user.phone = phone;
     if (city) user.city = city;
     
-    // <-- CHANGED: Update to save the new address structure correctly
+  
     if (pickupAddress) {
       user.pickupAddress = {
         houseNo: pickupAddress.houseNo || user.pickupAddress?.houseNo,

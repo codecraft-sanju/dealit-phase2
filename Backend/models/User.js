@@ -16,7 +16,15 @@ const userSchema = new mongoose.Schema({
   wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item' }],
   
   pickupAddress: {
-    houseNo: { type: String },
+    houseNo: { 
+      type: String,
+      validate: {
+        validator: function(v) {
+          return !v || /\d/.test(v);
+        },
+        message: 'House No must contain at least one digit for shipping purposes.'
+      }
+    },
     areaStreet: { type: String },
     landmark: { type: String },
     city: { type: String },

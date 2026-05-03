@@ -150,6 +150,13 @@ const ProfilePage = ({ user, onLogout }) => {
 
   const handleEditSubmit = (e) => {
     e.preventDefault();
+    
+    // CHANGED: Check for at least one digit in pickup house number if provided
+    if (editForm.pickupAddress.houseNo && !/\d/.test(editForm.pickupAddress.houseNo)) {
+      alert('Please include at least one number in your House No. (e.g., Flat 4B, Plot 12) for Shiprocket pickups.');
+      return;
+    }
+
     // <-- CHANGED: Trigger mutation -->
     editProfileMutation.mutate(editForm);
   };
@@ -295,7 +302,7 @@ const ProfilePage = ({ user, onLogout }) => {
                 <h2 className="text-xl font-bold text-gray-900 leading-tight">{profileData?.full_name}</h2>
                 <p className="text-sm text-gray-500 font-medium mb-3">{profileData?.email}</p>
 
-               
+                
                 <div className="mt-1 w-full flex flex-col items-center">
                   
                   {/* Role Badge */}
@@ -319,7 +326,7 @@ const ProfilePage = ({ user, onLogout }) => {
                     </div>
                   </div>
 
-                 
+                  
                   <Link to="/aura" className="w-full bg-white border border-gray-100 rounded-2xl p-4 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow cursor-pointer block">
                     <div className="flex items-center gap-3">
                       <div className="bg-[#6B46C1] p-3 rounded-xl flex-shrink-0 shadow-sm border border-[#5a3aa3]">

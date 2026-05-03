@@ -86,7 +86,7 @@ const addPickupLocation = async (seller) => {
       name: seller.full_name,
       email: seller.email,
       phone: seller.phone,
-      // CHANGED: Restructured to force Shiprocket to accept the address
+   
       address: `${seller.pickupAddress.houseNo}, ${seller.pickupAddress.areaStreet}`,
       address_2: seller.pickupAddress.landmark || "",
       city: seller.pickupAddress.city,

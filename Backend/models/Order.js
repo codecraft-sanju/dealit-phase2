@@ -12,8 +12,16 @@ const orderSchema = new mongoose.Schema({
   shippingAddress: {
     fullName: { type: String, required: true },
     phone: { type: String, required: true },
-    // CHANGED: Replaced addressLine with specific fields to satisfy Shiprocket
-    houseNo: { type: String, required: true },
+    houseNo: { 
+      type: String, 
+      required: true,
+      validate: {
+        validator: function(v) {
+          return /\d/.test(v);
+        },
+        message: 'House No must contain at least one digit for shipping purposes.'
+      }
+    },
     areaStreet: { type: String, required: true },
     landmark: { type: String, default: '' },
     city: { type: String, required: true },
