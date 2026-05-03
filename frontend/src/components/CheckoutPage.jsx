@@ -70,7 +70,7 @@ const CheckoutPage = ({ user, setUser }) => {
         }
 
         // Fetch settings for shipping and auto-cancel time
-        const settingsRes = await axios.get(`${API_URL}/admin/public-credit-settings`);
+        const settingsRes = await axios.get(`${API_URL}/admin/public-settings`);
         if (settingsRes.data.success) {
           setShippingCost(settingsRes.data.data.flatShippingCost !== undefined ? settingsRes.data.data.flatShippingCost : 60);
           // CHANGED: Update the autoCancelHours state
