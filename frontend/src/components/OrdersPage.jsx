@@ -123,7 +123,7 @@ const OrdersPage = ({ user }) => {
     }
   };
 
-  const handleDownloadLabel = async (orderId) => {
+ const handleDownloadLabel = async (orderId) => {
     setDownloadingLabelFor(orderId);
     try {
       const res = await axios.post(
@@ -132,13 +132,27 @@ const OrdersPage = ({ user }) => {
         { withCredentials: true }
       );
 
-      if (res.data.success && res.data.labelUrl) {
-         window.open(res.data.labelUrl, '_blank');
-         fetchOrders(); 
+      // CHANGED: Added else conditions to catch silent failures
+      if (res.data.success) {
+         if (res.data.labelUrl) {
+            const link = document.createElement('a');
+            link.href = res.data.labelUrl;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            fetchOrders(); 
+         } else {
+            alert('Shiprocket is still processing the label. Please try again in 1 minute.');
+         }
+      } else {
+         alert(res.data.message || 'Failed to generate label.');
       }
     } catch (err) {
        console.error("Label Error:", err);
-       alert(err.response?.data?.message || 'Failed to generate shipping label. Try again later.');
+       alert(err.response?.data?.message || 'Failed to generate shipping label. Ensure you have balance in Shiprocket wallet.');
     } finally {
        setDownloadingLabelFor(null);
     }

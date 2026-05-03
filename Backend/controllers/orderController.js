@@ -397,6 +397,7 @@ const dispatchOrder = async (req, res) => {
   }
 };
 
+
 const getShippingLabel = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -420,6 +421,11 @@ const getShippingLabel = async (req, res) => {
     }
 
     const labelUrl = await generateLabel(shipmentId);
+    
+    // CHANGED: Explicit check before sending response
+    if (!labelUrl) {
+      return res.status(400).json({ success: false, message: 'Label is not ready yet. Try again later.' });
+    }
 
     res.status(200).json({ success: true, labelUrl, awb_code: order.trackingDetails.awb_code });
 
@@ -428,6 +434,7 @@ const getShippingLabel = async (req, res) => {
      res.status(500).json({ success: false, message: error.message || 'Server error generating label' });
   }
 };
+
 
 const handleShiprocketWebhook = async (req, res) => {
   try {

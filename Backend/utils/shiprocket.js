@@ -1,8 +1,6 @@
 const axios = require('axios');
 const SHIPROCKET_BASE_URL = 'https://apiv2.shiprocket.in/v1/external';
 
-// <-- NAYA CHANGE: TEST MODE FLAG -->
-// Agar .env mein SHIPROCKET_TEST_MODE=true hai, toh real order place nahi hoga.
 const IS_TEST_MODE = process.env.SHIPROCKET_TEST_MODE === 'true'; 
 
 const getShiprocketToken = async () => {
@@ -31,7 +29,7 @@ const verifyShiprocketConnection = async () => {
 };
 
 const checkServiceability = async (pickupPincode, deliveryPincode, weight, dimensions) => {
-  if (IS_TEST_MODE) return 60; // Dummy price for testing
+  if (IS_TEST_MODE) return 60;
 
   try {
     const token = await getShiprocketToken();
@@ -71,7 +69,7 @@ const checkServiceability = async (pickupPincode, deliveryPincode, weight, dimen
 };
 
 const addPickupLocation = async (seller) => {
-  if (IS_TEST_MODE) return "Primary"; // Skip adding location in test mode
+  if (IS_TEST_MODE) return "Primary";
 
   try {
     const token = await getShiprocketToken();
@@ -86,7 +84,6 @@ const addPickupLocation = async (seller) => {
       name: seller.full_name,
       email: seller.email,
       phone: seller.phone,
-   
       address: `${seller.pickupAddress.houseNo}, ${seller.pickupAddress.areaStreet}`,
       address_2: seller.pickupAddress.landmark || "",
       city: seller.pickupAddress.city,
@@ -109,20 +106,12 @@ const addPickupLocation = async (seller) => {
 
 const createShiprocketOrder = async (orderData) => {
   if (IS_TEST_MODE) {
-    console.log(" TEST MODE ON: Skipping real Shiprocket order creation.");
-    return {
-      order_id: "TEST_ORD_" + Date.now(),
-      shipment_id: "TEST_SHIP_" + Date.now(),
-      status: "NEW"
-    };
+    return { order_id: "TEST_ORD_" + Date.now(), shipment_id: "TEST_SHIP_" + Date.now(), status: "NEW" };
   }
 
   try {
     const token = await getShiprocketToken();
-    const config = {
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
-    };
-
+    const config = { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } };
     const response = await axios.post(`${SHIPROCKET_BASE_URL}/orders/create/adhoc`, orderData, config);
     return response.data;
   } catch (error) {
@@ -132,41 +121,50 @@ const createShiprocketOrder = async (orderData) => {
 };
 
 const generateAWB = async (shipment_id) => {
-  if (IS_TEST_MODE) {
-    return { awb_code: "TEST_AWB_987654321", courier_name: "Test Express" };
-  }
+  if (IS_TEST_MODE) return { awb_code: "TEST_AWB_987654321", courier_name: "Test Express" };
 
   try {
     const token = await getShiprocketToken();
     const response = await axios.post(
       `${SHIPROCKET_BASE_URL}/courier/assign/awb`,
-      { shipment_id: shipment_id },
+      { shipment_id: parseInt(shipment_id) }, // CHANGED: Forced to integer
       { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } }
     );
-    return response.data.response.data; // Contains awb_code, courier_name, etc.
+    
+    // CHANGED: Strict error checking for Shiprocket internal failures
+    if (response.data.awb_assign_status === 0 || !response.data.response?.data) {
+      console.error("Shiprocket AWB Assignment Failed internally:", response.data);
+      throw new Error(response.data.message || 'Shiprocket could not assign AWB. Low wallet balance or invalid route.');
+    }
+
+    return response.data.response.data; 
   } catch (error) {
     console.error('Shiprocket Generate AWB Error:', error.response?.data || error.message);
-    throw new Error('Failed to generate AWB tracking number.');
+    throw new Error(error.response?.data?.message || error.message || 'Failed to generate AWB tracking number.');
   }
 };
 
-
 const generateLabel = async (shipment_id) => {
-  if (IS_TEST_MODE) {
-    return "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"; // Dummy PDF link
-  }
+  if (IS_TEST_MODE) return "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"; 
 
   try {
     const token = await getShiprocketToken();
     const response = await axios.post(
       `${SHIPROCKET_BASE_URL}/courier/generate/label`,
-      { shipment_id: [shipment_id] }, // Shiprocket expects an array of shipment IDs
+      { shipment_id: [parseInt(shipment_id)] }, // CHANGED: Array of integers
       { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } }
     );
-    return response.data.label_url; // Returns the URL to download the PDF
+
+    // CHANGED: Strict check. If Shiprocket gives 200 OK but no URL, throw error!
+    if (response.data.label_created === 0 || !response.data.label_url) {
+      console.error("Shiprocket Label generation failed internally:", response.data);
+      throw new Error(response.data.response || 'Shiprocket is still processing the label. Please try again in 1-2 minutes.');
+    }
+
+    return response.data.label_url; 
   } catch (error) {
     console.error('Shiprocket Generate Label Error:', error.response?.data || error.message);
-    throw new Error('Failed to generate Shipping Label.');
+    throw new Error(error.response?.data?.message || error.message || 'Failed to generate Shipping Label.');
   }
 };
 
