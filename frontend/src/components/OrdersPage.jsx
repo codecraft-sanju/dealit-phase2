@@ -132,7 +132,6 @@ const OrdersPage = ({ user }) => {
         { withCredentials: true }
       );
 
-      // CHANGED: Added else conditions to catch silent failures
       if (res.data.success) {
          if (res.data.labelUrl) {
             const link = document.createElement('a');
@@ -157,8 +156,6 @@ const OrdersPage = ({ user }) => {
        setDownloadingLabelFor(null);
     }
   };
-
-  // CHANGED: Logic to handle submitting the cancel form
   const submitCancelOrder = async (e) => {
     e.preventDefault();
     if (!cancelReason.trim()) {
