@@ -436,7 +436,7 @@ const ProfilePage = ({ user, onLogout }) => {
                     { to: "/wallet", icon: Wallet, title: "My Wallet", subtitle: "Credit Balance & Purchases" },
                     /* <-- NAYA CHANGE: Removed the Aura Score list item from here --> */
                     { to: "/notifications", icon: Bell, title: "Notifications", subtitle: "Alert Settings", iconClass: "fill-[#6B46C1]" },      
-                    { to: "#", icon: HelpCircle, title: "Help & Support", subtitle: "Get Assistance", iconClass: "fill-[#6B46C1]/20", noBorder: true }
+                    { to: "/help-support", icon: HelpCircle, title: "Help & Support", subtitle: "Get Assistance", iconClass: "fill-[#6B46C1]/20", noBorder: true }
                   ].map((item, index) => (
                     <MotionLink 
                       key={index}

@@ -10,7 +10,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
 
-// SMART LAZY LOADER: Chunk error ko catch karke page reload karega
 const smartLazy = (importFunc) => {
   return lazy(() =>
     importFunc().catch((error) => {
@@ -26,11 +25,11 @@ const IosInstallPopup = smartLazy(() => import('./components/IosInstallPopup'));
 const DesktopLandingPage = smartLazy(() => import('./Desktop/DesktopLandingPage'));
 const PrivacyPage = smartLazy(() => import('./components/PrivacyPage'));
 
-/* NEW CHANGES: Added policy page imports */
+
 const TermsPage = smartLazy(() => import('./components/TermsPage'));
 const RefundPolicyPage = smartLazy(() => import('./components/RefundPolicyPage'));
 const CancellationPolicyPage = smartLazy(() => import('./components/CancellationPolicyPage'));
-/* END NEW CHANGES */
+const HelpSupportPage=smartLazy(()=>import('./helpandSupport/HelpSupportPage'));
 
 const AuraPage = smartLazy(() => import('./components/AuraPage'));
 const AuraLeadershipPage = smartLazy(() => import('./components/AuraLeadershipPage'));
@@ -422,7 +421,7 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
             <Route path="/items" element={<ItemsPage />} />
             <Route path="/deal/:id" element={user ? <DealDetailsPage user={user} /> : <Navigate to="/login" />} />
             <Route path="/notifications" element={user ? <NotificationsPage /> : <Navigate to="/login" />} />
-            
+            <Route path="/help-support" element={user ? <HelpSupportPage /> : <Navigate to="/login" />} />
             <Route path="*" element={<div className="text-white text-center mt-20 text-xl">404 - Page Not Found</div>} />
           </Routes>
         </Suspense>

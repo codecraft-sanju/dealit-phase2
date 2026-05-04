@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Plus, ChevronLeft, Gift, Image as ImageIcon, Sparkles, Wand2, Scale, Box } from 'lucide-react';
 import axios from 'axios';
@@ -6,14 +6,11 @@ import Cropper from 'react-easy-crop';
 import { toast } from 'react-toastify'; 
 import { removeBackground } from '@imgly/background-removal';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'; 
-
-// <-- NAYA CHANGE: Import browser-image-compression -->
 import imageCompression from 'browser-image-compression';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
-// <-- NAYA CHANGE: Helper function to optimize Cloudinary URLs for fast loading -->
 export const getOptimizedCloudinaryUrl = (url) => {
   if (!url || typeof url !== 'string' || !url.includes('cloudinary.com') || url.includes('q_auto')) {
     return url;
@@ -150,6 +147,9 @@ const ShimmerLoading = () => {
 const AddItemPage = ({ user, setUser }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  const DRAFT_STORAGE_KEY = 'dealit_add_item_draft';
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -162,6 +162,34 @@ const AddItemPage = ({ user, setUser }) => {
     dimensions: { length: 10, width: 10, height: 10 }
   });
   const [images, setImages] = useState([]);
+
+  // Load draft from local storage when component mounts
+  useEffect(() => {
+    const savedDraft = localStorage.getItem(DRAFT_STORAGE_KEY);
+    if (savedDraft) {
+      try {
+        const { formData: savedFormData, images: savedImages } = JSON.parse(savedDraft);
+        if (savedFormData) setFormData(savedFormData);
+        if (savedImages) setImages(savedImages);
+      } catch (error) {
+        console.error('Failed to parse draft:', error);
+      }
+    }
+  }, []);
+
+  // Save draft to local storage whenever user types or adds images
+  useEffect(() => {
+    if (formData.title !== '' || images.length > 0) {
+      const imagesToSave = images.map(img => 
+        img.startsWith('blob:') ? (blobToOriginalMap.get(img) || img) : img
+      );
+
+      localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({
+        formData,
+        images: imagesToSave
+      }));
+    }
+  }, [formData, images]);
   
   const { data: categories = [], isLoading: loadingCategories } = useQuery({
     queryKey: ['categories'],
@@ -217,7 +245,6 @@ const AddItemPage = ({ user, setUser }) => {
     });
   };
 
-  // <-- NAYA CHANGE: Image Compression added before showing crop modal -->
   const handleImageSelect = async (e) => {
     if (images.length >= 5) {
       toast.error('You can only upload a maximum of 5 images.');
@@ -228,7 +255,7 @@ const AddItemPage = ({ user, setUser }) => {
       let imageFile = e.target.files[0];
 
       const options = {
-        maxSizeMB: 0.8, // compress to max 800 KB
+        maxSizeMB: 0.8,
         maxWidthOrHeight: 1920,
         useWebWorker: true,
       };
@@ -454,6 +481,10 @@ const AddItemPage = ({ user, setUser }) => {
       } catch (e) {
         console.error("Failed to update user profile locally", e);
       }
+      
+      // Clear the draft once successfully submitted
+      localStorage.removeItem(DRAFT_STORAGE_KEY);
+
       toast.success(data.message);
       navigate('/dashboard'); 
     },
@@ -464,6 +495,15 @@ const AddItemPage = ({ user, setUser }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    // Verification check for Pickup Address before allowing listing
+    if (!user?.pickupAddress || !user?.pickupAddress?.houseNo) {
+      toast.error('Please add your pickup address: Profile Page -> Account Details -> Edit', {
+        position: "top-center",
+        autoClose: 5000,
+      });
+      return;
+    }
 
     if (images.length < 3) {
       toast.error('Please upload at least 3 images of your item.');
@@ -573,9 +613,7 @@ const AddItemPage = ({ user, setUser }) => {
                   
                   return (
                     <div key={index} className="flex flex-col gap-1.5 w-20 sm:w-24">
-                      {/* Image Thumbnail Container */}
                       <div className="relative w-full aspect-square rounded-2xl overflow-hidden shadow-sm border-2 border-white bg-gray-100 group shrink-0">
-                        {/* <-- NAYA CHANGE: Using getOptimizedCloudinaryUrl for fast rendering --> */}
                         <img 
                           src={getOptimizedCloudinaryUrl(url)} 
                           alt={`Upload ${index + 1}`} 
@@ -588,14 +626,12 @@ const AddItemPage = ({ user, setUser }) => {
                           }}
                         />
                         
-                        {/* Loading Overlay */}
                         {isProcessing && (
                           <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-[1px]">
                             <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                           </div>
                         )}
 
-                        {/* Delete Button */}
                         <button 
                           type="button" 
                           onClick={() => removeImage(index)} 
@@ -606,7 +642,6 @@ const AddItemPage = ({ user, setUser }) => {
                         </button>
                       </div>
 
-                      {/* AI Background Button underneath */}
                       <button 
                         type="button" 
                         onClick={() => toggleAIBackground(index)} 
@@ -648,7 +683,6 @@ const AddItemPage = ({ user, setUser }) => {
               {images.length > 0 && !isLimitReached && (
                 <div className="bg-gradient-to-br from-purple-50 to-white border border-purple-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-[0_4px_20px_rgba(128,90,213,0.08)] mt-5 relative overflow-hidden">
                   
-                  {/* Subtle background decoration */}
                   <div className="absolute -right-6 -top-6 text-purple-100 opacity-50 transform rotate-12 pointer-events-none">
                      <Sparkles className="w-24 h-24" />
                   </div>
