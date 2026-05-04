@@ -102,7 +102,7 @@ const OrdersPage = ({ user }) => {
       } else if (window.scrollY < 10) {
         setIsScrolled(false);
       }
-    };
+    }
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
@@ -431,7 +431,7 @@ const OrdersPage = ({ user }) => {
                                {downloadingLabelFor === order._id ? (
                                   <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating...</>
                                ) : (
-                                  <><FileText className="w-3.5 h-3.5" /> Download Slip</>
+                                  <><FileText className="w-3.5 h-3.5" /> Schedule Pickup & Get Slip</>
                                )}
                              </button>
                            )}
@@ -486,7 +486,7 @@ const OrdersPage = ({ user }) => {
                                   <span>Waiting for Courier Pickup. Status will update automatically.</span>
                                </div>
                                <p className="text-xs text-purple-500 font-medium pl-6">
-                                 Please download the shipping slip, print it, and attach it to the package.
+                                 Click below to schedule the courier pickup and download your shipping slip.
                                </p>
                             </div>
                           )}

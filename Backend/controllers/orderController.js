@@ -4,7 +4,7 @@ const User = require('../models/User');
 const CreditSetting = require('../models/CreditSetting');
 const Transaction = require('../models/Transaction'); 
 const crypto = require('crypto'); 
-const { checkServiceability, createShiprocketOrder, addPickupLocation, generateAWB, generateLabel } = require('../utils/shiprocket'); 
+const { checkServiceability, createShiprocketOrder, addPickupLocation, generateAWB, generateLabel, schedulePickup } = require('../utils/shiprocket'); 
 const Notification = require('../models/Notification');
 const AuraLog = require('../models/AuraLog'); 
 
@@ -446,6 +446,7 @@ const getShippingLabel = async (req, res) => {
        const awbData = await generateAWB(shipmentId);
        order.trackingDetails.awb_code = awbData.awb_code;
        order.trackingDetails.courier_company = awbData.courier_name;
+       await schedulePickup(shipmentId);
        await order.save();
     }
 

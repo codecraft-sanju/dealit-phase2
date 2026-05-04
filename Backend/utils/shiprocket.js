@@ -191,6 +191,24 @@ const generateLabel = async (shipment_id) => {
   }
 };
 
+const schedulePickup = async (shipment_id) => {
+  if (IS_TEST_MODE) return { pickup_status: 1 };
+
+  try {
+    const token = await getShiprocketToken();
+    const response = await axios.post(
+      `${SHIPROCKET_BASE_URL}/courier/generate/pickup`,
+      { shipment_id: [parseInt(shipment_id)] }, 
+      { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } }
+    );
+    
+    return response.data;
+  } catch (error) {
+    console.error('Shiprocket Schedule Pickup Error:', error.response?.data || error.message);
+    throw new Error('AWB generated but failed to schedule pickup automatically.');
+  }
+};
+
 module.exports = {
   getShiprocketToken,
   checkServiceability,
@@ -198,5 +216,6 @@ module.exports = {
   addPickupLocation,
   verifyShiprocketConnection,
   generateAWB,
-  generateLabel
+  generateLabel,
+  schedulePickup
 };
