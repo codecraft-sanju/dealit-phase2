@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingBag, Truck, CheckCircle, Clock, MapPin, Phone, User, ArrowLeft, Coins, Package, ExternalLink, X, FileText, Loader2, AlertCircle, Info } from 'lucide-react'; 
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -33,7 +33,16 @@ const OrderSkeleton = () => (
 );
 
 const OrdersPage = ({ user }) => {
-  const [activeTab, setActiveTab] = useState('purchases'); 
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Initialize active tab from URL query parameter if it exists
+  const [activeTab, setActiveTab] = useState(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const tabParam = searchParams.get('tab');
+    return tabParam === 'sales' ? 'sales' : 'purchases';
+  }); 
+
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -54,7 +63,11 @@ const OrdersPage = ({ user }) => {
   const [autoCancelHours, setAutoCancelHours] = useState(24);
   const [auraPenalty, setAuraPenalty] = useState(50); 
 
-  const navigate = useNavigate();
+  // Sync tab change with URL parameter
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    navigate(`/orders?tab=${tab}`, { replace: true });
+  };
 
   const fetchSettings = async () => {
     try {
@@ -256,7 +269,7 @@ const OrdersPage = ({ user }) => {
             return (
               <button
                 key={tab}
-                onClick={() => setActiveTab(tab)}
+                onClick={() => handleTabChange(tab)}
                 className="relative flex-1 py-3 rounded-xl font-bold text-sm md:text-base outline-none tap-highlight-transparent"
                 style={{ WebkitTapHighlightColor: 'transparent' }}
               >
