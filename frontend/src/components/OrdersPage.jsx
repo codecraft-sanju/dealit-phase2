@@ -469,6 +469,13 @@ const OrdersPage = ({ user }) => {
                               onClick={() => {
                                 setSelectedOrder(order);
                                 setDispatchError(''); 
+                                // MODIFIED: Pre-fill dispatch modal with item's saved dimensions and weight
+                                setDispatchData({
+                                  weight: order.item?.weight || 0.5,
+                                  length: order.item?.dimensions?.length || 10,
+                                  width: order.item?.dimensions?.width || 10,
+                                  height: order.item?.dimensions?.height || 10
+                                });
                                 setShowDispatchModal(true);
                               }}
                               className="bg-[#6B46C1] hover:bg-[#5a3aa3] text-white px-6 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm active:scale-95 flex items-center gap-2"
