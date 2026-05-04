@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
   ArrowLeft, MapPin, Phone, User, Home, Hash, 
-  Truck, Coins, AlertCircle, CheckCircle, Wallet, ShoppingBag 
+  Truck, Coins, AlertCircle, CheckCircle, Wallet, ShoppingBag, Plus, Check
 } from 'lucide-react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -31,8 +31,11 @@ const CheckoutPage = ({ user, setUser }) => {
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   
-  // CHANGED: New state for dynamic autoCancelHours
   const [autoCancelHours, setAutoCancelHours] = useState(24);
+
+  // Saved Addresses from user object
+  const savedAddresses = user?.savedAddresses || [];
+  const [selectedAddressIndex, setSelectedAddressIndex] = useState(savedAddresses.length > 0 ? 0 : -1);
 
   const [formData, setFormData] = useState({
     fullName: user?.full_name || '',
@@ -69,11 +72,9 @@ const CheckoutPage = ({ user, setUser }) => {
           setItem(itemRes.data.data);
         }
 
-        // Fetch settings for shipping and auto-cancel time
         const settingsRes = await axios.get(`${API_URL}/admin/public-settings`);
         if (settingsRes.data.success) {
           setShippingCost(settingsRes.data.data.flatShippingCost !== undefined ? settingsRes.data.data.flatShippingCost : 60);
-          // CHANGED: Update the autoCancelHours state
           if (settingsRes.data.data.autoCancelHours) {
             setAutoCancelHours(settingsRes.data.data.autoCancelHours);
           }
@@ -89,10 +90,41 @@ const CheckoutPage = ({ user, setUser }) => {
     fetchCheckoutData();
   }, [itemId]);
 
+  // Effect to auto-fill form when a saved address is selected
+  useEffect(() => {
+    if (selectedAddressIndex >= 0 && savedAddresses[selectedAddressIndex]) {
+      const addr = savedAddresses[selectedAddressIndex];
+      setFormData({
+        fullName: addr.fullName || '',
+        phone: addr.phone || '',
+        houseNo: addr.houseNo || '',
+        areaStreet: addr.areaStreet || '',
+        landmark: addr.landmark || '',
+        city: addr.city || '',
+        state: addr.state || '',
+        pincode: addr.pincode || ''
+      });
+    } else if (selectedAddressIndex === -1) {
+      // Clear form for new address
+      setFormData({
+        fullName: user?.full_name || '',
+        phone: user?.phone || '',
+        houseNo: '',
+        areaStreet: '',
+        landmark: '',
+        city: user?.city || '',
+        state: '',
+        pincode: ''
+      });
+    }
+  }, [selectedAddressIndex]);
+
+  // Calculate Shipping Cost
   useEffect(() => {
     const fetchDynamicShippingCost = async () => {
       if (formData.pincode && formData.pincode.length >= 6) {
         setIsCalculatingShipping(true);
+        setError('');
         try {
           const res = await axios.post(`${API_URL}/orders/calculate-shipping`, {
             itemId,
@@ -104,6 +136,8 @@ const CheckoutPage = ({ user, setUser }) => {
           }
         } catch (err) {
           console.error('Error calculating dynamic shipping:', err);
+          setError(err.response?.data?.message || 'Failed to calculate shipping. Please check address or contact support.');
+          setShippingCost(0);
         } finally {
           setIsCalculatingShipping(false);
         }
@@ -119,6 +153,9 @@ const CheckoutPage = ({ user, setUser }) => {
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    if (selectedAddressIndex !== -1) {
+      setSelectedAddressIndex(-1);
+    }
   };
 
   const itemPrice = item?.estimated_value || 0;
@@ -133,22 +170,21 @@ const CheckoutPage = ({ user, setUser }) => {
       }, { withCredentials: true });
 
       if (checkoutRes.data.success) {
+        const updatedAddresses = [...savedAddresses];
+        const isAddressExist = updatedAddresses.some(addr => addr.houseNo === formData.houseNo && addr.pincode === formData.pincode);
+        if (!isAddressExist) {
+          updatedAddresses.push(formData);
+        }
+
         const updatedUser = {
           ...user,
           account_credits: user.account_credits - itemPrice,
-          houseNo: formData.houseNo,
-          areaStreet: formData.areaStreet,
-          landmark: formData.landmark,
-          city: formData.city,
-          state: formData.state,
-          pincode: formData.pincode,
-          full_name: formData.fullName,
-          phone: formData.phone
+          savedAddresses: updatedAddresses
         };
         setUser(updatedUser);
         localStorage.setItem('dealit_user', JSON.stringify(updatedUser));
 
-        alert('Order Placed Successfully! ');
+        alert('Order Placed Successfully! 🎉');
         navigate('/orders'); 
       }
     } catch (err) {
@@ -332,50 +368,101 @@ const CheckoutPage = ({ user, setUser }) => {
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="relative">
-                  <User className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
-                  <input type="text" name="fullName" placeholder="Full Name" required value={formData.fullName} onChange={handleInputChange}
-                    className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-gray-800 placeholder-gray-400 font-medium" />
-                </div>
-
-                <div className="relative">
-                  <Phone className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
-                  <input type="tel" name="phone" placeholder="Mobile Number" required value={formData.phone} onChange={handleInputChange}
-                    className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-gray-800 placeholder-gray-400 font-medium" />
-                </div>
-
-                <div className="space-y-3">
-                  <div className="relative">
-                    <Home className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
-                    <input type="text" name="houseNo" placeholder="House No. / Flat No. / Road No." required value={formData.houseNo} onChange={handleInputChange}
-                      className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-gray-800 placeholder-gray-400 font-medium" />
+              {savedAddresses.length > 0 && (
+                <div className="space-y-3 mb-6">
+                  <p className="text-sm font-bold text-gray-700">Select Delivery Address</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {savedAddresses.map((addr, idx) => (
+                      <div 
+                        key={idx}
+                        onClick={() => setSelectedAddressIndex(idx)}
+                        className={`relative p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 ${
+                          selectedAddressIndex === idx 
+                            ? 'border-[#6B46C1] bg-[#f8f6ff] shadow-sm' 
+                            : 'border-gray-100 hover:border-gray-200 bg-white'
+                        }`}
+                      >
+                        {selectedAddressIndex === idx && (
+                          <div className="absolute top-3 right-3 bg-[#6B46C1] text-white rounded-full p-1">
+                            <Check className="w-3 h-3" />
+                          </div>
+                        )}
+                        <h4 className="font-bold text-gray-900 text-sm mb-1">{addr.fullName}</h4>
+                        <p className="text-xs text-gray-500 font-medium leading-relaxed truncate">
+                          {addr.houseNo}, {addr.areaStreet} <br/>
+                          {addr.city}, {addr.state} - {addr.pincode}
+                        </p>
+                      </div>
+                    ))}
+                    
+                    <div 
+                      onClick={() => setSelectedAddressIndex(-1)}
+                      className={`relative p-4 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all duration-200 min-h-[90px] ${
+                        selectedAddressIndex === -1 
+                          ? 'border-[#6B46C1] bg-[#f8f6ff] text-[#6B46C1]' 
+                          : 'border-gray-200 hover:border-gray-300 text-gray-500 hover:text-gray-700 bg-gray-50/50'
+                      }`}
+                    >
+                      <Plus className="w-6 h-6 mb-1" />
+                      <span className="text-sm font-bold">Add New Address</span>
+                    </div>
                   </div>
-                  <div className="relative">
-                    <MapPin className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
-                    <input type="text" name="areaStreet" placeholder="Area, Street, Sector" required value={formData.areaStreet} onChange={handleInputChange}
-                      className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-gray-800 placeholder-gray-400 font-medium" />
-                  </div>
-                  <div className="relative">
-                    <MapPin className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400 opacity-50" />
-                    <input type="text" name="landmark" placeholder="Landmark (Optional)" value={formData.landmark} onChange={handleInputChange}
-                      className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-gray-800 placeholder-gray-400 font-medium" />
-                  </div>
                 </div>
+              )}
 
-                <div className="grid grid-cols-2 gap-4">
-                  <input type="text" name="city" placeholder="City" required value={formData.city} onChange={handleInputChange}
-                    className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl px-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-gray-800 placeholder-gray-400 font-medium" />
-                  <input type="text" name="state" placeholder="State" required value={formData.state} onChange={handleInputChange}
-                    className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl px-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-gray-800 placeholder-gray-400 font-medium" />
-                </div>
+              <AnimatePresence>
+                {(selectedAddressIndex === -1 || savedAddresses.length === 0) && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-4 overflow-hidden"
+                  >
+                    <div className="relative">
+                      <User className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
+                      <input type="text" name="fullName" placeholder="Full Name" required value={formData.fullName} onChange={handleInputChange}
+                        className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-gray-800 placeholder-gray-400 font-medium" />
+                    </div>
 
-                <div className="relative">
-                  <Hash className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
-                  <input type="text" name="pincode" placeholder="Pincode (6 Digits)" required value={formData.pincode} onChange={handleInputChange} maxLength="6"
-                    className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-gray-800 placeholder-gray-400 font-medium" />
-                </div>
-              </div>
+                    <div className="relative">
+                      <Phone className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
+                      <input type="tel" name="phone" placeholder="Mobile Number" required value={formData.phone} onChange={handleInputChange}
+                        className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-gray-800 placeholder-gray-400 font-medium" />
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="relative">
+                        <Home className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
+                        <input type="text" name="houseNo" placeholder="House No. / Flat No. / Road No." required value={formData.houseNo} onChange={handleInputChange}
+                          className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-gray-800 placeholder-gray-400 font-medium" />
+                      </div>
+                      <div className="relative">
+                        <MapPin className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
+                        <input type="text" name="areaStreet" placeholder="Area, Street, Sector" required value={formData.areaStreet} onChange={handleInputChange}
+                          className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-gray-800 placeholder-gray-400 font-medium" />
+                      </div>
+                      <div className="relative">
+                        <MapPin className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400 opacity-50" />
+                        <input type="text" name="landmark" placeholder="Landmark (Optional)" value={formData.landmark} onChange={handleInputChange}
+                          className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-gray-800 placeholder-gray-400 font-medium" />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <input type="text" name="city" placeholder="City" required value={formData.city} onChange={handleInputChange}
+                        className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl px-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-gray-800 placeholder-gray-400 font-medium" />
+                      <input type="text" name="state" placeholder="State" required value={formData.state} onChange={handleInputChange}
+                        className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl px-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-gray-800 placeholder-gray-400 font-medium" />
+                    </div>
+
+                    <div className="relative">
+                      <Hash className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
+                      <input type="text" name="pincode" placeholder="Pincode (6 Digits)" required value={formData.pincode} onChange={handleInputChange} maxLength="6"
+                        className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-gray-800 placeholder-gray-400 font-medium" />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
 
             <motion.div variants={itemVariants} className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
@@ -407,7 +494,16 @@ const CheckoutPage = ({ user, setUser }) => {
                 </div>
               </div>
 
-              {/* CHANGED: Dynamic Notice before order placement */}
+              {error && (
+                <div className="mt-4 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-red-800 font-bold mb-0.5">Alert</p>
+                    <p className="text-xs text-red-700 leading-relaxed">{error}</p>
+                  </div>
+                </div>
+              )}
+
               <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-xl flex items-start gap-3">
                 <AlertCircle className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
                 <div>
@@ -437,12 +533,6 @@ const CheckoutPage = ({ user, setUser }) => {
                   </>
                 )}
               </div>
-
-              {error && (
-                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm text-center font-bold">
-                  {error}
-                </motion.div>
-              )}
 
               {hasEnoughCredits ? (
                 <motion.button 

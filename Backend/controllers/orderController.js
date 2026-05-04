@@ -121,6 +121,18 @@ const createOrder = async (req, res) => {
     }
 
     buyer.account_credits -= itemPrice;
+
+    
+    if (!buyer.savedAddresses) buyer.savedAddresses = [];
+    const isAddressExist = buyer.savedAddresses.some(addr => 
+      addr.houseNo === shippingAddress.houseNo && 
+      addr.pincode === shippingAddress.pincode
+    );
+
+    if (!isAddressExist) {
+      buyer.savedAddresses.push(shippingAddress);
+    }
+
     await buyer.save();
 
     item.status = 'reserved'; 

@@ -31,9 +31,20 @@ const userSchema = new mongoose.Schema({
     state: { type: String },
     pincode: { type: String }
   },
+
+  // CHANGED: Added savedAddresses array for the buyer's address book
+  savedAddresses: [{
+    fullName: { type: String },
+    phone: { type: String },
+    houseNo: { type: String },
+    areaStreet: { type: String },
+    landmark: { type: String },
+    city: { type: String },
+    state: { type: String },
+    pincode: { type: String }
+  }],
   
   account_credits: { type: Number, default: 0 },
-  
   aura_points: { type: Number, default: 100 }, 
   
   listedProductsCount: { type: Number, default: 0 },
