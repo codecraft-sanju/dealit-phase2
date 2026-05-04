@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Truck, CheckCircle, Clock, MapPin, Phone, User, ArrowLeft, Coins, Package, ExternalLink, X, FileText, Loader2, AlertCircle } from 'lucide-react'; 
+import { ShoppingBag, Truck, CheckCircle, Clock, MapPin, Phone, User, ArrowLeft, Coins, Package, ExternalLink, X, FileText, Loader2, AlertCircle, Info } from 'lucide-react'; 
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -43,7 +43,6 @@ const OrdersPage = ({ user }) => {
   const [dispatchData, setDispatchData] = useState({ weight: 0.5, length: 10, width: 10, height: 10 });
   const [dispatching, setDispatching] = useState(false);
   
-  // NAYA CHANGE: Error show karne ke liye state
   const [dispatchError, setDispatchError] = useState(''); 
 
   const [downloadingLabelFor, setDownloadingLabelFor] = useState(null);
@@ -53,19 +52,17 @@ const OrdersPage = ({ user }) => {
   const [cancelling, setCancelling] = useState(false);
 
   const [autoCancelHours, setAutoCancelHours] = useState(24);
-  const [auraPenalty, setAuraPenalty] = useState(50); // NAYA CHANGE: Added state for dynamic penalty
+  const [auraPenalty, setAuraPenalty] = useState(50); 
 
   const navigate = useNavigate();
 
   const fetchSettings = async () => {
     try {
-      // CHANGED: Fixed the API endpoint to match the backend route
       const res = await axios.get(`${API_URL}/admin/public-settings`);
       if (res.data.success) {
         if (res.data.data.autoCancelHours) {
           setAutoCancelHours(res.data.data.autoCancelHours);
         }
-        // NAYA CHANGE: Backend se aayi hui aura penalty state me set karna
         if (res.data.data.auraPenalty !== undefined) {
           setAuraPenalty(res.data.data.auraPenalty);
         }
@@ -128,7 +125,7 @@ const OrdersPage = ({ user }) => {
     if (!selectedOrder) return;
     
     setDispatching(true);
-    setDispatchError(''); // NAYA CHANGE: Purana error clear karna
+    setDispatchError('');
 
     try {
       const res = await axios.post(
@@ -142,7 +139,6 @@ const OrdersPage = ({ user }) => {
         fetchOrders();
       }
     } catch (err) {
-      // NAYA CHANGE: Alert ki jagah modal me error state set kar rahe hain
       setDispatchError(err.response?.data?.message || 'Failed to dispatch order. Please check details.');
     } finally {
       setDispatching(false);
@@ -347,7 +343,7 @@ const OrdersPage = ({ user }) => {
                   <div className="p-5 md:p-6">
                     <div className="flex flex-col md:flex-row gap-6">
                       <div className="flex gap-4 md:w-1/2">
-                        <div className="w-24 h-24 bg-[#f8f6ff] rounded-[1.2rem] overflow-hidden shrink-0 border border-gray-100">
+                        <div className="w-24 h-24 sm:w-28 sm:h-28 bg-[#f8f6ff] rounded-[1.2rem] overflow-hidden shrink-0 border border-gray-100">
                           <img 
                             src={order.item?.images?.[0] || 'https://via.placeholder.com/150'} 
                             alt={order.item?.title} 
@@ -355,13 +351,41 @@ const OrdersPage = ({ user }) => {
                             loading="lazy"
                           />
                         </div>
-                        <div>
+                        <div className="flex-1">
                           <h3 className="text-lg font-bold text-gray-900 leading-tight mb-1">{order.item?.title || 'Deleted Item'}</h3>
-                          <p className="text-sm text-gray-500 font-medium mb-2.5">{order.item?.category}</p>
-                          <div className="inline-flex items-center gap-1.5 bg-[#FFF4D2] border border-[#FFE28A]/50 px-2.5 py-1 rounded-lg shadow-sm">
-                            <Coins className="w-3.5 h-3.5 text-yellow-600" />
-                            <span className="font-bold text-xs text-gray-900">{order.totalAmount} Credits</span>
+                          <p className="text-xs text-gray-500 font-medium mb-3">{order.item?.category}</p>
+                          
+                          {/* NAYA CHANGE: EXPLICIT COST BREAKDOWN UI */}
+                          <div className="flex flex-col gap-2">
+                            <div className="flex flex-wrap gap-2">
+                              <div className="inline-flex items-center gap-1.5 bg-[#FFF4D2] border border-[#FFE28A]/50 px-2 py-1 rounded-md shadow-sm" title="Item Value (Deducted from Wallet)">
+                                <Coins className="w-3.5 h-3.5 text-yellow-600" />
+                                <span className="font-bold text-[11px] sm:text-xs text-gray-900">{order.itemPrice || 0} Credits</span>
+                              </div>
+                              <div className={`inline-flex items-center gap-1.5 border px-2 py-1 rounded-md shadow-sm ${order.shippingCost > 0 ? 'bg-blue-50 border-blue-200' : 'bg-emerald-50 border-emerald-200'}`} title="Shipping Paid via Gateway">
+                                <Truck className={`w-3 h-3 ${order.shippingCost > 0 ? 'text-blue-600' : 'text-emerald-600'}`} />
+                                <span className={`font-bold text-[11px] sm:text-xs ${order.shippingCost > 0 ? 'text-blue-900' : 'text-emerald-900'}`}>
+                                  {order.shippingCost > 0 ? `₹${order.shippingCost} Shipping` : 'Free Shipping'}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            {/* Role Based Payment Info Text */}
+                            <div className="flex items-start gap-1.5 mt-1">
+                              <Info className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
+                              {activeTab === 'purchases' ? (
+                                <p className="text-[10px] sm:text-[11px] text-gray-500 font-medium leading-tight">
+                                  <strong className="text-gray-700">Paid:</strong> {order.itemPrice} credits from wallet & ₹{order.shippingCost} online.
+                                </p>
+                              ) : (
+                                <p className="text-[10px] sm:text-[11px] text-gray-500 font-medium leading-tight">
+                                  <strong className="text-gray-700">Earnings:</strong> You get <strong className="text-emerald-600">{order.itemPrice} Credits</strong> on delivery. (Buyer paid shipping).
+                                </p>
+                              )}
+                            </div>
                           </div>
+                          {/* END OF COST BREAKDOWN UI */}
+
                         </div>
                       </div>
 
@@ -372,13 +396,11 @@ const OrdersPage = ({ user }) => {
                         <p className="text-sm font-bold text-gray-900 mb-1 flex items-center gap-2">
                           <User className="w-3.5 h-3.5 text-gray-400" /> {order.shippingAddress?.fullName}
                         </p>
-                        {/* CHANGED: Address display logic updated to use correct fields */}
                         <p className="text-xs text-gray-600 font-medium leading-relaxed pl-5.5">
                           {order.shippingAddress?.houseNo}, {order.shippingAddress?.areaStreet}
                           {order.shippingAddress?.landmark ? `, ${order.shippingAddress.landmark}` : ''}, <br className="hidden md:block" />
                           {order.shippingAddress?.city}, {order.shippingAddress?.state} - {order.shippingAddress?.pincode}
                         </p>
-                        {/* CHANGED: Mask phone number for sellers but show last 4 digits */}
                         {activeTab === 'purchases' ? (
                           <p className="text-sm font-bold text-[#6B46C1] mt-2.5 flex items-center gap-2">
                             <Phone className="w-3.5 h-3.5 text-[#A388E1]" /> {order.shippingAddress?.phone}
@@ -469,7 +491,6 @@ const OrdersPage = ({ user }) => {
                               onClick={() => {
                                 setSelectedOrder(order);
                                 setDispatchError(''); 
-                                // MODIFIED: Pre-fill dispatch modal with item's saved dimensions and weight
                                 setDispatchData({
                                   weight: order.item?.weight || 0.5,
                                   length: order.item?.dimensions?.length || 10,
@@ -553,7 +574,6 @@ const OrdersPage = ({ user }) => {
             <h3 className="text-xl font-black text-gray-900 mb-1">Package Details</h3>
             <p className="text-xs text-gray-500 font-medium mb-4">Enter actual box size for accurate courier assignment.</p>
 
-            {/* NAYA CHANGE: Error Display UI in Modal */}
             {dispatchError && (
               <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
