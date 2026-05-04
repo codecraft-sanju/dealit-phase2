@@ -52,7 +52,6 @@ const getPendingItems = async (req, res) => {
   }
 };
 
-// CHANGED: Added search logic for Transactions
 const getAllTransactions = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
@@ -105,7 +104,6 @@ const getAllTransactions = async (req, res) => {
   }
 };
 
-// Update Item Status (No changes needed here for search)
 const updateItemStatus = async (req, res) => {
   try {
     const { status, rejection_reason } = req.body; 
@@ -131,7 +129,6 @@ const updateItemStatus = async (req, res) => {
 
     await item.save();
 
-    // <-- NAYA CHANGE: User ko in-app notification bhejna start -->
     if ((status === 'active' && !wasAlreadyActive) || status === 'rejected') {
       const notifTitle = status === 'active' ? 'Item Approved! ✅' : 'Item Rejected ❌';
       const notifMessage = status === 'active' 
@@ -146,7 +143,6 @@ const updateItemStatus = async (req, res) => {
         metadata: { referenceId: item._id, newStatus: status }
       });
     }
-    // <-- NAYA CHANGE: User ko in-app notification bhejna end -->
 
     if (status === 'active' && !wasAlreadyActive) {
       let setting = await CreditSetting.findOne();
@@ -177,7 +173,6 @@ const updateItemStatus = async (req, res) => {
   }
 };
 
-// CHANGED: Added search logic for All Items
 const getAllItems = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
@@ -224,7 +219,6 @@ const getAllItems = async (req, res) => {
   }
 };
 
-// CHANGED: Added search logic for Users
 const getAllUsers = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
@@ -265,7 +259,6 @@ const getAllUsers = async (req, res) => {
   }
 };
 
-// Update Role, Delete User, Settings (No search changes needed here)
 const updateUserRole = async (req, res) => {
   try {
     const { role } = req.body;
@@ -419,7 +412,6 @@ const getPublicCreditSettings = async (req, res) => {
   }
 };
 
-// CHANGED: Added search logic for Orders
 const getAllOrders = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
@@ -526,21 +518,53 @@ const updateAdminOrderStatus = async (req, res) => {
   }
 };
 
+// ======================================================
+// OPTIMIZED GET DASHBOARD STATS (Parallel queries via Promise.all)
+// ======================================================
 const getDashboardStats = async (req, res) => {
   try {
-    const totalUsers = await User.countDocuments();
-    const verifiedUsers = await User.countDocuments({ isVerified: true });
-    
-    const totalItems = await Item.countDocuments();
-    const activeItems = await Item.countDocuments({ status: 'active' });
-    const pendingItems = await Item.countDocuments({ status: 'pending' });
-    const swappedItems = await Item.countDocuments({ status: 'swapped' });
+    // 1. Fire all simple count/aggregate queries concurrently
+    const [
+      totalUsers,
+      verifiedUsers, 
+      totalItems,
+      activeItems,
+      pendingItems,
+      swappedItems,
+      totalOrders,
+      deliveredOrders,
+      pendingOrders,
+      successfulTxns,
+      recentUsers,
+      categoryDataRaw, 
+      recentSwaps,
+      recentItemsList,
+      recentTxnsList,
+      recentOrdersList
+    ] = await Promise.all([
+      User.countDocuments(),
+      User.countDocuments({ isVerified: true }),
+      Item.countDocuments(),
+      Item.countDocuments({ status: 'active' }),
+      Item.countDocuments({ status: 'pending' }),
+      Item.countDocuments({ status: 'swapped' }),
+      Order.countDocuments(),
+      Order.countDocuments({ orderStatus: 'delivered' }),
+      Order.countDocuments({ orderStatus: 'pending' }),
+      Transaction.find({ status: 'success' }),
+      User.find().select('full_name email profilePic created_at').sort({ created_at: -1 }).limit(5),
+      Item.aggregate([
+        { $match: { status: 'active' } },
+        { $group: { _id: '$category', value: { $sum: 1 } } },
+        { $project: { name: '$_id', value: 1, _id: 0 } }
+      ]),
+      BarterRequest.find({ status: 'ACCEPTED' }).sort({ updated_at: -1 }).limit(3).populate('item'),
+      Item.find().sort({ created_at: -1 }).limit(3),
+      Transaction.find({ status: 'success' }).sort({ created_at: -1 }).limit(3),
+      Order.find({ orderStatus: 'delivered' }).sort({ updated_at: -1 }).limit(3).populate('item')
+    ]);
 
-    const totalOrders = await Order.countDocuments();
-    const deliveredOrders = await Order.countDocuments({ orderStatus: 'delivered' });
-    const pendingOrders = await Order.countDocuments({ orderStatus: 'pending' });
-
-    
+    // Current Month Orders
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
@@ -554,21 +578,13 @@ const getDashboardStats = async (req, res) => {
       created_at: { $gte: startOfMonth, $lte: endOfMonth }
     });
 
-    const successfulTxns = await Transaction.find({ status: 'success' });
     const totalRevenue = successfulTxns.reduce((sum, txn) => sum + txn.amount, 0);
-
-    const recentUsers = await User.find().select('full_name email profilePic created_at').sort({ created_at: -1 }).limit(5);
-
-    const categoryDataRaw = await Item.aggregate([
-      { $match: { status: 'active' } },
-      { $group: { _id: '$category', value: { $sum: 1 } } },
-      { $project: { name: '$_id', value: 1, _id: 0 } }
-    ]);
     const categoryData = categoryDataRaw.filter(c => c.name);
 
-    const performanceData = [];
+    // 2. Loop for 7 days (Run in parallel instead of sequence)
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    
+    const performancePromises = [];
+
     for (let i = 6; i >= 0; i--) {
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - i);
@@ -577,27 +593,26 @@ const getDashboardStats = async (req, res) => {
       const endDate = new Date(startDate);
       endDate.setHours(23, 59, 59, 999);
 
-      const dailyTxns = await Transaction.find({
-        status: 'success',
-        created_at: { $gte: startDate, $lte: endDate }
-      });
-      const dailyRevenue = dailyTxns.reduce((sum, txn) => sum + txn.amount, 0);
-
-      const dailySwaps = await BarterRequest.countDocuments({
-        status: 'ACCEPTED',
-        updated_at: { $gte: startDate, $lte: endDate }
-      });
-
-      performanceData.push({
-        name: days[startDate.getDay()],
-        revenue: dailyRevenue,
-        swaps: dailySwaps
-      });
+      performancePromises.push(
+        (async () => {
+          const [dailyTxns, dailySwaps] = await Promise.all([
+            Transaction.find({ status: 'success', created_at: { $gte: startDate, $lte: endDate } }),
+            BarterRequest.countDocuments({ status: 'ACCEPTED', updated_at: { $gte: startDate, $lte: endDate } })
+          ]);
+          return {
+            name: days[startDate.getDay()],
+            revenue: dailyTxns.reduce((sum, txn) => sum + txn.amount, 0),
+            swaps: dailySwaps
+          };
+        })()
+      );
     }
 
+    const performanceData = await Promise.all(performancePromises);
+
+    // 3. Map Activities
     let activities = [];
 
-    const recentSwaps = await BarterRequest.find({ status: 'ACCEPTED' }).sort({ updated_at: -1 }).limit(3).populate('item');
     recentSwaps.forEach(swap => activities.push({
       id: `swap-${swap._id}`,
       action: 'Swap Accepted',
@@ -607,7 +622,6 @@ const getDashboardStats = async (req, res) => {
       bg: 'bg-emerald-400/10 border-emerald-400/20'
     }));
 
-    const recentItemsList = await Item.find().sort({ created_at: -1 }).limit(3);
     recentItemsList.forEach(item => activities.push({
       id: `item-${item._id}`,
       action: 'New Item Listed',
@@ -617,7 +631,6 @@ const getDashboardStats = async (req, res) => {
       bg: 'bg-blue-400/10 border-blue-400/20'
     }));
 
-    const recentTxnsList = await Transaction.find({ status: 'success' }).sort({ created_at: -1 }).limit(3);
     recentTxnsList.forEach(txn => activities.push({
       id: `txn-${txn._id}`,
       action: txn.transactionType === 'wallet_recharge' ? 'Credits Purchased' : 'Shipping Paid',
@@ -627,7 +640,6 @@ const getDashboardStats = async (req, res) => {
       bg: 'bg-yellow-400/10 border-yellow-400/20'
     }));
 
-    const recentOrdersList = await Order.find({ orderStatus: 'delivered' }).sort({ updated_at: -1 }).limit(3).populate('item');
     recentOrdersList.forEach(order => activities.push({
       id: `order-${order._id}`,
       action: 'Order Delivered',
@@ -645,7 +657,7 @@ const getDashboardStats = async (req, res) => {
       data: {
         users: { total: totalUsers, verified: verifiedUsers },
         items: { total: totalItems, active: activeItems, pending: pendingItems, swapped: swappedItems },
-        orders: { total: totalOrders, delivered: deliveredOrders, pending: pendingOrders, currentMonth: currentMonthOrders }, // ADDED currentMonth HERE
+        orders: { total: totalOrders, delivered: deliveredOrders, pending: pendingOrders, currentMonth: currentMonthOrders },
         revenue: totalRevenue,
         recentUsers,
         performanceData, 
@@ -671,6 +683,6 @@ module.exports = {
   getPublicCreditSettings,
   getAllTransactions,
   getAllOrders,              
-  updateAdminOrderStatus    ,
+  updateAdminOrderStatus,
   getDashboardStats
 };

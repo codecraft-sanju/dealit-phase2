@@ -1,7 +1,27 @@
 import React from 'react';
-import { Coins, ToggleRight, ToggleLeft, Package, List, Gift, Users, Target, Truck, Zap, IndianRupee, Clock, AlertTriangle } from 'lucide-react'; // NAYA CHANGE: AlertTriangle import kiya
+import { Coins, ToggleRight, ToggleLeft, Package, List, Gift, Users, Target, Truck, Zap, IndianRupee, Clock, AlertTriangle, Settings } from 'lucide-react';
 
-const SettingsPanel = ({ creditSettings, setCreditSettings, handleSaveSettings, updating }) => {
+const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, handleSaveSettings, updating }) => {
+  
+  // Dynamic Title setup based on active sub-tab
+  const getTabTitle = () => {
+    switch(activeTab) {
+      case 'settings-credits': 
+      case 'settings': 
+        return { title: 'Credits & Bonuses', sub: 'Manage listing rewards & welcome gifts' };
+      case 'settings-referrals': 
+        return { title: 'Referral System', sub: 'Configure refer & earn milestones' };
+      case 'settings-shipping': 
+        return { title: 'Shipping Rules', sub: 'Set flat rates or dynamic APIs' };
+      case 'settings-orders': 
+        return { title: 'Order & Aura', sub: 'Manage automated limits and penalties' };
+      default: 
+        return { title: 'Platform Configurations', sub: 'Manage Rules, Limits & Rewards' };
+    }
+  };
+
+  const currentInfo = getTabTitle();
+
   return (
     <div className="flex-1 p-4 md:p-6 lg:p-10 overflow-y-auto admin-scroll relative">
       {/* Background Ambience Inside Settings */}
@@ -11,366 +31,388 @@ const SettingsPanel = ({ creditSettings, setCreditSettings, handleSaveSettings, 
         
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8 md:mb-10 border-b border-white/10 pb-5 md:pb-6">
           <div className="p-3 md:p-3.5 bg-yellow-500/10 rounded-xl md:rounded-2xl border border-yellow-500/20 shadow-[0_0_20px_rgba(234,179,8,0.15)] inline-flex w-fit shrink-0">
-            <Coins className="w-6 h-6 md:w-8 md:h-8 text-yellow-400" />
+            <Settings className="w-6 h-6 md:w-8 md:h-8 text-yellow-400" />
           </div>
           <div>
-            <h2 className="text-xl md:text-2xl lg:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 tracking-tight leading-tight">Platform Configurations</h2>
-            <p className="text-[10px] md:text-xs text-gray-500 mt-1 uppercase tracking-widest font-bold">Manage Rules, Limits & Rewards</p>
+            <h2 className="text-xl md:text-2xl lg:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 tracking-tight leading-tight">
+              {currentInfo.title}
+            </h2>
+            <p className="text-[10px] md:text-xs text-gray-500 mt-1 uppercase tracking-widest font-bold">
+              {currentInfo.sub}
+            </p>
           </div>
         </div>
         
         <form onSubmit={handleSaveSettings} className="space-y-8 md:space-y-10 relative z-10">
           
-          {/* 1. Free Credits Section */}
-          <div className="space-y-5 md:space-y-6">
-            <div className="bg-white/[0.02] p-4 md:p-6 rounded-2xl border border-white/5 flex items-center justify-between cursor-pointer hover:bg-white/[0.04] transition-colors gap-3 md:gap-4" onClick={() => setCreditSettings({ ...creditSettings, isCreditSystemEnabled: !creditSettings.isCreditSystemEnabled })}>
-              <div className="flex-1">
-                <p className="font-bold text-white text-base md:text-lg tracking-tight">Enable Free Credits</p>
-                <p className="text-[10px] md:text-xs text-gray-500 mt-0.5 md:mt-1 max-w-md leading-relaxed">If turned off, users will not receive any credits for listing new products.</p>
-              </div>
-              {creditSettings.isCreditSystemEnabled ? (
-                <ToggleRight className="w-10 h-10 md:w-14 md:h-14 text-emerald-400 drop-shadow-[0_0_10px_rgba(16,185,129,0.4)] shrink-0" />
-              ) : (
-                <ToggleLeft className="w-10 h-10 md:w-14 md:h-14 text-gray-600 shrink-0" />
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6">
-              <div className="space-y-2 md:space-y-2.5">
-                <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest">Credits Per Listing</label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
-                    <Coins className="w-4 h-4 text-yellow-400 group-focus-within:text-purple-400 transition-colors" />
+          {/* ===================== TAB 1: CREDITS & BONUS ===================== */}
+          {(activeTab === 'settings-credits' || activeTab === 'settings') && (
+            <>
+              {/* Free Credits Section */}
+              <div className="space-y-5 md:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="bg-white/[0.02] p-4 md:p-6 rounded-2xl border border-white/5 flex items-center justify-between cursor-pointer hover:bg-white/[0.04] transition-colors gap-3 md:gap-4" onClick={() => setCreditSettings({ ...creditSettings, isCreditSystemEnabled: !creditSettings.isCreditSystemEnabled })}>
+                  <div className="flex-1">
+                    <p className="font-bold text-white text-base md:text-lg tracking-tight">Enable Free Credits</p>
+                    <p className="text-[10px] md:text-xs text-gray-500 mt-0.5 md:mt-1 max-w-md leading-relaxed">If turned off, users will not receive any credits for listing new products.</p>
                   </div>
-                  <input 
-                    type="number" 
-                    required 
-                    min="0" 
-                    value={creditSettings.creditsPerListing} 
-                    onChange={(e) => setCreditSettings({...creditSettings, creditsPerListing: Number(e.target.value)})} 
-                    disabled={!creditSettings.isCreditSystemEnabled} 
-                    className="w-full bg-black/20 border border-white/10 rounded-xl pl-9 md:pl-11 pr-3 md:pr-4 py-3 md:py-3.5 text-white text-xs md:text-sm font-bold focus:outline-none focus:border-purple-500/50 focus:bg-black/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-inner" 
-                  />
+                  {creditSettings.isCreditSystemEnabled ? (
+                    <ToggleRight className="w-10 h-10 md:w-14 md:h-14 text-emerald-400 drop-shadow-[0_0_10px_rgba(16,185,129,0.4)] shrink-0" />
+                  ) : (
+                    <ToggleLeft className="w-10 h-10 md:w-14 md:h-14 text-gray-600 shrink-0" />
+                  )}
                 </div>
-                <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider">Amount awarded upon approval.</p>
-              </div>
 
-              <div className="space-y-2 md:space-y-2.5">
-                <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest">Max Rewarded Limit</label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
-                    <Package className="w-4 h-4 text-blue-400 group-focus-within:text-blue-300 transition-colors" />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6">
+                  <div className="space-y-2 md:space-y-2.5">
+                    <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest">Credits Per Listing</label>
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
+                        <Coins className="w-4 h-4 text-yellow-400 group-focus-within:text-purple-400 transition-colors" />
+                      </div>
+                      <input 
+                        type="number" 
+                        required 
+                        min="0" 
+                        value={creditSettings.creditsPerListing} 
+                        onChange={(e) => setCreditSettings({...creditSettings, creditsPerListing: Number(e.target.value)})} 
+                        disabled={!creditSettings.isCreditSystemEnabled} 
+                        className="w-full bg-black/20 border border-white/10 rounded-xl pl-9 md:pl-11 pr-3 md:pr-4 py-3 md:py-3.5 text-white text-xs md:text-sm font-bold focus:outline-none focus:border-purple-500/50 focus:bg-black/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-inner" 
+                      />
+                    </div>
+                    <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider">Amount awarded upon approval.</p>
                   </div>
-                  <input 
-                    type="number" 
-                    required 
-                    min="1" 
-                    value={creditSettings.maxListingsRewarded} 
-                    onChange={(e) => setCreditSettings({...creditSettings, maxListingsRewarded: Number(e.target.value)})} 
-                    disabled={!creditSettings.isCreditSystemEnabled} 
-                    className="w-full bg-black/20 border border-white/10 rounded-xl pl-9 md:pl-11 pr-3 md:pr-4 py-3 md:py-3.5 text-white text-xs md:text-sm font-bold focus:outline-none focus:border-blue-500/50 focus:bg-black/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-inner" 
-                  />
-                </div>
-                <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider">Listings eligible for reward (e.g., 3).</p>
-              </div>
 
-              <div className="space-y-2 md:space-y-2.5">
-                <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest">Max Allowed Listings</label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
-                    <List className="w-4 h-4 text-emerald-400 group-focus-within:text-emerald-300 transition-colors" />
+                  <div className="space-y-2 md:space-y-2.5">
+                    <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest">Max Rewarded Limit</label>
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
+                        <Package className="w-4 h-4 text-blue-400 group-focus-within:text-blue-300 transition-colors" />
+                      </div>
+                      <input 
+                        type="number" 
+                        required 
+                        min="1" 
+                        value={creditSettings.maxListingsRewarded} 
+                        onChange={(e) => setCreditSettings({...creditSettings, maxListingsRewarded: Number(e.target.value)})} 
+                        disabled={!creditSettings.isCreditSystemEnabled} 
+                        className="w-full bg-black/20 border border-white/10 rounded-xl pl-9 md:pl-11 pr-3 md:pr-4 py-3 md:py-3.5 text-white text-xs md:text-sm font-bold focus:outline-none focus:border-blue-500/50 focus:bg-black/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-inner" 
+                      />
+                    </div>
+                    <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider">Listings eligible for reward (e.g., 3).</p>
                   </div>
-                  <input 
-                    type="number" 
-                    required 
-                    min="1" 
-                    value={creditSettings.maxAllowedListings || 5} 
-                    onChange={(e) => setCreditSettings({...creditSettings, maxAllowedListings: Number(e.target.value)})} 
-                    className="w-full bg-black/20 border border-white/10 rounded-xl pl-9 md:pl-11 pr-3 md:pr-4 py-3 md:py-3.5 text-white text-xs md:text-sm font-bold focus:outline-none focus:border-emerald-500/50 focus:bg-black/40 transition-all shadow-inner" 
-                  />
-                </div>
-                <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider">Total items a user can list.</p>
-              </div>
-            </div>
-          </div>
 
-          <hr className="border-white/5" />
-
-          {/* --- WELCOME BONUS SECTION --- */}
-          <div className="space-y-5 md:space-y-6">
-            <div className="bg-white/[0.02] p-4 md:p-6 rounded-2xl border border-white/5 flex items-center justify-between cursor-pointer hover:bg-white/[0.04] transition-colors gap-3 md:gap-4" onClick={() => setCreditSettings({ ...creditSettings, isWelcomeBonusEnabled: !creditSettings.isWelcomeBonusEnabled })}>
-              <div className="flex-1">
-                <p className="font-bold text-white text-base md:text-lg tracking-tight">Enable Welcome Bonus</p>
-                <p className="text-[10px] md:text-xs text-gray-500 mt-0.5 md:mt-1 max-w-md leading-relaxed">If turned off, the claim bonus button will be hidden for new users.</p>
-              </div>
-              {creditSettings.isWelcomeBonusEnabled ? (
-                <ToggleRight className="w-10 h-10 md:w-14 md:h-14 text-pink-400 drop-shadow-[0_0_10px_rgba(244,114,182,0.4)] shrink-0" />
-              ) : (
-                <ToggleLeft className="w-10 h-10 md:w-14 md:h-14 text-gray-600 shrink-0" />
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6">
-              <div className="space-y-2 md:space-y-2.5">
-                <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest">Bonus Amount</label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
-                    <Gift className="w-4 h-4 text-pink-400 group-focus-within:text-pink-300 transition-colors" />
+                  <div className="space-y-2 md:space-y-2.5">
+                    <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest">Max Allowed Listings</label>
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
+                        <List className="w-4 h-4 text-emerald-400 group-focus-within:text-emerald-300 transition-colors" />
+                      </div>
+                      <input 
+                        type="number" 
+                        required 
+                        min="1" 
+                        value={creditSettings.maxAllowedListings || 5} 
+                        onChange={(e) => setCreditSettings({...creditSettings, maxAllowedListings: Number(e.target.value)})} 
+                        className="w-full bg-black/20 border border-white/10 rounded-xl pl-9 md:pl-11 pr-3 md:pr-4 py-3 md:py-3.5 text-white text-xs md:text-sm font-bold focus:outline-none focus:border-emerald-500/50 focus:bg-black/40 transition-all shadow-inner" 
+                      />
+                    </div>
+                    <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider">Total items a user can list.</p>
                   </div>
-                  <input 
-                    type="number" 
-                    required 
-                    min="0" 
-                    value={creditSettings.welcomeBonusAmount || 50} 
-                    onChange={(e) => setCreditSettings({...creditSettings, welcomeBonusAmount: Number(e.target.value)})} 
-                    disabled={!creditSettings.isWelcomeBonusEnabled} 
-                    className="w-full bg-black/20 border border-white/10 rounded-xl pl-9 md:pl-11 pr-3 md:pr-4 py-3 md:py-3.5 text-white text-xs md:text-sm font-bold focus:outline-none focus:border-pink-500/50 focus:bg-black/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-inner" 
-                  />
                 </div>
-                <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider">Credits given when claimed.</p>
               </div>
-            </div>
-          </div>
 
-          <hr className="border-white/5" />
+              <hr className="border-white/5" />
 
-          {/* 2. Referral System Section */}
-          <div className="space-y-5 md:space-y-6">
-            <div className="bg-white/[0.02] p-4 md:p-6 rounded-2xl border border-white/5 flex items-center justify-between cursor-pointer hover:bg-white/[0.04] transition-colors gap-3 md:gap-4" onClick={() => setCreditSettings({ ...creditSettings, isReferralSystemEnabled: !creditSettings.isReferralSystemEnabled })}>
-              <div className="flex-1">
-                <p className="font-bold text-white text-base md:text-lg tracking-tight">Enable Refer & Earn</p>
-                <p className="text-[10px] md:text-xs text-gray-500 mt-0.5 md:mt-1 max-w-md leading-relaxed">If turned off, the referral input on sign-up and the share page will be hidden.</p>
-              </div>
-              {creditSettings.isReferralSystemEnabled ? (
-                <ToggleRight className="w-10 h-10 md:w-14 md:h-14 text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.4)] shrink-0" />
-              ) : (
-                <ToggleLeft className="w-10 h-10 md:w-14 md:h-14 text-gray-600 shrink-0" />
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6">
-              <div className="space-y-2 md:space-y-2.5">
-                <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest">First Reward</label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
-                    <Gift className="w-4 h-4 text-blue-400 group-focus-within:text-blue-300 transition-colors" />
+              {/* Welcome Bonus Section */}
+              <div className="space-y-5 md:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-75">
+                <div className="bg-white/[0.02] p-4 md:p-6 rounded-2xl border border-white/5 flex items-center justify-between cursor-pointer hover:bg-white/[0.04] transition-colors gap-3 md:gap-4" onClick={() => setCreditSettings({ ...creditSettings, isWelcomeBonusEnabled: !creditSettings.isWelcomeBonusEnabled })}>
+                  <div className="flex-1">
+                    <p className="font-bold text-white text-base md:text-lg tracking-tight">Enable Welcome Bonus</p>
+                    <p className="text-[10px] md:text-xs text-gray-500 mt-0.5 md:mt-1 max-w-md leading-relaxed">If turned off, the claim bonus button will be hidden for new users.</p>
                   </div>
-                  <input 
-                    type="number" 
-                    required 
-                    min="0" 
-                    value={creditSettings.referralRewardCredits || 40} 
-                    onChange={(e) => setCreditSettings({...creditSettings, referralRewardCredits: Number(e.target.value)})} 
-                    disabled={!creditSettings.isReferralSystemEnabled} 
-                    className="w-full bg-black/20 border border-white/10 rounded-xl pl-9 md:pl-11 pr-3 md:pr-4 py-3 md:py-3.5 text-white text-xs md:text-sm font-bold focus:outline-none focus:border-blue-500/50 focus:bg-black/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-inner" 
-                  />
+                  {creditSettings.isWelcomeBonusEnabled ? (
+                    <ToggleRight className="w-10 h-10 md:w-14 md:h-14 text-pink-400 drop-shadow-[0_0_10px_rgba(244,114,182,0.4)] shrink-0" />
+                  ) : (
+                    <ToggleLeft className="w-10 h-10 md:w-14 md:h-14 text-gray-600 shrink-0" />
+                  )}
                 </div>
-                <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider">Credits given on 1st refer.</p>
-              </div>
 
-              <div className="space-y-2 md:space-y-2.5">
-                <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest">Max Referral Limit</label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
-                    <Users className="w-4 h-4 text-emerald-400 group-focus-within:text-emerald-300 transition-colors" />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6">
+                  <div className="space-y-2 md:space-y-2.5">
+                    <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest">Bonus Amount</label>
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
+                        <Gift className="w-4 h-4 text-pink-400 group-focus-within:text-pink-300 transition-colors" />
+                      </div>
+                      <input 
+                        type="number" 
+                        required 
+                        min="0" 
+                        value={creditSettings.welcomeBonusAmount || 50} 
+                        onChange={(e) => setCreditSettings({...creditSettings, welcomeBonusAmount: Number(e.target.value)})} 
+                        disabled={!creditSettings.isWelcomeBonusEnabled} 
+                        className="w-full bg-black/20 border border-white/10 rounded-xl pl-9 md:pl-11 pr-3 md:pr-4 py-3 md:py-3.5 text-white text-xs md:text-sm font-bold focus:outline-none focus:border-pink-500/50 focus:bg-black/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-inner" 
+                      />
+                    </div>
+                    <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider">Credits given when claimed.</p>
                   </div>
-                  <input 
-                    type="number" 
-                    required 
-                    min="1" 
-                    value={creditSettings.maxReferralLimit || 5} 
-                    onChange={(e) => setCreditSettings({...creditSettings, maxReferralLimit: Number(e.target.value)})} 
-                    disabled={!creditSettings.isReferralSystemEnabled} 
-                    className="w-full bg-black/20 border border-white/10 rounded-xl pl-9 md:pl-11 pr-3 md:pr-4 py-3 md:py-3.5 text-white text-xs md:text-sm font-bold focus:outline-none focus:border-emerald-500/50 focus:bg-black/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-inner" 
-                  />
                 </div>
-                <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider">Max friends user can invite.</p>
+              </div>
+            </>
+          )}
+
+          {/* ===================== TAB 2: REFERRALS ===================== */}
+          {activeTab === 'settings-referrals' && (
+            <div className="space-y-5 md:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="bg-white/[0.02] p-4 md:p-6 rounded-2xl border border-white/5 flex items-center justify-between cursor-pointer hover:bg-white/[0.04] transition-colors gap-3 md:gap-4" onClick={() => setCreditSettings({ ...creditSettings, isReferralSystemEnabled: !creditSettings.isReferralSystemEnabled })}>
+                <div className="flex-1">
+                  <p className="font-bold text-white text-base md:text-lg tracking-tight">Enable Refer & Earn</p>
+                  <p className="text-[10px] md:text-xs text-gray-500 mt-0.5 md:mt-1 max-w-md leading-relaxed">If turned off, the referral input on sign-up and the share page will be hidden.</p>
+                </div>
+                {creditSettings.isReferralSystemEnabled ? (
+                  <ToggleRight className="w-10 h-10 md:w-14 md:h-14 text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.4)] shrink-0" />
+                ) : (
+                  <ToggleLeft className="w-10 h-10 md:w-14 md:h-14 text-gray-600 shrink-0" />
+                )}
               </div>
 
-              <div className="space-y-2 md:space-y-2.5">
-                <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest">Milestone Reward</label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
-                    <Target className="w-4 h-4 text-yellow-400 group-focus-within:text-yellow-300 transition-colors" />
-                  </div>
-                  <input 
-                    type="number" 
-                    required 
-                    min="0" 
-                    value={creditSettings.milestoneReferralReward || 100} 
-                    onChange={(e) => setCreditSettings({...creditSettings, milestoneReferralReward: Number(e.target.value)})} 
-                    disabled={!creditSettings.isReferralSystemEnabled} 
-                    className="w-full bg-black/20 border border-white/10 rounded-xl pl-9 md:pl-11 pr-3 md:pr-4 py-3 md:py-3.5 text-white text-xs md:text-sm font-bold focus:outline-none focus:border-yellow-500/50 focus:bg-black/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-inner" 
-                  />
-                </div>
-                <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider">Bumper prize at max limit.</p>
-              </div>
-            </div>
-          </div>
-
-          <hr className="border-white/5" />
-
-          {/* SHIPPING METHOD SELECTION */}
-          <div className="bg-white/[0.02] p-5 md:p-6 sm:p-8 rounded-2xl md:rounded-3xl border border-white/5 flex flex-col justify-between">
-            <div className="mb-5 md:mb-6">
-              <p className="font-bold text-white text-base md:text-lg tracking-tight">Shipping Settings</p>
-              <p className="text-[10px] md:text-xs text-gray-400 mt-0.5 md:mt-1 max-w-md leading-relaxed">Configure how shipping costs are calculated for buyers.</p>
-            </div>
-
-            {/* Shipping Method Toggles */}
-            <div className="flex flex-col sm:flex-row bg-black/20 p-1.5 rounded-xl md:rounded-2xl border border-white/5 w-full mb-6 md:mb-8 shadow-inner gap-1">
-              <button
-                type="button"
-                onClick={() => setCreditSettings({...creditSettings, shippingMethod: 'flat'})}
-                className={`flex-1 py-3 px-3 md:py-3.5 md:px-4 rounded-lg md:rounded-xl font-bold text-xs md:text-sm transition-all flex items-center justify-center gap-1.5 md:gap-2 ${
-                  creditSettings.shippingMethod === 'flat' 
-                    ? 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white shadow-[0_0_15px_rgba(99,102,241,0.4)] border border-indigo-400/50' 
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                }`}
-              >
-                <Truck className="w-3.5 h-3.5 md:w-4 md:h-4" /> Flat Rate
-              </button>
-              <button
-                type="button"
-                onClick={() => setCreditSettings({...creditSettings, shippingMethod: 'dynamic'})}
-                className={`flex-1 py-3 px-3 md:py-3.5 md:px-4 rounded-lg md:rounded-xl font-bold text-xs md:text-sm transition-all flex items-center justify-center gap-1.5 md:gap-2 ${
-                  creditSettings.shippingMethod === 'dynamic' 
-                    ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-[0_0_15px_rgba(16,185,129,0.4)] border border-emerald-400/50' 
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                }`}
-              >
-                <Zap className="w-3.5 h-3.5 md:w-4 md:h-4" /> Dynamic API
-              </button>
-            </div>
-
-            {/* Conditional Form Fields */}
-            <div className="bg-white/[0.01] p-4 md:p-6 rounded-xl md:rounded-2xl border border-white/5 shadow-inner">
-              {creditSettings.shippingMethod === 'flat' ? (
-                <div className="space-y-2 md:space-y-3 max-w-sm">
-                  <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest">Flat Shipping Cost (₹)</label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6">
+                <div className="space-y-2 md:space-y-2.5">
+                  <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest">First Reward</label>
                   <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
-                      <IndianRupee className="w-4 h-4 text-indigo-400 group-focus-within:text-indigo-300 transition-colors" />
+                      <Gift className="w-4 h-4 text-blue-400 group-focus-within:text-blue-300 transition-colors" />
                     </div>
                     <input 
                       type="number" 
                       required 
                       min="0" 
-                      value={creditSettings.flatShippingCost !== undefined ? creditSettings.flatShippingCost : 60} 
-                      onChange={(e) => setCreditSettings({...creditSettings, flatShippingCost: Number(e.target.value)})} 
-                      className="w-full bg-black/20 border border-white/10 rounded-xl pl-9 md:pl-11 pr-3 md:pr-4 py-3 md:py-3.5 text-white text-xs md:text-sm font-bold focus:outline-none focus:border-indigo-500/50 focus:bg-black/40 transition-all shadow-inner" 
+                      value={creditSettings.referralRewardCredits || 40} 
+                      onChange={(e) => setCreditSettings({...creditSettings, referralRewardCredits: Number(e.target.value)})} 
+                      disabled={!creditSettings.isReferralSystemEnabled} 
+                      className="w-full bg-black/20 border border-white/10 rounded-xl pl-9 md:pl-11 pr-3 md:pr-4 py-3 md:py-3.5 text-white text-xs md:text-sm font-bold focus:outline-none focus:border-blue-500/50 focus:bg-black/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-inner" 
                     />
                   </div>
-                  <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider mt-1.5 md:mt-2 leading-relaxed">This fixed amount will be charged on all orders. Set to 0 for platform-wide free shipping.</p>
+                  <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider">Credits given on 1st refer.</p>
                 </div>
-              ) : (
-                <div className="space-y-3 md:space-y-4">
-                  <div className="flex items-start gap-3 md:gap-4">
-                    <div className="bg-emerald-500/10 p-2.5 md:p-3 rounded-lg md:rounded-xl border border-emerald-500/20 shrink-0 mt-0.5 md:mt-1">
-                      <Zap className="w-4 h-4 md:w-5 md:h-5 text-emerald-400" />
-                    </div>
-                    <div>
-                      <h4 className="text-emerald-100 font-bold text-xs md:text-sm tracking-wide">Dynamic Calculation Active</h4>
-                      <p className="text-gray-400 text-[10px] md:text-xs mt-1 md:mt-1.5 leading-relaxed">
-                        Shipping cost is now calculated in real-time based on the item's weight and the distance between the seller's pickup address and the buyer's delivery pincode.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="p-3 md:p-4 bg-yellow-500/5 border border-yellow-500/20 rounded-lg md:rounded-xl mt-3 md:mt-4">
-                     <p className="text-yellow-500/90 text-[9px] md:text-[11px] font-bold uppercase tracking-wider leading-relaxed">⚠️ Integration Note: To use Dynamic rates, ensure your courier aggregator API (e.g., Shiprocket) is configured in the backend.</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
 
-          <hr className="border-white/5" />
-
-          {/* ORDER MANAGEMENT SECTION */}
-          <div className="bg-white/[0.02] p-5 md:p-6 sm:p-8 rounded-2xl md:rounded-3xl border border-white/5 flex flex-col justify-between mt-6">
-            <div className="mb-5 md:mb-6">
-              <p className="font-bold text-white text-base md:text-lg tracking-tight">Order Management</p>
-              <p className="text-[10px] md:text-xs text-gray-400 mt-0.5 md:mt-1 max-w-md leading-relaxed">Configure automated rules and aura points for orders on the platform.</p>
-            </div>
-
-            <div className="bg-white/[0.01] p-4 md:p-6 rounded-xl md:rounded-2xl border border-white/5 shadow-inner">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6">
-                
-                {/* Auto-Cancel Timer */}
-                <div className="space-y-2 md:space-y-3">
-                  <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                    <Clock className="w-3.5 h-3.5 text-gray-400" /> Auto-Cancel Timer
-                  </label>
+                <div className="space-y-2 md:space-y-2.5">
+                  <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest">Max Referral Limit</label>
                   <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
-                      <span className="text-gray-400 text-xs font-bold group-focus-within:text-white transition-colors">Hr</span>
+                      <Users className="w-4 h-4 text-emerald-400 group-focus-within:text-emerald-300 transition-colors" />
                     </div>
                     <input 
                       type="number" 
                       required 
                       min="1" 
-                      value={creditSettings.autoCancelHours !== undefined ? creditSettings.autoCancelHours : 24} 
-                      onChange={(e) => setCreditSettings({...creditSettings, autoCancelHours: Number(e.target.value)})} 
-                      className="w-full bg-black/20 border border-white/10 rounded-xl pl-10 md:pl-12 pr-3 md:pr-4 py-3 md:py-3.5 text-white text-xs md:text-sm font-bold focus:outline-none focus:border-white/50 focus:bg-black/40 transition-all shadow-inner" 
+                      value={creditSettings.maxReferralLimit || 5} 
+                      onChange={(e) => setCreditSettings({...creditSettings, maxReferralLimit: Number(e.target.value)})} 
+                      disabled={!creditSettings.isReferralSystemEnabled} 
+                      className="w-full bg-black/20 border border-white/10 rounded-xl pl-9 md:pl-11 pr-3 md:pr-4 py-3 md:py-3.5 text-white text-xs md:text-sm font-bold focus:outline-none focus:border-emerald-500/50 focus:bg-black/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-inner" 
                     />
                   </div>
-                  <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider mt-1.5 md:mt-2 leading-relaxed">
-                    Pending orders older than this will be auto-cancelled.
-                  </p>
+                  <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider">Max friends user can invite.</p>
                 </div>
 
-                {/* NAYA CHANGE: Delivery Reward */}
-                <div className="space-y-2 md:space-y-3">
-                  <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                    <Target className="w-3.5 h-3.5 text-emerald-400" /> Delivery Reward (Aura)
-                  </label>
+                <div className="space-y-2 md:space-y-2.5">
+                  <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest">Milestone Reward</label>
                   <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
-                      <span className="text-emerald-500 text-xs font-bold group-focus-within:text-emerald-400 transition-colors">+</span>
+                      <Target className="w-4 h-4 text-yellow-400 group-focus-within:text-yellow-300 transition-colors" />
                     </div>
                     <input 
                       type="number" 
                       required 
                       min="0" 
-                      value={creditSettings.auraReward !== undefined ? creditSettings.auraReward : 50} 
-                      onChange={(e) => setCreditSettings({...creditSettings, auraReward: Number(e.target.value)})} 
-                      className="w-full bg-black/20 border border-emerald-500/10 rounded-xl pl-10 md:pl-12 pr-3 md:pr-4 py-3 md:py-3.5 text-emerald-100 text-xs md:text-sm font-bold focus:outline-none focus:border-emerald-500/50 focus:bg-emerald-900/10 transition-all shadow-inner" 
+                      value={creditSettings.milestoneReferralReward || 100} 
+                      onChange={(e) => setCreditSettings({...creditSettings, milestoneReferralReward: Number(e.target.value)})} 
+                      disabled={!creditSettings.isReferralSystemEnabled} 
+                      className="w-full bg-black/20 border border-white/10 rounded-xl pl-9 md:pl-11 pr-3 md:pr-4 py-3 md:py-3.5 text-white text-xs md:text-sm font-bold focus:outline-none focus:border-yellow-500/50 focus:bg-black/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-inner" 
                     />
                   </div>
-                  <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider mt-1.5 md:mt-2 leading-relaxed">
-                    Aura points awarded to seller on successful delivery.
-                  </p>
+                  <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider">Bumper prize at max limit.</p>
                 </div>
-
-                {/* NAYA CHANGE: Cancel Penalty */}
-                <div className="space-y-2 md:space-y-3">
-                  <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                    <AlertTriangle className="w-3.5 h-3.5 text-red-400" /> Cancel Penalty (Aura)
-                  </label>
-                  <div className="relative group">
-                    <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
-                      <span className="text-red-500 text-xs font-bold group-focus-within:text-red-400 transition-colors">-</span>
-                    </div>
-                    <input 
-                      type="number" 
-                      required 
-                      min="0" 
-                      value={creditSettings.auraPenalty !== undefined ? creditSettings.auraPenalty : 50} 
-                      onChange={(e) => setCreditSettings({...creditSettings, auraPenalty: Number(e.target.value)})} 
-                      className="w-full bg-black/20 border border-red-500/10 rounded-xl pl-10 md:pl-12 pr-3 md:pr-4 py-3 md:py-3.5 text-red-100 text-xs md:text-sm font-bold focus:outline-none focus:border-red-500/50 focus:bg-red-900/10 transition-all shadow-inner" 
-                    />
-                  </div>
-                  <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider mt-1.5 md:mt-2 leading-relaxed">
-                    Aura points deducted for late dispatch or cancellation.
-                  </p>
-                </div>
-
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Save Button */}
-          <div className="pt-6 md:pt-8 border-t border-white/5 flex justify-end">
+          {/* ===================== TAB 3: SHIPPING ===================== */}
+          {activeTab === 'settings-shipping' && (
+            <div className="bg-white/[0.02] p-5 md:p-6 sm:p-8 rounded-2xl md:rounded-3xl border border-white/5 flex flex-col justify-between animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="mb-5 md:mb-6">
+                <p className="font-bold text-white text-base md:text-lg tracking-tight">Shipping Settings</p>
+                <p className="text-[10px] md:text-xs text-gray-400 mt-0.5 md:mt-1 max-w-md leading-relaxed">Configure how shipping costs are calculated for buyers.</p>
+              </div>
+
+              {/* Shipping Method Toggles */}
+              <div className="flex flex-col sm:flex-row bg-black/20 p-1.5 rounded-xl md:rounded-2xl border border-white/5 w-full mb-6 md:mb-8 shadow-inner gap-1">
+                <button
+                  type="button"
+                  onClick={() => setCreditSettings({...creditSettings, shippingMethod: 'flat'})}
+                  className={`flex-1 py-3 px-3 md:py-3.5 md:px-4 rounded-lg md:rounded-xl font-bold text-xs md:text-sm transition-all flex items-center justify-center gap-1.5 md:gap-2 ${
+                    creditSettings.shippingMethod === 'flat' 
+                      ? 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white shadow-[0_0_15px_rgba(99,102,241,0.4)] border border-indigo-400/50' 
+                      : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <Truck className="w-3.5 h-3.5 md:w-4 md:h-4" /> Flat Rate
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCreditSettings({...creditSettings, shippingMethod: 'dynamic'})}
+                  className={`flex-1 py-3 px-3 md:py-3.5 md:px-4 rounded-lg md:rounded-xl font-bold text-xs md:text-sm transition-all flex items-center justify-center gap-1.5 md:gap-2 ${
+                    creditSettings.shippingMethod === 'dynamic' 
+                      ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-[0_0_15px_rgba(16,185,129,0.4)] border border-emerald-400/50' 
+                      : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <Zap className="w-3.5 h-3.5 md:w-4 md:h-4" /> Dynamic API
+                </button>
+              </div>
+
+              {/* Conditional Form Fields */}
+              <div className="bg-white/[0.01] p-4 md:p-6 rounded-xl md:rounded-2xl border border-white/5 shadow-inner">
+                {creditSettings.shippingMethod === 'flat' ? (
+                  <div className="space-y-2 md:space-y-3 max-w-sm">
+                    <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest">Flat Shipping Cost (₹)</label>
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
+                        <IndianRupee className="w-4 h-4 text-indigo-400 group-focus-within:text-indigo-300 transition-colors" />
+                      </div>
+                      <input 
+                        type="number" 
+                        required 
+                        min="0" 
+                        value={creditSettings.flatShippingCost !== undefined ? creditSettings.flatShippingCost : 60} 
+                        onChange={(e) => setCreditSettings({...creditSettings, flatShippingCost: Number(e.target.value)})} 
+                        className="w-full bg-black/20 border border-white/10 rounded-xl pl-9 md:pl-11 pr-3 md:pr-4 py-3 md:py-3.5 text-white text-xs md:text-sm font-bold focus:outline-none focus:border-indigo-500/50 focus:bg-black/40 transition-all shadow-inner" 
+                      />
+                    </div>
+                    <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider mt-1.5 md:mt-2 leading-relaxed">This fixed amount will be charged on all orders. Set to 0 for platform-wide free shipping.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 md:space-y-4">
+                    <div className="flex items-start gap-3 md:gap-4">
+                      <div className="bg-emerald-500/10 p-2.5 md:p-3 rounded-lg md:rounded-xl border border-emerald-500/20 shrink-0 mt-0.5 md:mt-1">
+                        <Zap className="w-4 h-4 md:w-5 md:h-5 text-emerald-400" />
+                      </div>
+                      <div>
+                        <h4 className="text-emerald-100 font-bold text-xs md:text-sm tracking-wide">Dynamic Calculation Active</h4>
+                        <p className="text-gray-400 text-[10px] md:text-xs mt-1 md:mt-1.5 leading-relaxed">
+                          Shipping cost is now calculated in real-time based on the item's weight and the distance between the seller's pickup address and the buyer's delivery pincode.
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Improved Warning & Info Badges */}
+                    <div className="flex flex-col sm:flex-row gap-3 mt-3 md:mt-4">
+                      <div className="p-3 md:p-4 bg-yellow-500/5 border border-yellow-500/20 rounded-lg md:rounded-xl flex-1 flex items-start gap-2">
+                         <AlertTriangle className="w-4 h-4 text-yellow-500 shrink-0" />
+                         <p className="text-yellow-500/90 text-[9px] md:text-[10px] font-bold uppercase tracking-wider leading-relaxed">
+                           Ensure Shiprocket credentials are set securely in your backend .env file.
+                         </p>
+                      </div>
+                      <div className="p-3 md:p-4 bg-blue-500/5 border border-blue-500/20 rounded-lg md:rounded-xl flex-1 flex items-start gap-2">
+                         <Package className="w-4 h-4 text-blue-400 shrink-0" />
+                         <p className="text-blue-400/90 text-[9px] md:text-[10px] font-bold uppercase tracking-wider leading-relaxed">
+                           Requires sellers to input exact weight & box dimensions while listing items.
+                         </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ===================== TAB 4: ORDERS & AURA ===================== */}
+          {activeTab === 'settings-orders' && (
+            <div className="bg-white/[0.02] p-5 md:p-6 sm:p-8 rounded-2xl md:rounded-3xl border border-white/5 flex flex-col justify-between animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="mb-5 md:mb-6">
+                <p className="font-bold text-white text-base md:text-lg tracking-tight">Order Management</p>
+                <p className="text-[10px] md:text-xs text-gray-400 mt-0.5 md:mt-1 max-w-md leading-relaxed">Configure automated rules and aura points for orders on the platform.</p>
+              </div>
+
+              <div className="bg-white/[0.01] p-4 md:p-6 rounded-xl md:rounded-2xl border border-white/5 shadow-inner">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6">
+                  
+                  {/* Auto-Cancel Timer */}
+                  <div className="space-y-2 md:space-y-3">
+                    <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                      <Clock className="w-3.5 h-3.5 text-gray-400" /> Auto-Cancel Timer
+                    </label>
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
+                        <span className="text-gray-400 text-xs font-bold group-focus-within:text-white transition-colors">Hr</span>
+                      </div>
+                      <input 
+                        type="number" 
+                        required 
+                        min="1" 
+                        value={creditSettings.autoCancelHours !== undefined ? creditSettings.autoCancelHours : 24} 
+                        onChange={(e) => setCreditSettings({...creditSettings, autoCancelHours: Number(e.target.value)})} 
+                        className="w-full bg-black/20 border border-white/10 rounded-xl pl-10 md:pl-12 pr-3 md:pr-4 py-3 md:py-3.5 text-white text-xs md:text-sm font-bold focus:outline-none focus:border-white/50 focus:bg-black/40 transition-all shadow-inner" 
+                      />
+                    </div>
+                    <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider mt-1.5 md:mt-2 leading-relaxed">
+                      Pending orders older than this will be auto-cancelled.
+                    </p>
+                  </div>
+
+                  {/* Delivery Reward */}
+                  <div className="space-y-2 md:space-y-3">
+                    <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                      <Target className="w-3.5 h-3.5 text-emerald-400" /> Delivery Reward (Aura)
+                    </label>
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
+                        <span className="text-emerald-500 text-xs font-bold group-focus-within:text-emerald-400 transition-colors">+</span>
+                      </div>
+                      <input 
+                        type="number" 
+                        required 
+                        min="0" 
+                        value={creditSettings.auraReward !== undefined ? creditSettings.auraReward : 50} 
+                        onChange={(e) => setCreditSettings({...creditSettings, auraReward: Number(e.target.value)})} 
+                        className="w-full bg-black/20 border border-emerald-500/10 rounded-xl pl-10 md:pl-12 pr-3 md:pr-4 py-3 md:py-3.5 text-emerald-100 text-xs md:text-sm font-bold focus:outline-none focus:border-emerald-500/50 focus:bg-emerald-900/10 transition-all shadow-inner" 
+                      />
+                    </div>
+                    <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider mt-1.5 md:mt-2 leading-relaxed">
+                      Aura points awarded to seller on successful delivery.
+                    </p>
+                  </div>
+
+                  {/* Cancel Penalty */}
+                  <div className="space-y-2 md:space-y-3">
+                    <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                      <AlertTriangle className="w-3.5 h-3.5 text-red-400" /> Cancel Penalty (Aura)
+                    </label>
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
+                        <span className="text-red-500 text-xs font-bold group-focus-within:text-red-400 transition-colors">-</span>
+                      </div>
+                      <input 
+                        type="number" 
+                        required 
+                        min="0" 
+                        value={creditSettings.auraPenalty !== undefined ? creditSettings.auraPenalty : 50} 
+                        onChange={(e) => setCreditSettings({...creditSettings, auraPenalty: Number(e.target.value)})} 
+                        className="w-full bg-black/20 border border-red-500/10 rounded-xl pl-10 md:pl-12 pr-3 md:pr-4 py-3 md:py-3.5 text-red-100 text-xs md:text-sm font-bold focus:outline-none focus:border-red-500/50 focus:bg-red-900/10 transition-all shadow-inner" 
+                      />
+                    </div>
+                    <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider mt-1.5 md:mt-2 leading-relaxed">
+                      Aura points deducted for late dispatch or cancellation.
+                    </p>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Save Button (Always visible at the bottom) */}
+          <div className="pt-6 md:pt-8 border-t border-white/5 flex justify-end mt-auto">
              <button type="submit" disabled={updating} className={`w-full sm:w-auto px-6 md:px-10 py-3.5 md:py-4 rounded-xl font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 text-[10px] md:text-xs ${updating ? 'bg-purple-600/30 text-white/50 cursor-not-allowed border border-purple-500/20' : 'bg-gradient-to-r from-[#A388E1] to-purple-600 hover:from-purple-500 hover:to-indigo-600 text-white shadow-[0_0_20px_rgba(163,136,225,0.4)] border border-[#A388E1]/50 hover:scale-105 active:scale-95'}`}>
                {updating ? 'Saving...' : 'Save All Settings'}
              </button>
