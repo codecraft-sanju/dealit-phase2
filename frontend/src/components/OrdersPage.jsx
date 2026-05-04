@@ -7,6 +7,35 @@ import { motion, AnimatePresence } from 'framer-motion';
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
+const CountdownTimer = ({ createdAt, hours }) => {
+  const [timeLeft, setTimeLeft] = useState('');
+
+  useEffect(() => {
+    const calculateTime = () => {
+      if (!createdAt || !hours) return '00h 00m 00s';
+      
+      const expireDate = new Date(createdAt).getTime() + hours * 60 * 60 * 1000;
+      const now = new Date().getTime();
+      const diff = expireDate - now;
+
+      if (diff <= 0) return '00h 00m 00s';
+
+      const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+      return `${h}h ${m}m ${s}s`;
+    };
+
+    setTimeLeft(calculateTime());
+    const timer = setInterval(() => setTimeLeft(calculateTime()), 1000);
+    
+    return () => clearInterval(timer);
+  }, [createdAt, hours]);
+
+  return <span>{timeLeft}</span>;
+};
+
 const OrderSkeleton = () => (
   <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm p-5 md:p-6 mb-6">
     <div className="flex justify-between items-center mb-6">
@@ -36,7 +65,6 @@ const OrdersPage = ({ user }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Initialize active tab from URL query parameter if it exists
   const [activeTab, setActiveTab] = useState(() => {
     const searchParams = new URLSearchParams(location.search);
     const tabParam = searchParams.get('tab');
@@ -63,7 +91,6 @@ const OrdersPage = ({ user }) => {
   const [autoCancelHours, setAutoCancelHours] = useState(24);
   const [auraPenalty, setAuraPenalty] = useState(50); 
 
-  // Sync tab change with URL parameter
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     navigate(`/orders?tab=${tab}`, { replace: true });
@@ -368,7 +395,6 @@ const OrdersPage = ({ user }) => {
                           <h3 className="text-lg font-bold text-gray-900 leading-tight mb-1">{order.item?.title || 'Deleted Item'}</h3>
                           <p className="text-xs text-gray-500 font-medium mb-3">{order.item?.category}</p>
                           
-                          {/* NAYA CHANGE: EXPLICIT COST BREAKDOWN UI */}
                           <div className="flex flex-col gap-2">
                             <div className="flex flex-wrap gap-2">
                               <div className="inline-flex items-center gap-1.5 bg-[#FFF4D2] border border-[#FFE28A]/50 px-2 py-1 rounded-md shadow-sm" title="Item Value (Deducted from Wallet)">
@@ -383,7 +409,6 @@ const OrdersPage = ({ user }) => {
                               </div>
                             </div>
                             
-                            {/* Role Based Payment Info Text */}
                             <div className="flex items-start gap-1.5 mt-1">
                               <Info className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
                               {activeTab === 'purchases' ? (
@@ -397,7 +422,6 @@ const OrdersPage = ({ user }) => {
                               )}
                             </div>
                           </div>
-                          {/* END OF COST BREAKDOWN UI */}
 
                         </div>
                       </div>
@@ -484,17 +508,20 @@ const OrdersPage = ({ user }) => {
                       </div>
                     )}
 
-                    {/* Actions for Seller */}
                     {activeTab === 'sales' && order.orderStatus !== 'delivered' && order.orderStatus !== 'shipped' && order.orderStatus !== 'cancelled' && (
                       <div className="mt-6 pt-5 border-t border-gray-100">
                         
                         {order.orderStatus === 'pending' && (
                           <div className="bg-orange-50 border border-orange-100 p-3.5 rounded-xl mb-4 flex items-start gap-3 shadow-sm">
                             <AlertCircle className="w-5 h-5 text-orange-500 mt-0.5 shrink-0" />
-                            <p className="text-xs text-orange-800 font-medium leading-relaxed">
+                            <div className="text-xs text-orange-800 font-medium leading-relaxed w-full">
                               <span className="font-bold text-orange-900 block mb-1">Action Required:</span> 
-                              Please dispatch this order within <span className="font-bold">{autoCancelHours} hours</span> of receiving it. Failure to dispatch will result in automatic cancellation and a <span className="font-bold text-red-600">{auraPenalty} Aura point penalty</span>.
-                            </p>
+                              Please dispatch this order within <span className="font-bold">{autoCancelHours} hours</span>.
+                              <div className="text-red-600 font-bold flex items-center gap-1.5 mt-1.5 mb-1.5 bg-red-50/50 w-fit px-2 py-1 rounded-md border border-red-100">
+                                <Clock className="w-3.5 h-3.5" /> Time Left: <span className="animate-pulse"><CountdownTimer createdAt={order.createdAt || order.created_at} hours={autoCancelHours} /></span>
+                              </div>
+                              Failure to dispatch will result in automatic cancellation and a <span className="font-bold text-red-600">{auraPenalty} Aura point penalty</span>.
+                            </div>
                           </div>
                         )}
                         
@@ -545,7 +572,6 @@ const OrdersPage = ({ user }) => {
                       </div>
                     )}
                     
-                    {/* Info for Buyer */}
                     {activeTab === 'purchases' && order.orderStatus !== 'cancelled' && (
                       <div className="mt-6 flex flex-col gap-2">
                         <div className="flex items-center gap-3 text-gray-600 text-sm font-medium bg-[#f8f6ff] p-3.5 rounded-xl border border-gray-100">
@@ -554,10 +580,16 @@ const OrdersPage = ({ user }) => {
                         </div>
                         
                         {order.orderStatus === 'pending' && (
-                          <p className="text-[11px] text-gray-500 px-2 flex items-center gap-1.5 font-medium mt-1">
-                            <Clock className="w-3.5 h-3.5" /> 
-                            If the seller doesn't dispatch within {autoCancelHours} hours, the order will auto-cancel and you'll be fully refunded.
-                          </p>
+                          <div className="text-[11px] text-gray-500 px-2 flex flex-col gap-1.5 font-medium mt-1">
+                            <span className="flex items-center gap-1.5">
+                              <Info className="w-3.5 h-3.5 shrink-0" /> 
+                              If the seller doesn't dispatch within {autoCancelHours} hours, the order will auto-cancel and you'll be fully refunded.
+                            </span>
+                            <span className="flex items-center gap-1.5 text-red-500 font-bold bg-red-50/50 w-fit px-2 py-1 rounded-md border border-red-50">
+                              <Clock className="w-3.5 h-3.5" /> 
+                              Time Left: <span className="animate-pulse"><CountdownTimer createdAt={order.createdAt || order.created_at} hours={autoCancelHours} /></span>
+                            </span>
+                          </div>
                         )}
                       </div>
                     )}
@@ -569,7 +601,6 @@ const OrdersPage = ({ user }) => {
         </AnimatePresence>
       </div>
 
-      {/* Dispatch Modal UI */}
       {showDispatchModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-gray-900/60 backdrop-blur-sm">
           <motion.div 
