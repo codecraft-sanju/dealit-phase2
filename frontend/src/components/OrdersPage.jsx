@@ -372,12 +372,22 @@ const OrdersPage = ({ user }) => {
                         <p className="text-sm font-bold text-gray-900 mb-1 flex items-center gap-2">
                           <User className="w-3.5 h-3.5 text-gray-400" /> {order.shippingAddress?.fullName}
                         </p>
+                        {/* CHANGED: Address display logic updated to use correct fields */}
                         <p className="text-xs text-gray-600 font-medium leading-relaxed pl-5.5">
-                          {order.shippingAddress?.addressLine}, {order.shippingAddress?.city}, {order.shippingAddress?.state} - {order.shippingAddress?.pincode}
+                          {order.shippingAddress?.houseNo}, {order.shippingAddress?.areaStreet}
+                          {order.shippingAddress?.landmark ? `, ${order.shippingAddress.landmark}` : ''}, <br className="hidden md:block" />
+                          {order.shippingAddress?.city}, {order.shippingAddress?.state} - {order.shippingAddress?.pincode}
                         </p>
-                        <p className="text-sm font-bold text-[#6B46C1] mt-2.5 flex items-center gap-2">
-                          <Phone className="w-3.5 h-3.5 text-[#A388E1]" /> {order.shippingAddress?.phone}
-                        </p>
+                        {/* CHANGED: Mask phone number for sellers but show last 4 digits */}
+                        {activeTab === 'purchases' ? (
+                          <p className="text-sm font-bold text-[#6B46C1] mt-2.5 flex items-center gap-2">
+                            <Phone className="w-3.5 h-3.5 text-[#A388E1]" /> {order.shippingAddress?.phone}
+                          </p>
+                        ) : (
+                          <p className="text-sm font-bold text-gray-500 mt-2.5 flex items-center gap-2" title="Partially hidden to protect buyer privacy">
+                            <Phone className="w-3.5 h-3.5 text-gray-400" /> +91 ******{order.shippingAddress?.phone?.slice(-4) || '••••'}
+                          </p>
+                        )}
                       </div>
                     </div>
 
