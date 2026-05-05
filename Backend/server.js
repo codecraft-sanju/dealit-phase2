@@ -3,7 +3,7 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const helmet = require('helmet');
-const mongoSanitize = require('express-mongo-sanitize');
+
 const xss = require('xss-clean');
 
 const connectDB = require('./database/db');
@@ -40,15 +40,12 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 }));
 
-
 app.use(helmet());
-
 
 app.use(express.json());
 app.use(cookieParser());
 
 
-app.use(mongoSanitize());
 app.use(xss());
 
 
