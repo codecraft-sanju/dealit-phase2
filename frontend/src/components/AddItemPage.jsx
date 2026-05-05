@@ -163,7 +163,6 @@ const AddItemPage = ({ user, setUser }) => {
   });
   const [images, setImages] = useState([]);
 
-  // Load draft from local storage when component mounts
   useEffect(() => {
     const savedDraft = localStorage.getItem(DRAFT_STORAGE_KEY);
     if (savedDraft) {
@@ -177,7 +176,6 @@ const AddItemPage = ({ user, setUser }) => {
     }
   }, []);
 
-  // Save draft to local storage whenever user types or adds images
   useEffect(() => {
     if (formData.title !== '' || images.length > 0) {
       const imagesToSave = images.map(img => 
@@ -482,10 +480,7 @@ const AddItemPage = ({ user, setUser }) => {
         console.error("Failed to update user profile locally", e);
       }
       
-      // Clear the draft once successfully submitted
       localStorage.removeItem(DRAFT_STORAGE_KEY);
-
-      toast.success(data.message);
       navigate('/dashboard'); 
     },
     onError: (err) => {
@@ -493,10 +488,9 @@ const AddItemPage = ({ user, setUser }) => {
     }
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Verification check for Pickup Address before allowing listing
     if (!user?.pickupAddress || !user?.pickupAddress?.houseNo) {
       toast.error('Please add your pickup address: Profile Page -> Account Details -> Edit', {
         position: "top-center",
@@ -519,19 +513,56 @@ const AddItemPage = ({ user, setUser }) => {
        return;
     }
 
-    const payload = {
-      title: formData.title,
-      description: formData.description,
-      category: formData.category,
-      condition: formData.condition,
-      preferred_item: formData.preferred_item,
-      estimated_value: formData.estimated_value,
-      images: images,
-      weight: finalWeight,
-      dimensions: formData.dimensions
-    };
+    const toastId = toast.loading("Processing your images...");
 
-    createItemMutation.mutate(payload);
+    try {
+      const finalImages = [];
+      for (let imgUrl of images) {
+        if (imgUrl.startsWith('blob:')) {
+          const response = await fetch(imgUrl);
+          const blobData = await response.blob();
+          const file = new File([blobData], `bg-removed-${Date.now()}.png`, { type: "image/png" });
+          
+          const uploadData = new FormData();
+          uploadData.append('file', file);
+          uploadData.append('upload_preset', 'salon_preset');
+
+          const cloudRes = await axios.post(
+            `https://api.cloudinary.com/v1_1/dvoenforj/image/upload`,
+            uploadData
+          );
+          
+          finalImages.push(cloudRes.data.secure_url);
+        } else {
+          finalImages.push(imgUrl);
+        }
+      }
+
+      toast.update(toastId, { render: "Listing your item...", type: "info", isLoading: true });
+
+      const payload = {
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        condition: formData.condition,
+        preferred_item: formData.preferred_item,
+        estimated_value: formData.estimated_value,
+        images: finalImages, 
+        weight: finalWeight,
+        dimensions: formData.dimensions
+      };
+
+      createItemMutation.mutate(payload, {
+        onSettled: () => {
+          toast.dismiss(toastId);
+          toast.success("Product listed successfully! You will receive credits once the admin approves it.");
+        }
+      });
+
+    } catch (error) {
+      console.error("Failed to upload processed images:", error);
+      toast.update(toastId, { render: "Failed to process images. Please try again.", type: "error", isLoading: false, autoClose: 3000 });
+    }
   };
 
   if (loadingSettings || loadingCategories) {

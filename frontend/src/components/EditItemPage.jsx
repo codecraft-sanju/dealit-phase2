@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Save, Loader2, Image as ImageIcon, X, UploadCloud, Tag, AlignLeft, Activity, Coins, RefreshCw, Scale, Box, Sparkles, Wand2 } from 'lucide-react'; // --- NAYA CHANGE: Added Sparkles, Wand2 ---
+import { ArrowLeft, Save, Loader2, Image as ImageIcon, X, UploadCloud, Tag, AlignLeft, Activity, Coins, RefreshCw, Scale, Box, Sparkles, Wand2 } from 'lucide-react'; 
 import axios from 'axios';
 import Cropper from 'react-easy-crop';
 import { toast } from 'react-toastify';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'; 
 import imageCompression from 'browser-image-compression';
-import { removeBackground } from '@imgly/background-removal'; // --- NAYA CHANGE: Added for AI BG removal ---
+import { removeBackground } from '@imgly/background-removal'; 
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -18,7 +18,6 @@ export const getOptimizedCloudinaryUrl = (url) => {
   return url.replace('/upload/', '/upload/q_auto,f_auto,w_800/');
 };
 
-// --- NAYA CHANGE: Added blob map for BG removal ---
 const blobToOriginalMap = new Map();
 
 const createImage = (url) =>
@@ -102,7 +101,6 @@ const EditItemPage = () => {
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
 
-  // --- NAYA CHANGE: State for AI Tools ---
   const [processingAIIndex, setProcessingAIIndex] = useState(null);
   const [analyzeProgress, setAnalyzeProgress] = useState(0);
 
@@ -230,7 +228,6 @@ const EditItemPage = () => {
     }
   });
 
-  // --- NAYA CHANGE START: AI Tools Logic ---
   const toggleAIBackground = async (index) => {
     setProcessingAIIndex(index);
     const currentUrl = images[index];
@@ -380,7 +377,6 @@ const EditItemPage = () => {
     }
     generateDescMutation.mutate();
   };
-  // --- NAYA CHANGE END ---
 
   const removeImage = (indexToRemove) => {
     setImages(images.filter((_, index) => index !== indexToRemove));
@@ -405,20 +401,43 @@ const EditItemPage = () => {
 
     setSaving(true);
     setError('');
-
-    const payload = {
-      title: formData.title,
-      description: formData.description,
-      category: formData.category,
-      condition: formData.condition,
-      preferred_item: formData.preferred_item,
-      estimated_value: formData.estimated_value,
-      images: images,
-      weight: finalWeight,
-      dimensions: formData.dimensions
-    };
+    const toastId = toast.loading("Saving changes & processing images...");
 
     try {
+      const finalImages = [];
+      for (let imgUrl of images) {
+        if (imgUrl.startsWith('blob:')) {
+          const response = await fetch(imgUrl);
+          const blobData = await response.blob();
+          const file = new File([blobData], `bg-removed-${Date.now()}.png`, { type: "image/png" });
+          
+          const uploadData = new FormData();
+          uploadData.append('file', file);
+          uploadData.append('upload_preset', 'salon_preset');
+
+          const cloudRes = await axios.post(
+            `https://api.cloudinary.com/v1_1/dvoenforj/image/upload`,
+            uploadData
+          );
+          
+          finalImages.push(cloudRes.data.secure_url);
+        } else {
+          finalImages.push(imgUrl);
+        }
+      }
+
+      const payload = {
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        condition: formData.condition,
+        preferred_item: formData.preferred_item,
+        estimated_value: formData.estimated_value,
+        images: finalImages, 
+        weight: finalWeight,
+        dimensions: formData.dimensions
+      };
+
       const response = await axios.put(
         `${API_URL}/items/${id}`,
         payload,
@@ -427,13 +446,16 @@ const EditItemPage = () => {
 
       if (response.data.success) {
         queryClient.invalidateQueries(['myItems']);
-        toast.success('Item updated successfully!');
+        toast.update(toastId, { render: "Item updated successfully!", type: "success", isLoading: false, autoClose: 3000 });
         navigate('/dashboard'); 
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update item.');
+      const errorMsg = err.response?.data?.message || 'Failed to update item.';
+      setError(errorMsg);
+      toast.update(toastId, { render: errorMsg, type: "error", isLoading: false, autoClose: 3000 });
     } finally {
       setSaving(false);
+      setTimeout(() => toast.dismiss(toastId), 3000); 
     }
   };
 
@@ -528,7 +550,6 @@ const EditItemPage = () => {
                         </button>
                       </div>
 
-                      {/* --- NAYA CHANGE: Toggle Background Button --- */}
                       <button 
                         type="button" 
                         onClick={() => toggleAIBackground(index)} 
@@ -567,7 +588,6 @@ const EditItemPage = () => {
                 )}
               </div>
 
-              {/* --- NAYA CHANGE: AI Auto-Fill Section --- */}
               {images.length > 0 && (
                 <div className="bg-gradient-to-br from-purple-50 to-white border border-purple-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-[0_4px_20px_rgba(128,90,213,0.08)] mt-5 relative overflow-hidden">
                   
@@ -631,7 +651,6 @@ const EditItemPage = () => {
                 </div>
               </div>
 
-              {/* --- NAYA CHANGE: Added Write With AI Button to Description --- */}
               <div className="md:col-span-2 space-y-1.5 group">
                 <div className="flex items-center justify-between mb-1.5 sm:mb-2">
                   <label className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Description</label>
