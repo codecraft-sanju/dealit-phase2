@@ -1,5 +1,8 @@
 const express = require('express');
 const router = express.Router();
+// --- NAYA CHANGE START: Import rate limit ---
+const rateLimit = require('express-rate-limit');
+// --- NAYA CHANGE END ---
 
 const { 
   registerUser, 
@@ -21,12 +24,28 @@ const { getUserAura, getLeaderboard, getAuraHistory } = require('../controllers/
 
 const { protect } = require('../middleware/authMiddleware');
 
-router.post('/register', registerUser);
-router.post('/verify-otp', verifyOtp);
-router.post('/login', loginUser);
-router.post('/logout', logoutUser);
-router.post('/forgotpassword', forgotPassword);
-router.post('/resetpassword', resetPassword);
+
+// Sirf auth routes (login, register, otp) ke liye strict limit
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes ka time window
+  max: 10, // 15 minute mein maximum 10 requests allowed hain ek IP se
+  message: {
+    success: false,
+    message: 'Too many attempts from this IP, please try again after 15 minutes.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+
+
+router.post('/register', authLimiter, registerUser);
+router.post('/verify-otp', authLimiter, verifyOtp);
+router.post('/login', authLimiter, loginUser);
+router.post('/logout', logoutUser); // Logout pe limit itni zaroori nahi, par rakh sakte ho
+router.post('/forgotpassword', authLimiter, forgotPassword);
+router.post('/resetpassword', authLimiter, resetPassword);
+
 
 router.get('/profile', protect, getUserProfile);
 
