@@ -2,6 +2,10 @@ require('dotenv').config();
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
+const helmet = require('helmet');
+const mongoSanitize = require('express-mongo-sanitize');
+const xss = require('xss-clean');
+
 const connectDB = require('./database/db');
 const userRoutes = require('./routes/userRoutes');
 const itemRoutes = require('./routes/itemRoutes');
@@ -36,8 +40,16 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 }));
 
+
+app.use(helmet());
+
+
 app.use(express.json());
 app.use(cookieParser());
+
+
+app.use(mongoSanitize());
+app.use(xss());
 
 
 app.get('/', (req, res) => {
@@ -69,6 +81,16 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/notifications', notificationRoutes);
+
+
+app.use((err, req, res, next) => {
+  console.error('Unhandled Error:', err);
+  res.status(500).json({ 
+    success: false, 
+    message: 'Internal Server Error' 
+  });
+});
+
 
 const PORT = process.env.PORT || 5000;
 
