@@ -663,11 +663,12 @@ const AddItemPage = ({ user, setUser }) => {
                           </div>
                         )}
 
+                        {/* CHANGED: Made the delete button always visible on mobile, hover only on md+ screens */}
                         <button 
                           type="button" 
                           onClick={() => removeImage(index)} 
                           disabled={isProcessing}
-                          className="absolute top-1 right-1 bg-black/60 p-1 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity disabled:hidden"
+                          className="absolute top-1 right-1 bg-black/60 p-1 rounded-full text-white opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity disabled:hidden"
                         >
                           <X className="w-3 h-3 sm:w-4 sm:h-4" />
                         </button>

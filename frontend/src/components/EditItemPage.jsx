@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Save, Loader2, Image as ImageIcon, X, UploadCloud, Tag, AlignLeft, Activity, Coins, RefreshCw, Scale, Box, Sparkles, Wand2 } from 'lucide-react'; 
+import { useParams, useNavigate } from 'react-router-dom';
+import { ChevronLeft, Save, Loader2, Image as ImageIcon, X, Plus, Box, Scale, Sparkles, Wand2 } from 'lucide-react'; 
 import axios from 'axios';
 import Cropper from 'react-easy-crop';
 import { toast } from 'react-toastify';
@@ -70,6 +70,63 @@ const getCroppedImg = async (imageSrc, pixelCrop) => {
       }
     }, 'image/jpeg', 0.9);
   });
+};
+
+const ShimmerLoading = () => {
+  return (
+    <div className="min-h-screen bg-[#f4f2f9] md:py-10 flex justify-center font-sans">
+      <div className="w-full max-w-xl bg-[#fcfbff] md:rounded-[2.5rem] shadow-2xl flex flex-col relative overflow-hidden">
+        
+        <div className="sticky top-0 z-50 bg-gray-200 px-4 py-5 flex items-center justify-between shadow-md md:rounded-t-[2.5rem] animate-pulse">
+          <div className="w-8 h-8 bg-gray-300 rounded-full"></div>
+          <div className="w-32 h-6 bg-gray-300 rounded-md"></div>
+          <div className="w-12 h-4 bg-gray-300 rounded-md"></div>
+        </div>
+
+        <div className="p-6 md:p-8 space-y-6">
+          <div className="pb-4 border-b border-gray-100 animate-pulse">
+            <div className="h-4 bg-gray-200 rounded w-1/3 mb-4"></div>
+            <div className="flex gap-4">
+              <div className="w-24 h-24 bg-gray-200 rounded-2xl"></div>
+              <div className="w-24 h-24 bg-gray-200 rounded-2xl"></div>
+              <div className="w-24 h-24 bg-gray-200 rounded-2xl hidden sm:block"></div>
+            </div>
+          </div>
+
+          <div className="space-y-5 animate-pulse">
+            <div>
+              <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
+              <div className="w-full h-12 bg-gray-100 rounded-xl"></div>
+            </div>
+            
+            <div className="pb-4 border-b border-gray-100">
+              <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
+              <div className="w-full h-12 bg-gray-100 rounded-xl"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/3 mt-2"></div>
+            </div>
+
+            <div>
+              <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
+              <div className="w-full h-12 bg-gray-100 rounded-xl"></div>
+            </div>
+
+            <div>
+              <div className="flex justify-between mb-2">
+                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                <div className="h-6 bg-gray-200 rounded w-1/4"></div>
+              </div>
+              <div className="w-full h-24 bg-gray-100 rounded-xl"></div>
+            </div>
+          </div>
+
+          <div className="pt-4 animate-pulse">
+            <div className="w-full h-14 bg-gray-200 rounded-[1.25rem]"></div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const EditItemPage = () => {
@@ -386,7 +443,7 @@ const EditItemPage = () => {
     e.preventDefault();
     
     if (images.length < 3) {
-      setError('Please upload at least 3 images of your item.');
+      toast.error('Please upload at least 3 images of your item.');
       return;
     }
 
@@ -395,7 +452,7 @@ const EditItemPage = () => {
       : parseFloat(formData.weightCategory);
 
     if (formData.weightCategory === 'custom' && (!finalWeight || finalWeight <= 0)) {
-       setError("Please enter a valid custom weight in Kg.");
+       toast.error("Please enter a valid custom weight in Kg.");
        return;
     }
 
@@ -451,67 +508,43 @@ const EditItemPage = () => {
       }
     } catch (err) {
       const errorMsg = err.response?.data?.message || 'Failed to update item.';
-      setError(errorMsg);
       toast.update(toastId, { render: errorMsg, type: "error", isLoading: false, autoClose: 3000 });
     } finally {
       setSaving(false);
-      setTimeout(() => toast.dismiss(toastId), 3000); 
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#F8F6FF] flex flex-col items-center justify-center pb-20">
-        <div className="relative flex items-center justify-center w-24 h-24 mb-6">
-          <div className="absolute inset-0 border-4 border-[#A388E1]/20 rounded-full"></div>
-          <div className="absolute inset-0 border-4 border-transparent border-t-[#6B46C1] border-r-[#FFE28A] rounded-full animate-spin duration-1000"></div>
-          <div className="bg-white p-4 rounded-full shadow-lg z-10">
-            <RefreshCw className="w-8 h-8 text-[#6B46C1] animate-pulse" />
-          </div>
-        </div>
-        <p className="text-[#6B46C1] font-bold tracking-wide animate-pulse text-lg">Fetching details...</p>
-      </div>
-    );
+  if (loading || loadingCategories) {
+    return <ShimmerLoading />;
   }
 
   return (
-    <div className="max-w-md mx-auto bg-gray-50 min-h-screen pb-12 md:max-w-3xl relative font-sans selection:bg-[#6B46C1]/20">
-      
-      <div className="sticky top-0 z-50 bg-gray-50">
-        <div className="bg-gradient-to-r from-[#6B46C1] to-[#8B5CF6] pt-6 pb-8 px-5 md:px-8 rounded-b-[2.5rem] shadow-lg relative z-10 overflow-hidden">
-          <div className="absolute -top-12 -right-12 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
-          <div className="absolute bottom-0 left-10 w-24 h-24 bg-[#FFE28A]/20 rounded-full blur-xl"></div>
-          
-          <div className="flex items-center gap-4 relative z-10">
-            <Link 
-              to="/dashboard" 
-              className="p-2 bg-white/10 hover:bg-white/25 rounded-full text-white transition-all backdrop-blur-md border border-white/10 active:scale-95"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-black tracking-wide leading-tight text-white drop-shadow-sm">Edit Item</h1>
-              <p className="text-xs md:text-sm text-purple-100 font-medium mt-1 opacity-90">Perfect your listing details</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="px-4 md:px-8 mt-6 relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out">
+    <div className="min-h-screen bg-[#f4f2f9] md:py-10 flex justify-center font-sans">
+      <div className="w-full max-w-xl bg-[#fcfbff] md:rounded-[2.5rem] shadow-2xl flex flex-col relative">
         
-        <div className="bg-white rounded-[2rem] border border-gray-100 p-5 sm:p-6 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-          {error && (
-            <div className="bg-red-50 border border-red-100 text-red-600 text-sm px-5 py-4 rounded-2xl mb-6 font-bold flex items-center gap-3 animate-in fade-in zoom-in-95">
-              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
-              {error}
-            </div>
-          )}
+        <div className="sticky top-0 z-50 bg-[#6B46C1] px-4 py-4 sm:py-5 flex items-center justify-between text-white shadow-md md:rounded-t-[2.5rem]">
+          <button 
+            onClick={() => navigate('/dashboard')} 
+            className="p-1 hover:bg-white/20 rounded-full transition-colors"
+          >
+            <ChevronLeft className="w-6 h-6 sm:w-7 sm:h-7" />
+          </button>
+          <h2 className="text-lg sm:text-xl font-bold tracking-wide">Edit Item</h2>
+          <button 
+            onClick={() => navigate('/dashboard')}
+            className="text-xs sm:text-sm font-medium hover:text-purple-200 transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="p-4 sm:p-6 md:p-8 overflow-y-auto custom-scrollbar">
+          
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
             
-            <div className="space-y-3">
-              <label className="text-sm font-bold text-gray-800 flex items-center gap-2">
-                <ImageIcon className="w-4 h-4 text-[#6B46C1]" /> Item Photos
+            <div className="pb-4 border-b border-purple-100 border-dashed">
+              <label className="block text-xs sm:text-sm font-bold text-[#553c9a] mb-3 sm:mb-4">
+                Update Images (Min 3 required)*
               </label>
               
               <div className="flex flex-wrap gap-3 sm:gap-4 items-start">
@@ -544,7 +577,7 @@ const EditItemPage = () => {
                           type="button" 
                           onClick={() => removeImage(index)} 
                           disabled={isProcessing}
-                          className="absolute top-1 right-1 bg-black/60 p-1 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity disabled:hidden"
+                          className="absolute top-1 right-1 bg-black/60 p-1 rounded-full text-white opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity disabled:hidden"
                         >
                           <X className="w-3 h-3 sm:w-4 sm:h-4" />
                         </button>
@@ -580,7 +613,7 @@ const EditItemPage = () => {
                 {images.length < 5 && (
                   <div className="flex flex-col gap-1.5 w-20 sm:w-24">
                     <label className="w-full aspect-square bg-[#f8f6ff] border-2 border-[#e9d8ff] rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-[#f3edff] hover:border-[#d6bcfa] transition-all shadow-sm">
-                      <UploadCloud className="w-6 h-6 sm:w-8 sm:h-8 text-[#805ad5] mb-1" />
+                      <Plus className="w-6 h-6 sm:w-8 sm:h-8 text-[#805ad5] mb-1" />
                       <span className="text-[10px] sm:text-xs font-semibold text-[#805ad5]">Add Photo</span>
                       <input type="file" accept="image/*" onChange={handleImageSelect} disabled={uploadImageMutation.isPending} className="hidden" />
                     </label>
@@ -637,23 +670,136 @@ const EditItemPage = () => {
               )}
             </div>
 
-            <hr className="border-gray-100" />
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            <div className="space-y-4 sm:space-y-5">
               
-              <div className="md:col-span-2 space-y-1.5 group">
-                <label className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Title</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Tag className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 group-focus-within:text-[#6B46C1] transition-colors" />
-                  </div>
-                  <input type="text" name="title" required value={formData.title} onChange={handleInputChange} className="w-full bg-[#F8F9FA] border border-gray-200 rounded-2xl pl-10 sm:pl-11 pr-4 py-3 sm:py-3.5 text-sm sm:text-base text-gray-900 font-medium focus:outline-none focus:border-[#6B46C1] focus:ring-4 focus:ring-[#6B46C1]/10 focus:bg-white transition-all shadow-sm" placeholder="What are you trading?" />
+              <div>
+                <label className="block text-xs sm:text-sm font-bold text-[#553c9a] mb-1.5 sm:mb-2">Title of Your Item</label>
+                <input 
+                  type="text" 
+                  name="title" 
+                  required 
+                  value={formData.title} 
+                  onChange={handleInputChange} 
+                  className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-3 sm:px-4 py-2.5 sm:py-3.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#805ad5] focus:border-transparent transition-all" 
+                  placeholder="Enter item title" 
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 sm:gap-5">
+                <div>
+                  <label className="block text-[11px] sm:text-sm font-bold text-[#553c9a] mb-1.5 sm:mb-2">Choose Category</label>
+                  <select 
+                    name="category" 
+                    required 
+                    value={formData.category} 
+                    onChange={handleInputChange} 
+                    className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-2 sm:px-4 py-2.5 sm:py-3.5 text-xs sm:text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#805ad5] focus:border-transparent transition-all appearance-none"
+                  >
+                    <option value="" disabled className="text-gray-400">Select</option>
+                    {categories.map((cat) => (
+                      <option key={cat._id} value={cat.name}>{cat.name}</option>
+                    ))}
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] sm:text-sm font-bold text-[#553c9a] mb-1.5 sm:mb-2">Item Condition</label>
+                  <select 
+                    name="condition" 
+                    required 
+                    value={formData.condition} 
+                    onChange={handleInputChange} 
+                    className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-2 sm:px-4 py-2.5 sm:py-3.5 text-xs sm:text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#805ad5] focus:border-transparent transition-all appearance-none"
+                  >
+                    <option value="" disabled>Select</option>
+                    <option value="New">Brand New</option>
+                    <option value="Like New">Like New</option>
+                    <option value="Used">Used - Good</option>
+                    <option value="Fair">Fair</option>
+                  </select>
                 </div>
               </div>
 
-              <div className="md:col-span-2 space-y-1.5 group">
+              <div className="grid grid-cols-2 gap-3 sm:gap-5 pb-4 border-b border-purple-100 border-dashed">
+                <div>
+                  <label className="block text-[11px] sm:text-sm font-bold text-[#553c9a] mb-1.5 sm:mb-2">Set Your Price</label>
+                  <input 
+                    type="number" 
+                    name="estimated_value" 
+                    required
+                    value={formData.estimated_value} 
+                    onChange={handleInputChange} 
+                    className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-2 sm:px-4 py-2.5 sm:py-3.5 text-xs sm:text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#805ad5] focus:border-transparent transition-all" 
+                    placeholder="Credits" 
+                  />
+                  <div className="mt-1.5 text-[9px] sm:text-[10px]">
+                    <span className="font-bold text-[#553c9a]">₹1 = 1 Credit</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] sm:text-sm font-bold text-[#553c9a] mb-1.5 sm:mb-2">Preferred Item</label>
+                  <input 
+                    type="text" 
+                    name="preferred_item" 
+                    value={formData.preferred_item} 
+                    onChange={handleInputChange} 
+                    className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-2 sm:px-4 py-2.5 sm:py-3.5 text-xs sm:text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#805ad5] focus:border-transparent transition-all" 
+                    placeholder="Optional" 
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3 sm:space-y-4 pb-4 border-b border-purple-100 border-dashed">
+                <h3 className="text-xs sm:text-sm font-bold text-[#553c9a] flex items-center gap-1.5"><Box className="w-4 h-4" /> Shipping Details</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
+                  <div>
+                    <label className="block text-[11px] sm:text-sm font-bold text-gray-600 mb-1.5 sm:mb-2 flex items-center gap-1"><Scale className="w-3.5 h-3.5" /> Item Weight (Approx)</label>
+                    <select
+                      name="weightCategory"
+                      value={formData.weightCategory}
+                      onChange={handleInputChange}
+                      className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-2 sm:px-4 py-2.5 sm:py-3.5 text-xs sm:text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#805ad5] focus:border-transparent transition-all"
+                    >
+                      <option value="0.5">Up to 500g (Phones, Clothes)</option>
+                      <option value="1">500g to 1 Kg (Shoes, Books)</option>
+                      <option value="2">1 Kg to 2 Kg (Laptops, Appliances)</option>
+                      <option value="5">2 Kg to 5 Kg (Heavy items)</option>
+                      <option value="custom">Custom Weight (Kg)</option>
+                    </select>
+
+                    {formData.weightCategory === 'custom' && (
+                      <div className="relative mt-2">
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0.1"
+                          name="exactWeight"
+                          value={formData.exactWeight}
+                          onChange={handleInputChange}
+                          placeholder="e.g. 1.5"
+                          className="w-full bg-white border border-purple-300 shadow-sm rounded-xl pl-4 pr-10 py-2.5 sm:py-3.5 text-xs sm:text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#805ad5] focus:border-transparent transition-all"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-xs sm:text-sm">Kg</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] sm:text-sm font-bold text-gray-600 mb-1.5 sm:mb-2">Box Dimensions (L x W x H in cm)</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      <input type="number" name="length" placeholder="L" value={formData.dimensions.length} onChange={handleDimensionChange} className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-2 py-2.5 sm:py-3 text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#805ad5]" />
+                      <input type="number" name="width" placeholder="W" value={formData.dimensions.width} onChange={handleDimensionChange} className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-2 py-2.5 sm:py-3 text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#805ad5]" />
+                      <input type="number" name="height" placeholder="H" value={formData.dimensions.height} onChange={handleDimensionChange} className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-2 py-2.5 sm:py-3 text-center text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#805ad5]" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
                 <div className="flex items-center justify-between mb-1.5 sm:mb-2">
-                  <label className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Description</label>
+                  <label className="block text-xs sm:text-sm font-bold text-[#553c9a]">Description</label>
                   <button
                     type="button"
                     onClick={handleGenerateDescription}
@@ -664,131 +810,41 @@ const EditItemPage = () => {
                     {generateDescMutation.isPending ? 'Writing...' : 'Write with AI'}
                   </button>
                 </div>
-                <div className="relative">
-                  <div className="absolute top-3.5 sm:top-4 left-0 pl-4 flex items-start pointer-events-none">
-                    <AlignLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 group-focus-within:text-[#6B46C1] transition-colors" />
-                  </div>
-                  <textarea name="description" required rows="4" value={formData.description} onChange={handleInputChange} className="w-full bg-[#F8F9FA] border border-gray-200 rounded-2xl pl-10 sm:pl-11 pr-4 py-3 sm:py-3.5 text-sm sm:text-base text-gray-900 font-medium focus:outline-none focus:border-[#6B46C1] focus:ring-4 focus:ring-[#6B46C1]/10 focus:bg-white resize-none transition-all shadow-sm leading-relaxed" placeholder="Describe the item, flaws, features..."></textarea>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Category</label>
-                <select 
-                  name="category" 
+                <textarea 
+                  name="description" 
                   required 
-                  value={formData.category} 
+                  rows="3" 
+                  value={formData.description} 
                   onChange={handleInputChange} 
-                  disabled={loadingCategories}
-                  className="w-full bg-[#F8F9FA] border border-gray-200 rounded-2xl px-3 sm:px-4 py-3 sm:py-3.5 text-sm sm:text-base text-gray-900 font-medium focus:outline-none focus:border-[#6B46C1] focus:ring-4 focus:ring-[#6B46C1]/10 focus:bg-white transition-all shadow-sm appearance-none cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
-                >
-                  <option value="" disabled>
-                    {loadingCategories ? 'Loading...' : 'Select Category'}
-                  </option>
-                  {categories.map((cat) => (
-                    <option key={cat._id} value={cat.name}>{cat.name}</option>
-                  ))}
-                  <option value="Other">Other</option>
-                </select>
+                  className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-3 sm:px-4 py-3 sm:py-3.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#805ad5] focus:border-transparent transition-all resize-none" 
+                  placeholder="Describe the item in detail..."
+                ></textarea>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Condition</label>
-                <select name="condition" required value={formData.condition} onChange={handleInputChange} className="w-full bg-[#F8F9FA] border border-gray-200 rounded-2xl px-3 sm:px-4 py-3 sm:py-3.5 text-sm sm:text-base text-gray-900 font-medium focus:outline-none focus:border-[#6B46C1] focus:ring-4 focus:ring-[#6B46C1]/10 focus:bg-white transition-all shadow-sm appearance-none cursor-pointer">
-                  <option value="">Select Condition</option>
-                  <option value="New">Brand New</option>
-                  <option value="Like New">Like New</option>
-                  <option value="Used">Used - Good</option>
-                  <option value="Fair">Fair</option>
-                </select>
-              </div>
-
-              <div className="space-y-1.5 group">
-                <label className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider ml-1 flex items-center gap-1">
-                  Item Value (Credits)
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Coins className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 group-focus-within:text-yellow-500 transition-colors" />
-                  </div>
-                  <input type="number" name="estimated_value" required value={formData.estimated_value} onChange={handleInputChange} className="w-full bg-[#F8F9FA] border border-gray-200 rounded-2xl pl-10 sm:pl-11 pr-4 py-3 sm:py-3.5 text-sm sm:text-base text-gray-900 font-bold focus:outline-none focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/10 focus:bg-white transition-all shadow-sm" placeholder="0" />
-                </div>
-              </div>
-
-              <div className="space-y-1.5 group">
-                <label className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Looking For</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 group-focus-within:text-[#6B46C1] transition-colors" />
-                  </div>
-                  <input type="text" name="preferred_item" value={formData.preferred_item} onChange={handleInputChange} className="w-full bg-[#F8F9FA] border border-gray-200 rounded-2xl pl-10 sm:pl-11 pr-4 py-3 sm:py-3.5 text-sm sm:text-base text-gray-900 font-medium focus:outline-none focus:border-[#6B46C1] focus:ring-4 focus:ring-[#6B46C1]/10 focus:bg-white transition-all shadow-sm" placeholder="What do you want?" />
-                </div>
-              </div>
             </div>
 
-            <hr className="border-gray-100" />
-
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2"><Box className="w-4 h-4 text-[#6B46C1]" /> Shipping Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider ml-1 flex items-center gap-1"><Scale className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Item Weight (Approx)</label>
-                  <select
-                    name="weightCategory"
-                    value={formData.weightCategory}
-                    onChange={handleInputChange}
-                    className="w-full bg-[#F8F9FA] border border-gray-200 rounded-2xl px-3 sm:px-4 py-3 sm:py-3.5 text-sm sm:text-base text-gray-900 font-medium focus:outline-none focus:border-[#6B46C1] focus:ring-4 focus:ring-[#6B46C1]/10 focus:bg-white transition-all shadow-sm appearance-none cursor-pointer"
-                  >
-                    <option value="0.5">Up to 500g (Phones, Clothes)</option>
-                    <option value="1">500g to 1 Kg (Shoes, Books)</option>
-                    <option value="2">1 Kg to 2 Kg (Laptops, Appliances)</option>
-                    <option value="5">2 Kg to 5 Kg (Heavy items)</option>
-                    <option value="custom">Custom Weight (Kg)</option>
-                  </select>
-
-                  {formData.weightCategory === 'custom' && (
-                    <div className="relative mt-2 sm:mt-3">
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="0.1"
-                        name="exactWeight"
-                        value={formData.exactWeight}
-                        onChange={handleInputChange}
-                        placeholder="e.g. 1.5"
-                        className="w-full bg-[#F8F9FA] border border-[#A388E1] rounded-2xl pl-3 sm:pl-4 pr-10 py-2.5 sm:py-3 text-sm sm:text-base text-gray-900 font-medium focus:outline-none focus:border-[#6B46C1] focus:ring-4 focus:ring-[#6B46C1]/10 focus:bg-white transition-all shadow-sm"
-                      />
-                      <span className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-xs sm:text-sm">Kg</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Box Dimensions (cm)</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    <input type="number" name="length" placeholder="L" value={formData.dimensions.length} onChange={handleDimensionChange} className="w-full bg-[#F8F9FA] border border-gray-200 rounded-2xl px-2 py-3 sm:py-3.5 text-center text-sm sm:text-base text-gray-900 font-medium focus:outline-none focus:border-[#6B46C1] focus:ring-4 focus:ring-[#6B46C1]/10 focus:bg-white transition-all shadow-sm" />
-                    <input type="number" name="width" placeholder="W" value={formData.dimensions.width} onChange={handleDimensionChange} className="w-full bg-[#F8F9FA] border border-gray-200 rounded-2xl px-2 py-3 sm:py-3.5 text-center text-sm sm:text-base text-gray-900 font-medium focus:outline-none focus:border-[#6B46C1] focus:ring-4 focus:ring-[#6B46C1]/10 focus:bg-white transition-all shadow-sm" />
-                    <input type="number" name="height" placeholder="H" value={formData.dimensions.height} onChange={handleDimensionChange} className="w-full bg-[#F8F9FA] border border-gray-200 rounded-2xl px-2 py-3 sm:py-3.5 text-center text-sm sm:text-base text-gray-900 font-medium focus:outline-none focus:border-[#6B46C1] focus:ring-4 focus:ring-[#6B46C1]/10 focus:bg-white transition-all shadow-sm" />
-                  </div>
-                </div>
-              </div>
+            <div className="pt-2 sm:pt-4">
+              <button 
+                type="submit" 
+                disabled={saving || uploadImageMutation.isPending} 
+                className={`w-full font-bold text-sm sm:text-lg rounded-[1.25rem] px-4 py-3.5 sm:py-4 transition-all transform hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2 ${
+                  saving || uploadImageMutation.isPending
+                    ? 'bg-[#b794f4] text-white cursor-not-allowed' 
+                    : 'bg-gradient-to-r from-[#805ad5] to-[#6B46C1] hover:shadow-lg hover:shadow-purple-500/30 text-white'
+                }`}
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin" /> Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-5 h-5 sm:w-6 sm:h-6" /> Save Changes
+                  </>
+                )}
+              </button>
             </div>
 
-            <button 
-              type="submit" 
-              disabled={saving || uploadImageMutation.isPending} 
-              className={`w-full font-black text-base sm:text-lg rounded-2xl px-4 py-3.5 sm:py-4 transition-all mt-6 sm:mt-8 flex items-center justify-center gap-2 shadow-lg ${saving || uploadImageMutation.isPending ? 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none' : 'bg-gradient-to-r from-[#FFE28A] to-[#FFD75E] hover:to-[#FFC107] text-gray-900 active:scale-[0.98] shadow-[#FFE28A]/40 hover:shadow-[#FFE28A]/60'}`}
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin" /> Updating Item...
-                </>
-              ) : (
-                <>
-                  <Save className="w-5 h-5 sm:w-6 sm:h-6" /> Save Changes
-                </>
-              )}
-            </button>
           </form>
         </div>
       </div>
