@@ -22,6 +22,16 @@ const DashboardPage = ({ user, setUser }) => {
     },
   });
 
+  // --- NAYA CHANGE: Added creditSettings fetch for limit calculation ---
+  const { data: systemSettings = { maxAllowedListings: 5 } } = useQuery({
+    queryKey: ['creditSettings'],
+    queryFn: async () => {
+      const res = await axios.get(`${API_URL}/admin/credit-settings`, { withCredentials: true });
+      return res.data.success && res.data.data ? res.data.data : { maxAllowedListings: 5 };
+    },
+    staleTime: 1000 * 60 * 30,
+  });
+
   const deleteItemMutation = useMutation({
     mutationFn: async (itemId) => {
       return await axios.delete(`${API_URL}/items/${itemId}`, { withCredentials: true });
@@ -43,7 +53,6 @@ const DashboardPage = ({ user, setUser }) => {
     },
     onSuccess: async () => {
       toast.success('Item deleted successfully');
-      // UPDATE: Fetching latest profile so the frontend gets the accurate item count
       try {
         const userRes = await axios.get(`${API_URL}/users/profile`, { withCredentials: true });
         if (userRes.data.success && setUser) {
@@ -70,17 +79,27 @@ const DashboardPage = ({ user, setUser }) => {
       
       <div className="sticky top-0 z-50 bg-white">
         <div className="bg-[#6B46C1] pt-6 pb-8 px-5 md:px-8 rounded-b-[2rem] shadow-md relative z-10">
-          <div className="flex items-center gap-3">
-            <Link 
-              to="/profile" 
-              className="p-1.5 -ml-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all backdrop-blur-sm border border-white/10"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </Link>
-            <div>
-              <h1 className="text-xl md:text-2xl font-bold tracking-wide leading-tight text-white">My Dashboard</h1>
-              <p className="text-[11px] md:text-sm text-purple-200 font-medium mt-0.5">Manage all your listed items here</p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Link 
+                to="/profile" 
+                className="p-1.5 -ml-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all backdrop-blur-sm border border-white/10"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </Link>
+              <div>
+                <h1 className="text-xl md:text-2xl font-bold tracking-wide leading-tight text-white">My Dashboard</h1>
+                <p className="text-[11px] md:text-sm text-purple-200 font-medium mt-0.5">Manage all your listed items here</p>
+              </div>
             </div>
+            
+            {/* --- NAYA CHANGE: Added limits badge on top right --- */}
+            {!loading && (
+              <div className="bg-white/20 backdrop-blur-md border border-white/30 px-3 py-1.5 rounded-xl flex flex-col items-center">
+                <span className="text-[10px] font-medium text-purple-100 uppercase tracking-wide">Listed</span>
+                <span className="text-sm font-black text-white">{myItems.length}/{systemSettings.maxAllowedListings}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -132,9 +151,12 @@ const DashboardPage = ({ user, setUser }) => {
               <div key={item._id} className="bg-[#F8F6FF] rounded-3xl p-4 relative flex flex-col hover:shadow-md transition-shadow border border-gray-50 h-full">
                 
                 <div className="absolute top-4 left-4 z-10 flex gap-2">
-                  <Link to={`/edit-item/${item._id}`} className="bg-white hover:bg-gray-50 text-gray-600 p-1.5 rounded-full shadow-sm border border-gray-100 transition">
-                    <Edit2 className="w-3.5 h-3.5" />
-                  </Link>
+                  {/* --- NAYA CHANGE: Conditionally render the Edit button --- */}
+                  {item.status !== 'swapped' && item.status !== 'reserved' && (
+                    <Link to={`/edit-item/${item._id}`} className="bg-white hover:bg-gray-50 text-gray-600 p-1.5 rounded-full shadow-sm border border-gray-100 transition">
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </Link>
+                  )}
                   <button 
                     onClick={() => handleDelete(item._id)} 
                     disabled={deleteItemMutation.isPending && deleteItemMutation.variables === item._id}

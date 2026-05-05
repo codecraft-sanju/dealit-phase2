@@ -156,14 +156,34 @@ const updateItem = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Item not found' });
     }
 
-    if (item.owner.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+    const isOwner = item.owner.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+
+    if (!isOwner && !isAdmin) {
       return res.status(401).json({ success: false, message: 'Not authorized to update this item' });
     }
 
-    req.body.updated_at = Date.now();
+    let updateData = {};
 
-    // ⚡ NAYA CHANGE: Admin Approval & Aura Point Logic Start
-    if (req.body.status === 'active' && item.status !== 'active') {
+    if (isAdmin) {
+      updateData = { ...req.body };
+    } else {
+      const allowedFields = ['title', 'description', 'category', 'condition', 'images', 'preferred_item', 'weight', 'dimensions'];
+      
+      allowedFields.forEach(field => {
+        if (req.body[field] !== undefined) {
+          updateData[field] = req.body[field];
+        }
+      });
+
+      if (item.status === 'rejected') {
+        updateData.status = 'pending';
+      }
+    }
+
+    updateData.updated_at = Date.now();
+   
+    if (updateData.status === 'active' && item.status !== 'active') { 
       try {
         const owner = await User.findById(item.owner);
         
@@ -190,9 +210,9 @@ const updateItem = async (req, res) => {
         console.error("Error giving Aura points: ", auraError);
       }
     }
-    // ⚡ NAYA CHANGE END
+   
 
-    item = await Item.findByIdAndUpdate(req.params.id, req.body, {
+    item = await Item.findByIdAndUpdate(req.params.id, updateData, { // --- CHANGED: req.body to updateData ---
       new: true,
       runValidators: true
     });
