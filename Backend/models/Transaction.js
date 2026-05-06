@@ -8,23 +8,22 @@ const transactionSchema = new mongoose.Schema({
   },
   amount: { 
     type: Number, 
-    required: true // Amount in INR
+    required: true // Amount in INR or Credits
   },
   razorpay_order_id: { 
     type: String, 
-    required: true 
+   
   },
   razorpay_payment_id: { 
     type: String, 
-    required: true 
   },
   razorpay_signature: { 
     type: String, 
-    required: true 
   },
   transactionType: { 
     type: String, 
-    enum: ['wallet_recharge', 'shipping_fee'], 
+   
+    enum: ['wallet_recharge', 'shipping_fee', 'order_refund', 'shipping_refund'], 
     required: true 
   },
   status: { 

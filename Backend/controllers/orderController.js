@@ -9,6 +9,10 @@ const { checkServiceability, createShiprocketOrder, addPickupLocation, generateA
 const Notification = require('../models/Notification');
 const AuraLog = require('../models/AuraLog'); 
 
+// -> NAYA CHANGE START: Imported refund function
+const { refundRazorpayPayment } = require('./paymentController');
+// -> NAYA CHANGE END
+
 const calculateShippingCost = async (req, res) => {
   try {
     const { itemId, pincode } = req.body;
@@ -276,7 +280,34 @@ const updateOrderStatus = async (req, res) => {
       if (buyer) {
         buyer.account_credits += order.itemPrice;
         await buyer.save();
+
+        // -> NAYA CHANGE START: Save Credits Refund Transaction
+        await Transaction.create({
+          user: buyer._id,
+          amount: order.itemPrice,
+          status: 'success',
+          transactionType: 'order_refund'
+        });
         
+        // Refund shipping money via Razorpay
+        if (order.shippingCost > 0 && order.razorpay_payment_id) {
+          const refundRes = await refundRazorpayPayment(order.razorpay_payment_id, order.shippingCost);
+          if (!refundRes.success) {
+            console.error('Failed to process Razorpay refund for order:', order._id);
+          } else {
+            // Log shipping refund transaction if successful
+            await Transaction.create({
+              user: buyer._id,
+              amount: order.shippingCost,
+              razorpay_order_id: order.razorpay_order_id,
+              razorpay_payment_id: order.razorpay_payment_id,
+              status: 'success',
+              transactionType: 'shipping_refund'
+            });
+          }
+        }
+        // -> NAYA CHANGE END
+
         order.paymentStatus = 'refunded';
 
         await Notification.create({
@@ -569,6 +600,26 @@ const autoCancelOverdueOrders = async () => {
     for (const order of overdueOrders) {
       order.orderStatus = 'cancelled';
       order.cancellationReason = `System Auto-Cancel: Seller failed to dispatch within ${cancelHours} hours.`;
+      
+      // -> NAYA CHANGE START: Refund shipping money via Razorpay on auto-cancel
+      if (order.shippingCost > 0 && order.razorpay_payment_id) {
+        const refundRes = await refundRazorpayPayment(order.razorpay_payment_id, order.shippingCost);
+        if (!refundRes.success) {
+          console.error('Failed to process Razorpay refund for auto-cancelled order:', order._id);
+        } else {
+           // Log shipping refund transaction if successful
+           await Transaction.create({
+             user: order.buyer._id, 
+             amount: order.shippingCost,
+             razorpay_order_id: order.razorpay_order_id,
+             razorpay_payment_id: order.razorpay_payment_id,
+             status: 'success',
+             transactionType: 'shipping_refund'
+           });
+        }
+      }
+      // -> NAYA CHANGE END
+
       order.paymentStatus = 'refunded';
 
       await order.save({ validateBeforeSave: false });
@@ -576,6 +627,15 @@ const autoCancelOverdueOrders = async () => {
       const buyer = order.buyer;
       buyer.account_credits += order.itemPrice;
       await buyer.save();
+
+      // -> NAYA CHANGE START: Save Credits Refund Transaction for Auto-Cancel
+      await Transaction.create({
+        user: buyer._id,
+        amount: order.itemPrice,
+        status: 'success',
+        transactionType: 'order_refund'
+      });
+      // -> NAYA CHANGE END
 
       await Notification.create({
         user: buyer._id,

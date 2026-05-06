@@ -22,6 +22,21 @@ const verifyRazorpayConnection = () => {
 };
 // <-- NAYA CHANGE END -->
 
+// -> NAYA CHANGE START: Razorpay Refund function
+const refundRazorpayPayment = async (paymentId, amount) => {
+  try {
+    const refund = await razorpayInstance.payments.refund(paymentId, {
+      amount: amount * 100, // paise me convert kiya
+      speed: 'optimum'
+    });
+    return { success: true, data: refund };
+  } catch (error) {
+    console.error('Razorpay Refund Error:', error);
+    return { success: false, error };
+  }
+};
+// -> NAYA CHANGE END
+
 // 1. Order Create karne ki API
 const createOrder = async (req, res) => {
   try {
@@ -177,7 +192,7 @@ const razorpayWebhook = async (req, res) => {
            user: userId,
            type: 'CREDIT_ADDED',
            title: 'Wallet Recharged! 💳',
-           message: `₹${actualAmountInINR} credits have been successfully added to your account via webhook.`,
+           message: `₹${actualAmountInINR} credits have been successfully added to your account.`,
            metadata: { 
              amount: actualAmountInINR, 
              reason: 'wallet_recharge',
@@ -238,5 +253,6 @@ module.exports = {
   verifyPayment,
   razorpayWebhook,
   getUserTransactions,
-  verifyRazorpayConnection 
+  verifyRazorpayConnection,
+  refundRazorpayPayment 
 };

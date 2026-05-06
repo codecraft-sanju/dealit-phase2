@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
-import { ArrowLeft, Wallet, Coins, CreditCard, ChevronRight, Check, MoreHorizontal, Plus, Package, Sparkles, Copy, Users, Target, Share2, History, ArrowDownLeft, XCircle, Clock, X, Truck, Filter, List, Loader2 } from 'lucide-react';
+import { ArrowLeft, Wallet, Coins, CreditCard, ChevronRight, Check, MoreHorizontal, Plus, Package, Sparkles, Copy, Users, Target, Share2, History, ArrowDownLeft, XCircle, Clock, X, Truck, Filter, List, Loader2, RefreshCcw } from 'lucide-react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -315,8 +315,6 @@ const WalletPage = ({ user, setUser }) => {
             </div>
           </div>
 
-          {/* CHANGED: Removed the separate history button div from here */}
-
           <div className="px-5 md:px-0 mt-6">
             <h2 className="text-lg font-bold text-gray-900 mb-4">Ways to Earn Credits</h2>
 
@@ -430,7 +428,6 @@ const WalletPage = ({ user, setUser }) => {
                   ₹ 1 = 1 credit
                 </div>
                 
-                {/* CHANGED: Brought the transaction history button inside this block alongside the add credits button */}
                 <div className="flex flex-row items-center gap-3">
                   <button 
                     onClick={() => setShowPaymentForm(!showPaymentForm)}
@@ -553,6 +550,12 @@ const WalletPage = ({ user, setUser }) => {
                 >
                   <Truck className="w-3.5 h-3.5" /> Shipping
                 </button>
+                <button 
+                  onClick={() => handleFilterChange('refunds')}
+                  className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap flex-shrink-0 transition-all flex items-center gap-1.5 ${filterType === 'refunds' ? 'bg-purple-500 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                >
+                  <RefreshCcw className="w-3.5 h-3.5" /> Refunds
+                </button>
               </div>
 
               <div className="p-5 overflow-y-auto flex-1 bg-gray-50">
@@ -573,9 +576,54 @@ const WalletPage = ({ user, setUser }) => {
                   <div className="space-y-3 pb-6">
                     <AnimatePresence mode="popLayout">
                       {transactions.map((tx) => {
-                        const isShipping = tx.transactionType === 'shipping_fee';
+                        const txType = tx.transactionType || 'wallet_recharge';
+                        const isShipping = txType === 'shipping_fee';
+                        const isRefund = txType === 'order_refund' || txType === 'shipping_refund';
+                        const isRecharge = txType === 'wallet_recharge';
                         const isSuccess = tx.status === 'success';
                         const isFailed = tx.status === 'failed';
+
+                        let IconComponent = Clock;
+                        let iconBg = 'bg-orange-50 text-orange-600';
+
+                        if (isRefund) {
+                          IconComponent = RefreshCcw;
+                          iconBg = 'bg-purple-50 text-[#6B46C1]';
+                        } else if (isShipping) {
+                          IconComponent = Truck;
+                          iconBg = 'bg-blue-50 text-blue-600';
+                        } else if (isSuccess) {
+                          IconComponent = ArrowDownLeft;
+                          iconBg = 'bg-emerald-50 text-emerald-600';
+                        } else if (isFailed) {
+                          IconComponent = XCircle;
+                          iconBg = 'bg-red-50 text-red-600';
+                        }
+
+                        // -> Professional UI Setup: Display where the money went
+                        let displayName = txType.replace('_', ' ');
+                        let subText = '';
+
+                        if (txType === 'order_refund') {
+                          displayName = 'Credits Refunded';
+                          subText = 'Instantly added to Wallet';
+                        } else if (txType === 'shipping_refund') {
+                          displayName = 'Shipping Refund';
+                          subText = 'Refunded to original payment source (3-5 days)';
+                        } else if (txType === 'wallet_recharge') {
+                          displayName = 'Wallet Recharge';
+                          subText = 'Added to Wallet';
+                        } else if (txType === 'shipping_fee') {
+                          displayName = 'Shipping Fee';
+                          subText = 'Paid via Razorpay';
+                        }
+
+                        let amountPrefix = '+';
+                        if (isShipping) amountPrefix = '-';
+                        if (isFailed) amountPrefix = '';
+
+                        let currencySymbol = (isShipping || txType === 'shipping_refund' || isRecharge) ? '₹' : '';
+                        let showCr = !currencySymbol;
 
                         return (
                           <motion.div 
@@ -588,30 +636,30 @@ const WalletPage = ({ user, setUser }) => {
                             className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow"
                           >
                             <div className="flex items-center gap-3">
-                              <div className={`p-2.5 rounded-xl ${
-                                isShipping 
-                                  ? 'bg-blue-50 text-blue-600' 
-                                  : isSuccess ? 'bg-emerald-50 text-emerald-600' : isFailed ? 'bg-red-50 text-red-600' : 'bg-orange-50 text-orange-600'
-                              }`}>
-                                {isShipping ? <Truck className="w-5 h-5" /> : (isSuccess ? <ArrowDownLeft className="w-5 h-5" /> : isFailed ? <XCircle className="w-5 h-5" /> : <Clock className="w-5 h-5" />)}
+                              <div className={`p-2.5 rounded-xl ${iconBg}`}>
+                                <IconComponent className="w-5 h-5" />
                               </div>
                               <div>
                                 <p className="font-bold text-gray-900 text-sm capitalize">
-                                  {tx.transactionType ? tx.transactionType.replace('_', ' ') : 'Wallet Recharge'}
+                                  {displayName}
                                 </p>
                                 <p className="text-[11px] text-gray-500 font-medium mt-0.5">
                                   {new Date(tx.createdAt).toLocaleDateString()} at {new Date(tx.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                                {/* Naya helper text yahan add kiya */}
+                                <p className="text-[10px] text-gray-400 mt-1">
+                                  {subText}
                                 </p>
                               </div>
                             </div>
                             
                             <div className="text-right">
-                              <p className={`font-black text-sm ${isShipping ? 'text-gray-800' : isSuccess ? 'text-emerald-600' : 'text-gray-900'}`}>
-                                {isShipping ? '-' : (isSuccess ? '+' : '')}
-                                {isShipping ? '₹' : ''}{tx.amount} 
-                                {!isShipping && <span className="text-[10px] font-bold text-gray-500 ml-1">CR</span>}
+                              <p className={`font-black text-sm ${isShipping ? 'text-gray-800' : isSuccess || isRefund ? 'text-emerald-600' : 'text-gray-900'}`}>
+                                {amountPrefix}
+                                {currencySymbol}{tx.amount} 
+                                {showCr && <span className="text-[10px] font-bold text-gray-500 ml-1">CR</span>}
                               </p>
-                              <p className={`text-[10px] font-bold uppercase tracking-wider mt-0.5 ${tx.status === 'success' ? 'text-emerald-500' : tx.status === 'failed' ? 'text-red-500' : 'text-orange-500'}`}>
+                              <p className={`text-[10px] font-bold uppercase tracking-wider mt-0.5 ${isSuccess ? 'text-emerald-500' : isFailed ? 'text-red-500' : 'text-orange-500'}`}>
                                 {tx.status}
                               </p>
                             </div>
