@@ -209,6 +209,35 @@ const schedulePickup = async (shipment_id) => {
   }
 };
 
+// -> CHANGES START HERE: Added getTrackingByAWB function
+const getTrackingByAWB = async (awb_code) => {
+  if (IS_TEST_MODE) {
+    return {
+      tracking_data: {
+        track_status: 1,
+        shipment_status: 3,
+        shipment_track: [{ current_status: "IN TRANSIT", location: "Test Hub" }],
+        shipment_track_activities: [
+          { date: "2026-05-05 10:00:00", activity: "Picked up", location: "Seller Location" },
+          { date: "2026-05-06 14:00:00", activity: "In Transit", location: "Sorting Facility" }
+        ]
+      }
+    };
+  }
+
+  try {
+    const token = await getShiprocketToken();
+    const response = await axios.get(`${SHIPROCKET_BASE_URL}/courier/track/awb/${awb_code}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Shiprocket Tracking Error:', error.response?.data || error.message);
+    throw new Error('Failed to fetch live tracking details.');
+  }
+};
+
+
 module.exports = {
   getShiprocketToken,
   checkServiceability,
@@ -217,5 +246,6 @@ module.exports = {
   verifyShiprocketConnection,
   generateAWB,
   generateLabel,
-  schedulePickup
+  schedulePickup,
+  getTrackingByAWB
 };

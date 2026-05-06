@@ -4,7 +4,8 @@ const User = require('../models/User');
 const CreditSetting = require('../models/CreditSetting');
 const Transaction = require('../models/Transaction'); 
 const crypto = require('crypto'); 
-const { checkServiceability, createShiprocketOrder, addPickupLocation, generateAWB, generateLabel, schedulePickup } = require('../utils/shiprocket'); 
+// -> CHANGE: Imported getTrackingByAWB
+const { checkServiceability, createShiprocketOrder, addPickupLocation, generateAWB, generateLabel, schedulePickup, getTrackingByAWB } = require('../utils/shiprocket'); 
 const Notification = require('../models/Notification');
 const AuraLog = require('../models/AuraLog'); 
 
@@ -478,62 +479,72 @@ const getShippingLabel = async (req, res) => {
 
 
 const handleShiprocketWebhook = async (req, res) => {
-  try {
-    const { awb, current_status } = req.body;
-    if (!awb || !current_status) return res.status(400).json({ success: false, message: 'Invalid payload' });
-
-    const order = await Order.findOne({ 'trackingDetails.awb_code': awb }).populate('item');
-    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
-
-    let setting = await CreditSetting.findOne();
-    const auraRewardAmount = setting && setting.auraReward !== undefined ? setting.auraReward : 50;
-
-    if (current_status === 'DELIVERED' && order.orderStatus !== 'delivered') {
-      order.orderStatus = 'delivered';
-      order.updated_at = Date.now();
-
-      if (order.isSellerPaid === false) {
-        const seller = await User.findById(order.seller);
-        if (seller) {
-          seller.account_credits += order.itemPrice; 
-          seller.aura_points = (seller.aura_points || 0) + auraRewardAmount; 
-          await seller.save();
-          
-          order.isSellerPaid = true;
-
-          await Notification.create({
-            user: seller._id,
-            type: 'CREDIT_ADDED',
-            title: 'Payment Released! 💰',
-            message: `Order successfully delivered! ${order.itemPrice} credits and +${auraRewardAmount} Aura have been credited to your account.`,
-            metadata: { amount: order.itemPrice, reason: 'escrow_release', referenceId: order._id }
-          });
-
-          await AuraLog.create({
-            user: seller._id,
-            reason: "Successful Trade Delivered",
-            points: auraRewardAmount,
-            type: "positive"
-          });
-
-          if(order.item) {
-             order.item.status = 'swapped';
-             await order.item.save();
-          }
-        }
-      }
-      await order.save();
-    } 
-    else if ((current_status === 'SHIPPED' || current_status === 'IN TRANSIT') && order.orderStatus === 'processing') {
-      order.orderStatus = 'shipped';
-      await order.save();
+  try {
+    const { awb, current_status } = req.body;
+    
+    // CHANGE 1: 400 bad request ki jagah 200 OK return karo
+    if (!awb || !current_status) {
+      return res.status(200).json({ success: true, message: 'Webhook endpoint is active.' });
     }
 
-    res.status(200).json({ success: true, message: 'Webhook processed successfully' });
-  } catch (error) {
-    console.error('Shiprocket Webhook Error:', error);
-    res.status(500).json({ success: false, message: 'Server error processing webhook' });
-  }
+    const order = await Order.findOne({ 'trackingDetails.awb_code': awb }).populate('item');
+    
+    // CHANGE 2: 404 order not found ki jagah 200 OK return karo
+    if (!order) {
+      console.log(`Shiprocket test ping or invalid AWB received: ${awb}`);
+      return res.status(200).json({ success: true, message: 'Webhook received but order not found.' });
+    }
+
+    let setting = await CreditSetting.findOne();
+    const auraRewardAmount = setting && setting.auraReward !== undefined ? setting.auraReward : 50;
+
+    if (current_status === 'DELIVERED' && order.orderStatus !== 'delivered') {
+      order.orderStatus = 'delivered';
+      order.updated_at = Date.now();
+
+      if (order.isSellerPaid === false) {
+        const seller = await User.findById(order.seller);
+        if (seller) {
+          seller.account_credits += order.itemPrice; 
+          seller.aura_points = (seller.aura_points || 0) + auraRewardAmount; 
+          await seller.save();
+          
+          order.isSellerPaid = true;
+
+          await Notification.create({
+            user: seller._id,
+            type: 'CREDIT_ADDED',
+            title: 'Payment Released! 💰',
+            message: `Order successfully delivered! ${order.itemPrice} credits and +${auraRewardAmount} Aura have been credited to your account.`,
+            metadata: { amount: order.itemPrice, reason: 'escrow_release', referenceId: order._id }
+          });
+
+          await AuraLog.create({
+            user: seller._id,
+            reason: "Successful Trade Delivered",
+            points: auraRewardAmount,
+            type: "positive"
+          });
+
+          if(order.item) {
+             order.item.status = 'swapped';
+             await order.item.save();
+          }
+        }
+      }
+      await order.save();
+    } 
+    else if ((current_status === 'SHIPPED' || current_status === 'IN TRANSIT') && order.orderStatus === 'processing') {
+      order.orderStatus = 'shipped';
+      await order.save();
+    }
+
+    res.status(200).json({ success: true, message: 'Webhook processed successfully' });
+  } catch (error) {
+    console.error('Shiprocket Webhook Error:', error);
+    // CHANGE 3: Catch error me bhi 200 return karo taki shiprocket retry karke block na kare
+    res.status(200).json({ success: false, message: 'Server error processing webhook' });
+  }
 };
 
 const autoCancelOverdueOrders = async () => {
@@ -597,6 +608,36 @@ const autoCancelOverdueOrders = async () => {
   }
 };
 
+// -> CHANGES START HERE: Added getLiveTracking function
+const getLiveTracking = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const order = await Order.findById(orderId);
+
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+    
+    if (order.buyer.toString() !== req.user._id.toString() && order.seller.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Not authorized to view tracking for this order' });
+    }
+
+    if (!order.trackingDetails || !order.trackingDetails.awb_code) {
+      return res.status(400).json({ success: false, message: 'AWB code not available yet. Tracking cannot be fetched.' });
+    }
+
+    const trackingData = await getTrackingByAWB(order.trackingDetails.awb_code);
+    
+    res.status(200).json({
+      success: true,
+      data: trackingData
+    });
+
+  } catch (error) {
+    console.error('Error fetching live tracking:', error);
+    res.status(500).json({ success: false, message: error.message || 'Server error fetching tracking' });
+  }
+};
+// -> CHANGES END HERE
+
 module.exports = {
   calculateShippingCost, 
   createOrder,
@@ -605,6 +646,7 @@ module.exports = {
   updateOrderStatus,
   dispatchOrder, 
   getShippingLabel, 
-  handleShiprocketWebhook ,
-  autoCancelOverdueOrders
+  handleShiprocketWebhook,
+  autoCancelOverdueOrders,
+  getLiveTracking 
 };

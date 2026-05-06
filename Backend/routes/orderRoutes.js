@@ -10,10 +10,13 @@ const {
   updateOrderStatus,
   dispatchOrder, 
   getShippingLabel, 
-  handleShiprocketWebhook 
+  handleShiprocketWebhook,
+  
+  getLiveTracking
+
 } = require('../controllers/orderController');
 
-router.post('/shiprocket-webhook', handleShiprocketWebhook); 
+router.post('/status-update', handleShiprocketWebhook);
 
 router.post('/calculate-shipping', protect, calculateShippingCost); 
 router.post('/checkout', protect, createOrder);
@@ -22,5 +25,8 @@ router.get('/seller-orders', protect, getSellerOrders); // For Seller
 router.post('/:orderId/dispatch', protect, dispatchOrder); 
 router.post('/:orderId/generate-label', protect, getShippingLabel); 
 router.put('/:orderId/status', protect, updateOrderStatus); 
+
+router.get('/:orderId/track', protect, getLiveTracking); 
+
 
 module.exports = router;

@@ -88,6 +88,12 @@ const OrdersPage = ({ user }) => {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
 
+  // -> CHANGES START HERE: Live tracking states
+  const [showTrackingModal, setShowTrackingModal] = useState(false);
+  const [liveTrackingData, setLiveTrackingData] = useState(null);
+  const [fetchingTracking, setFetchingTracking] = useState(false);
+  // -> CHANGES END HERE
+
   const [autoCancelHours, setAutoCancelHours] = useState(24);
   const [auraPenalty, setAuraPenalty] = useState(50); 
 
@@ -231,6 +237,28 @@ const OrdersPage = ({ user }) => {
     setCancelReason('');
     setCancelling(false);
   };
+
+  // -> CHANGES START HERE: Function to fetch live tracking data
+  const handleViewLiveTracking = async (order) => {
+    if (!order.trackingDetails?.awb_code) return;
+    
+    setFetchingTracking(true);
+    setShowTrackingModal(true);
+    setLiveTrackingData(null);
+
+    try {
+      const res = await axios.get(`${API_URL}/orders/${order._id}/track`, { withCredentials: true });
+      if (res.data.success) {
+        setLiveTrackingData(res.data.data.tracking_data);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to load tracking data');
+      setShowTrackingModal(false);
+    } finally {
+      setFetchingTracking(false);
+    }
+  };
+  // -> CHANGES END HERE
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -480,16 +508,16 @@ const OrdersPage = ({ user }) => {
                         </div>
                         
                         <div className="flex gap-2 w-full sm:w-auto">
+                           {/* -> CHANGES START HERE: Replaced a tag with internal modal button */}
                            {order.trackingDetails.awb_code && (
-                             <a
-                               href={`https://shiprocket.co/tracking/${order.trackingDetails.awb_code}`}
-                               target="_blank"
-                               rel="noopener noreferrer"
+                             <button
+                               onClick={() => handleViewLiveTracking(order)}
                                className="bg-[#f8f6ff] border border-[#e9d8ff] text-[#6B46C1] hover:bg-[#6B46C1] hover:text-white hover:border-[#6B46C1] px-4 py-2.5 rounded-xl font-bold text-xs transition-all duration-300 flex items-center justify-center gap-2 flex-1 sm:flex-none"
                              >
-                               Track <ExternalLink className="w-3.5 h-3.5" />
-                             </a>
+                               Live Tracking <Truck className="w-3.5 h-3.5" />
+                             </button>
                            )}
+                           {/* -> CHANGES END HERE */}
                            
                            {activeTab === 'sales' && order.orderStatus === 'processing' && (
                              <button
@@ -719,6 +747,61 @@ const OrdersPage = ({ user }) => {
           </motion.div>
         </div>
       )}
+
+     
+      {showTrackingModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-gray-900/60 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-[2rem] p-6 max-w-md w-full shadow-2xl relative max-h-[80vh] flex flex-col"
+          >
+            <button 
+              onClick={() => setShowTrackingModal(false)}
+              className="absolute top-4 right-4 p-2 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-500 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            
+            <h3 className="text-xl font-black text-gray-900 mb-4">Live Tracking</h3>
+
+            {fetchingTracking ? (
+              <div className="flex flex-col items-center justify-center py-10 gap-3">
+                <Loader2 className="w-8 h-8 text-[#6B46C1] animate-spin" />
+                <p className="text-sm font-medium text-gray-500">Fetching courier updates...</p>
+              </div>
+            ) : liveTrackingData ? (
+              <div className="overflow-y-auto pr-2 custom-scrollbar">
+                <div className="mb-6 p-4 bg-[#f8f6ff] rounded-xl border border-[#e9d8ff]">
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Current Status</p>
+                  <p className="text-lg font-black text-[#6B46C1]">
+                    {liveTrackingData.shipment_track?.[0]?.current_status || 'Processing'}
+                  </p>
+                </div>
+
+                <div className="relative border-l-2 border-[#e9d8ff] ml-3 pl-6 space-y-6 pb-4">
+                  {liveTrackingData.shipment_track_activities?.map((activity, index) => (
+                    <div key={index} className="relative">
+                      <div className="absolute -left-[31px] bg-[#6B46C1] w-3.5 h-3.5 rounded-full ring-4 ring-white"></div>
+                      <p className="text-sm font-bold text-gray-900">{activity.activity}</p>
+                      <p className="text-xs font-medium text-gray-500 mt-0.5">{activity.location}</p>
+                      <p className="text-[10px] font-bold text-gray-400 mt-1">{activity.date}</p>
+                    </div>
+                  ))}
+                  {(!liveTrackingData.shipment_track_activities || liveTrackingData.shipment_track_activities.length === 0) && (
+                    <p className="text-sm text-gray-500 font-medium">Tracking timeline is not available yet. Please check back later.</p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-10 text-gray-500 font-medium">
+                Could not load tracking data.
+              </div>
+            )}
+          </motion.div>
+        </div>
+      )}
+    
       
     </div>
   );
