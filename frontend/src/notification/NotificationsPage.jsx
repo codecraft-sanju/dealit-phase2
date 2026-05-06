@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react'; // ADDED: useRef
-import { Link, useNavigate } from 'react-router-dom'; // MODIFIED: Added useNavigate
+import React, { useEffect, useRef } from 'react'; 
+import { Link, useNavigate } from 'react-router-dom'; 
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, 
@@ -11,11 +11,11 @@ import {
   Package,
   ShoppingBag,
   Info,
-  Loader2 // ADDED: A spinner icon for the bottom loader
+  Loader2 
 } from 'lucide-react';
 import axios from 'axios';
 import { formatDistanceToNow } from 'date-fns';
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'; // CHANGED: useQuery to useInfiniteQuery
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'; 
 
 const API_URL = import.meta.env.VITE_BACKEND_API + '/api';
 
@@ -42,8 +42,8 @@ const NotificationsShimmer = () => {
 
 const NotificationsPage = () => {
   const queryClient = useQueryClient();
-  const observerTarget = useRef(null); // Reference for the element at the bottom of the list
-  const navigate = useNavigate(); // MODIFIED: Initialized navigate
+  const observerTarget = useRef(null); 
+  const navigate = useNavigate(); 
 
   // <-- 1. Fetching notifications with useInfiniteQuery -->
   const { 
@@ -58,16 +58,14 @@ const NotificationsPage = () => {
     queryKey: ['notifications'],
     initialPageParam: 1,
     queryFn: async ({ pageParam = 1 }) => {
-      // Pushing the pageParam to your backend
       const response = await axios.get(`${API_URL}/notifications?page=${pageParam}&limit=15`, { withCredentials: true });
-      return response.data; // We return the whole object because we need totalPages
+      return response.data; 
     },
     getNextPageParam: (lastPage) => {
-      // Tell React Query how to get the next page number
       if (lastPage.currentPage < lastPage.totalPages) {
         return lastPage.currentPage + 1;
       }
-      return undefined; // No more pages left
+      return undefined; 
     },
     staleTime: 1000 * 60,
   });
@@ -83,7 +81,7 @@ const NotificationsPage = () => {
           fetchNextPage();
         }
       },
-      { threshold: 0.1 } // Trigger when 10% of the target is visible
+      { threshold: 0.1 } 
     );
 
     if (observerTarget.current) {
@@ -183,11 +181,13 @@ const NotificationsPage = () => {
         break;
 
       case 'ORDER_UPDATE':
+        // -> CHANGES START HERE: Now pointing directly to the order details page
         if (refId) {
-          navigate(`/orders`);
+          navigate(`/order/${refId}`); 
         } else {
           navigate('/orders');
         }
+        // -> CHANGES END HERE
         break;
 
       case 'AURA_UPDATE':
@@ -214,7 +214,7 @@ const NotificationsPage = () => {
         return { icon: RefreshCw, color: 'text-blue-500', bg: 'bg-blue-500/10' };
       case 'ORDER_UPDATE':
         return { icon: ShoppingBag, color: 'text-purple-500', bg: 'bg-purple-500/10' };
-      case 'AURA_UPDATE': // MODIFIED: Added AURA_UPDATE icon case
+      case 'AURA_UPDATE': 
         return { icon: Sparkles, color: 'text-amber-500', bg: 'bg-amber-500/10' };
       case 'SYSTEM':
         return { icon: Package, color: 'text-yellow-500', bg: 'bg-yellow-500/10' };
@@ -266,8 +266,8 @@ const NotificationsPage = () => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
-                    onClick={() => handleNotificationClick(notif)} // MODIFIED: Added onClick event
-                    className={`p-4 rounded-2xl border transition-all relative overflow-hidden cursor-pointer hover:shadow-md // MODIFIED: Added cursor pointer classes
+                    onClick={() => handleNotificationClick(notif)} 
+                    className={`p-4 rounded-2xl border transition-all relative overflow-hidden cursor-pointer hover:shadow-md 
                       ${notif.isRead 
                         ? 'bg-white border-gray-100 shadow-sm' 
                         : 'bg-white border-[#6B46C1]/30 shadow-md ring-1 ring-[#6B46C1]/10'}`}

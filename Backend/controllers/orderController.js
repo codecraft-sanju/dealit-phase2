@@ -642,7 +642,33 @@ const getLiveTracking = async (req, res) => {
     res.status(500).json({ success: false, message: error.message || 'Server error fetching tracking' });
   }
 };
-// -> CHANGES END HERE
+
+const getOrderById = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    
+    const order = await Order.findById(orderId)
+      .populate('item', 'title images category condition weight dimensions') 
+      .populate('buyer', 'full_name email phone')
+      .populate('seller', 'full_name email phone');
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    // Security check: Sirf buyer, seller ya admin hi order details dekh paye
+    if (order.buyer._id.toString() !== req.user._id.toString() && 
+        order.seller._id.toString() !== req.user._id.toString() && 
+        req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Not authorized to view this order' });
+    }
+
+    res.status(200).json({ success: true, data: order });
+  } catch (error) {
+    console.error('Error fetching order by ID:', error);
+    res.status(500).json({ success: false, message: 'Server error fetching order details' });
+  }
+};
 
 module.exports = {
   calculateShippingCost, 
@@ -654,5 +680,6 @@ module.exports = {
   getShippingLabel, 
   handleShiprocketWebhook,
   autoCancelOverdueOrders,
-  getLiveTracking 
+  getLiveTracking ,
+  getOrderById
 };

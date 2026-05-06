@@ -1,40 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Truck, CheckCircle, Clock, MapPin, Phone, User, ArrowLeft, Coins, Package, ExternalLink, X, FileText, Loader2, AlertCircle, Info } from 'lucide-react'; 
+import { ShoppingBag, Truck, Clock, ArrowLeft, Coins, Package, ChevronRight } from 'lucide-react'; 
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
-
-const CountdownTimer = ({ createdAt, hours }) => {
-  const [timeLeft, setTimeLeft] = useState('');
-
-  useEffect(() => {
-    const calculateTime = () => {
-      if (!createdAt || !hours) return '00h 00m 00s';
-      
-      const expireDate = new Date(createdAt).getTime() + hours * 60 * 60 * 1000;
-      const now = new Date().getTime();
-      const diff = expireDate - now;
-
-      if (diff <= 0) return '00h 00m 00s';
-
-      const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const s = Math.floor((diff % (1000 * 60)) / 1000);
-
-      return `${h}h ${m}m ${s}s`;
-    };
-
-    setTimeLeft(calculateTime());
-    const timer = setInterval(() => setTimeLeft(calculateTime()), 1000);
-    
-    return () => clearInterval(timer);
-  }, [createdAt, hours]);
-
-  return <span>{timeLeft}</span>;
-};
 
 const OrderSkeleton = () => (
   <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm p-5 md:p-6 mb-6">
@@ -50,12 +21,6 @@ const OrderSkeleton = () => (
           <div className="h-3 w-1/2 bg-gray-200 rounded-md animate-pulse"></div>
           <div className="h-6 w-24 bg-gray-100 rounded-lg animate-pulse mt-2"></div>
         </div>
-      </div>
-      <div className="md:w-1/2 space-y-3 pt-1">
-        <div className="h-3 w-1/3 bg-gray-200 rounded-md animate-pulse mb-4"></div>
-        <div className="h-3 w-full bg-gray-100 rounded-md animate-pulse"></div>
-        <div className="h-3 w-2/3 bg-gray-100 rounded-md animate-pulse"></div>
-        <div className="h-3 w-1/2 bg-gray-200 rounded-md animate-pulse mt-4"></div>
       </div>
     </div>
   </div>
@@ -75,47 +40,9 @@ const OrdersPage = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [isScrolled, setIsScrolled] = useState(false);
   
-  const [showDispatchModal, setShowDispatchModal] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [dispatchData, setDispatchData] = useState({ weight: 0.5, length: 10, width: 10, height: 10 });
-  const [dispatching, setDispatching] = useState(false);
-  
-  const [dispatchError, setDispatchError] = useState(''); 
-
-  const [downloadingLabelFor, setDownloadingLabelFor] = useState(null);
-  
-  const [showCancelModal, setShowCancelModal] = useState(false);
-  const [cancelReason, setCancelReason] = useState('');
-  const [cancelling, setCancelling] = useState(false);
-
-  // -> CHANGES START HERE: Live tracking states
-  const [showTrackingModal, setShowTrackingModal] = useState(false);
-  const [liveTrackingData, setLiveTrackingData] = useState(null);
-  const [fetchingTracking, setFetchingTracking] = useState(false);
-  // -> CHANGES END HERE
-
-  const [autoCancelHours, setAutoCancelHours] = useState(24);
-  const [auraPenalty, setAuraPenalty] = useState(50); 
-
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     navigate(`/orders?tab=${tab}`, { replace: true });
-  };
-
-  const fetchSettings = async () => {
-    try {
-      const res = await axios.get(`${API_URL}/admin/public-settings`);
-      if (res.data.success) {
-        if (res.data.data.autoCancelHours) {
-          setAutoCancelHours(res.data.data.autoCancelHours);
-        }
-        if (res.data.data.auraPenalty !== undefined) {
-          setAuraPenalty(res.data.data.auraPenalty);
-        }
-      }
-    } catch (err) {
-      console.error('Error fetching settings:', err);
-    }
   };
 
   const fetchOrders = async () => {
@@ -135,7 +62,6 @@ const OrdersPage = ({ user }) => {
 
   useEffect(() => {
     fetchOrders();
-    fetchSettings(); 
   }, [activeTab]);
 
   useEffect(() => {
@@ -150,115 +76,6 @@ const OrdersPage = ({ user }) => {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  const handleUpdateStatus = async (orderId, newStatus, reason = '') => {
-    try {
-      const res = await axios.put(`${API_URL}/orders/${orderId}/status`, 
-        { status: newStatus, cancellationReason: reason }, 
-        { withCredentials: true }
-      );
-      if (res.data.success) {
-        fetchOrders();
-        alert(`Order marked as ${newStatus}`);
-      }
-    } catch (err) {
-      alert('Failed to update status');
-    }
-  };
-
-  const handleDispatchOrder = async (e) => {
-    e.preventDefault();
-    if (!selectedOrder) return;
-    
-    setDispatching(true);
-    setDispatchError('');
-
-    try {
-      const res = await axios.post(
-        `${API_URL}/orders/${selectedOrder._id}/dispatch`, 
-        dispatchData, 
-        { withCredentials: true }
-      );
-      if (res.data.success) {
-        alert('Order Dispatched! Shiprocket pickup scheduled.');
-        setShowDispatchModal(false);
-        fetchOrders();
-      }
-    } catch (err) {
-      setDispatchError(err.response?.data?.message || 'Failed to dispatch order. Please check details.');
-    } finally {
-      setDispatching(false);
-    }
-  };
-
- const handleDownloadLabel = async (orderId) => {
-    setDownloadingLabelFor(orderId);
-    try {
-      const res = await axios.post(
-        `${API_URL}/orders/${orderId}/generate-label`,
-        {},
-        { withCredentials: true }
-      );
-
-      if (res.data.success) {
-         if (res.data.labelUrl) {
-            const link = document.createElement('a');
-            link.href = res.data.labelUrl;
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            fetchOrders(); 
-         } else {
-            alert('Shiprocket is still processing the label. Please try again in 1 minute.');
-         }
-      } else {
-         alert(res.data.message || 'Failed to generate label.');
-      }
-    } catch (err) {
-       console.error("Label Error:", err);
-       alert(err.response?.data?.message || 'Failed to generate shipping label. Ensure you have balance in Shiprocket wallet.');
-    } finally {
-       setDownloadingLabelFor(null);
-    }
-  };
-
-  const submitCancelOrder = async (e) => {
-    e.preventDefault();
-    if (!cancelReason.trim()) {
-      alert('Please provide a reason for cancellation.');
-      return;
-    }
-    setCancelling(true);
-    await handleUpdateStatus(selectedOrder._id, 'cancelled', cancelReason);
-    setShowCancelModal(false);
-    setCancelReason('');
-    setCancelling(false);
-  };
-
-  // -> CHANGES START HERE: Function to fetch live tracking data
-  const handleViewLiveTracking = async (order) => {
-    if (!order.trackingDetails?.awb_code) return;
-    
-    setFetchingTracking(true);
-    setShowTrackingModal(true);
-    setLiveTrackingData(null);
-
-    try {
-      const res = await axios.get(`${API_URL}/orders/${order._id}/track`, { withCredentials: true });
-      if (res.data.success) {
-        setLiveTrackingData(res.data.data.tracking_data);
-      }
-    } catch (err) {
-      alert(err.response?.data?.message || 'Failed to load tracking data');
-      setShowTrackingModal(false);
-    } finally {
-      setFetchingTracking(false);
-    }
-  };
-  // -> CHANGES END HERE
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -385,19 +202,20 @@ const OrdersPage = ({ user }) => {
               variants={containerVariants}
               initial="hidden"
               animate="visible"
-              className="space-y-6"
+              className="space-y-4"
             >
               {orders.map((order) => (
                 <motion.div 
                   variants={itemVariants} 
                   key={order._id} 
                   layout 
-                  className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm"
+                  className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
                   style={{ willChange: 'transform, opacity' }}
+                  onClick={() => navigate(`/order/${order._id}?type=${activeTab}`)}
                 >
-                  <div className="bg-[#f8f6ff] px-5 py-4 flex justify-between items-center border-b border-gray-100">
-                    <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Order ID: #{order._id.slice(-6)}</span>
-                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase shadow-sm border ${
+                  <div className="bg-[#f8f6ff] px-4 py-3 flex justify-between items-center border-b border-gray-100">
+                    <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">#{order._id.slice(-6)}</span>
+                    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase shadow-sm border ${
                       order.orderStatus === 'delivered' ? 'bg-[#f0fdf4] text-emerald-700 border-emerald-100' : 
                       order.orderStatus === 'shipped' ? 'bg-blue-50 text-blue-700 border-blue-100' : 
                       order.orderStatus === 'processing' ? 'bg-purple-50 text-purple-700 border-purple-100' : 
@@ -408,219 +226,30 @@ const OrdersPage = ({ user }) => {
                     </div>
                   </div>
 
-                  <div className="p-5 md:p-6">
-                    <div className="flex flex-col md:flex-row gap-6">
-                      <div className="flex gap-4 md:w-1/2">
-                        <div className="w-24 h-24 sm:w-28 sm:h-28 bg-[#f8f6ff] rounded-[1.2rem] overflow-hidden shrink-0 border border-gray-100">
-                          <img 
-                            src={order.item?.images?.[0] || 'https://via.placeholder.com/150'} 
-                            alt={order.item?.title} 
-                            className="w-full h-full object-cover" 
-                            loading="lazy"
-                          />
+                  <div className="p-4 flex items-center gap-4">
+                    <div className="w-20 h-20 bg-[#f8f6ff] rounded-[1rem] overflow-hidden shrink-0 border border-gray-100">
+                      <img 
+                        src={order.item?.images?.[0] || 'https://via.placeholder.com/150'} 
+                        alt={order.item?.title} 
+                        className="w-full h-full object-cover" 
+                        loading="lazy"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base font-bold text-gray-900 leading-tight mb-1 truncate">{order.item?.title || 'Deleted Item'}</h3>
+                      <p className="text-xs text-gray-500 font-medium mb-2 truncate">{order.item?.category}</p>
+                      
+                      <div className="flex items-center gap-2">
+                        <div className="inline-flex items-center gap-1 bg-[#FFF4D2] border border-[#FFE28A]/50 px-2 py-0.5 rounded-md">
+                          <Coins className="w-3 h-3 text-yellow-600" />
+                          <span className="font-bold text-[10px] text-gray-900">{order.itemPrice || 0}</span>
                         </div>
-                        <div className="flex-1">
-                          <h3 className="text-lg font-bold text-gray-900 leading-tight mb-1">{order.item?.title || 'Deleted Item'}</h3>
-                          <p className="text-xs text-gray-500 font-medium mb-3">{order.item?.category}</p>
-                          
-                          <div className="flex flex-col gap-2">
-                            <div className="flex flex-wrap gap-2">
-                              <div className="inline-flex items-center gap-1.5 bg-[#FFF4D2] border border-[#FFE28A]/50 px-2 py-1 rounded-md shadow-sm" title="Item Value (Deducted from Wallet)">
-                                <Coins className="w-3.5 h-3.5 text-yellow-600" />
-                                <span className="font-bold text-[11px] sm:text-xs text-gray-900">{order.itemPrice || 0} Credits</span>
-                              </div>
-                              <div className={`inline-flex items-center gap-1.5 border px-2 py-1 rounded-md shadow-sm ${order.shippingCost > 0 ? 'bg-blue-50 border-blue-200' : 'bg-emerald-50 border-emerald-200'}`} title="Shipping Paid via Gateway">
-                                <Truck className={`w-3 h-3 ${order.shippingCost > 0 ? 'text-blue-600' : 'text-emerald-600'}`} />
-                                <span className={`font-bold text-[11px] sm:text-xs ${order.shippingCost > 0 ? 'text-blue-900' : 'text-emerald-900'}`}>
-                                  {order.shippingCost > 0 ? `₹${order.shippingCost} Shipping` : 'Free Shipping'}
-                                </span>
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-start gap-1.5 mt-1">
-                              <Info className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
-                              {activeTab === 'purchases' ? (
-                                <p className="text-[10px] sm:text-[11px] text-gray-500 font-medium leading-tight">
-                                  <strong className="text-gray-700">Paid:</strong> {order.itemPrice} credits from wallet & ₹{order.shippingCost} online.
-                                </p>
-                              ) : (
-                                <p className="text-[10px] sm:text-[11px] text-gray-500 font-medium leading-tight">
-                                  <strong className="text-gray-700">Earnings:</strong> You get <strong className="text-emerald-600">{order.itemPrice} Credits</strong> on delivery. (Buyer paid shipping).
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                        </div>
-                      </div>
-
-                      <div className="bg-[#f8f6ff] p-5 rounded-2xl border border-gray-100 md:w-1/2">
-                        <h4 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
-                          <MapPin className="w-3.5 h-3.5 text-[#A388E1]" /> Shipping Address
-                        </h4>
-                        <p className="text-sm font-bold text-gray-900 mb-1 flex items-center gap-2">
-                          <User className="w-3.5 h-3.5 text-gray-400" /> {order.shippingAddress?.fullName}
-                        </p>
-                        <p className="text-xs text-gray-600 font-medium leading-relaxed pl-5.5">
-                          {order.shippingAddress?.houseNo}, {order.shippingAddress?.areaStreet}
-                          {order.shippingAddress?.landmark ? `, ${order.shippingAddress.landmark}` : ''}, <br className="hidden md:block" />
-                          {order.shippingAddress?.city}, {order.shippingAddress?.state} - {order.shippingAddress?.pincode}
-                        </p>
-                        {activeTab === 'purchases' ? (
-                          <p className="text-sm font-bold text-[#6B46C1] mt-2.5 flex items-center gap-2">
-                            <Phone className="w-3.5 h-3.5 text-[#A388E1]" /> {order.shippingAddress?.phone}
-                          </p>
-                        ) : (
-                          <p className="text-sm font-bold text-gray-500 mt-2.5 flex items-center gap-2" title="Partially hidden to protect buyer privacy">
-                            <Phone className="w-3.5 h-3.5 text-gray-400" /> +91 ******{order.shippingAddress?.phone?.slice(-4) || '••••'}
-                          </p>
+                        {order.orderStatus === 'pending' && activeTab === 'sales' && (
+                          <span className="text-[10px] font-bold text-red-500 animate-pulse bg-red-50 px-2 py-0.5 rounded-md border border-red-100">Action Required</span>
                         )}
                       </div>
                     </div>
-
-                    {order.orderStatus === 'cancelled' && order.cancellationReason && (
-                      <div className="mt-5 bg-red-50 border border-red-100 p-4 rounded-2xl flex items-start gap-3">
-                        <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-                        <div>
-                          <h4 className="text-[10px] font-bold text-red-700 uppercase tracking-widest mb-1">Cancellation Reason</h4>
-                          <p className="text-sm font-semibold text-gray-800">{order.cancellationReason}</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {order.trackingDetails && order.trackingDetails.shiprocket_order_id && order.orderStatus !== 'cancelled' && (
-                      <div className="mt-5 bg-white border border-[#e9d8ff] p-4 rounded-2xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative overflow-hidden">
-                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#6B46C1]"></div>
-                        <div className="pl-2">
-                          <h4 className="text-[10px] font-bold text-[#6B46C1] uppercase tracking-widest mb-1">Shipping Details</h4>
-                          {order.trackingDetails.awb_code ? (
-                            <>
-                              <p className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                                <Truck className="w-4 h-4 text-gray-400" /> {order.trackingDetails.courier_company || 'Courier Partner'}
-                              </p>
-                              <p className="text-xs text-gray-500 font-medium mt-0.5">AWB: <span className="text-gray-800">{order.trackingDetails.awb_code}</span></p>
-                            </>
-                          ) : (
-                            <p className="text-sm font-bold text-gray-600 flex items-center gap-2">
-                              <Package className="w-4 h-4 text-gray-400" /> Shipment is being prepared...
-                            </p>
-                          )}
-                        </div>
-                        
-                        <div className="flex gap-2 w-full sm:w-auto">
-                           {/* -> CHANGES START HERE: Replaced a tag with internal modal button */}
-                           {order.trackingDetails.awb_code && (
-                             <button
-                               onClick={() => handleViewLiveTracking(order)}
-                               className="bg-[#f8f6ff] border border-[#e9d8ff] text-[#6B46C1] hover:bg-[#6B46C1] hover:text-white hover:border-[#6B46C1] px-4 py-2.5 rounded-xl font-bold text-xs transition-all duration-300 flex items-center justify-center gap-2 flex-1 sm:flex-none"
-                             >
-                               Live Tracking <Truck className="w-3.5 h-3.5" />
-                             </button>
-                           )}
-                           {/* -> CHANGES END HERE */}
-                           
-                           {activeTab === 'sales' && order.orderStatus === 'processing' && (
-                             <button
-                               onClick={() => handleDownloadLabel(order._id)}
-                               disabled={downloadingLabelFor === order._id}
-                               className={`bg-[#6B46C1] text-white hover:bg-[#5a3aa3] px-4 py-2.5 rounded-xl font-bold text-xs transition-all duration-300 flex items-center justify-center gap-2 flex-1 sm:flex-none shadow-sm disabled:opacity-70 ${downloadingLabelFor === order._id ? 'cursor-not-allowed' : ''}`}
-                             >
-                               {downloadingLabelFor === order._id ? (
-                                  <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating...</>
-                               ) : (
-                                  <><FileText className="w-3.5 h-3.5" /> Schedule Pickup & Get Slip</>
-                               )}
-                             </button>
-                           )}
-                        </div>
-                      </div>
-                    )}
-
-                    {activeTab === 'sales' && order.orderStatus !== 'delivered' && order.orderStatus !== 'shipped' && order.orderStatus !== 'cancelled' && (
-                      <div className="mt-6 pt-5 border-t border-gray-100">
-                        
-                        {order.orderStatus === 'pending' && (
-                          <div className="bg-orange-50 border border-orange-100 p-3.5 rounded-xl mb-4 flex items-start gap-3 shadow-sm">
-                            <AlertCircle className="w-5 h-5 text-orange-500 mt-0.5 shrink-0" />
-                            <div className="text-xs text-orange-800 font-medium leading-relaxed w-full">
-                              <span className="font-bold text-orange-900 block mb-1">Action Required:</span> 
-                              Please dispatch this order within <span className="font-bold">{autoCancelHours} hours</span>.
-                              <div className="text-red-600 font-bold flex items-center gap-1.5 mt-1.5 mb-1.5 bg-red-50/50 w-fit px-2 py-1 rounded-md border border-red-100">
-                                <Clock className="w-3.5 h-3.5" /> Time Left: <span className="animate-pulse"><CountdownTimer createdAt={order.createdAt || order.created_at} hours={autoCancelHours} /></span>
-                              </div>
-                              Failure to dispatch will result in automatic cancellation and a <span className="font-bold text-red-600">{auraPenalty} Aura point penalty</span>.
-                            </div>
-                          </div>
-                        )}
-                        
-                        <div className="flex flex-wrap gap-3">
-                          {order.orderStatus === 'pending' && (
-                            <button 
-                              onClick={() => {
-                                setSelectedOrder(order);
-                                setDispatchError(''); 
-                                setDispatchData({
-                                  weight: order.item?.weight || 0.5,
-                                  length: order.item?.dimensions?.length || 10,
-                                  width: order.item?.dimensions?.width || 10,
-                                  height: order.item?.dimensions?.height || 10
-                                });
-                                setShowDispatchModal(true);
-                              }}
-                              className="bg-[#6B46C1] hover:bg-[#5a3aa3] text-white px-6 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm active:scale-95 flex items-center gap-2"
-                            >
-                              <Package className="w-4 h-4" /> Ready to Dispatch
-                            </button>
-                          )}
-                          
-                          {order.orderStatus === 'pending' && (
-                            <button 
-                              onClick={() => {
-                                setSelectedOrder(order);
-                                setShowCancelModal(true);
-                              }}
-                              className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 px-6 py-2.5 rounded-xl font-bold text-sm transition-colors active:scale-95"
-                            >
-                              Cancel Order
-                            </button>
-                          )}
-
-                          {order.orderStatus === 'processing' && (
-                            <div className="text-sm font-bold text-purple-600 flex flex-col gap-1 w-full bg-purple-50 rounded-xl border border-purple-100 p-4">
-                               <div className="flex items-center gap-2">
-                                  <Clock className="w-4 h-4" /> 
-                                  <span>Waiting for Courier Pickup. Status will update automatically.</span>
-                               </div>
-                               <p className="text-xs text-purple-500 font-medium pl-6">
-                                 Click below to schedule the courier pickup and download your shipping slip.
-                               </p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {activeTab === 'purchases' && order.orderStatus !== 'cancelled' && (
-                      <div className="mt-6 flex flex-col gap-2">
-                        <div className="flex items-center gap-3 text-gray-600 text-sm font-medium bg-[#f8f6ff] p-3.5 rounded-xl border border-gray-100">
-                          <Truck className="w-5 h-5 text-[#6B46C1]" />
-                          <span>{order.orderStatus === 'pending' ? 'Waiting for the seller to pack and dispatch your item.' : `Your item is currently ${order.orderStatus}. Tracking will update automatically.`}</span>
-                        </div>
-                        
-                        {order.orderStatus === 'pending' && (
-                          <div className="text-[11px] text-gray-500 px-2 flex flex-col gap-1.5 font-medium mt-1">
-                            <span className="flex items-center gap-1.5">
-                              <Info className="w-3.5 h-3.5 shrink-0" /> 
-                              If the seller doesn't dispatch within {autoCancelHours} hours, the order will auto-cancel and you'll be fully refunded.
-                            </span>
-                            <span className="flex items-center gap-1.5 text-red-500 font-bold bg-red-50/50 w-fit px-2 py-1 rounded-md border border-red-50">
-                              <Clock className="w-3.5 h-3.5" /> 
-                              Time Left: <span className="animate-pulse"><CountdownTimer createdAt={order.createdAt || order.created_at} hours={autoCancelHours} /></span>
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                    <ChevronRight className="w-5 h-5 text-gray-300 shrink-0" />
                   </div>
                 </motion.div>
               ))}
@@ -628,181 +257,6 @@ const OrdersPage = ({ user }) => {
           )}
         </AnimatePresence>
       </div>
-
-      {showDispatchModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-gray-900/60 backdrop-blur-sm">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-[2rem] p-6 max-w-sm w-full shadow-2xl relative"
-          >
-            <button 
-              onClick={() => setShowDispatchModal(false)}
-              className="absolute top-4 right-4 p-2 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-500 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            
-            <h3 className="text-xl font-black text-gray-900 mb-1">Package Details</h3>
-            <p className="text-xs text-gray-500 font-medium mb-4">Enter actual box size for accurate courier assignment.</p>
-
-            {dispatchError && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-                <p className="text-xs text-red-700 font-bold leading-relaxed">{dispatchError}</p>
-              </div>
-            )}
-            
-            <form onSubmit={handleDispatchOrder} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">Weight (kg)</label>
-                <input 
-                  type="number" step="0.1" required 
-                  value={dispatchData.weight} 
-                  onChange={(e) => setDispatchData({...dispatchData, weight: parseFloat(e.target.value)})}
-                  className="w-full bg-[#f8f6ff] border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:border-[#6B46C1] focus:ring-1 focus:ring-[#6B46C1] font-medium" 
-                />
-              </div>
-              
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">L (cm)</label>
-                  <input 
-                    type="number" required 
-                    value={dispatchData.length} 
-                    onChange={(e) => setDispatchData({...dispatchData, length: parseInt(e.target.value)})}
-                    className="w-full bg-[#f8f6ff] border border-gray-200 rounded-xl px-3 py-3 text-gray-900 focus:outline-none focus:border-[#6B46C1] font-medium text-center" 
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">W (cm)</label>
-                  <input 
-                    type="number" required 
-                    value={dispatchData.width} 
-                    onChange={(e) => setDispatchData({...dispatchData, width: parseInt(e.target.value)})}
-                    className="w-full bg-[#f8f6ff] border border-gray-200 rounded-xl px-3 py-3 text-gray-900 focus:outline-none focus:border-[#6B46C1] font-medium text-center" 
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">H (cm)</label>
-                  <input 
-                    type="number" required 
-                    value={dispatchData.height} 
-                    onChange={(e) => setDispatchData({...dispatchData, height: parseInt(e.target.value)})}
-                    className="w-full bg-[#f8f6ff] border border-gray-200 rounded-xl px-3 py-3 text-gray-900 focus:outline-none focus:border-[#6B46C1] font-medium text-center" 
-                  />
-                </div>
-              </div>
-              
-              <button 
-                type="submit" 
-                disabled={dispatching}
-                className="w-full bg-[#6B46C1] hover:bg-[#5a3aa3] text-white font-bold py-3.5 rounded-xl mt-4 transition-all shadow-md shadow-[#6B46C1]/20 disabled:opacity-70 flex justify-center items-center gap-2"
-              >
-                {dispatching ? 'Scheduling...' : 'Confirm Dispatch'}
-              </button>
-            </form>
-          </motion.div>
-        </div>
-      )}
-
-      {showCancelModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-gray-900/60 backdrop-blur-sm">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-[2rem] p-6 max-w-sm w-full shadow-2xl relative"
-          >
-            <button 
-              onClick={() => setShowCancelModal(false)}
-              className="absolute top-4 right-4 p-2 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-500 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            
-            <h3 className="text-xl font-black text-gray-900 mb-1">Cancel Order</h3>
-            <p className="text-xs text-gray-500 font-medium mb-6">Please provide a reason. This will be shared with the buyer.</p>
-            
-            <form onSubmit={submitCancelOrder} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">Reason for Cancellation</label>
-                <textarea 
-                  required 
-                  rows="3"
-                  placeholder="E.g., Item is currently out of stock or damaged..."
-                  value={cancelReason} 
-                  onChange={(e) => setCancelReason(e.target.value)}
-                  className="w-full bg-[#f8f6ff] border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 font-medium resize-none" 
-                ></textarea>
-              </div>
-              
-              <button 
-                type="submit" 
-                disabled={cancelling}
-                className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3.5 rounded-xl mt-4 transition-all shadow-md shadow-red-500/20 disabled:opacity-70 flex justify-center items-center gap-2"
-              >
-                {cancelling ? 'Cancelling...' : 'Confirm Cancellation'}
-              </button>
-            </form>
-          </motion.div>
-        </div>
-      )}
-
-     
-      {showTrackingModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-gray-900/60 backdrop-blur-sm">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-[2rem] p-6 max-w-md w-full shadow-2xl relative max-h-[80vh] flex flex-col"
-          >
-            <button 
-              onClick={() => setShowTrackingModal(false)}
-              className="absolute top-4 right-4 p-2 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-500 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            
-            <h3 className="text-xl font-black text-gray-900 mb-4">Live Tracking</h3>
-
-            {fetchingTracking ? (
-              <div className="flex flex-col items-center justify-center py-10 gap-3">
-                <Loader2 className="w-8 h-8 text-[#6B46C1] animate-spin" />
-                <p className="text-sm font-medium text-gray-500">Fetching courier updates...</p>
-              </div>
-            ) : liveTrackingData ? (
-              <div className="overflow-y-auto pr-2 custom-scrollbar">
-                <div className="mb-6 p-4 bg-[#f8f6ff] rounded-xl border border-[#e9d8ff]">
-                  <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Current Status</p>
-                  <p className="text-lg font-black text-[#6B46C1]">
-                    {liveTrackingData.shipment_track?.[0]?.current_status || 'Processing'}
-                  </p>
-                </div>
-
-                <div className="relative border-l-2 border-[#e9d8ff] ml-3 pl-6 space-y-6 pb-4">
-                  {liveTrackingData.shipment_track_activities?.map((activity, index) => (
-                    <div key={index} className="relative">
-                      <div className="absolute -left-[31px] bg-[#6B46C1] w-3.5 h-3.5 rounded-full ring-4 ring-white"></div>
-                      <p className="text-sm font-bold text-gray-900">{activity.activity}</p>
-                      <p className="text-xs font-medium text-gray-500 mt-0.5">{activity.location}</p>
-                      <p className="text-[10px] font-bold text-gray-400 mt-1">{activity.date}</p>
-                    </div>
-                  ))}
-                  {(!liveTrackingData.shipment_track_activities || liveTrackingData.shipment_track_activities.length === 0) && (
-                    <p className="text-sm text-gray-500 font-medium">Tracking timeline is not available yet. Please check back later.</p>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-10 text-gray-500 font-medium">
-                Could not load tracking data.
-              </div>
-            )}
-          </motion.div>
-        </div>
-      )}
-    
-      
     </div>
   );
 };

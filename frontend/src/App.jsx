@@ -25,7 +25,6 @@ const IosInstallPopup = smartLazy(() => import('./components/IosInstallPopup'));
 const DesktopLandingPage = smartLazy(() => import('./Desktop/DesktopLandingPage'));
 const PrivacyPage = smartLazy(() => import('./components/PrivacyPage'));
 
-
 const TermsPage = smartLazy(() => import('./components/TermsPage'));
 const RefundPolicyPage = smartLazy(() => import('./components/RefundPolicyPage'));
 const CancellationPolicyPage = smartLazy(() => import('./components/CancellationPolicyPage'));
@@ -50,6 +49,9 @@ const DealDetailsPage = smartLazy(() => import('./components/DealDetailsPage'));
 const WishlistPage = smartLazy(() => import('./components/WishlistPage'));
 const CheckoutPage = smartLazy(() => import('./components/CheckoutPage'));
 const OrdersPage = smartLazy(() => import('./components/OrdersPage'));
+// -> CHANGES START HERE: Added OrderDetailsPage import
+const OrderDetailsPage = smartLazy(() => import('./components/OrderDetailsPage'));
+// -> CHANGES END HERE
 const DeleteAccountPage = smartLazy(() => import('./components/DeleteAccountPage'));
 const NotificationsPage = smartLazy(() => import('./notification/NotificationsPage'));
 const EditItemPage = smartLazy(() => import('./components/EditItemPage'));
@@ -263,7 +265,12 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
 
             <Route path="/admin" element={<AdminPanel user={user} />} />
             <Route path="/checkout/:itemId" element={user ? <CheckoutPage user={user} setUser={setUser} /> : <Navigate to="/login" />} />
+            
+            {/* -> CHANGES START HERE: Routes for Orders list and Order Details */}
             <Route path="/orders" element={user ? <OrdersPage user={user} /> : <Navigate to="/login" />} />
+            <Route path="/order/:orderId" element={user ? <OrderDetailsPage user={user} /> : <Navigate to="/login" />} />
+            {/* -> CHANGES END HERE */}
+            
             <Route path="/add-item" element={user ? <AddItemPage user={user} setUser={setUser} /> : <Navigate to="/login" />} />
             <Route path="/delete-account" element={user ? <DeleteAccountPage user={user} /> : <Navigate to="/login" />} />
             
