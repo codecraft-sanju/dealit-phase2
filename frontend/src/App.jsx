@@ -248,28 +248,28 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
             <Route path="/signup" element={user ? <Navigate to="/" replace /> : <AuthPage defaultMode="signup" setUser={setUser} />} />
             <Route path="/forgot-password" element={user ? <Navigate to="/" replace /> : <ForgotPasswordPage setUser={setUser} />} />
           
-            <Route path="/profile" element={user ? <ProfilePage user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+          
+            <Route path="/profile" element={user ? <ProfilePage user={user} setUser={setUser} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             
-            {/* DASHBOARD ROUTE UPDATED: Added setUser prop here */}
+          
             <Route path="/dashboard" element={user ? <DashboardPage user={user} setUser={setUser} /> : <Navigate to="/login" />} />
             
             <Route path="/edit-item/:id" element={user ? <EditItemPage /> : <Navigate to="/login" />} />
             <Route path="/wishlist" element={user ? <WishlistPage user={user} /> : <Navigate to="/login" />} />
             <Route path="/privacy" element={<PrivacyPage />} />
 
-            {/* NEW CHANGES: Added policy routes */}
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/refund-policy" element={<RefundPolicyPage />} />
             <Route path="/cancellation-policy" element={<CancellationPolicyPage />} />
-            {/* END NEW CHANGES */}
+   
 
             <Route path="/admin" element={<AdminPanel user={user} />} />
             <Route path="/checkout/:itemId" element={user ? <CheckoutPage user={user} setUser={setUser} /> : <Navigate to="/login" />} />
             
-            {/* -> CHANGES START HERE: Routes for Orders list and Order Details */}
+          
             <Route path="/orders" element={user ? <OrdersPage user={user} /> : <Navigate to="/login" />} />
             <Route path="/order/:orderId" element={user ? <OrderDetailsPage user={user} /> : <Navigate to="/login" />} />
-            {/* -> CHANGES END HERE */}
+           
             
             <Route path="/add-item" element={user ? <AddItemPage user={user} setUser={setUser} /> : <Navigate to="/login" />} />
             <Route path="/delete-account" element={user ? <DeleteAccountPage user={user} /> : <Navigate to="/login" />} />

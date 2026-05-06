@@ -11,7 +11,8 @@ const API_URL = `${API_BASE}/api`;
 
 const MotionLink = motion(Link);
 
-const ProfilePage = ({ user, onLogout }) => {
+// --- CHANGES MADE HERE: Added setUser to props ---
+const ProfilePage = ({ user, setUser, onLogout }) => {
   
   const [showAccountDetails, setShowAccountDetails] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -132,14 +133,25 @@ const ProfilePage = ({ user, onLogout }) => {
     setIsEditModalOpen(true);
   };
 
-  // <-- CHANGED: 3. Edit Profile using useMutation -->
+  // --- CHANGES MADE HERE: Updated editProfileMutation to update global user state ---
   const editProfileMutation = useMutation({
     mutationFn: async (updatedData) => {
       return await axios.put(`${API_URL}/users/profile`, updatedData, { withCredentials: true });
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       queryClient.invalidateQueries(['profile']);
       setIsEditModalOpen(false);
+      
+      try {
+        const userRes = await axios.get(`${API_URL}/users/profile`, { withCredentials: true });
+        if (userRes.data.success && setUser) {
+          setUser(userRes.data.data);
+          localStorage.setItem('dealit_user', JSON.stringify(userRes.data.data));
+        }
+      } catch (e) {
+        console.error("Failed to update global user state", e);
+      }
+
       alert('Profile updated successfully!');
     },
     onError: (error) => {
@@ -435,7 +447,7 @@ const ProfilePage = ({ user, onLogout }) => {
                     { to: "/wishlist", icon: Heart, title: "Wishlist", subtitle: "Saved Items", iconClass: "fill-[#6B46C1]" },
                     { to: "/wallet", icon: Wallet, title: "My Wallet", subtitle: "Credit Balance & Purchases" },
                     /* <-- NAYA CHANGE: Removed the Aura Score list item from here --> */
-                    { to: "/notifications", icon: Bell, title: "Notifications", subtitle: "Alert Settings", iconClass: "fill-[#6B46C1]" },      
+                    { to: "/notifications", icon: Bell, title: "Notifications", subtitle: "Alert Settings", iconClass: "fill-[#6B46C1]" },     
                     { to: "/help-support", icon: HelpCircle, title: "Help & Support", subtitle: "Get Assistance", iconClass: "fill-[#6B46C1]/20", noBorder: true }
                   ].map((item, index) => (
                     <MotionLink 
