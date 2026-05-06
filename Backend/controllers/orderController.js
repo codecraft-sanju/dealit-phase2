@@ -479,72 +479,78 @@ const getShippingLabel = async (req, res) => {
 
 
 const handleShiprocketWebhook = async (req, res) => {
-  try {
-    const { awb, current_status } = req.body;
-    
-    // CHANGE 1: 400 bad request ki jagah 200 OK return karo
+  try {
+    // -> NAYA CODE: Security check
+    const token = req.headers['x-api-key'];
+    if (token !== process.env.SHIPROCKET_WEBHOOK_SECRET) {
+      console.warn('Unauthorized webhook attempt blocked');
+      return res.status(401).json({ success: false, message: 'Unauthorized access' });
+    }
+
+    const { awb, current_status } = req.body;
+    
+    // Test ping from Shiprocket
     if (!awb || !current_status) {
       return res.status(200).json({ success: true, message: 'Webhook endpoint is active.' });
     }
 
-    const order = await Order.findOne({ 'trackingDetails.awb_code': awb }).populate('item');
-    
-    // CHANGE 2: 404 order not found ki jagah 200 OK return karo
+    const order = await Order.findOne({ 'trackingDetails.awb_code': awb }).populate('item');
+    
+    // Test fake AWB ping from Shiprocket
     if (!order) {
       console.log(`Shiprocket test ping or invalid AWB received: ${awb}`);
       return res.status(200).json({ success: true, message: 'Webhook received but order not found.' });
     }
 
-    let setting = await CreditSetting.findOne();
-    const auraRewardAmount = setting && setting.auraReward !== undefined ? setting.auraReward : 50;
+    let setting = await CreditSetting.findOne();
+    const auraRewardAmount = setting && setting.auraReward !== undefined ? setting.auraReward : 50;
 
-    if (current_status === 'DELIVERED' && order.orderStatus !== 'delivered') {
-      order.orderStatus = 'delivered';
-      order.updated_at = Date.now();
+    if (current_status === 'DELIVERED' && order.orderStatus !== 'delivered') {
+      order.orderStatus = 'delivered';
+      order.updated_at = Date.now();
 
-      if (order.isSellerPaid === false) {
-        const seller = await User.findById(order.seller);
-        if (seller) {
-          seller.account_credits += order.itemPrice; 
-          seller.aura_points = (seller.aura_points || 0) + auraRewardAmount; 
-          await seller.save();
-          
-          order.isSellerPaid = true;
+      if (order.isSellerPaid === false) {
+        const seller = await User.findById(order.seller);
+        if (seller) {
+          seller.account_credits += order.itemPrice; 
+          seller.aura_points = (seller.aura_points || 0) + auraRewardAmount; 
+          await seller.save();
+          
+          order.isSellerPaid = true;
 
-          await Notification.create({
-            user: seller._id,
-            type: 'CREDIT_ADDED',
-            title: 'Payment Released! 💰',
-            message: `Order successfully delivered! ${order.itemPrice} credits and +${auraRewardAmount} Aura have been credited to your account.`,
-            metadata: { amount: order.itemPrice, reason: 'escrow_release', referenceId: order._id }
-          });
+          await Notification.create({
+            user: seller._id,
+            type: 'CREDIT_ADDED',
+            title: 'Payment Released! 💰',
+            message: `Order successfully delivered! ${order.itemPrice} credits and +${auraRewardAmount} Aura have been credited to your account.`,
+            metadata: { amount: order.itemPrice, reason: 'escrow_release', referenceId: order._id }
+          });
 
-          await AuraLog.create({
-            user: seller._id,
-            reason: "Successful Trade Delivered",
-            points: auraRewardAmount,
-            type: "positive"
-          });
+          await AuraLog.create({
+            user: seller._id,
+            reason: "Successful Trade Delivered",
+            points: auraRewardAmount,
+            type: "positive"
+          });
 
-          if(order.item) {
-             order.item.status = 'swapped';
-             await order.item.save();
-          }
-        }
-      }
-      await order.save();
-    } 
-    else if ((current_status === 'SHIPPED' || current_status === 'IN TRANSIT') && order.orderStatus === 'processing') {
-      order.orderStatus = 'shipped';
-      await order.save();
-    }
+          if(order.item) {
+             order.item.status = 'swapped';
+             await order.item.save();
+          }
+        }
+      }
+      await order.save();
+    } 
+    else if ((current_status === 'SHIPPED' || current_status === 'IN TRANSIT') && order.orderStatus === 'processing') {
+      order.orderStatus = 'shipped';
+      await order.save();
+    }
 
-    res.status(200).json({ success: true, message: 'Webhook processed successfully' });
-  } catch (error) {
-    console.error('Shiprocket Webhook Error:', error);
-    // CHANGE 3: Catch error me bhi 200 return karo taki shiprocket retry karke block na kare
-    res.status(200).json({ success: false, message: 'Server error processing webhook' });
-  }
+    res.status(200).json({ success: true, message: 'Webhook processed successfully' });
+  } catch (error) {
+    console.error('Shiprocket Webhook Error:', error);
+    res.status(200).json({ success: false, message: 'Server error processing webhook' });
+  }
 };
 
 const autoCancelOverdueOrders = async () => {
