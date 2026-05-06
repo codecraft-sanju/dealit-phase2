@@ -36,7 +36,8 @@ const orderSchema = new mongoose.Schema({
   },
   paymentStatus: {
     type: String,
-    enum: ['paid', 'refunded'],
+   
+    enum: ['paid', 'refund_processing', 'refunded'],
     default: 'paid' 
   },
   isSellerPaid: { 

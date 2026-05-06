@@ -289,6 +289,9 @@ const updateOrderStatus = async (req, res) => {
           transactionType: 'order_refund'
         });
         
+        // --> CHANGE START: Checking if shipping cost exists to set correct paymentStatus
+        let newPaymentStatus = 'refunded';
+
         // Refund shipping money via Razorpay
         if (order.shippingCost > 0 && order.razorpay_payment_id) {
           const refundRes = await refundRazorpayPayment(order.razorpay_payment_id, order.shippingCost);
@@ -304,11 +307,12 @@ const updateOrderStatus = async (req, res) => {
               status: 'success',
               transactionType: 'shipping_refund'
             });
+            newPaymentStatus = 'refund_processing'; // Set status to processing since bank takes time
           }
         }
-        // -> NAYA CHANGE END
-
-        order.paymentStatus = 'refunded';
+        
+        order.paymentStatus = newPaymentStatus;
+        // --> CHANGE END
 
         await Notification.create({
           user: buyer._id,
@@ -601,7 +605,10 @@ const autoCancelOverdueOrders = async () => {
       order.orderStatus = 'cancelled';
       order.cancellationReason = `System Auto-Cancel: Seller failed to dispatch within ${cancelHours} hours.`;
       
-      // -> NAYA CHANGE START: Refund shipping money via Razorpay on auto-cancel
+      // --> CHANGE START: Checking if shipping cost exists to set correct paymentStatus
+      let newPaymentStatus = 'refunded';
+
+      // Refund shipping money via Razorpay on auto-cancel
       if (order.shippingCost > 0 && order.razorpay_payment_id) {
         const refundRes = await refundRazorpayPayment(order.razorpay_payment_id, order.shippingCost);
         if (!refundRes.success) {
@@ -616,11 +623,12 @@ const autoCancelOverdueOrders = async () => {
              status: 'success',
              transactionType: 'shipping_refund'
            });
+           newPaymentStatus = 'refund_processing'; // Set status to processing since bank takes time
         }
       }
-      // -> NAYA CHANGE END
 
-      order.paymentStatus = 'refunded';
+      order.paymentStatus = newPaymentStatus;
+      // --> CHANGE END
 
       await order.save({ validateBeforeSave: false });
 

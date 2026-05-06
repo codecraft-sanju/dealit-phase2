@@ -358,54 +358,85 @@ const OrderDetailsPage = ({ user }) => {
                 </div>
               )}
               
-              {/* NAYA BLOCK: SUCCESS REFUND VERIFIED RECEIPT */}
-              {order.paymentStatus === 'refunded' && (
-                <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl flex items-start gap-3 shadow-sm relative overflow-hidden">
-                  <div className="absolute right-[-15px] top-[-15px] opacity-10 pointer-events-none">
-                     <CheckCircle className="w-24 h-24 text-emerald-600" />
-                  </div>
-                  
-                  <div className="bg-emerald-100 p-2 rounded-full shrink-0 relative z-10 mt-0.5">
-                    <CheckCircle className="w-5 h-5 text-emerald-600" />
-                  </div>
-                  
-                  <div className="relative z-10 w-full">
-                    <div className="flex justify-between items-center mb-2.5">
-                       <h4 className="text-[10px] font-bold text-emerald-800 uppercase tracking-widest">Refund Successful</h4>
-                       <span className="bg-emerald-500 text-white text-[9px] font-black px-2 py-0.5 rounded-sm uppercase tracking-wider shadow-sm">Verified</span>
-                    </div>
-                    
-                    <div className="space-y-2.5">
-                      <div className="flex justify-between items-center bg-white/70 p-2.5 rounded-xl border border-emerald-100/50">
-                         <div className="flex items-center gap-2">
-                            <div className="bg-[#FFF4D2] p-1.5 rounded-lg">
-                              <Coins className="w-3.5 h-3.5 text-yellow-600" />
-                            </div>
-                            <span className="text-xs font-bold text-gray-800">Credits Refund</span>
-                         </div>
-                         <div className="text-right">
-                           <span className="text-sm font-black text-emerald-600">+{order.itemPrice} CR</span>
-                           <p className="text-[9px] text-gray-500 font-medium leading-none mt-0.5">Added to Wallet</p>
-                         </div>
+              {/* Only show refund details to the Buyer */}
+              {userType === 'purchases' && (
+                <>
+                  {/* Refund Processing Block */}
+                  {order.paymentStatus === 'refund_processing' && (
+                    <div className="bg-orange-50 border border-orange-200 p-4 rounded-2xl flex items-start gap-3 shadow-sm relative overflow-hidden">
+                      <div className="absolute right-[-15px] top-[-15px] opacity-10 pointer-events-none">
+                        <RefreshCcw className="w-24 h-24 text-orange-600" />
                       </div>
-
-                      {order.shippingCost > 0 && (
-                        <div className="flex justify-between items-center bg-white/70 p-2.5 rounded-xl border border-emerald-100/50">
-                           <div className="flex items-center gap-2">
-                              <div className="bg-blue-50 p-1.5 rounded-lg">
-                                <Truck className="w-3.5 h-3.5 text-blue-600" />
-                              </div>
-                              <span className="text-xs font-bold text-gray-800">Shipping Refund</span>
-                           </div>
-                           <div className="text-right">
-                             <span className="text-sm font-black text-emerald-600">+₹{order.shippingCost}</span>
-                             <p className="text-[9px] text-gray-500 font-medium leading-none mt-0.5">Sent to Bank (3-5 days)</p>
-                           </div>
+                      
+                      <div className="bg-orange-100 p-2 rounded-full shrink-0 relative z-10 mt-0.5">
+                        <Clock className="w-5 h-5 text-orange-600" />
+                      </div>
+                      
+                      <div className="relative z-10 w-full">
+                        <div className="flex justify-between items-center mb-2.5">
+                           <h4 className="text-[10px] font-bold text-orange-800 uppercase tracking-widest">Refund Processing</h4>
+                           <span className="bg-orange-500 text-white text-[9px] font-black px-2 py-0.5 rounded-sm uppercase tracking-wider shadow-sm">In Progress</span>
                         </div>
-                      )}
+                        
+                        <div className="space-y-2.5">
+                          <p className="text-xs text-orange-900 font-medium leading-relaxed">
+                            Your order was cancelled. <strong>{order.itemPrice} Credits</strong> have been returned to your wallet instantly. The shipping amount of <strong>₹{order.shippingCost}</strong> is being processed and will reflect in your bank account in 3-5 days.
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  )}
+
+                  {/* SUCCESS REFUND VERIFIED RECEIPT */}
+                  {order.paymentStatus === 'refunded' && (
+                    <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl flex items-start gap-3 shadow-sm relative overflow-hidden">
+                      <div className="absolute right-[-15px] top-[-15px] opacity-10 pointer-events-none">
+                         <CheckCircle className="w-24 h-24 text-emerald-600" />
+                      </div>
+                      
+                      <div className="bg-emerald-100 p-2 rounded-full shrink-0 relative z-10 mt-0.5">
+                        <CheckCircle className="w-5 h-5 text-emerald-600" />
+                      </div>
+                      
+                      <div className="relative z-10 w-full">
+                        <div className="flex justify-between items-center mb-2.5">
+                           <h4 className="text-[10px] font-bold text-emerald-800 uppercase tracking-widest">Refund Successful</h4>
+                           <span className="bg-emerald-500 text-white text-[9px] font-black px-2 py-0.5 rounded-sm uppercase tracking-wider shadow-sm">Verified</span>
+                        </div>
+                        
+                        <div className="space-y-2.5">
+                          <div className="flex justify-between items-center bg-white/70 p-2.5 rounded-xl border border-emerald-100/50">
+                             <div className="flex items-center gap-2">
+                                <div className="bg-[#FFF4D2] p-1.5 rounded-lg">
+                                  <Coins className="w-3.5 h-3.5 text-yellow-600" />
+                                </div>
+                                <span className="text-xs font-bold text-gray-800">Credits Refund</span>
+                             </div>
+                             <div className="text-right">
+                               <span className="text-sm font-black text-emerald-600">+{order.itemPrice} CR</span>
+                               <p className="text-[9px] text-gray-500 font-medium leading-none mt-0.5">Added to Wallet</p>
+                             </div>
+                          </div>
+
+                          {order.shippingCost > 0 && (
+                            <div className="flex justify-between items-center bg-white/70 p-2.5 rounded-xl border border-emerald-100/50">
+                               <div className="flex items-center gap-2">
+                                  <div className="bg-blue-50 p-1.5 rounded-lg">
+                                    <Truck className="w-3.5 h-3.5 text-blue-600" />
+                                  </div>
+                                  <span className="text-xs font-bold text-gray-800">Shipping Refund</span>
+                               </div>
+                               <div className="text-right">
+                                 <span className="text-sm font-black text-emerald-600">+₹{order.shippingCost}</span>
+                                 <p className="text-[9px] text-gray-500 font-medium leading-none mt-0.5">Sent to Bank</p>
+                               </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}

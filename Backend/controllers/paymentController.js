@@ -4,6 +4,10 @@ const User = require('../models/User');
 const Transaction = require('../models/Transaction');
 const Notification = require('../models/Notification');
 
+// --> CHANGE: Order model import kiya webhook me use karne ke liye
+const Order = require('../models/Order');
+// --> CHANGE END
+
 // Razorpay instance initialize karna
 const razorpayInstance = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
@@ -191,7 +195,7 @@ const razorpayWebhook = async (req, res) => {
          await Notification.create({
            user: userId,
            type: 'CREDIT_ADDED',
-           title: 'Wallet Recharged! 💳',
+           title: 'Wallet Recharged! ',
            message: `₹${actualAmountInINR} credits have been successfully added to your account.`,
            metadata: { 
              amount: actualAmountInINR, 
@@ -200,7 +204,28 @@ const razorpayWebhook = async (req, res) => {
            }
          });
       }
+    } 
+    // Razorpay refund successful hone par webhook trigger handle kiya
+    else if (event === 'refund.processed') {
+      const refundEntity = req.body.payload.refund.entity;
+      const paymentId = refundEntity.payment_id;
+
+      const order = await Order.findOne({ razorpay_payment_id: paymentId, paymentStatus: 'refund_processing' });
+      
+      if (order) {
+         order.paymentStatus = 'refunded';
+         await order.save();
+
+         await Notification.create({
+           user: order.buyer,
+           type: 'CREDIT_ADDED',
+           title: 'Bank Refund Successful ',
+           message: `₹${order.shippingCost} shipping refund has been successfully processed by your bank.`,
+           metadata: { amount: order.shippingCost, reason: 'bank_refund_success', referenceId: order._id }
+         });
+      }
     }
+    // --> CHANGE END
 
     res.status(200).send('OK');
   } catch (error) {

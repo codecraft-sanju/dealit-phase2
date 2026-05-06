@@ -551,8 +551,8 @@ const WalletPage = ({ user, setUser }) => {
                   <Truck className="w-3.5 h-3.5" /> Shipping
                 </button>
                 <button 
-                  onClick={() => handleFilterChange('refunds')}
-                  className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap flex-shrink-0 transition-all flex items-center gap-1.5 ${filterType === 'refunds' ? 'bg-purple-500 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                  onClick={() => handleFilterChange('order_refund')}
+                  className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap flex-shrink-0 transition-all flex items-center gap-1.5 ${filterType === 'order_refund' ? 'bg-purple-500 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
                 >
                   <RefreshCcw className="w-3.5 h-3.5" /> Refunds
                 </button>
@@ -606,16 +606,16 @@ const WalletPage = ({ user, setUser }) => {
 
                         if (txType === 'order_refund') {
                           displayName = 'Credits Refunded';
-                          subText = 'Instantly added to Wallet';
+                          subText = 'Instantly returned to Wallet';
                         } else if (txType === 'shipping_refund') {
-                          displayName = 'Shipping Refund';
-                          subText = 'Refunded to original payment source (3-5 days)';
+                          displayName = 'Shipping Refunded';
+                          subText = 'Sent to bank (takes 3-5 days)';
                         } else if (txType === 'wallet_recharge') {
-                          displayName = 'Wallet Recharge';
+                          displayName = 'Credits Purchased';
                           subText = 'Added to Wallet';
                         } else if (txType === 'shipping_fee') {
-                          displayName = 'Shipping Fee';
-                          subText = 'Paid via Razorpay';
+                          displayName = 'Shipping Paid';
+                          subText = 'Online payment via Razorpay';
                         }
 
                         let amountPrefix = '+';
@@ -644,9 +644,8 @@ const WalletPage = ({ user, setUser }) => {
                                   {displayName}
                                 </p>
                                 <p className="text-[11px] text-gray-500 font-medium mt-0.5">
-                                  {new Date(tx.createdAt).toLocaleDateString()} at {new Date(tx.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  {new Date(tx.createdAt || tx.created_at).toLocaleDateString()} at {new Date(tx.createdAt || tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </p>
-                                {/* Naya helper text yahan add kiya */}
                                 <p className="text-[10px] text-gray-400 mt-1">
                                   {subText}
                                 </p>
