@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { Package, ChevronLeft, Edit2, Trash2, AlertCircle, Coins, Plus, Loader2 } from 'lucide-react';
+import { Package, ChevronLeft, Edit2, Trash2, AlertCircle, Coins, Plus, Loader2, X } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'; 
@@ -11,6 +11,9 @@ const API_URL = `${API_BASE}/api`;
 
 const DashboardPage = ({ user, setUser }) => {
   const queryClient = useQueryClient();
+  
+  // CHANGED: Added state for the rejection modal
+  const [rejectionModalItem, setRejectionModalItem] = useState(null);
 
   if (!user) return <Navigate to="/login" />;
 
@@ -192,15 +195,7 @@ const DashboardPage = ({ user, setUser }) => {
                   <h3 className="text-sm font-bold text-gray-900 leading-tight mb-1 line-clamp-2">{item.title}</h3>
                   <p className="text-xs text-gray-500 mb-3">{item.category}</p>
                   
-                  {item.status === 'rejected' && item.rejection_reason && (
-                    <div className="mb-3 bg-[#FEF2F2] border border-[#FECACA] p-2.5 rounded-xl flex items-start gap-2">
-                      <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-[10px] font-bold text-red-700 uppercase tracking-wide mb-0.5">Rejected</p>
-                        <p className="text-[11px] text-red-600 line-clamp-2 leading-tight">{item.rejection_reason}</p>
-                      </div>
-                    </div>
-                  )}
+                  {/* CHANGED: Removed the inline rejection reason div from here so it doesn't break height */}
 
                   <div className="mt-auto flex items-center gap-1.5 mb-3">
                     <div className="bg-yellow-100 rounded-full p-0.5">
@@ -210,15 +205,61 @@ const DashboardPage = ({ user, setUser }) => {
                     <span className="text-xs text-gray-400 font-medium">Credits</span>
                   </div>
                   
-                  <Link to={`/item/${item._id}`} className="w-full bg-[#EBE5F7] hover:bg-[#DCD0F0] text-[#8B70CA] text-center py-2.5 rounded-xl text-xs font-bold transition shadow-sm">
-                    View Details
-                  </Link>
+                  {/* CHANGED: Conditionally render 'View Reason' button or 'View Details' link */}
+                  {item.status === 'rejected' ? (
+                    <button 
+                      onClick={() => setRejectionModalItem(item)}
+                      className="w-full bg-[#FEE2E2] hover:bg-[#FECACA] text-[#991B1B] text-center py-2.5 rounded-xl text-xs font-bold transition shadow-sm"
+                    >
+                      View Reason
+                    </button>
+                  ) : (
+                    <Link to={`/item/${item._id}`} className="w-full bg-[#EBE5F7] hover:bg-[#DCD0F0] text-[#8B70CA] text-center py-2.5 rounded-xl text-xs font-bold transition shadow-sm">
+                      View Details
+                    </Link>
+                  )}
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* CHANGED: Added the Rejection Modal Component */}
+      {rejectionModalItem && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-opacity">
+          <div className="bg-white rounded-2xl w-full max-w-xs shadow-xl overflow-hidden transform transition-all">
+            <div className="bg-[#FEF2F2] p-4 flex items-center justify-between border-b border-[#FECACA]">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-red-600" />
+                <h3 className="font-bold text-red-800 text-sm">Item Rejected</h3>
+              </div>
+              <button 
+                onClick={() => setRejectionModalItem(null)}
+                className="p-1 hover:bg-red-100 rounded-full text-red-500 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-5">
+              <p className="text-xs text-gray-500 uppercase tracking-wide font-bold mb-1">Item Title</p>
+              <p className="text-sm text-gray-900 font-medium mb-4">{rejectionModalItem.title}</p>
+              
+              <p className="text-xs text-gray-500 uppercase tracking-wide font-bold mb-1">Reason for Rejection</p>
+              <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 text-sm text-gray-700 whitespace-pre-wrap">
+                {rejectionModalItem.rejection_reason || "No specific reason provided."}
+              </div>
+              
+              <button 
+                onClick={() => setRejectionModalItem(null)}
+                className="mt-6 w-full bg-gray-900 text-white py-2.5 rounded-xl text-sm font-bold hover:bg-gray-800 transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
