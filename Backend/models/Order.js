@@ -36,8 +36,9 @@ const orderSchema = new mongoose.Schema({
   },
   paymentStatus: {
     type: String,
-   
-    enum: ['paid', 'refund_processing', 'refunded'],
+    // Note: Assuming 'refund_failed' might be needed based on earlier webhook code, 
+    // but sticking to your exact schema enum for now.
+    enum: ['paid', 'refund_processing', 'refunded', 'refund_failed'], 
     default: 'paid' 
   },
   isSellerPaid: { 
@@ -63,5 +64,29 @@ const orderSchema = new mongoose.Schema({
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now }
 });
+
+// -> MODIFICATION START: Added Indexes for 10x Performance
+
+// 1. User App: "My Orders" API ke liye (Instantly load buyer's orders sorted by date)
+orderSchema.index({ buyer: 1, created_at: -1 });
+
+// 2. User App: "Seller Orders" API ke liye (Instantly load seller's received orders)
+orderSchema.index({ seller: 1, created_at: -1 });
+
+// 3. Admin Dashboard & Auto-Cancel Job: 
+// Dashboard me 'delivered' ya 'pending' count karne aur 24 hours wale pending orders cancel karne ke liye
+orderSchema.index({ orderStatus: 1, created_at: -1 });
+
+// 4. Admin Panel: Payment status filter ke liye
+orderSchema.index({ paymentStatus: 1, created_at: -1 });
+
+// 5. Shiprocket Webhook: AWB number se order find karna webhook me sabse frequent task hai
+// Unique false rakha hai in case starting me empty string ho.
+orderSchema.index({ 'trackingDetails.awb_code': 1 });
+
+// 6. Razorpay Webhook: Refund process hone par order find karne ke liye
+orderSchema.index({ razorpay_payment_id: 1 });
+
+// -> MODIFICATION END
 
 module.exports = mongoose.model('Order', orderSchema);

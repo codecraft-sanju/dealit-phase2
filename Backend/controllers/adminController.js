@@ -586,34 +586,41 @@ const getDashboardStats = async (req, res) => {
     const totalRevenue = successfulTxns.reduce((sum, txn) => sum + txn.amount, 0);
     const categoryData = categoryDataRaw.filter(c => c.name);
 
+    // -> MODIFICATION START
     // 2. Loop for 7 days (Run in parallel instead of sequence)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+
+    const [txnsAgg, swapsAgg] = await Promise.all([
+      Transaction.aggregate([
+        { $match: { status: 'success', created_at: { $gte: sevenDaysAgo } } },
+        { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$created_at" } }, revenue: { $sum: "$amount" } } }
+      ]),
+      BarterRequest.aggregate([
+        { $match: { status: 'ACCEPTED', updated_at: { $gte: sevenDaysAgo } } },
+        { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$updated_at" } }, swaps: { $sum: 1 } } }
+      ])
+    ]);
+
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const performancePromises = [];
+    const performanceData = [];
 
     for (let i = 6; i >= 0; i--) {
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - i);
-      startDate.setHours(0, 0, 0, 0);
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateString = d.toISOString().split('T')[0];
 
-      const endDate = new Date(startDate);
-      endDate.setHours(23, 59, 59, 999);
+      const txnData = txnsAgg.find(t => t._id === dateString);
+      const swapData = swapsAgg.find(s => s._id === dateString);
 
-      performancePromises.push(
-        (async () => {
-          const [dailyTxns, dailySwaps] = await Promise.all([
-            Transaction.find({ status: 'success', created_at: { $gte: startDate, $lte: endDate } }),
-            BarterRequest.countDocuments({ status: 'ACCEPTED', updated_at: { $gte: startDate, $lte: endDate } })
-          ]);
-          return {
-            name: days[startDate.getDay()],
-            revenue: dailyTxns.reduce((sum, txn) => sum + txn.amount, 0),
-            swaps: dailySwaps
-          };
-        })()
-      );
+      performanceData.push({
+        name: days[d.getDay()],
+        revenue: txnData ? txnData.revenue : 0,
+        swaps: swapData ? swapData.swaps : 0
+      });
     }
-
-    const performanceData = await Promise.all(performancePromises);
+    // -> MODIFICATION END
 
     // 3. Map Activities
     let activities = [];
@@ -734,7 +741,7 @@ module.exports = {
   updateCreditSettings,
   getPublicCreditSettings,
   getAllTransactions,
-  getAllOrders,              
+  getAllOrders,             
   updateAdminOrderStatus,
   getDashboardStats,
   resolveFailedRefund 

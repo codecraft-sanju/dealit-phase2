@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-// [CHANGED: Added getUserTransactions to the import list]
+
 const { createOrder, verifyPayment, razorpayWebhook, getUserTransactions } = require('../controllers/paymentController');
 const { protect } = require('../middleware/authMiddleware');
 

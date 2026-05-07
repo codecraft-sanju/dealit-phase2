@@ -70,4 +70,9 @@ userSchema.index({ created_at: -1 });
 // 3. Standard Index for role filtering
 userSchema.index({ role: 1 });
 
+// -> MODIFICATION START
+// 4. Compound Index to instantly count verified users for the Admin Dashboard
+userSchema.index({ isVerified: 1, created_at: -1 });
+// -> MODIFICATION END
+
 module.exports = mongoose.model('User', userSchema);
