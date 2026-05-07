@@ -263,7 +263,7 @@ const HomePage = ({ user, setUser }) => {
             
             <h1 className="text-[16px] sm:text-[15px] md:text-[20px] font-extrabold text-gray-900 leading-tight mb-1.5 tracking-tight relative z-10 drop-shadow-sm">
               Sell what you don't use<br/>
-              Get what you <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#805ad5] to-[#A388E1] animate-pulse">actually want</span>
+              Get what you <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#805ad5] to-[#A388E1]">actually want</span>
             </h1>
             <p className="text-[10px] sm:text-[11px] md:text-xs text-gray-500 font-medium leading-snug relative z-10">
               Sell your stuff &rarr; Earn credits &rarr; Buy anything.
@@ -291,10 +291,10 @@ const HomePage = ({ user, setUser }) => {
                     transition={{ duration: 0.8, type: "spring" }}
                     className="mb-1 w-max"
                   >
-                    <div className="relative w-8 h-8 rounded-full shadow-[0_4px_10px_rgba(217,119,6,0.6),inset_0_-3px_5px_rgba(146,64,14,0.6),inset_0_2px_4px_rgba(255,255,255,0.9)] border border-[#FEF08A] bg-gradient-to-br from-[#FEF08A] via-[#F59E0B] to-[#92400E] flex items-center justify-center overflow-hidden">
+                    <div className="relative w-6 h-6 rounded-full shadow-[0_3px_8px_rgba(217,119,6,0.6),inset_0_-2px_4px_rgba(146,64,14,0.6),inset_0_1px_3px_rgba(255,255,255,0.9)] border border-[#FEF08A] bg-gradient-to-br from-[#FEF08A] via-[#F59E0B] to-[#92400E] flex items-center justify-center overflow-hidden">
                       {/* Inner Engraving */}
-                      <div className="absolute inset-[3px] rounded-full border-[0.5px] border-[#92400E]/50 bg-gradient-to-tl from-[#FEF08A]/20 via-transparent to-[#D97706]/40 flex items-center justify-center shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)]">
-                        <span className="font-black text-[#78350F] text-[11px] tracking-tighter drop-shadow-[0_1px_1px_rgba(255,255,255,0.7)]">Cr</span>
+                      <div className="absolute inset-[2px] rounded-full border-[0.5px] border-[#92400E]/50 bg-gradient-to-tl from-[#FEF08A]/20 via-transparent to-[#D97706]/40 flex items-center justify-center shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)]">
+                        <span className="font-black text-[#78350F] text-[9px] tracking-tighter drop-shadow-[0_1px_1px_rgba(255,255,255,0.7)]">Cr</span>
                       </div>
                       {/* Premium Glare sweep inside the coin */}
                       <div className="absolute top-0 left-[-150%] w-full h-full bg-gradient-to-r from-transparent via-white/60 to-transparent skew-x-[-25deg] animate-[glare_3s_infinite_ease-in-out]"></div>
@@ -302,7 +302,7 @@ const HomePage = ({ user, setUser }) => {
                   </motion.div>
                   {/* ------------------------------------- */}
 
-                  <div className="flex items-end gap-0.5">
+                  <div className="flex items-end gap-0.5 mt-0.5">
                     <span className="text-base font-bold leading-none relative drop-shadow-md">
                       {user.account_credits || 0}
                       <AnimatePresence>
@@ -675,12 +675,6 @@ const HomePage = ({ user, setUser }) => {
         .hide-scrollbar {
           -ms-overflow-style: none;
           scrollbar-width: none;
-        }
-        
-        @keyframes shimmer {
-          100% {
-            transform: translateX(100%);
-          }
         }
 
         /* Advanced Glossy Glare Sweep Animation */

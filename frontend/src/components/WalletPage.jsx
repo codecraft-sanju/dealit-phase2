@@ -280,7 +280,10 @@ const WalletPage = ({ user, setUser }) => {
         
         <div className="space-y-6 mt-2">
           
-          <div className={`mx-5 md:mx-0 bg-gradient-to-r from-[#A388E1] to-[#b7a3eb] rounded-3xl p-5 text-white shadow-lg relative overflow-hidden transition-all duration-1000 ${showCelebration ? 'shadow-yellow-400/50 scale-[1.02]' : 'shadow-[#A388E1]/30'}`}>
+          <div className={`mx-5 md:mx-0 bg-gradient-to-br from-[#A388E1] via-[#8c67d6] to-[#6b46c1] rounded-3xl p-5 text-white shadow-[0_8px_20px_rgba(163,136,225,0.4),inset_0_1px_1px_rgba(255,255,255,0.3)] relative overflow-hidden transition-all duration-1000 ${showCelebration ? 'shadow-[0_0_30px_rgba(250,204,21,0.6)] scale-[1.02]' : ''}`}>
+            
+            {/* Continuous Glossy Shimmer Line */}
+            <div className="absolute top-0 left-[-150%] w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-[-25deg] animate-[glare_4s_infinite_ease-in-out] pointer-events-none z-0"></div>
             
             {loading ? (
               <div className="flex items-center gap-3 mb-4 relative z-10 animate-pulse">
@@ -288,15 +291,35 @@ const WalletPage = ({ user, setUser }) => {
                 <div className="h-10 w-32 bg-white/30 rounded-2xl"></div>
               </div>
             ) : (
-              <div className="flex items-center gap-2 mb-4 relative z-10">
-                <div className={`bg-yellow-400 p-1.5 rounded-full transition-transform duration-700 ${showCelebration ? 'rotate-180 scale-110' : ''}`}>
-                  <Coins className="w-6 h-6 text-yellow-900" />
-                </div>
-                <span className="text-4xl font-black relative">
+              <div className="flex items-center gap-3 mb-4 relative z-10">
+                
+                {/* --- PREMIUM 3D COIN (Auto-Flips every 5s & on Celebration) --- */}
+                <motion.div 
+                  animate={showCelebration 
+                    ? { rotateY: [0, 360], scale: [1, 1.2, 1] } 
+                    : { rotateY: [0, 360, 360] }
+                  }
+                  transition={showCelebration 
+                    ? { duration: 0.8, ease: "easeOut" } 
+                    : { duration: 5, repeat: Infinity, times: [0, 0.15, 1], ease: "easeInOut" }
+                  }
+                  className="w-max shrink-0 origin-center"
+                >
+                  <div className="relative w-10 h-10 rounded-full shadow-[0_4px_10px_rgba(217,119,6,0.6),inset_0_-3px_5px_rgba(146,64,14,0.6),inset_0_2px_4px_rgba(255,255,255,0.9)] border border-[#FEF08A] bg-gradient-to-br from-[#FEF08A] via-[#F59E0B] to-[#92400E] flex items-center justify-center overflow-hidden">
+                    <div className="absolute inset-[3px] rounded-full border-[0.5px] border-[#92400E]/50 bg-gradient-to-tl from-[#FEF08A]/20 via-transparent to-[#D97706]/40 flex items-center justify-center shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)]">
+                      <span className="font-black text-[#78350F] text-sm tracking-tighter drop-shadow-[0_1px_1px_rgba(255,255,255,0.7)]">Cr</span>
+                    </div>
+                    {/* Premium Glare sweep inside the coin */}
+                    <div className="absolute top-0 left-[-150%] w-full h-full bg-gradient-to-r from-transparent via-white/60 to-transparent skew-x-[-25deg] animate-[glare_3s_infinite_ease-in-out]"></div>
+                  </div>
+                </motion.div>
+                {/* ----------------------- */}
+
+                <span className="text-4xl font-black relative drop-shadow-md">
                   {profileData?.account_credits || 0}
                   
                   {showCelebration && (
-                    <span className="absolute -top-6 -right-16 text-2xl text-yellow-300 font-black floating-up drop-shadow-[0_0_8px_rgba(253,224,71,0.8)] flex items-center">
+                    <span className="absolute -top-6 -right-16 text-2xl text-yellow-300 font-black floating-up drop-shadow-[0_0_10px_rgba(253,224,71,1)] flex items-center">
                       +{addedAmount} <Sparkles className="w-4 h-4 ml-1 animate-spin" />
                     </span>
                   )}
@@ -306,7 +329,7 @@ const WalletPage = ({ user, setUser }) => {
               </div>
             )}
 
-            <div className="inline-block bg-white/20 px-3 py-1 rounded-full backdrop-blur-sm text-xs font-medium z-10 relative border border-white/10">
+            <div className="inline-block bg-white/20 px-3 py-1 rounded-full backdrop-blur-sm text-xs font-medium z-10 relative border border-white/20 shadow-sm">
               ₹ 1 = 1 credit
             </div>
             
@@ -409,8 +432,9 @@ const WalletPage = ({ user, setUser }) => {
                   If your item gets approved and goes live, receive extra credits!
                 </li>
               </ul>
-              <Link to="/add-item" className="bg-[#FFE28A] text-gray-900 px-5 py-2.5 rounded-full text-sm font-bold inline-flex items-center gap-1.5 shadow-sm hover:bg-[#FFD75E] transition relative z-10">
-                <Plus className="w-4 h-4" /> List an Item
+              <Link to="/add-item" className="bg-[#FFE28A] text-gray-900 px-5 py-2.5 rounded-full text-sm font-bold inline-flex items-center gap-1.5 shadow-[0_4px_12px_rgba(250,204,21,0.25)] hover:bg-[#FFD75E] transition relative z-10 overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-[-20deg] animate-[glare_2.5s_infinite_ease-in-out]"></div>
+                <Plus className="w-4 h-4 relative z-10" /> <span className="relative z-10">List an Item</span>
               </Link>
               
               <div className="absolute right-[-10px] bottom-[-10px] w-28 h-28 bg-[#EBE5F7] rounded-full opacity-50 flex items-center justify-center">
@@ -431,9 +455,10 @@ const WalletPage = ({ user, setUser }) => {
                 <div className="flex flex-row items-center gap-3">
                   <button 
                     onClick={() => setShowPaymentForm(!showPaymentForm)}
-                    className="bg-[#A388E1] text-white px-5 py-2.5 rounded-full text-sm font-bold inline-flex items-center gap-1.5 shadow-sm hover:bg-[#8b70ca] hover:-translate-y-0.5 transition-all duration-300"
+                    className="bg-gradient-to-r from-[#A388E1] to-[#805ad5] text-white px-5 py-2.5 rounded-full text-sm font-bold inline-flex items-center gap-1.5 shadow-[0_4px_12px_rgba(163,136,225,0.3)] hover:shadow-[0_6px_15px_rgba(163,136,225,0.4)] hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden group"
                   >
-                    <Coins className="w-4 h-4" /> Add Credits
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-20deg] animate-[glare_3s_infinite_ease-in-out]"></div>
+                    <Coins className="w-4 h-4 relative z-10" /> <span className="relative z-10">Add Credits</span>
                   </button>
                   <button 
                     onClick={openHistoryModal} 
@@ -463,13 +488,16 @@ const WalletPage = ({ user, setUser }) => {
                     <button 
                       type="submit"
                       disabled={!customAmount || customAmount < 10 || processing}
-                      className={`px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center justify-center gap-1 ${
+                      className={`px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center justify-center gap-1 relative overflow-hidden ${
                         !customAmount || customAmount < 10 || processing
                           ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                          : 'bg-[#FFE28A] text-gray-900 hover:bg-[#FFD75E] shadow-md hover:-translate-y-0.5'
+                          : 'bg-gradient-to-r from-[#FFE28A] to-[#FFD75E] text-yellow-900 hover:shadow-[0_4px_12px_rgba(250,204,21,0.3)] hover:-translate-y-0.5'
                       }`}
                     >
-                      {processing ? '...' : 'Pay'} <ChevronRight className="w-4 h-4" />
+                      {!(!customAmount || customAmount < 10 || processing) && (
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent skew-x-[-20deg] animate-[glare_2s_infinite_ease-in-out]"></div>
+                      )}
+                      <span className="relative z-10">{processing ? '...' : 'Pay'}</span> <ChevronRight className="w-4 h-4 relative z-10" />
                     </button>
                   </div>
                 </form>
@@ -486,8 +514,9 @@ const WalletPage = ({ user, setUser }) => {
               <p className="text-xs text-gray-600 font-medium mb-4 w-2/3 relative z-10 leading-relaxed">
                 Get credits instantly by trading in items you no longer use.
               </p>
-              <Link to="/add-item" className="bg-[#FFE28A] text-gray-900 px-5 py-2.5 rounded-full text-sm font-bold inline-flex items-center gap-1.5 shadow-sm hover:bg-[#FFD75E] transition relative z-10">
-                <Plus className="w-4 h-4" /> List Item
+              <Link to="/add-item" className="bg-gradient-to-r from-[#FFE28A] to-[#FFD75E] text-gray-900 px-5 py-2.5 rounded-full text-sm font-bold inline-flex items-center gap-1.5 shadow-[0_4px_12px_rgba(250,204,21,0.25)] hover:shadow-[0_6px_15px_rgba(250,204,21,0.3)] hover:-translate-y-0.5 transition-all relative z-10 overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-[-20deg] animate-[glare_3s_infinite_ease-in-out]"></div>
+                <Plus className="w-4 h-4 relative z-10" /> <span className="relative z-10">List Item</span>
               </Link>
 
               <div className="absolute right-[-10px] bottom-[-10px] w-24 h-24 bg-[#FFE28A]/30 rounded-full flex items-center justify-center">
@@ -531,28 +560,29 @@ const WalletPage = ({ user, setUser }) => {
                 </button>
               </div>
 
+              {/* RESTORED: Horizontal Scroll Layout for Filters */}
               <div className="px-5 py-3 border-b border-gray-100 bg-white shrink-0 flex gap-2 overflow-x-auto hide-scrollbar flex-nowrap">
                 <button 
                   onClick={() => handleFilterChange('all')}
-                  className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap flex-shrink-0 transition-all flex items-center gap-1.5 ${filterType === 'all' ? 'bg-[#6B46C1] text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                  className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap flex-shrink-0 transition-all flex items-center gap-1.5 ${filterType === 'all' ? 'bg-gradient-to-r from-[#6B46C1] to-[#805ad5] text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
                 >
                   <List className="w-3.5 h-3.5" /> All History
                 </button>
                 <button 
                   onClick={() => handleFilterChange('wallet_recharge')}
-                  className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap flex-shrink-0 transition-all flex items-center gap-1.5 ${filterType === 'wallet_recharge' ? 'bg-emerald-500 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                  className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap flex-shrink-0 transition-all flex items-center gap-1.5 ${filterType === 'wallet_recharge' ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
                 >
                   <Wallet className="w-3.5 h-3.5" /> Recharges
                 </button>
                 <button 
                   onClick={() => handleFilterChange('shipping_fee')}
-                  className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap flex-shrink-0 transition-all flex items-center gap-1.5 ${filterType === 'shipping_fee' ? 'bg-blue-500 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                  className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap flex-shrink-0 transition-all flex items-center gap-1.5 ${filterType === 'shipping_fee' ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
                 >
                   <Truck className="w-3.5 h-3.5" /> Shipping
                 </button>
                 <button 
                   onClick={() => handleFilterChange('order_refund')}
-                  className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap flex-shrink-0 transition-all flex items-center gap-1.5 ${filterType === 'order_refund' ? 'bg-purple-500 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                  className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap flex-shrink-0 transition-all flex items-center gap-1.5 ${filterType === 'order_refund' ? 'bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
                 >
                   <RefreshCcw className="w-3.5 h-3.5" /> Refunds
                 </button>
@@ -600,7 +630,6 @@ const WalletPage = ({ user, setUser }) => {
                           iconBg = 'bg-red-50 text-red-600';
                         }
 
-                        // -> Professional UI Setup: Display where the money went
                         let displayName = txType.replace('_', ' ');
                         let subText = '';
 
@@ -703,7 +732,7 @@ const WalletPage = ({ user, setUser }) => {
                 color: '#FDE047',
               };
               return (
-                <div key={i} className="coin-piece flex items-center justify-center" style={style}>
+                <div key={i} className="coin-piece flex items-center justify-center drop-shadow-[0_0_10px_rgba(253,224,71,0.8)]" style={style}>
                   <Sparkles size={size} />
                 </div>
               );
@@ -718,7 +747,7 @@ const WalletPage = ({ user, setUser }) => {
               height: `${size}px`,
               borderRadius: '50%',
               border: '1px solid #D97706',
-              boxShadow: 'inset 0 0 4px rgba(217, 119, 6, 0.6), 0 2px 4px rgba(0,0,0,0.2)',
+              boxShadow: 'inset 0 0 6px rgba(217, 119, 6, 0.8), 0 4px 8px rgba(0,0,0,0.3)',
             };
             return <div key={i} className="coin-piece" style={style} />;
           })}
@@ -732,6 +761,11 @@ const WalletPage = ({ user, setUser }) => {
         .hide-scrollbar {
           -ms-overflow-style: none;
           scrollbar-width: none;
+        }
+
+        @keyframes glare {
+          0%, 20% { transform: translateX(-150%) skewX(-25deg); }
+          80%, 100% { transform: translateX(250%) skewX(-25deg); }
         }
 
         @keyframes coinFall {
