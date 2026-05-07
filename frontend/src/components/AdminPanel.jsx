@@ -6,7 +6,7 @@ import {
   Check, ToggleLeft, ToggleRight, Layers, Settings, Menu, 
   Car, Monitor, Book, Shirt, Gamepad2, Watch, Home as HomeIcon, Sofa, Music, Utensils, Heart, Briefcase, Camera, Dumbbell, Smartphone, Target,
   IndianRupee, Activity, Truck, ChevronRight, LayoutDashboard, Coins,
-  Search, ChevronLeft
+  Search, ChevronLeft, RefreshCcw 
 } from 'lucide-react'; 
 import axios from 'axios';
 import Cropper from 'react-easy-crop';
@@ -21,6 +21,10 @@ import OfferModal from '../admin/OfferModal';
 import DashboardOverview from '../admin/DashboardOverview';
 import ViewUserModal from '../admin/ViewUserModal';
 import AdminSidebar from '../admin/AdminSidebar';
+import CategoryModal from '../admin/CategoryModal';
+import EditItemModal from '../admin/EditItemModal';
+import EditOrderModal from '../admin/EditOrderModal';
+import RejectItemModal from '../admin/RejectItemModal';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -119,11 +123,17 @@ const AdminPanel = ({ user }) => {
     title: '', description: '', category: '', condition: '', estimated_value: '', preferred_item: ''
   });
 
+  const [dropdownCategories, setDropdownCategories] = useState([]);
+
   const [isEditOrderModalOpen, setIsEditOrderModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
   const [orderForm, setOrderForm] = useState({
     orderStatus: '', awb_code: '', courier_company: ''
   });
+
+  const [isResolveModalOpen, setIsResolveModalOpen] = useState(false);
+  const [resolvingOrder, setResolvingOrder] = useState(null);
+  const [resolveForm, setResolveForm] = useState({ adminNote: '', transactionId: '' });
 
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [rejectingItemId, setRejectingItemId] = useState(null);
@@ -165,6 +175,20 @@ const AdminPanel = ({ user }) => {
   if (!user || user.role !== 'admin') {
     return <Navigate to="/" />;
   }
+
+  useEffect(() => {
+    const fetchDropdownCategories = async () => {
+      try {
+        const res = await axios.get(`${API_URL}/categories?limit=100`, { withCredentials: true });
+        if (res.data.success && res.data.data) {
+          setDropdownCategories(res.data.data.filter(c => c.isActive));
+        }
+      } catch (error) {
+        console.error("Failed to load categories for dropdown", error);
+      }
+    };
+    fetchDropdownCategories();
+  }, []);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -322,6 +346,30 @@ const AdminPanel = ({ user }) => {
     } catch (error) {
       console.error('Error updating order:', error);
       toast.error('Failed to update order details.'); 
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleResolveRefundClick = (order) => {
+    setResolvingOrder(order);
+    setResolveForm({ adminNote: '', transactionId: '' });
+    setIsResolveModalOpen(true);
+  };
+
+  const handleResolveSubmit = async (e) => {
+    e.preventDefault();
+    setUpdating(true);
+    try {
+      const res = await axios.put(`${API_URL}/admin/orders/${resolvingOrder._id}/resolve-refund`, resolveForm, { withCredentials: true });
+      if (res.data.success) {
+        setData(Array.isArray(data) ? data.map(o => o._id === resolvingOrder._id ? res.data.data : o) : data);
+        setIsResolveModalOpen(false);
+        toast.success('Failed refund resolved manually! ✅');
+      }
+    } catch (error) {
+      console.error('Error resolving refund:', error);
+      toast.error('Failed to resolve refund.');
     } finally {
       setUpdating(false);
     }
@@ -540,7 +588,7 @@ const AdminPanel = ({ user }) => {
       <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-purple-600/10 rounded-full blur-[140px] pointer-events-none"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] bg-emerald-600/10 rounded-full blur-[140px] pointer-events-none"></div>
 
-      {/* --- Custom Scrollbar styling --- */}
+     
       <style dangerouslySetInnerHTML={{__html: `
         .admin-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
         .admin-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -808,6 +856,7 @@ const AdminPanel = ({ user }) => {
                   handleUpdateRole={handleUpdateRole}
                   handleDeleteUser={handleDeleteUser}
                   handleEditOrderClick={handleEditOrderClick} 
+                  handleResolveRefundClick={handleResolveRefundClick}
                   currentPage={currentPage}
                   totalPages={totalPages}
                   setCurrentPage={setCurrentPage}
@@ -820,175 +869,104 @@ const AdminPanel = ({ user }) => {
 
       {/* --- ALL MODALS (Upgraded to Frosted Glass UI & fully responsive) --- */}
       
-      {/* Edit Order Modal */}
-      {isEditOrderModalOpen && editingOrder && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm transition-opacity">
-          <div className="bg-[#0B0F19]/95 backdrop-blur-3xl w-full max-w-md rounded-2xl md:rounded-3xl border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
-            <div className="p-4 md:p-5 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
-              <h2 className="text-base md:text-lg font-black text-white flex items-center gap-2">
-                <Truck className="w-4 h-4 md:w-5 md:h-5 text-blue-400" /> Update Order Status
-              </h2>
-              <button onClick={() => setIsEditOrderModalOpen(false)} className="text-gray-400 hover:text-white transition-all p-2 bg-white/5 hover:bg-white/10 rounded-full">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            
-            <div className="p-5 md:p-6">
-              <form id="orderForm" onSubmit={handleOrderSubmit} className="space-y-4 md:space-y-5">
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Order Status</label>
-                  <select 
-                    value={orderForm.orderStatus} 
-                    onChange={(e) => setOrderForm({ ...orderForm, orderStatus: e.target.value })} 
-                    className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-white text-xs md:text-sm focus:outline-none focus:border-blue-500/50 focus:bg-white/[0.05] transition-all appearance-none shadow-inner"
-                  >
-                    <option value="pending" className="bg-[#0B0F19]">Pending</option>
-                    <option value="processing" className="bg-[#0B0F19]">Processing</option>
-                    <option value="shipped" className="bg-[#0B0F19]">Shipped</option>
-                  
-                    <option value="delivered" className="bg-[#0B0F19]">Delivered (Will Release Escrow)</option>
-                    <option value="cancelled" className="bg-[#0B0F19]">Cancelled (Will Refund)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">AWB / Tracking Number</label>
-                  <input 
-                    type="text" 
-                    value={orderForm.awb_code} 
-                    onChange={(e) => setOrderForm({ ...orderForm, awb_code: e.target.value })} 
-                    className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-white text-xs md:text-sm focus:outline-none focus:border-blue-500/50 focus:bg-white/[0.05] transition-all shadow-inner placeholder:text-gray-600 font-mono"
-                    placeholder="e.g. AWB123456789"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Courier Company</label>
-                  <input 
-                    type="text" 
-                    value={orderForm.courier_company} 
-                    onChange={(e) => setOrderForm({ ...orderForm, courier_company: e.target.value })} 
-                    className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-white text-xs md:text-sm focus:outline-none focus:border-blue-500/50 focus:bg-white/[0.05] transition-all shadow-inner placeholder:text-gray-600"
-                    placeholder="e.g. Delhivery, Bluedart"
-                  />
-                </div>
-              </form>
-            </div>
-            
-            <div className="p-4 md:p-5 border-t border-white/5 bg-white/[0.01] flex justify-end gap-2 md:gap-3">
-              <button type="button" onClick={() => setIsEditOrderModalOpen(false)} className="px-4 md:px-5 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all">Cancel</button>
-              <button 
-                type="submit" 
-                form="orderForm" 
-                disabled={updating} 
-                className={`px-5 md:px-6 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center gap-2 ${updating ? 'bg-blue-600/30 text-white/50 cursor-not-allowed border-blue-500/20' : 'bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.3)] border border-blue-500/50'}`}
-              >
-                {updating ? 'Saving...' : 'Update'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Reject Item Modal */}
-      {isRejectModalOpen && (
+      {/* Resolve Failed Refund Modal */}
+      {isResolveModalOpen && resolvingOrder && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm transition-opacity">
           <div className="bg-[#0B0F19]/95 backdrop-blur-3xl w-full max-w-md rounded-2xl md:rounded-3xl border border-red-500/20 shadow-[0_0_50px_rgba(239,68,68,0.15)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
             <div className="p-4 md:p-5 border-b border-red-500/10 flex justify-between items-center bg-red-500/5">
               <h2 className="text-base md:text-lg font-black text-red-400 flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 md:w-5 md:h-5" /> Reject Item
+                <RefreshCcw className="w-4 h-4 md:w-5 md:h-5" /> Resolve Failed Refund
               </h2>
-              <button onClick={() => setIsRejectModalOpen(false)} className="text-gray-400 hover:text-white transition-all bg-white/5 p-2 rounded-full hover:bg-white/10">
+              <button onClick={() => setIsResolveModalOpen(false)} className="text-gray-400 hover:text-white transition-all bg-white/5 p-2 rounded-full hover:bg-white/10">
                 <X className="w-4 h-4" />
               </button>
             </div>
+            
             <div className="p-5 md:p-6">
-              <form id="rejectForm" onSubmit={handleRejectSubmit}>
-                <label className="block text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-widest">Reason for rejection <span className="text-red-400 font-normal lowercase">*</span></label>
-                <textarea 
-                  required
-                  rows="4" 
-                  value={rejectionReason} 
-                  onChange={(e) => setRejectionReason(e.target.value)} 
-                  className="w-full bg-white/[0.02] border border-white/10 rounded-xl md:rounded-2xl px-4 py-3 text-white focus:outline-none focus:border-red-500/50 focus:bg-white/[0.05] resize-none transition-all placeholder:text-gray-600 text-xs md:text-sm shadow-inner" 
-                  placeholder="E.g., Contains inappropriate imagery..."
-                ></textarea>
+              <p className="text-xs text-gray-400 mb-5 leading-relaxed">
+                Confirming this will mark the <span className="text-red-400 font-bold">₹{resolvingOrder.shippingCost}</span> shipping refund as resolved. Ensure you have transferred the money to the buyer manually via UPI/Bank.
+              </p>
+              <form id="resolveForm" onSubmit={handleResolveSubmit} className="space-y-4 md:space-y-5">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Transaction ID (Optional)</label>
+                  <input 
+                    type="text" 
+                    value={resolveForm.transactionId} 
+                    onChange={(e) => setResolveForm({ ...resolveForm, transactionId: e.target.value })} 
+                    className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-white text-xs focus:outline-none focus:border-red-500/50 focus:bg-white/[0.05] transition-all shadow-inner placeholder:text-gray-600 font-mono"
+                    placeholder="e.g. UPI Ref No. 123456789"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Admin Note / Reason</label>
+                  <textarea 
+                    value={resolveForm.adminNote} 
+                    onChange={(e) => setResolveForm({ ...resolveForm, adminNote: e.target.value })} 
+                    rows="3"
+                    className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-white text-xs focus:outline-none focus:border-red-500/50 focus:bg-white/[0.05] transition-all shadow-inner placeholder:text-gray-600 resize-none"
+                    placeholder="e.g. Refunded manually to user's GPay account."
+                  ></textarea>
+                </div>
               </form>
             </div>
+            
             <div className="p-4 md:p-5 border-t border-white/5 bg-white/[0.01] flex justify-end gap-2 md:gap-3">
-              <button onClick={() => setIsRejectModalOpen(false)} className="px-4 md:px-6 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all">Cancel</button>
-              <button type="submit" form="rejectForm" className="px-5 md:px-6 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold bg-red-600 hover:bg-red-500 text-white shadow-[0_0_15px_rgba(220,38,38,0.3)] border border-red-500/50 transition-all">Confirm</button>
+              <button type="button" onClick={() => setIsResolveModalOpen(false)} className="px-4 md:px-5 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all">Cancel</button>
+              <button 
+                type="submit" 
+                form="resolveForm" 
+                disabled={updating} 
+                className={`px-5 md:px-6 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center gap-2 ${updating ? 'bg-red-600/30 text-white/50 cursor-not-allowed border-red-500/20' : 'bg-red-600 hover:bg-red-500 text-white shadow-[0_0_15px_rgba(220,38,38,0.3)] border border-red-500/50'}`}
+              >
+                {updating ? 'Resolving...' : 'Confirm Resolution'}
+              </button>
             </div>
           </div>
         </div>
       )}
 
+      {/* Edit Order Modal */}
+      <EditOrderModal 
+        isEditOrderModalOpen={isEditOrderModalOpen}
+        setIsEditOrderModalOpen={setIsEditOrderModalOpen}
+        editingOrder={editingOrder}
+        orderForm={orderForm}
+        setOrderForm={setOrderForm}
+        handleOrderSubmit={handleOrderSubmit}
+        updating={updating}
+      />
+
+      {/* CHANGES MADE HERE: Replaced inline Reject Item Modal with imported RejectItemModal component */}
+      <RejectItemModal 
+        isRejectModalOpen={isRejectModalOpen}
+        setIsRejectModalOpen={setIsRejectModalOpen}
+        handleRejectSubmit={handleRejectSubmit}
+        rejectionReason={rejectionReason}
+        setRejectionReason={setRejectionReason}
+      />
+
       {/* Edit Item Modal */}
-      {isEditModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 py-6 md:py-8 bg-black/60 backdrop-blur-sm transition-opacity">
-          <div className="bg-[#0B0F19]/95 backdrop-blur-3xl w-full max-w-2xl rounded-2xl md:rounded-3xl border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
-            <div className="p-4 md:p-5 border-b border-white/5 flex justify-between items-center bg-white/[0.02] shrink-0">
-              <h2 className="text-base md:text-lg font-black text-white flex items-center gap-2">
-                <Edit className="w-4 h-4 md:w-5 md:h-5 text-emerald-400" /> Edit Item
-              </h2>
-              <button onClick={() => setIsEditModalOpen(false)} className="text-gray-400 hover:text-white transition-all p-2 bg-white/5 hover:bg-white/10 rounded-full border border-white/5">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="p-4 md:p-6 overflow-y-auto flex-1 admin-scroll">
-              <form id="adminEditForm" onSubmit={handleEditSubmit} className="space-y-4 md:space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
-                  <div className="md:col-span-2">
-                    <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Title</label>
-                    <input type="text" name="title" required value={editForm.title} onChange={handleEditChange} className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-2.5 md:py-3 text-white text-xs md:text-sm focus:outline-none focus:border-emerald-500/50 focus:bg-white/[0.05] transition-all shadow-inner" />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Description</label>
-                    <textarea name="description" required rows="4" value={editForm.description} onChange={handleEditChange} className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-2.5 md:py-3 text-white text-xs md:text-sm focus:outline-none focus:border-emerald-500/50 focus:bg-white/[0.05] resize-none transition-all shadow-inner"></textarea>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Category</label>
-                    <select name="category" required value={editForm.category} onChange={handleEditChange} className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-2.5 md:py-3 text-white text-xs md:text-sm focus:outline-none focus:border-emerald-500/50 focus:bg-white/[0.05] transition-all appearance-none shadow-inner">
-                      <option value="Electronics" className="bg-[#0B0F19]">Electronics</option>
-                      <option value="Fashion" className="bg-[#0B0F19]">Fashion</option>
-                      <option value="Home" className="bg-[#0B0F19]">Home & Garden</option>
-                      <option value="Vehicles" className="bg-[#0B0F19]">Vehicles</option>
-                      <option value="Other" className="bg-[#0B0F19]">Other</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Condition</label>
-                    <select name="condition" required value={editForm.condition} onChange={handleEditChange} className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-2.5 md:py-3 text-white text-xs md:text-sm focus:outline-none focus:border-emerald-500/50 focus:bg-white/[0.05] transition-all appearance-none shadow-inner">
-                      <option value="New" className="bg-[#0B0F19]">Brand New</option>
-                      <option value="Like New" className="bg-[#0B0F19]">Like New</option>
-                      <option value="Used" className="bg-[#0B0F19]">Used - Good</option>
-                      <option value="Fair" className="bg-[#0B0F19]">Fair</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Estimated Value</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Coins className="h-4 w-4 text-yellow-400" />
-                      </div>
-                      <input type="number" name="estimated_value" value={editForm.estimated_value} onChange={handleEditChange} className="w-full bg-white/[0.02] border border-white/10 rounded-xl pl-9 pr-4 py-2.5 md:py-3 text-white text-xs md:text-sm focus:outline-none focus:border-yellow-500/50 focus:bg-white/[0.05] transition-all shadow-inner" />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Preferred Item</label>
-                    <input type="text" name="preferred_item" value={editForm.preferred_item} onChange={handleEditChange} className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-2.5 md:py-3 text-white text-xs md:text-sm focus:outline-none focus:border-emerald-500/50 focus:bg-white/[0.05] transition-all shadow-inner" />
-                  </div>
-                </div>
-              </form>
-            </div>
-            <div className="p-4 md:p-5 border-t border-white/5 bg-white/[0.01] flex justify-end gap-2 md:gap-3 shrink-0">
-              <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-4 md:px-6 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all">Cancel</button>
-              <button type="submit" form="adminEditForm" disabled={updating} className={`px-5 md:px-8 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center gap-2 ${updating ? 'bg-emerald-600/30 text-emerald-200/50 cursor-not-allowed border-emerald-500/20' : 'bg-emerald-500 hover:bg-emerald-400 text-white shadow-[0_0_15px_rgba(16,185,129,0.3)] border border-emerald-500/50'}`}>
-                {updating ? 'Saving...' : 'Save'}
-              </button>
-            </div>
-          </div>
-        </div>
+      <EditItemModal 
+        isEditModalOpen={isEditModalOpen}
+        setIsEditModalOpen={setIsEditModalOpen}
+        editForm={editForm}
+        handleEditChange={handleEditChange}
+        handleEditSubmit={handleEditSubmit}
+        dropdownCategories={dropdownCategories}
+        updating={updating}
+      />
+
+      {/* Category Modal */}
+      {isCategoryModalOpen && (
+        <CategoryModal
+          setIsCategoryModalOpen={setIsCategoryModalOpen}
+          editingCategoryId={editingCategoryId}
+          categoryForm={categoryForm}
+          setCategoryForm={setCategoryForm}
+          handleCategorySubmit={handleCategorySubmit}
+          updating={updating}
+          AVAILABLE_ICONS={AVAILABLE_ICONS}
+        />
       )}
 
       <ViewUserModal 

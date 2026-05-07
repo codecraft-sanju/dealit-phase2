@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery, useMutation } from '@tanstack/react-query'; 
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Package, Coins, ChevronRight, Plus, UserCircle, Gift,
@@ -8,7 +8,7 @@ import {
   Car, Monitor, Book, Sofa, Music, Utensils, Heart, Briefcase, Camera, Dumbbell, Sparkles
 } from 'lucide-react';
 import axios from 'axios';
-import ProductCard from './ProductCard'; 
+import ProductCard from './ProductCard';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -70,10 +70,14 @@ const ModernShimmer = ({ className }) => (
   </div>
 );
 
+// Global variable to track if the initial animation has played this session
+let initialAnimationPlayed = false;
+
 const HomePage = ({ user, setUser }) => {
   const [activeCategory, setActiveCategory] = useState('All');
   const [showCelebration, setShowCelebration] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const shouldAnimate = !initialAnimationPlayed;
 
   const scrollRef = useRef(null);
   const isDown = useRef(false);
@@ -81,6 +85,9 @@ const HomePage = ({ user, setUser }) => {
   const scrollLeftPos = useRef(0);
 
   useEffect(() => {
+    // Mark that the animation has played so it doesn't repeat when returning to the page
+    initialAnimationPlayed = true;
+
     const handleBonusClaimedEvent = () => {
       setShowCelebration(true);
       setTimeout(() => setShowCelebration(false), 5500);
@@ -232,48 +239,71 @@ const HomePage = ({ user, setUser }) => {
 
   return (
     <motion.div 
-      initial="hidden" 
+      initial={shouldAnimate ? "hidden" : false} 
       animate="show" 
       variants={containerVariants}
-      className="max-w-md mx-auto bg-white min-h-[calc(100vh-130px)] md:max-w-7xl md:px-0 relative overflow-hidden"
+      className="max-w-md mx-auto bg-[#faf9fc] min-h-[calc(100vh-130px)] md:max-w-7xl md:px-0 relative overflow-hidden"
     >
-      <div className="px-4 pt-3 pb-0">
+      {/* Background Ambient Glows */}
+      <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-purple-100/40 to-transparent pointer-events-none"></div>
+
+      <div className="px-4 pt-3 pb-0 relative z-10">
         
         {/* --- Hero Banner Section --- */}
         <div className="grid grid-cols-7 gap-2 mb-3">
           <motion.div 
             variants={itemVariants}
-            className="col-span-5 bg-white border border-[#EBE5F7] rounded-2xl p-3 flex flex-col justify-center h-full relative overflow-hidden group"
+            className="col-span-5 bg-white border border-white shadow-[0_4px_20px_rgb(0,0,0,0.03),inset_0_1px_1px_rgb(255,255,255,1)] rounded-2xl p-3 flex flex-col justify-center h-full relative overflow-hidden group"
           >
-            {/* Subtle floating background gradient */}
-            <div className="absolute -top-10 -right-10 w-32 h-32 bg-purple-100/50 rounded-full blur-3xl group-hover:bg-purple-200/50 transition-colors duration-500"></div>
+            {/* Glossy Gradient Background */}
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-50/50 via-white to-white opacity-80 z-0"></div>
             
-            <h1 className="text-[16px] sm:text-[15px] md:text-[20px] font-extrabold text-gray-900 leading-tight mb-1.5 tracking-tight relative z-10">
+            {/* Subtle floating background gradient */}
+            <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#A388E1]/20 rounded-full blur-3xl group-hover:bg-[#A388E1]/30 transition-colors duration-500 z-0"></div>
+            
+            <h1 className="text-[16px] sm:text-[15px] md:text-[20px] font-extrabold text-gray-900 leading-tight mb-1.5 tracking-tight relative z-10 drop-shadow-sm">
               Sell what you don't use<br/>
-              Get what you <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#A388E1] to-[#805ad5]">actually want</span>
+              Get what you <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#805ad5] to-[#A388E1] animate-pulse">actually want</span>
             </h1>
             <p className="text-[10px] sm:text-[11px] md:text-xs text-gray-500 font-medium leading-snug relative z-10">
               Sell your stuff &rarr; Earn credits &rarr; Buy anything.
             </p>
+
+            {/* Corner Gloss Glare overlay on hover */}
+            <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none z-20"></div>
           </motion.div>
 
           <motion.div variants={itemVariants} className="col-span-2 h-full">
             {user ? (
-              <div className={`h-full bg-gradient-to-br from-[#A388E1] to-[#805ad5] rounded-2xl p-2 text-white shadow-lg shadow-[#A388E1]/30 flex flex-col justify-between relative overflow-hidden transition-all duration-700 ${showCelebration ? 'shadow-yellow-400/50 scale-[1.05]' : ''}`}>
-                <div className="absolute top-1.5 right-1.5 bg-white/20 px-1 py-[1px] rounded text-[7px] font-semibold border border-white/10 backdrop-blur-sm tracking-wide z-10 whitespace-nowrap">
+              <div className={`h-full bg-gradient-to-br from-[#A388E1] via-[#8c67d6] to-[#6b46c1] rounded-2xl p-2 text-white shadow-[0_8px_20px_rgba(163,136,225,0.4),inset_0_1px_1px_rgba(255,255,255,0.3)] flex flex-col justify-between relative overflow-hidden transition-all duration-700 ${showCelebration ? 'shadow-[0_0_30px_rgba(250,204,21,0.6)] scale-[1.05]' : ''}`}>
+                
+                {/* Continuous Glossy Shimmer Line */}
+                <div className="absolute top-0 left-[-150%] w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-[-25deg] animate-[glare_4s_infinite_ease-in-out] pointer-events-none z-0"></div>
+
+                <div className="absolute top-1.5 right-1.5 bg-white/20 px-1 py-[1px] rounded text-[7px] font-semibold border border-white/20 backdrop-blur-md shadow-sm tracking-wide z-10 whitespace-nowrap">
                   ₹1 = 1 Cr
                 </div>
 
-                <div>
+                <div className="relative z-10 flex flex-col justify-end">
+                  {/* --- PREMIUM 3D COIN REPLACEMENT --- */}
                   <motion.div 
-                    animate={showCelebration ? { rotate: 360, scale: 1.2 } : { rotate: 0, scale: 1 }}
-                    transition={{ duration: 0.6, type: "spring" }}
-                    className="bg-yellow-400 p-1 rounded-full inline-flex items-center justify-center mb-1"
+                    animate={showCelebration ? { rotateY: 360, scale: 1.2 } : { rotateY: 0, scale: 1 }}
+                    transition={{ duration: 0.8, type: "spring" }}
+                    className="mb-1 w-max"
                   >
-                    <Coins className="w-3 h-3 text-yellow-900" />
+                    <div className="relative w-8 h-8 rounded-full shadow-[0_4px_10px_rgba(217,119,6,0.6),inset_0_-3px_5px_rgba(146,64,14,0.6),inset_0_2px_4px_rgba(255,255,255,0.9)] border border-[#FEF08A] bg-gradient-to-br from-[#FEF08A] via-[#F59E0B] to-[#92400E] flex items-center justify-center overflow-hidden">
+                      {/* Inner Engraving */}
+                      <div className="absolute inset-[3px] rounded-full border-[0.5px] border-[#92400E]/50 bg-gradient-to-tl from-[#FEF08A]/20 via-transparent to-[#D97706]/40 flex items-center justify-center shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)]">
+                        <span className="font-black text-[#78350F] text-[11px] tracking-tighter drop-shadow-[0_1px_1px_rgba(255,255,255,0.7)]">Cr</span>
+                      </div>
+                      {/* Premium Glare sweep inside the coin */}
+                      <div className="absolute top-0 left-[-150%] w-full h-full bg-gradient-to-r from-transparent via-white/60 to-transparent skew-x-[-25deg] animate-[glare_3s_infinite_ease-in-out]"></div>
+                    </div>
                   </motion.div>
+                  {/* ------------------------------------- */}
+
                   <div className="flex items-end gap-0.5">
-                    <span className="text-base font-bold leading-none relative">
+                    <span className="text-base font-bold leading-none relative drop-shadow-md">
                       {user.account_credits || 0}
                       <AnimatePresence>
                         {showCelebration && (
@@ -282,14 +312,14 @@ const HomePage = ({ user, setUser }) => {
                             animate={{ opacity: 1, y: -30, scale: 1.2 }}
                             exit={{ opacity: 0 }}
                             transition={{ duration: 1.5, ease: "easeOut" }}
-                            className="absolute -top-2 -right-8 text-xs text-yellow-300 font-black drop-shadow-[0_0_8px_rgba(253,224,71,0.8)] flex items-center z-10"
+                            className="absolute -top-2 -right-8 text-xs text-yellow-300 font-black drop-shadow-[0_0_10px_rgba(253,224,71,1)] flex items-center z-10"
                           >
                             +{bonusSettings.amount} <Sparkles className="w-2.5 h-2.5 ml-0.5 animate-spin" />
                           </motion.span>
                         )}
                       </AnimatePresence>
                     </span>
-                    <span className="text-[8px] font-normal opacity-90 mb-0.5">credits</span>
+                    <span className="text-[8px] font-medium opacity-90 mb-0.5">credits</span>
                   </div>
                 </div>
 
@@ -298,38 +328,41 @@ const HomePage = ({ user, setUser }) => {
                     whileTap={scaleTap}
                     onClick={() => claimBonusMutation.mutate()} 
                     disabled={claimBonusMutation.isPending}
-                    className="bg-gradient-to-r from-[#FFE28A] to-[#FFD75E] text-yellow-900 text-[9px] font-extrabold px-1 py-1.5 mt-1.5 rounded-lg flex items-center justify-center gap-0.5 shadow-sm transition hover:brightness-105 z-10 whitespace-nowrap disabled:opacity-80 relative overflow-hidden"
+                    className="bg-gradient-to-r from-[#FFE28A] via-[#FFF0B3] to-[#FFD75E] text-yellow-900 text-[9px] font-extrabold px-1 py-1.5 mt-1.5 rounded-lg flex items-center justify-center gap-0.5 shadow-[0_4px_10px_rgba(0,0,0,0.1),inset_0_1px_1px_rgba(255,255,255,0.8)] transition hover:brightness-105 z-10 whitespace-nowrap disabled:opacity-80 relative overflow-hidden"
                   >
+                    {/* Sharp Glass Sweep inside Button */}
                     <motion.div 
-                      className="absolute inset-0 bg-white/30"
-                      animate={{ x: ["-100%", "200%"] }}
-                      transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/70 to-transparent skew-x-[-20deg]"
+                      animate={{ x: ["-150%", "250%"] }}
+                      transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
                     />
-                    <span className="relative z-10">{claimBonusMutation.isPending ? 'Claiming...' : `Claim ${bonusSettings.amount}`}</span>
-                    <Gift className="w-2.5 h-2.5 relative z-10" />
+                    <span className="relative z-10 drop-shadow-sm">{claimBonusMutation.isPending ? 'Claiming...' : `Claim ${bonusSettings.amount}`}</span>
+                    <Gift className="w-2.5 h-2.5 relative z-10 drop-shadow-sm" />
                   </motion.button>
                 ) : (
-                  <Link to="/wallet" className="block">
-                    <motion.div whileTap={scaleTap} className="bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white text-[9px] font-bold px-1 py-1.5 mt-1.5 rounded-lg flex items-center justify-center gap-0.5 shadow-sm transition-colors z-10 whitespace-nowrap">
-                      Earn More <ChevronRight className="w-2.5 h-2.5" />
+                  <Link to="/wallet" className="block relative z-10">
+                    <motion.div whileTap={scaleTap} className="bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white text-[9px] font-bold px-1 py-1.5 mt-1.5 rounded-lg flex items-center justify-center gap-0.5 shadow-sm transition-colors whitespace-nowrap overflow-hidden relative">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-[-20deg] animate-[glare_3s_infinite_ease-in-out]"></div>
+                      <span className="relative z-10">Earn More</span> <ChevronRight className="w-2.5 h-2.5 relative z-10" />
                     </motion.div>
                   </Link>
                 )}
               </div>
             ) : (
-              <div className="h-full bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-2 text-white shadow-lg shadow-gray-900/30 flex flex-col justify-between relative overflow-hidden">
-                <div>
+              <div className="h-full bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-2 text-white shadow-[0_8px_20px_rgba(0,0,0,0.2),inset_0_1px_1px_rgba(255,255,255,0.1)] flex flex-col justify-between relative overflow-hidden">
+                <div className="absolute top-0 left-[-150%] w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-[-25deg] animate-[glare_5s_infinite_ease-in-out] pointer-events-none"></div>
+                <div className="relative z-10">
                   <UserCircle className="w-4 h-4 text-gray-400 opacity-80 mb-0.5" />
                   <h3 className="text-[10px] font-bold leading-tight">Join</h3>
                 </div>
-                <div className="flex flex-col gap-1 mt-1">
+                <div className="flex flex-col gap-1 mt-1 relative z-10">
                   <Link to="/login">
-                    <motion.div whileTap={scaleTap} className="bg-white text-gray-900 text-center text-[9px] font-bold py-1 rounded-md shadow-sm">
+                    <motion.div whileTap={scaleTap} className="bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 text-white text-center text-[9px] font-bold py-1 rounded-md shadow-sm transition-colors">
                       Login
                     </motion.div>
                   </Link>
                   <Link to="/signup">
-                    <motion.div whileTap={scaleTap} className="bg-[#A388E1] text-white text-center text-[9px] font-bold py-1 rounded-md shadow-sm">
+                    <motion.div whileTap={scaleTap} className="bg-gradient-to-r from-[#A388E1] to-[#805ad5] text-white text-center text-[9px] font-bold py-1 rounded-md shadow-[0_2px_8px_rgba(163,136,225,0.4)]">
                       Join
                     </motion.div>
                   </Link>
@@ -343,11 +376,14 @@ const HomePage = ({ user, setUser }) => {
         {loadingOffers ? (
           <motion.div variants={itemVariants} className="mb-0">
             <div className="flex overflow-x-auto hide-scrollbar gap-3 pb-0">
-              <ModernShimmer className="w-full aspect-[5/2] md:aspect-[5/1] flex-shrink-0" />
+              <ModernShimmer className="w-full aspect-[5/2] md:aspect-[5/1] flex-shrink-0 shadow-sm" />
             </div>
           </motion.div>
         ) : offers.length > 0 ? (
-          <motion.div variants={itemVariants} className="mb-0">
+          <motion.div variants={itemVariants} className="mb-0 relative group">
+            {/* Offer Glass Overlay Reflection */}
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-10"></div>
+
             <div 
               ref={scrollRef}
               onMouseEnter={() => setIsHovered(true)}
@@ -357,23 +393,25 @@ const HomePage = ({ user, setUser }) => {
               onMouseMove={handleMouseMove}
               onTouchStart={() => setIsHovered(true)}
               onTouchEnd={() => setIsHovered(false)}
-              className="flex overflow-x-auto hide-scrollbar gap-3 snap-x snap-mandatory pb-0 scroll-smooth cursor-grab active:cursor-grabbing"
+              className="flex overflow-x-auto hide-scrollbar gap-3 snap-x snap-mandatory pb-0 scroll-smooth cursor-grab active:cursor-grabbing relative z-0"
             >
               {offers.map((offer) => (
                 <div 
                   key={offer._id} 
-                  className="w-full aspect-[5/2] md:aspect-[5/1] flex-shrink-0 snap-center rounded-2xl overflow-hidden shadow-sm border border-gray-100 relative bg-gray-50 group"
+                  className="w-full aspect-[5/2] md:aspect-[5/1] flex-shrink-0 snap-center rounded-2xl overflow-hidden shadow-[0_4px_15px_rgba(0,0,0,0.05)] border border-white/50 relative bg-gray-50"
                 >
                   <picture className="w-full h-full block pointer-events-none">
                     <source media="(min-width: 768px)" srcSet={getOptimizedCloudinaryUrl(offer.desktopImage)} />
                     <motion.img 
                       whileHover={{ scale: 1.03 }}
-                      transition={{ duration: 0.4 }}
+                      transition={{ duration: 0.5, ease: "easeOut" }}
                       src={getOptimizedCloudinaryUrl(offer.mobileImage)} 
                       alt="Special Offer" 
                       className="w-full h-full object-cover"
                     />
                   </picture>
+                  {/* Subtle persistent glossy shine over images */}
+                  <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
                 </div>
               ))}
             </div>
@@ -383,7 +421,7 @@ const HomePage = ({ user, setUser }) => {
       </div>
 
       {/* --- Categories Section --- */}
-      <motion.div variants={itemVariants} className="px-4 pt-1.5 pb-0">
+      <motion.div variants={itemVariants} className="px-4 pt-1.5 pb-0 relative z-10">
         <div className="flex gap-3 overflow-x-auto hide-scrollbar items-center pb-2 pt-1">
           <motion.div 
             whileHover={hoverSpring} whileTap={scaleTap}
@@ -391,13 +429,14 @@ const HomePage = ({ user, setUser }) => {
             className="flex flex-col items-center gap-1.5 min-w-max cursor-pointer"
           >
             {activeCategory === 'All' ? (
-              <motion.div layoutId="activeCategory" className="bg-[#EBE5F7] text-[#A388E1] px-3 py-2 rounded-full flex items-center gap-1.5 border border-[#A388E1]/20 shadow-sm relative">
-                <Package className="w-4 h-4 relative z-10" />
+              <motion.div layoutId="activeCategory" className="bg-gradient-to-r from-[#EBE5F7] to-[#e1d6f5] text-[#805ad5] px-3 py-2 rounded-full flex items-center gap-1.5 border border-white shadow-[0_4px_12px_rgba(163,136,225,0.25),inset_0_1px_1px_rgba(255,255,255,1)] relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent skew-x-[-20deg] animate-[glare_3s_infinite_ease-in-out]"></div>
+                <Package className="w-4 h-4 relative z-10 drop-shadow-sm" />
                 <span className="text-xs font-bold relative z-10">All</span>
               </motion.div>
             ) : (
               <>
-                <div className="bg-[#F8F9FA] text-gray-500 p-2.5 rounded-xl w-12 h-12 flex items-center justify-center border border-gray-100 shadow-sm transition-colors hover:bg-gray-100">
+                <div className="bg-white text-gray-500 p-2.5 rounded-xl w-12 h-12 flex items-center justify-center border border-white shadow-[0_2px_10px_rgba(0,0,0,0.03)] transition-all hover:shadow-[0_4px_15px_rgba(163,136,225,0.15)] hover:text-[#A388E1] hover:-translate-y-0.5">
                   <Package className="w-5 h-5" />
                 </div>
                 <span className="text-[11px] text-gray-500 font-medium">All</span>
@@ -408,7 +447,7 @@ const HomePage = ({ user, setUser }) => {
           {loadingCategories ? (
             [1, 2, 3, 4].map((i) => (
               <div key={i} className="flex flex-col items-center gap-1.5 min-w-max">
-                <ModernShimmer className="w-12 h-12 rounded-xl" />
+                <ModernShimmer className="w-12 h-12 rounded-xl shadow-sm" />
                 <ModernShimmer className="h-2 w-8 rounded" />
               </div>
             ))
@@ -426,13 +465,14 @@ const HomePage = ({ user, setUser }) => {
                     className="flex flex-col items-center gap-1.5 min-w-max cursor-pointer"
                   >
                     {isActive ? (
-                      <motion.div layoutId="activeCategory" className="bg-[#EBE5F7] text-[#A388E1] px-3 py-2 rounded-full flex items-center gap-1.5 border border-[#A388E1]/20 shadow-sm relative">
-                        <IconComponent className="w-4 h-4 relative z-10" />
+                      <motion.div layoutId="activeCategory" className="bg-gradient-to-r from-[#EBE5F7] to-[#e1d6f5] text-[#805ad5] px-3 py-2 rounded-full flex items-center gap-1.5 border border-white shadow-[0_4px_12px_rgba(163,136,225,0.25),inset_0_1px_1px_rgba(255,255,255,1)] relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent skew-x-[-20deg] animate-[glare_3s_infinite_ease-in-out]"></div>
+                        <IconComponent className="w-4 h-4 relative z-10 drop-shadow-sm" />
                         <span className="text-xs font-bold relative z-10">{cat.name}</span>
                       </motion.div>
                     ) : (
                       <>
-                        <div className="bg-[#F8F9FA] text-gray-500 p-2.5 rounded-xl w-12 h-12 flex items-center justify-center border border-gray-100 shadow-sm transition-colors hover:bg-gray-100">
+                        <div className="bg-white text-gray-500 p-2.5 rounded-xl w-12 h-12 flex items-center justify-center border border-white shadow-[0_2px_10px_rgba(0,0,0,0.03)] transition-all hover:shadow-[0_4px_15px_rgba(163,136,225,0.15)] hover:text-[#A388E1] hover:-translate-y-0.5">
                           <IconComponent className="w-5 h-5" />
                         </div>
                         <span className="text-[11px] text-gray-500 font-medium">{cat.name}</span>
@@ -448,13 +488,14 @@ const HomePage = ({ user, setUser }) => {
                 className="flex flex-col items-center gap-1.5 min-w-max cursor-pointer"
               >
                 {activeCategory === 'Other' ? (
-                  <motion.div layoutId="activeCategory" className="bg-[#EBE5F7] text-[#A388E1] px-3 py-2 rounded-full flex items-center gap-1.5 border border-[#A388E1]/20 shadow-sm relative">
-                    <Plus className="w-4 h-4 relative z-10" />
+                  <motion.div layoutId="activeCategory" className="bg-gradient-to-r from-[#EBE5F7] to-[#e1d6f5] text-[#805ad5] px-3 py-2 rounded-full flex items-center gap-1.5 border border-white shadow-[0_4px_12px_rgba(163,136,225,0.25),inset_0_1px_1px_rgba(255,255,255,1)] relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent skew-x-[-20deg] animate-[glare_3s_infinite_ease-in-out]"></div>
+                    <Plus className="w-4 h-4 relative z-10 drop-shadow-sm" />
                     <span className="text-xs font-bold relative z-10">Other</span>
                   </motion.div>
                 ) : (
                   <>
-                    <div className="bg-[#F8F9FA] text-gray-500 p-2.5 rounded-xl w-12 h-12 flex items-center justify-center border border-gray-100 shadow-sm transition-colors hover:bg-gray-100">
+                    <div className="bg-white text-gray-500 p-2.5 rounded-xl w-12 h-12 flex items-center justify-center border border-white shadow-[0_2px_10px_rgba(0,0,0,0.03)] transition-all hover:shadow-[0_4px_15px_rgba(163,136,225,0.15)] hover:text-[#A388E1] hover:-translate-y-0.5">
                       <Plus className="w-5 h-5" />
                     </div>
                     <span className="text-[11px] text-gray-500 font-medium">Other</span>
@@ -467,15 +508,15 @@ const HomePage = ({ user, setUser }) => {
       </motion.div>
 
       {/* --- Items Listing Section --- */}
-      <motion.div variants={itemVariants} className="px-4 pt-1.5 pb-0">
+      <motion.div variants={itemVariants} className="px-4 pt-1.5 pb-0 relative z-10">
         <div className="flex justify-between items-center mb-2">
-          <h2 className="text-lg font-bold text-gray-900">
+          <h2 className="text-lg font-bold text-gray-900 drop-shadow-sm">
             {activeCategory === 'All' ? 'Popular Items' : `Top in ${activeCategory}`}
           </h2>
           <Link 
             to={activeCategory === 'All' ? '/items' : `/items?category=${activeCategory}`} 
           >
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="text-xs font-semibold text-[#A388E1] bg-[#F8F6FF] px-2.5 py-1 rounded-full flex items-center gap-0.5 hover:bg-[#EBE5F7] transition-colors">
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="text-xs font-semibold text-[#A388E1] bg-white border border-[#EBE5F7] px-3 py-1.5 rounded-full flex items-center gap-0.5 shadow-[0_2px_8px_rgba(163,136,225,0.1)] hover:shadow-[0_4px_12px_rgba(163,136,225,0.2)] transition-all">
               See All <ChevronRight className="w-3.5 h-3.5" />
             </motion.div>
           </Link>
@@ -484,22 +525,24 @@ const HomePage = ({ user, setUser }) => {
         {loadingItems ? (
           <div className="flex overflow-x-auto hide-scrollbar gap-3 pb-2 pt-1">
             {[1, 2, 3, 4].map((i) => (
-              <ProductCard key={i} isLoading={true} className="min-w-[140px] w-[140px] flex-shrink-0" />
+              <ProductCard key={i} isLoading={true} className="min-w-[140px] w-[140px] flex-shrink-0 shadow-sm" />
             ))}
           </div>
         ) : items.length === 0 ? (
-          <div className="text-center text-gray-400 py-6 bg-gray-50 rounded-2xl border border-gray-100 flex flex-col items-center justify-center">
-            <Package className="w-6 h-6 text-gray-300 mb-1.5" />
-            <span className="text-xs">No items right now.</span>
+          <div className="text-center text-gray-400 py-8 bg-white/60 backdrop-blur-md rounded-2xl border border-white shadow-[0_4px_15px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center">
+            <Package className="w-8 h-8 text-gray-300 mb-2" />
+            <span className="text-xs font-medium">No items right now.</span>
           </div>
         ) : (
           <motion.div 
-            initial="hidden" animate="show" variants={containerVariants}
-            className="flex overflow-x-auto hide-scrollbar gap-3 pb-3 pt-1 snap-x"
+            initial={shouldAnimate ? "hidden" : false} 
+            animate="show" 
+            variants={containerVariants}
+            className="flex overflow-x-auto hide-scrollbar gap-3 pb-4 pt-1 snap-x"
           >
             {items.map((item) => (
               <motion.div variants={itemVariants} key={item._id} className="min-w-[140px] w-[140px] flex-shrink-0 snap-start">
-                <ProductCard item={item} />
+                <ProductCard item={item} className="hover:shadow-[0_8px_25px_rgba(163,136,225,0.15)] transition-shadow duration-300" />
               </motion.div>
             ))}
           </motion.div>
@@ -507,29 +550,35 @@ const HomePage = ({ user, setUser }) => {
       </motion.div>
 
       {/* --- Call to Action Section --- */}
-      <motion.div variants={itemVariants} className="px-4 pt-1.5 pb-1">
+      <motion.div variants={itemVariants} className="px-4 pt-1 pb-1 relative z-10">
         <motion.div 
           whileHover={{ y: -2 }}
-          className="bg-gradient-to-r from-[#EBE5F7] to-[#F8F6FF] border border-[#EBE5F7]/80 rounded-2xl p-4 relative overflow-hidden shadow-sm"
+          className="bg-gradient-to-r from-[#EBE5F7] via-[#F8F6FF] to-white border border-white shadow-[0_8px_20px_rgba(163,136,225,0.1),inset_0_1px_2px_rgba(255,255,255,1)] rounded-2xl p-4 relative overflow-hidden group"
         >
+          {/* Subtle CTA Glow */}
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#A388E1]/5 to-transparent skew-x-[-20deg] animate-[glare_5s_infinite_ease-in-out] pointer-events-none"></div>
+
           <div className="w-3/4 relative z-10">
-            <h3 className="text-base font-bold text-[#6B46C1] mb-1">Got unused items?</h3>
-            <p className="text-[11px] text-gray-600 mb-3 leading-snug">
+            <h3 className="text-base font-extrabold text-[#6B46C1] mb-1 drop-shadow-sm">Got unused items?</h3>
+            <p className="text-[11px] text-gray-600 mb-3 leading-snug font-medium">
               List items you no longer need and earn instant credits to exchange for products you want!
             </p>
             <Link to={user ? "/add-item" : "/login"}>
               <motion.div 
-                whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                className="bg-gradient-to-r from-[#FFE28A] to-[#FFD75E] text-yellow-900 px-3 py-1.5 rounded-lg text-xs font-bold inline-flex items-center gap-1 shadow-sm hover:shadow-md transition-shadow"
+                whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.95 }}
+                className="bg-gradient-to-r from-[#FFE28A] via-[#FFF0B3] to-[#FFD75E] text-yellow-900 px-3.5 py-2 rounded-xl text-xs font-bold inline-flex items-center gap-1 shadow-[0_4px_12px_rgba(250,204,21,0.25),inset_0_1px_1px_rgba(255,255,255,0.8)] hover:shadow-[0_6px_15px_rgba(250,204,21,0.4)] transition-all overflow-hidden relative"
               >
-                <Plus className="w-3.5 h-3.5" /> List an Item
+                {/* Button Gloss Sweep */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent skew-x-[-20deg] animate-[glare_2.5s_infinite_ease-in-out]"></div>
+                <Plus className="w-4 h-4 relative z-10 drop-shadow-sm" /> 
+                <span className="relative z-10 drop-shadow-sm">List an Item</span>
               </motion.div>
             </Link>
           </div>
           <motion.div 
-            animate={{ y: [0, -10, 0] }} 
-            transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
-            className="absolute -right-4 -bottom-4 w-28 h-28 opacity-20 pointer-events-none"
+            animate={{ y: [0, -8, 0], rotate: [0, 5, 0] }} 
+            transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}
+            className="absolute -right-4 -bottom-4 w-28 h-28 opacity-20 pointer-events-none drop-shadow-xl"
           >
             <Package className="w-full h-full text-[#A388E1]" />
           </motion.div>
@@ -537,21 +586,21 @@ const HomePage = ({ user, setUser }) => {
       </motion.div>
 
       {/* --- Social Proof Footer --- */}
-      <motion.div variants={itemVariants} className="px-4 pb-4 pt-2">
-        <div className="flex items-center gap-2.5 px-1">
+      <motion.div variants={itemVariants} className="px-4 pb-6 pt-3 relative z-10">
+        <div className="flex items-center gap-3 px-1 bg-white/40 backdrop-blur-sm border border-white/60 rounded-2xl p-2 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
           <motion.div 
             animate={{ scale: [1, 1.1, 1] }} 
             transition={{ repeat: Infinity, duration: 2 }}
-            className="flex-shrink-0"
+            className="flex-shrink-0 bg-white p-2 rounded-full shadow-[0_2px_8px_rgba(163,136,225,0.2)]"
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
               <path d="M3 17L9 11L13 15L21 7" stroke="#A388E1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
               <path d="M15 7H21V13" stroke="#A388E1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </motion.div>
 
           <div className="flex flex-col gap-1">
-            <p className="text-[11px] font-bold text-gray-800 leading-tight">
+            <p className="text-[11px] font-extrabold text-gray-800 leading-tight">
               Start earning by selling what you don't use anymore!
             </p>
 
@@ -559,11 +608,11 @@ const HomePage = ({ user, setUser }) => {
               <div className="flex -space-x-1.5 hover:space-x-0 transition-all duration-300 cursor-pointer">
                 {DUMMY_AVATARS.map((src, i) => (
                   <motion.img
-                    whileHover={{ y: -5 }}
+                    whileHover={{ y: -5, scale: 1.1, zIndex: 20 }}
                     key={i}
                     src={src}
                     alt={`user-${i}`}
-                    className="w-5 h-5 rounded-full border-2 border-white object-cover shadow-sm relative z-0 hover:z-10"
+                    className="w-5 h-5 rounded-full border-2 border-white object-cover shadow-[0_2px_5px_rgba(0,0,0,0.1)] relative z-0"
                     onError={(e) => {
                       e.target.onerror = null;
                       e.target.src = `https://ui-avatars.com/api/?name=U${i}&background=A388E1&color=fff&size=40`;
@@ -571,7 +620,7 @@ const HomePage = ({ user, setUser }) => {
                   />
                 ))}
               </div>
-              <p className="text-[9px] text-gray-500 font-medium">
+              <p className="text-[9px] text-gray-500 font-bold">
                 people are already trading
               </p>
             </div>
@@ -596,7 +645,7 @@ const HomePage = ({ user, setUser }) => {
                 color: '#FDE047',
               };
               return (
-                <div key={i} className="coin-piece flex items-center justify-center" style={style}>
+                <div key={i} className="coin-piece flex items-center justify-center drop-shadow-[0_0_10px_rgba(253,224,71,0.8)]" style={style}>
                   <Sparkles size={size} />
                 </div>
               );
@@ -611,13 +660,14 @@ const HomePage = ({ user, setUser }) => {
               height: `${size}px`,
               borderRadius: '50%',
               border: '1px solid #D97706',
-              boxShadow: 'inset 0 0 4px rgba(217, 119, 6, 0.6), 0 2px 4px rgba(0,0,0,0.2)',
+              boxShadow: 'inset 0 0 6px rgba(217, 119, 6, 0.8), 0 4px 8px rgba(0,0,0,0.3)',
             };
             return <div key={i} className="coin-piece" style={style} />;
           })}
         </div>
       )}
 
+      {/* Embedded Styles for Shimmers and Animations */}
       <style>{`
         .hide-scrollbar::-webkit-scrollbar {
           display: none;
@@ -631,6 +681,12 @@ const HomePage = ({ user, setUser }) => {
           100% {
             transform: translateX(100%);
           }
+        }
+
+        /* Advanced Glossy Glare Sweep Animation */
+        @keyframes glare {
+          0%, 20% { transform: translateX(-150%) skewX(-20deg); }
+          80%, 100% { transform: translateX(250%) skewX(-20deg); }
         }
         
         @keyframes coinFall {

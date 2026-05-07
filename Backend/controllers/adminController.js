@@ -418,8 +418,15 @@ const getAllOrders = async (req, res) => {
     const limit = parseInt(req.query.limit, 10) || 10;
     const skip = (page - 1) * limit;
     const searchQuery = req.query.search || '';
-
+    
+    // -> MODIFICATION START
+    const paymentStatusFilter = req.query.paymentStatus || '';
     let filter = {};
+
+    if (paymentStatusFilter) {
+      filter.paymentStatus = paymentStatusFilter;
+    }
+    // -> MODIFICATION END
 
     if (searchQuery) {
       const searchRegex = new RegExp(searchQuery, 'i');
@@ -518,12 +525,10 @@ const updateAdminOrderStatus = async (req, res) => {
   }
 };
 
-// ======================================================
-// OPTIMIZED GET DASHBOARD STATS (Parallel queries via Promise.all)
-// ======================================================
+
 const getDashboardStats = async (req, res) => {
   try {
-    // 1. Fire all simple count/aggregate queries concurrently
+
     const [
       totalUsers,
       verifiedUsers, 
@@ -671,6 +676,53 @@ const getDashboardStats = async (req, res) => {
   }
 };
 
+// -> MODIFICATION START
+const resolveFailedRefund = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { adminNote, transactionId } = req.body; 
+
+    const order = await Order.findById(orderId).populate('buyer');
+    
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    if (order.paymentStatus !== 'refund_failed') {
+      return res.status(400).json({ success: false, message: 'Order payment status is not refund_failed' });
+    }
+
+    order.paymentStatus = 'refunded'; 
+    await order.save();
+
+    await Transaction.create({
+      user: order.buyer._id,
+      amount: order.shippingCost,
+      razorpay_payment_id: transactionId || 'manual_upi_transfer',
+      status: 'success',
+      transactionType: 'shipping_refund'
+    });
+
+    await Notification.create({
+      user: order.buyer._id,
+      type: 'CREDIT_ADDED',
+      title: 'Refund Resolved Manually ✅',
+      message: `Your shipping refund of ₹${order.shippingCost} has been processed manually by our support team. Note: ${adminNote || 'Processed via UPI/Bank transfer'}`,
+      metadata: { amount: order.shippingCost, reason: 'manual_refund_resolved', referenceId: order._id }
+    });
+
+    res.status(200).json({ 
+      success: true, 
+      message: 'Failed refund marked as resolved manually', 
+      data: order 
+    });
+  } catch (error) {
+    console.error('Error resolving failed refund:', error);
+    res.status(500).json({ success: false, message: 'Server Error resolving refund' });
+  }
+};
+
+
 module.exports = {
   getPendingItems,
   updateItemStatus,
@@ -684,5 +736,6 @@ module.exports = {
   getAllTransactions,
   getAllOrders,              
   updateAdminOrderStatus,
-  getDashboardStats
+  getDashboardStats,
+  resolveFailedRefund 
 };

@@ -1,21 +1,22 @@
-import React, { useEffect, useRef } from 'react'; 
-import { Link, useNavigate } from 'react-router-dom'; 
+import React, { useEffect, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  ArrowLeft, 
-  Bell, 
-  Zap, 
-  RefreshCw, 
-  Coins, 
+import {
+  ArrowLeft,
+  Bell,
+  Zap,
+  RefreshCw,
+  Coins,
   Sparkles,
   Package,
   ShoppingBag,
   Info,
-  Loader2 
+  Loader2,
+  AlertCircle // <-- Pehle se imported hai, bas use karna hai
 } from 'lucide-react';
 import axios from 'axios';
 import { formatDistanceToNow } from 'date-fns';
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'; 
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 const API_URL = import.meta.env.VITE_BACKEND_API + '/api';
 
@@ -42,14 +43,14 @@ const NotificationsShimmer = () => {
 
 const NotificationsPage = () => {
   const queryClient = useQueryClient();
-  const observerTarget = useRef(null); 
-  const navigate = useNavigate(); 
+  const observerTarget = useRef(null);
+  const navigate = useNavigate();
 
   // <-- 1. Fetching notifications with useInfiniteQuery -->
-  const { 
-    data, 
-    isLoading, 
-    isError, 
+  const {
+    data,
+    isLoading,
+    isError,
     error,
     fetchNextPage,
     hasNextPage,
@@ -59,13 +60,13 @@ const NotificationsPage = () => {
     initialPageParam: 1,
     queryFn: async ({ pageParam = 1 }) => {
       const response = await axios.get(`${API_URL}/notifications?page=${pageParam}&limit=15`, { withCredentials: true });
-      return response.data; 
+      return response.data;
     },
     getNextPageParam: (lastPage) => {
       if (lastPage.currentPage < lastPage.totalPages) {
         return lastPage.currentPage + 1;
       }
-      return undefined; 
+      return undefined;
     },
     staleTime: 1000 * 60,
   });
@@ -81,7 +82,7 @@ const NotificationsPage = () => {
           fetchNextPage();
         }
       },
-      { threshold: 0.1 } 
+      { threshold: 0.1 }
     );
 
     if (observerTarget.current) {
@@ -181,14 +182,15 @@ const NotificationsPage = () => {
         break;
 
       case 'ORDER_UPDATE':
-        // -> CHANGES START HERE: Now pointing directly to the order details page
+      // --> CHANGE START: Backend system alerts ke liye logic
+      case 'SYSTEM_ALERT':
         if (refId) {
           navigate(`/order/${refId}`); 
         } else {
           navigate('/orders');
         }
-        // -> CHANGES END HERE
         break;
+      // --> CHANGE END
 
       case 'AURA_UPDATE':
         navigate('/aura');
@@ -216,6 +218,10 @@ const NotificationsPage = () => {
         return { icon: ShoppingBag, color: 'text-purple-500', bg: 'bg-purple-500/10' };
       case 'AURA_UPDATE': 
         return { icon: Sparkles, color: 'text-amber-500', bg: 'bg-amber-500/10' };
+      // --> CHANGE START: Red alert icon SYSTEM_ALERT ke liye
+      case 'SYSTEM_ALERT':
+        return { icon: AlertCircle, color: 'text-red-600', bg: 'bg-red-500/10' };
+      // --> CHANGE END
       case 'SYSTEM':
         return { icon: Package, color: 'text-yellow-500', bg: 'bg-yellow-500/10' };
       default:
