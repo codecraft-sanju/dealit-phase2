@@ -522,7 +522,9 @@ const handleShiprocketWebhook = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Unauthorized access' });
     }
 
-    const { awb, current_status } = req.body;
+    // --> CHANGE START: Extract 'etd' (Estimated Time of Delivery) from webhook
+    const { awb, current_status, etd } = req.body;
+    // --> CHANGE END
     
     // Test ping from Shiprocket
     if (!awb || !current_status) {
@@ -531,7 +533,7 @@ const handleShiprocketWebhook = async (req, res) => {
 
     const order = await Order.findOne({ 'trackingDetails.awb_code': awb }).populate('item');
     
-    // Test fake AWB ping from Shiprocket
+   
     if (!order) {
       console.log(`Shiprocket test ping or invalid AWB received: ${awb}`);
       return res.status(200).json({ success: true, message: 'Webhook received but order not found.' });
@@ -539,6 +541,15 @@ const handleShiprocketWebhook = async (req, res) => {
 
     let setting = await CreditSetting.findOne();
     const auraRewardAmount = setting && setting.auraReward !== undefined ? setting.auraReward : 50;
+
+  
+    if (etd && order.trackingDetails) {
+     
+      if (etd.trim() !== '') {
+        order.trackingDetails.expected_date = etd;
+      }
+    }
+  
 
     if (current_status === 'DELIVERED' && order.orderStatus !== 'delivered') {
       order.orderStatus = 'delivered';
@@ -578,7 +589,11 @@ const handleShiprocketWebhook = async (req, res) => {
     } 
     else if ((current_status === 'SHIPPED' || current_status === 'IN TRANSIT') && order.orderStatus === 'processing') {
       order.orderStatus = 'shipped';
+      await order.save(); 
+    } else {
+     
       await order.save();
+     
     }
 
     res.status(200).json({ success: true, message: 'Webhook processed successfully' });

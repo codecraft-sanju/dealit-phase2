@@ -58,14 +58,15 @@ const orderSchema = new mongoose.Schema({
     shiprocket_order_id: { type: String },
     shiprocket_shipment_id: { type: String },
     awb_code: { type: String }, // Tracking Number
-    courier_company: { type: String } // e.g. Delhivery, Xpressbees
+    courier_company: { type: String } ,
+    expected_date: { type: String, default: '' }
   },
 
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now }
 });
 
-// -> MODIFICATION START: Added Indexes for 10x Performance
+
 
 // 1. User App: "My Orders" API ke liye (Instantly load buyer's orders sorted by date)
 orderSchema.index({ buyer: 1, created_at: -1 });
