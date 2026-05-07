@@ -346,8 +346,10 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                       </div>
                       <div className="text-left">
                         <h3 className="font-bold text-gray-900 text-[14px]">Build your Aura!</h3>
-                        <p className="text-[11px] text-gray-500 font-medium mt-0.5 leading-snug">
-                          Complete trades, get good reviews<br />& be active to increase your Aura.
+                        
+                        {/* <-- CHANGED: Removed the <br /> tag and added pr-2 so the text wraps naturally without breaking on narrower screens like OnePlus --> */}
+                        <p className="text-[11px] text-gray-500 font-medium mt-0.5 leading-snug pr-2">
+                          Complete trades, get good reviews & be active to increase your Aura.
                         </p>
                       </div>
                     </div>
@@ -405,7 +407,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                             { icon: Mail, label: 'Email Address', value: profileData?.email },
                             { icon: Phone, label: 'Phone Number', value: profileData?.phone },
                             { icon: MapPin, label: 'Location', value: profileData?.city, capitalize: true },
-                            // <-- CHANGED: Displaying new address format nicely
                             { 
                               icon: Truck, 
                               label: 'Pickup Address', 
@@ -529,7 +530,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                       <span className="text-[10px] bg-yellow-100 text-yellow-700 px-2 py-1 rounded font-bold">Needed for Sellers</span>
                     </div>
                     
-                    {/* <-- CHANGED: Splitted single textarea into three dedicated inputs --> */}
                     <div className="space-y-3">
                       <div className="relative">
                         <Home className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />

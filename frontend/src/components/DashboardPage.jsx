@@ -152,35 +152,37 @@ const DashboardPage = ({ user, setUser }) => {
             {myItems.map(item => (
               <div key={item._id} className="bg-[#F8F6FF] rounded-3xl p-4 relative flex flex-col hover:shadow-md transition-shadow border border-gray-50 h-full">
                 
-                <div className="absolute top-4 left-4 z-10 flex gap-2">
-                  {/* --- NAYA CHANGE: Conditionally render the Edit button --- */}
-                  {item.status !== 'swapped' && item.status !== 'reserved' && (
-                    <Link to={`/edit-item/${item._id}`} className="bg-white hover:bg-gray-50 text-gray-600 p-1.5 rounded-full shadow-sm border border-gray-100 transition">
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </Link>
-                  )}
-                  <button 
-                    onClick={() => handleDelete(item._id)} 
-                    disabled={deleteItemMutation.isPending && deleteItemMutation.variables === item._id}
-                    className="bg-white hover:bg-red-50 text-gray-600 hover:text-red-500 p-1.5 rounded-full shadow-sm border border-gray-100 transition disabled:opacity-50"
-                  >
-                    {deleteItemMutation.isPending && deleteItemMutation.variables === item._id ? (
-                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                       <Trash2 className="w-3.5 h-3.5" />
+                <div className="absolute top-3 left-0 w-full px-3 flex justify-between items-start z-10 pointer-events-none">
+                  <div className="flex gap-1.5 pointer-events-auto">
+                    {/* --- NAYA CHANGE: Conditionally render the Edit button --- */}
+                    {item.status !== 'swapped' && item.status !== 'reserved' && (
+                      <Link to={`/edit-item/${item._id}`} className="bg-white hover:bg-gray-50 text-gray-600 p-1.5 rounded-full shadow-sm border border-gray-100 transition">
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </Link>
                     )}
-                  </button>
-                </div>
+                    <button 
+                      onClick={() => handleDelete(item._id)} 
+                      disabled={deleteItemMutation.isPending && deleteItemMutation.variables === item._id}
+                      className="bg-white hover:bg-red-50 text-gray-600 hover:text-red-500 p-1.5 rounded-full shadow-sm border border-gray-100 transition disabled:opacity-50"
+                    >
+                      {deleteItemMutation.isPending && deleteItemMutation.variables === item._id ? (
+                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                         <Trash2 className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  </div>
 
-                <div className="absolute top-4 right-4 z-10">
-                  <span className={`px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider shadow-sm ${
-                    item.status === 'active' ? 'bg-[#D1FAE5] text-[#065F46] border border-[#A7F3D0]' :
-                    item.status === 'pending' ? 'bg-[#FEF3C7] text-[#92400E] border border-[#FDE68A]' :
-                    item.status === 'swapped' ? 'bg-[#DBEAFE] text-[#1E40AF] border border-[#BFDBFE]' :
-                    'bg-[#FEE2E2] text-[#991B1B] border border-[#FECACA]'
-                  }`}>
-                    {item.status}
-                  </span>
+                  <div className="pointer-events-auto shrink-0 ml-1">
+                    <span className={`px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider shadow-sm ${
+                      item.status === 'active' ? 'bg-[#D1FAE5] text-[#065F46] border border-[#A7F3D0]' :
+                      item.status === 'pending' ? 'bg-[#FEF3C7] text-[#92400E] border border-[#FDE68A]' :
+                      item.status === 'swapped' ? 'bg-[#DBEAFE] text-[#1E40AF] border border-[#BFDBFE]' :
+                      'bg-[#FEE2E2] text-[#991B1B] border border-[#FECACA]'
+                    }`}>
+                      {item.status}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="h-32 w-full flex items-center justify-center mb-4 mt-8 rounded-xl overflow-hidden bg-white/40">
