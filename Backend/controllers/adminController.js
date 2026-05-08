@@ -7,6 +7,9 @@ const Order = require('../models/Order');
 const BarterRequest = require('../models/BarterRequest');
 const Notification = require('../models/Notification');
 
+// IMPORT PAYMENT CONTROLLER FOR RAZORPAY RETRY
+const { refundRazorpayPayment } = require('./paymentController');
+
 const getPendingItems = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
@@ -111,22 +114,28 @@ const getAllTransactions = async (req, res) => {
       }
     ]);
 
-    let totalRevenue = 0;
+    let walletIncome = 0;
+    let shippingIncome = 0;
     let totalRefunds = 0;
 
     incomeAgg.forEach(item => {
-      if (item._id === 'wallet_recharge' || item._id === 'shipping_fee') {
-        totalRevenue += item.total;
+      if (item._id === 'wallet_recharge') {
+        walletIncome += item.total;
+      } else if (item._id === 'shipping_fee') {
+        shippingIncome += item.total;
       } else if (item._id === 'shipping_refund') {
         totalRefunds += item.total;
       }
     });
 
+    const totalRevenue = walletIncome + shippingIncome;
     const netIncome = totalRevenue - totalRefunds;
 
     res.status(200).json({ 
       success: true, 
       financials: {
+        walletIncome: walletIncome,
+        shippingIncome: shippingIncome,
         totalRevenue: totalRevenue,
         totalRefunds: totalRefunds,
         netIncome: netIncome
@@ -459,14 +468,12 @@ const getAllOrders = async (req, res) => {
     const skip = (page - 1) * limit;
     const searchQuery = req.query.search || '';
     
-    // -> MODIFICATION START
     const paymentStatusFilter = req.query.paymentStatus || '';
     let filter = {};
 
     if (paymentStatusFilter) {
       filter.paymentStatus = paymentStatusFilter;
     }
-    // -> MODIFICATION END
 
     if (searchQuery) {
       const searchRegex = new RegExp(searchQuery, 'i');
@@ -595,7 +602,6 @@ const getDashboardStats = async (req, res) => {
       Order.countDocuments(),
       Order.countDocuments({ orderStatus: 'delivered' }),
       Order.countDocuments({ orderStatus: 'pending' }),
-      // Yaha filter lagaya hai taaki calculation mein sirf Rupees aayein
       Transaction.find({ status: 'success', transactionType: { $in: ['wallet_recharge', 'shipping_fee', 'shipping_refund'] } }),
       User.find().select('full_name email profilePic created_at').sort({ created_at: -1 }).limit(5),
       Item.aggregate([
@@ -605,7 +611,6 @@ const getDashboardStats = async (req, res) => {
       ]),
       BarterRequest.find({ status: 'ACCEPTED' }).sort({ updated_at: -1 }).limit(3).populate('item'),
       Item.find().sort({ created_at: -1 }).limit(3),
-      // Yaha filter lagaya hai taaki recent activity mein coin refunds na dikhein
       Transaction.find({ status: 'success', transactionType: { $in: ['wallet_recharge', 'shipping_fee', 'shipping_refund'] } }).sort({ created_at: -1 }).limit(3),
       Order.find({ orderStatus: 'delivered' }).sort({ updated_at: -1 }).limit(3).populate('item')
     ]);
@@ -623,17 +628,21 @@ const getDashboardStats = async (req, res) => {
       created_at: { $gte: startOfMonth, $lte: endOfMonth }
     });
 
-    let totalRevenue = 0;
+    let walletIncome = 0;
+    let shippingIncome = 0;
     let totalRefunds = 0;
 
     successfulTxns.forEach(txn => {
-      if (txn.transactionType === 'wallet_recharge' || txn.transactionType === 'shipping_fee') {
-        totalRevenue += txn.amount;
+      if (txn.transactionType === 'wallet_recharge') {
+        walletIncome += txn.amount;
+      } else if (txn.transactionType === 'shipping_fee') {
+        shippingIncome += txn.amount;
       } else if (txn.transactionType === 'shipping_refund') {
         totalRefunds += txn.amount;
       }
     });
 
+    const totalRevenue = walletIncome + shippingIncome;
     const netIncome = totalRevenue - totalRefunds;
     
     const filteredCategories = categoryDataRaw.filter(c => c.name);
@@ -703,7 +712,6 @@ const getDashboardStats = async (req, res) => {
       bg: 'bg-blue-400/10 border-blue-400/20'
     }));
 
-    // Modified to handle Real Money UI text and colors properly
     recentTxnsList.forEach(txn => activities.push({
       id: `txn-${txn._id}`,
       action: txn.transactionType === 'shipping_refund' ? 'Bank Refund Processed' : (txn.transactionType === 'wallet_recharge' ? 'Credits Purchased' : 'Shipping Paid'),
@@ -732,6 +740,8 @@ const getDashboardStats = async (req, res) => {
         items: { total: totalItems, active: activeItems, pending: pendingItems, swapped: swappedItems },
         orders: { total: totalOrders, delivered: deliveredOrders, pending: pendingOrders, currentMonth: currentMonthOrders },
         financials: {
+          walletIncome,
+          shippingIncome,
           totalRevenue,
           totalRefunds,
           netIncome
@@ -794,6 +804,69 @@ const resolveFailedRefund = async (req, res) => {
   }
 };
 
+// NAYA FUNCTION: Auto Retry Refund using Razorpay
+const retryFailedRefund = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const order = await Order.findById(orderId).populate('buyer');
+    
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    if (order.paymentStatus !== 'refund_failed') {
+      return res.status(400).json({ success: false, message: 'Only failed refunds can be retried' });
+    }
+
+    if (order.shippingCost <= 0 || !order.razorpay_payment_id) {
+        return res.status(400).json({ success: false, message: 'No valid Razorpay payment found to refund' });
+    }
+
+    // Call Razorpay API again
+    const refundRes = await refundRazorpayPayment(order.razorpay_payment_id, order.shippingCost);
+    
+    if (!refundRes.success) {
+        return res.status(500).json({ 
+          success: false, 
+          message: 'Razorpay refund failed again. Check Razorpay dashboard.', 
+          error: refundRes.error 
+        });
+    }
+
+    // Since bank takes time, move to refund_processing
+    order.paymentStatus = 'refund_processing';
+    await order.save();
+
+    // Log the transaction
+    await Transaction.create({
+      user: order.buyer._id,
+      amount: order.shippingCost,
+      razorpay_order_id: order.razorpay_order_id,
+      razorpay_payment_id: order.razorpay_payment_id,
+      status: 'success',
+      transactionType: 'shipping_refund' 
+    });
+
+    await Notification.create({
+      user: order.buyer._id,
+      type: 'SYSTEM_ALERT',
+      title: 'Refund Retried Successfully 🔄',
+      message: `Your shipping refund of ₹${order.shippingCost} has been re-initiated and is processing.`,
+      metadata: { amount: order.shippingCost, reason: 'retry_refund_success', referenceId: order._id }
+    });
+
+    res.status(200).json({ 
+      success: true, 
+      message: 'Refund re-initiated successfully via Razorpay', 
+      data: order 
+    });
+
+  } catch (error) {
+    console.error('Error retrying refund:', error);
+    res.status(500).json({ success: false, message: 'Server Error retrying refund' });
+  }
+};
+
 
 module.exports = {
   getPendingItems,
@@ -809,5 +882,6 @@ module.exports = {
   getAllOrders,              
   updateAdminOrderStatus,
   getDashboardStats,
-  resolveFailedRefund 
+  resolveFailedRefund,
+  retryFailedRefund 
 };

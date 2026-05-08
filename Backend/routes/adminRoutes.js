@@ -13,8 +13,10 @@ const {
   getPublicCreditSettings,
   getAllTransactions,
   getAllOrders,          
-  updateAdminOrderStatus    ,
-  getDashboardStats
+  updateAdminOrderStatus,
+  getDashboardStats,
+  resolveFailedRefund,
+  retryFailedRefund 
 } = require('../controllers/adminController');
 
 const {
@@ -25,7 +27,6 @@ const {
 } = require('../controllers/offerController');
 
 const { protect, admin } = require('../middleware/authMiddleware');
-
 
 router.route('/public-settings')
   .get(getPublicCreditSettings);
@@ -69,6 +70,12 @@ router.route('/orders')
 router.route('/orders/:id')
   .put(protect, admin, updateAdminOrderStatus);
 
- router.get('/dashboard-stats', protect, admin, getDashboardStats);
+
+router.put('/orders/:orderId/resolve-refund', protect, admin, resolveFailedRefund);
+
+
+router.put('/orders/:orderId/retry-refund', protect, admin, retryFailedRefund);
+
+router.get('/dashboard-stats', protect, admin, getDashboardStats);
 
 module.exports = router;

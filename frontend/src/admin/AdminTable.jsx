@@ -2,7 +2,7 @@ import React from 'react';
 import {
   User, Shield, Check, X, Package, Eye, CheckCircle,
   Edit, Trash2, ShieldAlert, ShieldCheck, ChevronLeft, ChevronRight,
-  RefreshCcw, Clock, AlertCircle // -> ADDED: Clock and AlertCircle for refund UI
+  RefreshCcw, Clock, AlertCircle // Added for refund UI
 } from 'lucide-react';
 
 const AdminTable = ({
@@ -23,6 +23,7 @@ const AdminTable = ({
   handleDeleteUser,
   handleEditOrderClick,
   handleResolveRefundClick, 
+  handleRetryRefundClick, // NAYA PROP ADDED
   currentPage,
   totalPages,
   setCurrentPage
@@ -185,7 +186,6 @@ const AdminTable = ({
                        <p className="text-[8px] md:text-[10px] text-gray-500 uppercase mt-0.5 font-bold tracking-wider">{row.trackingDetails?.courier_company || 'Pending'}</p>
                     </td>
                     <td className="px-4 md:px-6 py-3 md:py-4">
-                      {/* -> MODIFICATION START: Clear Refund Status Visualization */}
                       <div className="flex flex-col gap-1.5">
                         <span className={`px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-[8px] md:text-[10px] font-black uppercase tracking-widest flex items-center gap-1 md:gap-1.5 w-fit shadow-sm border ${
                           row.orderStatus === 'delivered' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
@@ -213,7 +213,6 @@ const AdminTable = ({
                           </span>
                         )}
                       </div>
-                      {/* -> MODIFICATION END */}
                     </td>
                   </>
                 ) : (
@@ -308,13 +307,25 @@ const AdminTable = ({
                   ) : activeTab === 'orders' ? (
                     <div className="flex justify-end gap-1 md:gap-1.5">
                       {row.paymentStatus === 'refund_failed' && (
-                        <button 
-                          onClick={() => handleResolveRefundClick(row)} 
-                          className="bg-red-500/10 hover:bg-red-500 hover:text-white text-red-400 border border-red-500/30 transition-all p-1.5 md:px-3 md:py-2 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold flex items-center gap-1.5 hover:shadow-[0_0_15px_rgba(239,68,68,0.4)]"
-                          title="Resolve Failed Refund"
-                        >
-                          <RefreshCcw className="w-3.5 h-3.5 md:w-4 md:h-4" /> <span className="hidden sm:inline">Resolve</span>
-                        </button>
+                        <>
+                          {/* -> MODIFICATION START: NAYA RETRY REFUND BUTTON <- */}
+                          <button 
+                            onClick={() => handleRetryRefundClick(row._id)} 
+                            className="bg-blue-500/10 hover:bg-blue-500 hover:text-white text-blue-400 border border-blue-500/30 transition-all p-1.5 md:px-3 md:py-2 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold flex items-center gap-1.5 hover:shadow-[0_0_15px_rgba(59,130,246,0.4)]"
+                            title="Auto Retry via Razorpay"
+                          >
+                            <RefreshCcw className="w-3.5 h-3.5 md:w-4 md:h-4" /> <span className="hidden sm:inline">Retry</span>
+                          </button>
+                          {/* -> MODIFICATION END <- */}
+                          
+                          <button 
+                            onClick={() => handleResolveRefundClick(row)} 
+                            className="bg-red-500/10 hover:bg-red-500 hover:text-white text-red-400 border border-red-500/30 transition-all p-1.5 md:px-3 md:py-2 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold flex items-center gap-1.5 hover:shadow-[0_0_15px_rgba(239,68,68,0.4)]"
+                            title="Resolve Failed Refund Manually"
+                          >
+                            <CheckCircle className="w-3.5 h-3.5 md:w-4 md:h-4" /> <span className="hidden sm:inline">Manual</span>
+                          </button>
+                        </>
                       )}
                       <button 
                         onClick={() => handleEditOrderClick(row)} 

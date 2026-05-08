@@ -92,7 +92,7 @@ const AdminPanel = ({ user }) => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const [totalIncome, setTotalIncome] = useState(0);
-  const [financials, setFinancials] = useState({ totalRevenue: 0, totalRefunds: 0, netIncome: 0 });
+  const [financials, setFinancials] = useState({ walletIncome: 0, shippingIncome: 0, totalRevenue: 0, totalRefunds: 0, netIncome: 0 });
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -377,6 +377,20 @@ const AdminPanel = ({ user }) => {
       toast.error('Failed to resolve refund.');
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleRetryRefundClick = async (orderId) => {
+    if (!window.confirm('Are you sure you want to retry the refund automatically via Razorpay?')) return;
+    try {
+      const res = await axios.put(`${API_URL}/admin/orders/${orderId}/retry-refund`, {}, { withCredentials: true });
+      if (res.data.success) {
+        setData(Array.isArray(data) ? data.map(o => o._id === orderId ? res.data.data : o) : data);
+        toast.success('Refund re-initiated successfully! 🔄');
+      }
+    } catch (error) {
+      console.error('Error retrying refund:', error);
+      toast.error(error.response?.data?.message || 'Failed to retry refund.');
     }
   };
 
@@ -689,7 +703,6 @@ const AdminPanel = ({ user }) => {
 
             {activeTab === 'transactions' && !loading && (
               <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden">
-                {/* --- REDESIGNED COMPACT CARDS SIDE-BY-SIDE ON MOBILE --- */}
                 <div className="flex flex-row gap-2 md:gap-4 mb-3 md:mb-4 shrink-0">
                   
                   {/* Compact Card 1: Net Balance (takes up 2/3 width) */}
@@ -706,15 +719,19 @@ const AdminPanel = ({ user }) => {
                       </div>
                     </div>
                     
-                    <div className="flex items-center justify-between gap-2 pt-2 md:pt-3 border-t border-emerald-500/10">
+                    <div className="flex items-start justify-between gap-2 pt-2 md:pt-3 border-t border-emerald-500/10">
                       <div className="flex-1 min-w-0">
                         <p className="text-[7px] md:text-[9px] text-emerald-400/70 font-bold uppercase tracking-wider mb-0.5 truncate">Total In</p>
-                        <p className="text-[10px] sm:text-xs md:text-sm font-bold text-emerald-300 truncate">₹{financials.totalRevenue ? financials.totalRevenue.toLocaleString('en-IN') : '0'}</p>
+                        <p className="text-[10px] sm:text-xs md:text-sm font-bold text-emerald-300 truncate leading-none mb-1">₹{financials.totalRevenue ? financials.totalRevenue.toLocaleString('en-IN') : '0'}</p>
+                        <div className="flex flex-col gap-0.5">
+                          <p className="text-[7px] md:text-[8px] text-gray-400 truncate leading-none"><span className="text-purple-400 font-semibold">Wallet:</span> ₹{financials.walletIncome ? financials.walletIncome.toLocaleString('en-IN') : '0'}</p>
+                          <p className="text-[7px] md:text-[8px] text-gray-400 truncate leading-none"><span className="text-blue-400 font-semibold">Ship:</span> ₹{financials.shippingIncome ? financials.shippingIncome.toLocaleString('en-IN') : '0'}</p>
+                        </div>
                       </div>
-                      <div className="w-px h-4 md:h-6 bg-emerald-500/20 shrink-0"></div>
+                      <div className="w-px h-8 md:h-12 bg-emerald-500/20 shrink-0"></div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[7px] md:text-[9px] text-red-400/70 font-bold uppercase tracking-wider mb-0.5 truncate">Refunds</p>
-                        <p className="text-[10px] sm:text-xs md:text-sm font-bold text-red-300 truncate">₹{financials.totalRefunds ? financials.totalRefunds.toLocaleString('en-IN') : '0'}</p>
+                        <p className="text-[7px] md:text-[9px] text-red-400/70 font-bold uppercase tracking-wider mb-0.5 truncate">Refunds Out</p>
+                        <p className="text-[10px] sm:text-xs md:text-sm font-bold text-red-300 truncate leading-none">₹{financials.totalRefunds ? financials.totalRefunds.toLocaleString('en-IN') : '0'}</p>
                       </div>
                     </div>
                   </div>
@@ -879,6 +896,7 @@ const AdminPanel = ({ user }) => {
                   handleDeleteUser={handleDeleteUser}
                   handleEditOrderClick={handleEditOrderClick} 
                   handleResolveRefundClick={handleResolveRefundClick}
+                  handleRetryRefundClick={handleRetryRefundClick} 
                   currentPage={currentPage}
                   totalPages={totalPages}
                   setCurrentPage={setCurrentPage}

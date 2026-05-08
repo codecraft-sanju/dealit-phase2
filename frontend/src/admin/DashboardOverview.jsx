@@ -94,8 +94,6 @@ const DashboardOverview = ({ data }) => {
   
   const calcPercent = (part, total) => total > 0 ? Math.round((part / total) * 100) : 0;
 
-  // --- CHANGED: Removed the sorting logic from frontend since backend handles it now ---
-
   // --- SHIPROCKET SMART ADVISOR LOGIC ---
   const currentOrders = orders.currentMonth || 0;
   
@@ -161,15 +159,19 @@ const DashboardOverview = ({ data }) => {
             </div>
           </div>
           
-          <div className="flex items-center gap-3 pt-3 border-t border-emerald-500/20 mt-auto">
+          <div className="flex items-start gap-3 pt-3 border-t border-emerald-500/20 mt-auto">
             <div className="flex-1">
               <p className="text-[8px] md:text-[9px] text-emerald-400/70 font-bold uppercase tracking-wider mb-0.5 flex items-center gap-1">
-                <TrendingUp className="w-2.5 h-2.5" /> Gross
+                <TrendingUp className="w-2.5 h-2.5" /> Total In
               </p>
-              <p className="text-xs font-bold text-emerald-300">₹{financials?.totalRevenue ? financials.totalRevenue.toLocaleString('en-IN') : '0'}</p>
+              <p className="text-xs font-bold text-emerald-300 mb-1">₹{financials?.totalRevenue ? financials.totalRevenue.toLocaleString('en-IN') : '0'}</p>
+              <div className="flex flex-col gap-0.5">
+                <p className="text-[8px] text-gray-400"><span className="text-purple-400 font-semibold">Wallet:</span> ₹{financials?.walletIncome ? financials.walletIncome.toLocaleString('en-IN') : '0'}</p>
+                <p className="text-[8px] text-gray-400"><span className="text-blue-400 font-semibold">Ship:</span> ₹{financials?.shippingIncome ? financials.shippingIncome.toLocaleString('en-IN') : '0'}</p>
+              </div>
             </div>
-            <div className="w-px h-6 bg-emerald-500/20"></div>
-            <div className="flex-1">
+            <div className="w-px h-10 bg-emerald-500/20"></div>
+            <div className="flex-1 self-start">
               <p className="text-[8px] md:text-[9px] text-red-400/70 font-bold uppercase tracking-wider mb-0.5 flex items-center gap-1">
                 <TrendingDown className="w-2.5 h-2.5" /> Refunds
               </p>
@@ -287,7 +289,6 @@ const DashboardOverview = ({ data }) => {
           </div>
           
           <div className="flex-1 min-h-[180px] md:min-h-[200px] relative">
-            {/* --- CHANGED: Using categoryData back directly from props --- */}
             {categoryData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
