@@ -31,7 +31,9 @@ const orderSchema = new mongoose.Schema({
 
   orderStatus: {
     type: String,
-    enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
+    // -> MODIFICATION START: Added 'in_transit' to separate it from 'shipped'
+    enum: ['pending', 'processing', 'shipped', 'in_transit', 'delivered', 'cancelled'],
+    // -> MODIFICATION END
     default: 'pending'
   },
   paymentStatus: {
@@ -88,6 +90,5 @@ orderSchema.index({ 'trackingDetails.awb_code': 1 });
 // 6. Razorpay Webhook: Refund process hone par order find karne ke liye
 orderSchema.index({ razorpay_payment_id: 1 });
 
-// -> MODIFICATION END
 
 module.exports = mongoose.model('Order', orderSchema);

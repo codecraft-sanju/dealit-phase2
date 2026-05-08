@@ -9,9 +9,7 @@ const { checkServiceability, createShiprocketOrder, addPickupLocation, generateA
 const Notification = require('../models/Notification');
 const AuraLog = require('../models/AuraLog'); 
 
-
 const { refundRazorpayPayment } = require('./paymentController');
-
 
 const calculateShippingCost = async (req, res) => {
   try {
@@ -533,7 +531,6 @@ const handleShiprocketWebhook = async (req, res) => {
 
     const order = await Order.findOne({ 'trackingDetails.awb_code': awb }).populate('item');
     
-   
     if (!order) {
       console.log(`Shiprocket test ping or invalid AWB received: ${awb}`);
       return res.status(200).json({ success: true, message: 'Webhook received but order not found.' });
@@ -544,13 +541,12 @@ const handleShiprocketWebhook = async (req, res) => {
 
   
     if (etd && order.trackingDetails) {
-     
+      
       if (etd.trim() !== '') {
         order.trackingDetails.expected_date = etd;
       }
     }
   
-
     if (current_status === 'DELIVERED' && order.orderStatus !== 'delivered') {
       order.orderStatus = 'delivered';
       order.updated_at = Date.now();
@@ -587,13 +583,18 @@ const handleShiprocketWebhook = async (req, res) => {
       }
       await order.save();
     } 
-    else if ((current_status === 'SHIPPED' || current_status === 'IN TRANSIT') && order.orderStatus === 'processing') {
+    // -> MODIFICATION START: Separate IN TRANSIT and SHIPPED statuses
+    else if (current_status === 'IN TRANSIT' && (order.orderStatus === 'processing' || order.orderStatus === 'shipped')) {
+      order.orderStatus = 'in_transit';
+      await order.save(); 
+    } 
+    else if (current_status === 'SHIPPED' && order.orderStatus === 'processing') {
       order.orderStatus = 'shipped';
       await order.save(); 
-    } else {
-     
+    } 
+    // -> MODIFICATION END
+    else {
       await order.save();
-     
     }
 
     res.status(200).json({ success: true, message: 'Webhook processed successfully' });

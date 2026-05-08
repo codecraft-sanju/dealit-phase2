@@ -36,13 +36,81 @@ const CountdownTimer = ({ createdAt, hours }) => {
   return <span>{timeLeft}</span>;
 };
 
+// --> MODIFICATION START: Stepper Component Added
+const OrderTrackingStepper = ({ currentStatus }) => {
+  const steps = [
+    { id: 'pending', label: 'Placed', icon: Clock },
+    { id: 'processing', label: 'Processing', icon: Package },
+    { id: 'shipped', label: 'Shipped', icon: Truck },
+    { id: 'in_transit', label: 'In Transit', icon: MapPin },
+    { id: 'delivered', label: 'Delivered', icon: CheckCircle }
+  ];
+
+  const getActiveIndex = () => {
+    if (currentStatus === 'cancelled') return -1;
+    const statusIndex = steps.findIndex(step => step.id === currentStatus);
+    return statusIndex >= 0 ? statusIndex : 0;
+  };
+
+  const activeIndex = getActiveIndex();
+  const progressWidth = activeIndex >= 0 ? `${(activeIndex / (steps.length - 1)) * 100}%` : '0%';
+
+  if (currentStatus === 'cancelled') return null;
+
+  return (
+    <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 md:p-6 mb-6 overflow-hidden">
+      <div className="relative px-2 sm:px-4">
+        {/* Background empty line */}
+        <div className="absolute top-5 left-0 w-full h-1.5 bg-gray-100 rounded-full"></div>
+        
+        {/* Animated filling line */}
+        <motion.div 
+          initial={{ width: 0 }}
+          animate={{ width: progressWidth }}
+          transition={{ duration: 0.8, ease: "easeInOut" }}
+          className="absolute top-5 left-0 h-1.5 bg-[#6B46C1] rounded-full z-0"
+        />
+
+        {/* Steps */}
+        <div className="relative z-10 flex justify-between">
+          {steps.map((step, index) => {
+            const isCompleted = index <= activeIndex;
+            const isCurrent = index === activeIndex;
+            const StepIcon = step.icon;
+
+            return (
+              <div key={step.id} className="flex flex-col items-center w-[4.5rem] sm:w-20">
+                <motion.div 
+                  initial={{ scale: 0.8 }}
+                  animate={{ scale: isCurrent ? 1.1 : 1 }}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center border-4 border-white shadow-sm transition-colors duration-300 z-10 ${
+                    isCompleted ? 'bg-[#6B46C1] text-white' : 'bg-gray-200 text-gray-400'
+                  }`}
+                >
+                  <StepIcon className="w-4 h-4" />
+                </motion.div>
+                <span className={`mt-2 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-center leading-tight ${
+                  isCompleted ? 'text-[#6B46C1]' : 'text-gray-400'
+                }`}>
+                  {step.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+// --> MODIFICATION END
+
 const OrderDetailsPage = ({ user }) => {
   const { orderId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   
   const searchParams = new URLSearchParams(location.search);
-  const userType = searchParams.get('type') || 'purchases'; // 'purchases' or 'sales'
+  const userType = searchParams.get('type') || 'purchases'; 
 
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -62,6 +130,12 @@ const OrderDetailsPage = ({ user }) => {
   const [showTrackingModal, setShowTrackingModal] = useState(false);
   const [liveTrackingData, setLiveTrackingData] = useState(null);
   const [fetchingTracking, setFetchingTracking] = useState(false);
+
+  useEffect(() => {
+    if (liveTrackingData) {
+      console.log("Live Tracking Data Full Object:", liveTrackingData);
+    }
+  }, [liveTrackingData]);
 
   const [autoCancelHours, setAutoCancelHours] = useState(24);
   const [auraPenalty, setAuraPenalty] = useState(50); 
@@ -108,11 +182,9 @@ const OrderDetailsPage = ({ user }) => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // --> MODIFICATION START: Silent Background Fetch for Tracking Data
   useEffect(() => {
     let isMounted = true;
     
-    // Agar order ship ho chuka hai (AWB hai) to background me live data laao
     if (order?.trackingDetails?.awb_code && order.orderStatus !== 'cancelled' && !liveTrackingData) {
       const fetchSilentTracking = async () => {
         try {
@@ -129,7 +201,6 @@ const OrderDetailsPage = ({ user }) => {
     
     return () => { isMounted = false; };
   }, [order?.trackingDetails?.awb_code, orderId]);
-  // --> MODIFICATION END
 
   const handleUpdateStatus = async (newStatus, reason = '') => {
     try {
@@ -219,7 +290,6 @@ const OrderDetailsPage = ({ user }) => {
     
     setShowTrackingModal(true);
     
-    // Agar background me pehle se fetch ho chuka hai, wapas fetch kyu karein?
     if (liveTrackingData) return;
 
     setFetchingTracking(true);
@@ -239,10 +309,13 @@ const OrderDetailsPage = ({ user }) => {
   const getEstimatedDelivery = () => {
     if (!order) return { date: '', source: '' };
    
-    if (liveTrackingData?.shipment_track?.[0]?.expected_date) {
-      const expectedStr = liveTrackingData.shipment_track[0].expected_date;
-      if (expectedStr && expectedStr.trim() !== '') {
-        const expectedDate = new Date(expectedStr);
+    const expectedStr = liveTrackingData?.etd || 
+                        liveTrackingData?.shipment_track?.[0]?.expected_date || 
+                        order.trackingDetails?.expected_date;
+
+    if (expectedStr && expectedStr.trim() !== '') {
+      const expectedDate = new Date(expectedStr);
+      if (!isNaN(expectedDate.getTime())) {
         return {
           date: expectedDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
           source: 'shiprocket'
@@ -250,15 +323,6 @@ const OrderDetailsPage = ({ user }) => {
       }
     }
 
-    if (order.trackingDetails?.expected_date) {
-      const expectedDate = new Date(order.trackingDetails.expected_date);
-      return {
-        date: expectedDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
-        source: 'shiprocket'
-      };
-    }
-
-    // 3. Fallback to range logic
     const baseDate = new Date(order.createdAt || order.created_at);
     const minDate = new Date(baseDate.getTime() + 5 * 24 * 60 * 60 * 1000);
     const maxDate = new Date(baseDate.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -266,29 +330,102 @@ const OrderDetailsPage = ({ user }) => {
     const minStr = minDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
     const maxStr = maxDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
     
-    // 4. Agar order dispatch/ship ho chuka hai, par courier wale ne date update nahi ki
-    if (order.trackingDetails?.awb_code || order.orderStatus === 'shipped') {
+    if (order.trackingDetails?.awb_code || order.orderStatus === 'shipped' || order.orderStatus === 'in_transit') {
       return {
         date: `${minStr} - ${maxStr}`,
         source: 'in_transit'
       };
     }
 
-    // 5. Normal Order Placed status
     return {
       date: `${minStr} - ${maxStr}`,
       source: 'standard'
     };
   };
-  // --> MODIFICATION END
 
+  const trackingActivities = (() => {
+    if (!liveTrackingData) return [];
+    const activities = [...(liveTrackingData.shipment_track_activities || [])];
+    const hasOrderReceived = activities.some(act => act.activity?.toLowerCase().includes('order received'));
+
+    if (!hasOrderReceived && (order?.createdAt || order?.created_at)) {
+      const orderDate = new Date(order.createdAt || order.created_at);
+      const pad = (n) => n.toString().padStart(2, '0');
+      activities.push({
+        activity: 'Order Received',
+        location: 'Origin',
+        date: `${orderDate.getFullYear()}-${pad(orderDate.getMonth() + 1)}-${pad(orderDate.getDate())} ${pad(orderDate.getHours())}:${pad(orderDate.getMinutes())}:00`
+      });
+    }
+    return activities;
+  })();
+
+  // --> MODIFICATION START: Modern Shimmer Loader
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f4f2f9] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-[#6B46C1] animate-spin" />
+      <div className="min-h-screen bg-[#f4f2f9] font-sans relative overflow-x-hidden">
+        {/* Header Skeleton */}
+        <div className="fixed top-0 left-0 right-0 z-50 bg-[#6B46C1] py-5 shadow-md">
+          <div className="max-w-md mx-auto md:max-w-4xl px-5 md:px-8 flex items-center gap-4">
+            <div className="w-9 h-9 bg-white/20 rounded-full animate-pulse"></div>
+            <div className="flex flex-col gap-2">
+              <div className="w-32 h-5 bg-white/20 rounded-md animate-pulse"></div>
+              <div className="w-20 h-3 bg-white/10 rounded-md animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+
+        <div className="absolute top-0 left-0 right-0 bg-[#6B46C1] h-40 rounded-b-[2rem] z-0 animate-pulse opacity-80" />
+
+        <div className="max-w-md mx-auto md:max-w-4xl px-4 md:px-8 pt-28 relative z-20">
+          {/* Stepper Skeleton */}
+          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 md:p-6 mb-6">
+             <div className="relative px-2 sm:px-4 flex justify-between">
+                <div className="absolute top-5 left-0 w-full h-1.5 bg-gray-100 rounded-full animate-pulse"></div>
+                {[1, 2, 3, 4, 5].map(i => (
+                  <div key={i} className="flex flex-col items-center gap-2 z-10 w-[4.5rem] sm:w-20">
+                    <div className="w-10 h-10 rounded-full bg-gray-200 border-4 border-white animate-pulse"></div>
+                    <div className="w-12 h-2.5 bg-gray-200 rounded-full animate-pulse mt-1"></div>
+                  </div>
+                ))}
+             </div>
+          </div>
+
+          {/* Order Info Skeleton */}
+          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 md:p-6">
+            <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
+               <div className="w-24 h-4 bg-gray-200 rounded-md animate-pulse"></div>
+               <div className="w-20 h-6 bg-gray-200 rounded-full animate-pulse"></div>
+            </div>
+
+            <div className="flex flex-col md:flex-row gap-6">
+               <div className="flex gap-4 md:w-1/2">
+                  <div className="w-24 h-24 sm:w-28 sm:h-28 bg-gray-200 rounded-[1.2rem] shrink-0 animate-pulse"></div>
+                  <div className="flex-1 flex flex-col gap-2 pt-1">
+                     <div className="w-full h-5 bg-gray-200 rounded-md animate-pulse"></div>
+                     <div className="w-2/3 h-4 bg-gray-200 rounded-md animate-pulse"></div>
+                     <div className="w-1/2 h-3 bg-gray-100 rounded-md animate-pulse mt-2"></div>
+                     <div className="flex gap-2 mt-2">
+                       <div className="w-20 h-6 bg-gray-100 rounded-md animate-pulse"></div>
+                       <div className="w-24 h-6 bg-gray-100 rounded-md animate-pulse"></div>
+                     </div>
+                  </div>
+               </div>
+
+               <div className="bg-[#f8f6ff] p-5 rounded-2xl md:w-1/2 flex flex-col gap-2 animate-pulse">
+                  <div className="w-32 h-3 bg-gray-200 rounded-md mb-2"></div>
+                  <div className="w-48 h-4 bg-gray-300 rounded-md"></div>
+                  <div className="w-full h-3 bg-gray-200 rounded-md mt-1"></div>
+                  <div className="w-3/4 h-3 bg-gray-200 rounded-md"></div>
+                  <div className="w-24 h-4 bg-gray-300 rounded-md mt-2"></div>
+               </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
+  // --> MODIFICATION END
 
   if (!order) return null;
   
@@ -335,6 +472,10 @@ const OrderDetailsPage = ({ user }) => {
 
       <div className="max-w-md mx-auto md:max-w-4xl px-4 md:px-8 pt-28 relative z-20">
         
+        {/* --> MODIFICATION START: Stepper Injection */}
+        <OrderTrackingStepper currentStatus={order.orderStatus} />
+        {/* --> MODIFICATION END */}
+        
         <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm p-5 md:p-6 mb-6">
           <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
             <span className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
@@ -342,12 +483,13 @@ const OrderDetailsPage = ({ user }) => {
             </span>
             <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase shadow-sm border ${
               order.orderStatus === 'delivered' ? 'bg-[#f0fdf4] text-emerald-700 border-emerald-100' : 
+              order.orderStatus === 'in_transit' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' : 
               order.orderStatus === 'shipped' ? 'bg-blue-50 text-blue-700 border-blue-100' : 
               order.orderStatus === 'processing' ? 'bg-purple-50 text-purple-700 border-purple-100' : 
               order.orderStatus === 'cancelled' ? 'bg-red-50 text-red-700 border-red-100' : 
               'bg-[#FFF4D2] text-yellow-800 border-[#FFE28A]/50'
             }`}>
-              <Clock className="w-3.5 h-3.5" /> {order.orderStatus}
+              <Clock className="w-3.5 h-3.5" /> {order.orderStatus.replace('_', ' ')}
             </div>
           </div>
 
@@ -560,14 +702,26 @@ const OrderDetailsPage = ({ user }) => {
                 )}
               </div>
               
-              <div className="flex gap-2 w-full sm:w-auto">
+              {/* --> MODIFICATION START: External Link Button added with Flex Wrap */}
+              <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                  {order.trackingDetails.awb_code && (
-                   <button
-                     onClick={handleViewLiveTracking}
-                     className="bg-[#f8f6ff] border border-[#e9d8ff] text-[#6B46C1] hover:bg-[#6B46C1] hover:text-white hover:border-[#6B46C1] px-4 py-2.5 rounded-xl font-bold text-xs transition-all duration-300 flex items-center justify-center gap-2 flex-1 sm:flex-none"
-                   >
-                     Live Tracking <Truck className="w-3.5 h-3.5" />
-                   </button>
+                   <div className="flex gap-2 flex-1 sm:flex-none">
+                     <button
+                       onClick={handleViewLiveTracking}
+                       className="bg-[#f8f6ff] border border-[#e9d8ff] text-[#6B46C1] hover:bg-[#6B46C1] hover:text-white hover:border-[#6B46C1] px-4 py-2.5 rounded-xl font-bold text-xs transition-all duration-300 flex items-center justify-center gap-2 flex-1 sm:flex-none"
+                     >
+                       Live Tracking <Truck className="w-3.5 h-3.5" />
+                     </button>
+                     <a
+                       href={`https://shiprocket.co/tracking/${order.trackingDetails.awb_code}`}
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       className="bg-white border border-gray-200 text-gray-500 hover:text-[#6B46C1] hover:border-[#6B46C1] hover:bg-[#f8f6ff] px-3 py-2.5 rounded-xl transition-all duration-300 flex items-center justify-center shadow-sm shrink-0"
+                       title="Track on Shiprocket Website"
+                     >
+                       <ExternalLink className="w-4 h-4" />
+                     </a>
+                   </div>
                  )}
                  
                  {userType === 'sales' && order.orderStatus === 'processing' && (
@@ -584,11 +738,12 @@ const OrderDetailsPage = ({ user }) => {
                    </button>
                  )}
               </div>
+              {/* --> MODIFICATION END */}
             </div>
           )}
 
           {/* Action Buttons & Timers for SELLER */}
-          {userType === 'sales' && order.orderStatus !== 'delivered' && order.orderStatus !== 'shipped' && order.orderStatus !== 'cancelled' && (
+          {userType === 'sales' && order.orderStatus !== 'delivered' && order.orderStatus !== 'shipped' && order.orderStatus !== 'in_transit' && order.orderStatus !== 'cancelled' && (
             <div className="mt-6 pt-5 border-t border-gray-100">
               
               {order.orderStatus === 'pending' && (
@@ -653,10 +808,9 @@ const OrderDetailsPage = ({ user }) => {
             <div className="mt-6 flex flex-col gap-2">
               <div className="flex items-center gap-3 text-gray-600 text-sm font-medium bg-[#f8f6ff] p-4 rounded-xl border border-gray-100">
                 <Truck className="w-5 h-5 text-[#6B46C1]" />
-                <span>{order.orderStatus === 'pending' ? 'Waiting for the seller to pack and dispatch your item.' : `Your item is currently ${order.orderStatus}. Tracking will update automatically.`}</span>
+                <span>{order.orderStatus === 'pending' ? 'Waiting for the seller to pack and dispatch your item.' : `Your item is currently ${order.orderStatus.replace('_', ' ')}. Tracking will update automatically.`}</span>
               </div>
 
-              {/* --> MODIFICATION START: Updated to show precise Estimate wording */}
               {order.orderStatus !== 'delivered' && (
                 <div className="flex items-center gap-3 text-emerald-700 bg-emerald-50 p-4 rounded-xl border border-emerald-100">
                   <Calendar className="w-5 h-5 text-emerald-600 shrink-0" />
@@ -670,7 +824,6 @@ const OrderDetailsPage = ({ user }) => {
                   </div>
                 </div>
               )}
-              {/* --> MODIFICATION END */}
               
               {order.orderStatus === 'pending' && (
                 <div className="text-[11px] text-gray-500 px-2 flex flex-col gap-1.5 font-medium mt-1">
@@ -842,7 +995,7 @@ const OrderDetailsPage = ({ user }) => {
                 </div>
 
                 <div className="relative border-l-2 border-[#e9d8ff] ml-3 pl-6 space-y-6 pb-4">
-                  {liveTrackingData.shipment_track_activities?.map((activity, index) => (
+                  {trackingActivities.map((activity, index) => (
                     <div key={index} className="relative">
                       <div className="absolute -left-[31px] bg-[#6B46C1] w-3.5 h-3.5 rounded-full ring-4 ring-white"></div>
                       <p className="text-sm font-bold text-gray-900">{activity.activity}</p>
@@ -850,7 +1003,7 @@ const OrderDetailsPage = ({ user }) => {
                       <p className="text-[10px] font-bold text-gray-400 mt-1">{activity.date}</p>
                     </div>
                   ))}
-                  {(!liveTrackingData.shipment_track_activities || liveTrackingData.shipment_track_activities.length === 0) && (
+                  {trackingActivities.length === 0 && (
                     <p className="text-sm text-gray-500 font-medium">Tracking timeline is not available yet. Please check back later.</p>
                   )}
                 </div>
