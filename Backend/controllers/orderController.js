@@ -15,7 +15,10 @@ const calculateShippingCost = async (req, res) => {
   try {
     const { itemId, pincode } = req.body;
     
-    const item = await Item.findById(itemId).populate('owner');
+    /* --- CHANGE START --- */
+    const item = await Item.findById(itemId).populate('owner', 'pickupAddress');
+    /* --- CHANGE END --- */
+
     if (!item) return res.status(404).json({ success: false, message: 'Item not found' });
 
     let setting = await CreditSetting.findOne();
@@ -52,7 +55,10 @@ const createOrder = async (req, res) => {
     const { itemId, shippingAddress, paymentDetails } = req.body;
     const buyerId = req.user._id;
 
-    const item = await Item.findById(itemId).populate('owner');
+    /* --- CHANGE START --- */
+    const item = await Item.findById(itemId).populate('owner', 'pickupAddress');
+    /* --- CHANGE END --- */
+
     if (!item) {
       return res.status(404).json({ success: false, message: 'Item not found' });
     }
@@ -113,6 +119,7 @@ const createOrder = async (req, res) => {
 
     const itemPrice = item.estimated_value || 0;
 
+    /* --- CHANGE START: Atomic check and deduction to prevent double spend --- */
     const buyer = await User.findById(buyerId);
     if (buyer.account_credits < itemPrice) {
       return res.status(400).json({ 
@@ -123,9 +130,8 @@ const createOrder = async (req, res) => {
       });
     }
 
-    buyer.account_credits -= itemPrice;
+    let updateQuery = { $inc: { account_credits: -itemPrice } };
 
-    
     if (!buyer.savedAddresses) buyer.savedAddresses = [];
     const isAddressExist = buyer.savedAddresses.some(addr => 
       addr.houseNo === shippingAddress.houseNo && 
@@ -133,10 +139,22 @@ const createOrder = async (req, res) => {
     );
 
     if (!isAddressExist) {
-      buyer.savedAddresses.push(shippingAddress);
+      updateQuery.$push = { savedAddresses: shippingAddress };
     }
 
-    await buyer.save();
+    const updatedBuyer = await User.findOneAndUpdate(
+      { _id: buyerId, account_credits: { $gte: itemPrice } },
+      updateQuery,
+      { new: true }
+    );
+
+    if (!updatedBuyer) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Transaction failed. Insufficient credits or concurrent request detected.' 
+      });
+    }
+    /* --- CHANGE END --- */
 
     item.status = 'reserved'; 
     await item.save();
@@ -243,12 +261,16 @@ const updateOrderStatus = async (req, res) => {
     const auraPenaltyAmount = setting && setting.auraPenalty !== undefined ? setting.auraPenalty : 50;
 
     if (status === 'delivered' && order.isSellerPaid === false) {
-      const seller = await User.findById(order.seller);
+      /* --- CHANGE START: Use atomic $inc for rewards --- */
+      const seller = await User.findByIdAndUpdate(order.seller, {
+        $inc: {
+          account_credits: order.itemPrice,
+          aura_points: auraRewardAmount
+        }
+      }, { new: true });
+      /* --- CHANGE END --- */
+      
       if (seller) {
-        seller.account_credits += order.itemPrice; 
-        seller.aura_points = (seller.aura_points || 0) + auraRewardAmount; 
-        await seller.save();
-        
         order.isSellerPaid = true;
 
         await Notification.create({
@@ -274,11 +296,13 @@ const updateOrderStatus = async (req, res) => {
     }
 
     if (status === 'cancelled' && order.paymentStatus === 'paid') {
-      const buyer = await User.findById(order.buyer);
+      /* --- CHANGE START: Use atomic $inc for refund --- */
+      const buyer = await User.findByIdAndUpdate(order.buyer, {
+        $inc: { account_credits: order.itemPrice }
+      }, { new: true });
+      /* --- CHANGE END --- */
+      
       if (buyer) {
-        buyer.account_credits += order.itemPrice;
-        await buyer.save();
-
         // -> NAYA CHANGE START: Save Credits Refund Transaction
         await Transaction.create({
           user: buyer._id,
@@ -320,11 +344,19 @@ const updateOrderStatus = async (req, res) => {
           metadata: { amount: order.itemPrice, reason: 'order_refund', referenceId: order._id }
         });
         
-        const seller = await User.findById(order.seller);
+        /* --- CHANGE START: Use pipeline for atomic Math.max logic --- */
+        const seller = await User.findByIdAndUpdate(order.seller, [
+          {
+            $set: {
+              aura_points: {
+                $max: [0, { $subtract: [{ $ifNull: ["$aura_points", 0] }, auraPenaltyAmount] }]
+              }
+            }
+          }
+        ], { new: true });
+        /* --- CHANGE END --- */
+        
         if (seller) {
-          seller.aura_points = Math.max(0, (seller.aura_points || 0) - auraPenaltyAmount); 
-          await seller.save();
-
           await AuraLog.create({
             user: seller._id,
             reason: "Cancelled deal after accepting",
@@ -362,9 +394,14 @@ const dispatchOrder = async (req, res) => {
     const { orderId } = req.params;
     const { weight, length, width, height } = req.body;
 
-    const order = await Order.findById(orderId).populate({
-      path: 'item', populate: { path: 'owner' }
-    }).populate('buyer');
+    /* --- CHANGE START --- */
+    const order = await Order.findById(orderId)
+      .populate({
+        path: 'item', 
+        populate: { path: 'owner', select: 'full_name email phone pickupAddress' }
+      })
+      .populate('buyer', 'full_name email phone');
+    /* --- CHANGE END --- */
     
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
     if (order.seller.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
@@ -552,12 +589,16 @@ const handleShiprocketWebhook = async (req, res) => {
       order.updated_at = Date.now();
 
       if (order.isSellerPaid === false) {
-        const seller = await User.findById(order.seller);
+        /* --- CHANGE START: Use atomic $inc for webhook payout --- */
+        const seller = await User.findByIdAndUpdate(order.seller, {
+          $inc: {
+            account_credits: order.itemPrice,
+            aura_points: auraRewardAmount
+          }
+        }, { new: true });
+        /* --- CHANGE END --- */
+        
         if (seller) {
-          seller.account_credits += order.itemPrice; 
-          seller.aura_points = (seller.aura_points || 0) + auraRewardAmount; 
-          await seller.save();
-          
           order.isSellerPaid = true;
 
           await Notification.create({
@@ -648,40 +689,49 @@ const autoCancelOverdueOrders = async () => {
 
       await order.save({ validateBeforeSave: false });
 
-      const buyer = order.buyer;
-      buyer.account_credits += order.itemPrice;
-      await buyer.save();
-
+      /* --- CHANGE START: Use atomic update for background refunds and penalties --- */
+      const buyerId = order.buyer._id;
+      await User.findByIdAndUpdate(buyerId, {
+        $inc: { account_credits: order.itemPrice }
+      });
       // -> NAYA CHANGE START: Save Credits Refund Transaction for Auto-Cancel
       await Transaction.create({
-        user: buyer._id,
+        user: buyerId,
         amount: order.itemPrice,
         status: 'success',
         transactionType: 'order_refund'
       });
       // -> NAYA CHANGE END
+      
+      const sellerId = order.seller._id;
+      await User.findByIdAndUpdate(sellerId, [
+        {
+          $set: {
+            aura_points: {
+              $max: [0, { $subtract: [{ $ifNull: ["$aura_points", 0] }, auraPenaltyAmount] }]
+            }
+          }
+        }
+      ]);
+      /* --- CHANGE END --- */
 
       await Notification.create({
-        user: buyer._id,
+        user: buyerId,
         type: 'CREDIT_ADDED',
         title: 'Order Auto-Cancelled & Refunded 🔄',
         message: `The seller failed to dispatch your order on time. Your ${order.itemPrice} credits have been refunded.`,
         metadata: { amount: order.itemPrice, reason: 'auto_cancel_refund', referenceId: order._id }
       });
 
-      const seller = order.seller;
-      seller.aura_points = Math.max(0, (seller.aura_points || 0) - auraPenaltyAmount);
-      await seller.save();
-
       await AuraLog.create({
-        user: seller._id,
+        user: sellerId,
         reason: "Auto-cancelled: Failed to dispatch order on time",
         points: -auraPenaltyAmount,
         type: "negative"
       });
 
       await Notification.create({
-        user: seller._id,
+        user: sellerId,
         type: 'AURA_UPDATE',
         title: 'Aura Penalty ⚠️',
         message: `${auraPenaltyAmount} Aura points deducted. You failed to dispatch the order within ${cancelHours} hours.`,
