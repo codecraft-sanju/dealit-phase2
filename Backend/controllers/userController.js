@@ -6,6 +6,11 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const sendEmail = require('../utils/sendEmail');
 
+const Item = require('../models/Item');
+const Order = require('../models/Order');
+const BarterRequest = require('../models/BarterRequest');
+
+
 const sendTokenResponse = (user, statusCode, res, message) => {
   const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
     expiresIn: '36500d' 
@@ -118,7 +123,7 @@ const registerUser = async (req, res) => {
 
               if (referrer.totalReferrals === 1) {
                 referrer.account_credits += setting.referralRewardCredits;
-                referrer.aura_points = (referrer.aura_points || 0) + 20; // ⚡ NAYA: +20 Aura for successful referral
+                referrer.aura_points = (referrer.aura_points || 0) + 20; 
                 
                 await Notification.create({
                   user: referrer._id,
@@ -138,7 +143,7 @@ const registerUser = async (req, res) => {
 
               } else if (referrer.totalReferrals === setting.maxReferralLimit) {
                 referrer.account_credits += setting.milestoneReferralReward;
-                referrer.aura_points = (referrer.aura_points || 0) + 50; // ⚡ NAYA: +50 Aura for Milestone
+                referrer.aura_points = (referrer.aura_points || 0) + 50; 
                 
                 await Notification.create({
                   user: referrer._id,
@@ -148,7 +153,6 @@ const registerUser = async (req, res) => {
                   metadata: { amount: setting.milestoneReferralReward, reason: 'milestone_bonus' }
                 });
 
-                // ⚡ NAYA: Aura Log for Milestone
                 await AuraLog.create({
                   user: referrer._id,
                   reason: "Referral Milestone Unlocked",
@@ -243,9 +247,12 @@ const loginUser = async (req, res) => {
     }
 
     const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    
+    // -> CHANGES START HERE: Block login if account is soft deleted
+    if (!user || user.isDeleted) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials or account has been deleted' });
     }
+    // -> CHANGES END HERE
 
     if (!user.isVerified) {
       if (user.otp === undefined && user.password) {
@@ -548,6 +555,78 @@ const claimWelcomeBonus = async (req, res) => {
   }
 };
 
+// -> CHANGES START HERE: Added Soft Delete and Anonymization Logic
+const deleteUserProfile = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (user.isDeleted) {
+      return res.status(400).json({ success: false, message: 'Account is already deleted' });
+    }
+
+    const activeOrders = await Order.findOne({ 
+      $or: [{ buyer: userId }, { seller: userId }], 
+      orderStatus: { $nin: ['delivered', 'cancelled'] } 
+    });
+
+    if (activeOrders) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'You have active ongoing orders. Please complete or cancel them before deleting your account.' 
+      });
+    }
+
+    user.full_name = 'Deleted User';
+    user.email = `deleted_${Date.now()}_${userId}@dealit.in`; 
+    user.phone = '0000000000';
+    user.city = 'Deleted';
+    user.pickupAddress = {}; 
+    user.savedAddresses = [];
+    user.password = ''; 
+    user.profilePic = ''; 
+    user.account_credits = 0; 
+    user.aura_points = 0;
+    user.referralCode = `DEL_${Date.now()}`;
+    user.otp = undefined;
+    user.resetPasswordOtp = undefined;
+    
+    user.isDeleted = true; 
+    user.updated_at = Date.now();
+    
+    await user.save({ validateBeforeSave: false }); 
+
+    await Item.updateMany(
+      { owner: userId, status: { $in: ['active', 'pending'] } },
+      { $set: { status: 'rejected', rejection_reason: 'Account Deleted by User', updated_at: Date.now() } }
+    );
+
+    await BarterRequest.updateMany(
+      { $or: [{ requester: userId }, { owner: userId }], status: 'PENDING' },
+      { $set: { status: 'CANCELLED', updated_at: Date.now() } }
+    );
+
+    const isProduction = process.env.NODE_ENV === 'production';
+    res.cookie('token', 'none', {
+      expires: new Date(Date.now() + 10 * 1000),
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax'
+    });
+
+    res.status(200).json({ success: true, message: 'Account permanently deleted and data anonymized.' });
+
+  } catch (error) {
+    console.error('Error deleting account:', error);
+    res.status(500).json({ success: false, message: 'Server Error during account deletion' });
+  }
+};
+// -> CHANGES END HERE
+
 module.exports = {
   registerUser,
   verifyOtp, 
@@ -560,5 +639,8 @@ module.exports = {
   updateProfilePic,
   toggleWishlist,
   getWishlist,
-  claimWelcomeBonus 
+  claimWelcomeBonus,
+
+  deleteUserProfile 
+
 };

@@ -16,7 +16,10 @@ const {
   updateProfilePic,
   toggleWishlist,
   getWishlist,
-  claimWelcomeBonus 
+  claimWelcomeBonus,
+ 
+  deleteUserProfile
+
 } = require('../controllers/userController');
 
 
@@ -50,6 +53,10 @@ router.post('/resetpassword', authLimiter, resetPassword);
 router.get('/profile', protect, getUserProfile);
 
 router.put('/profile', protect, updateUserProfile); 
+
+
+router.delete('/profile', protect, deleteUserProfile);
+
 
 router.put('/profile-pic', protect, updateProfilePic);
 

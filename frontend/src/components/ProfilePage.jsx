@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Link, Navigate } from 'react-router-dom';
-import { LogOut, User, Mail, Phone, MapPin, Calendar, Package, RefreshCw, Camera, Loader2, Coins, ChevronRight, ClipboardList, Archive, Tag, Heart, Wallet, Bell, HelpCircle, Edit2, X, Home, Hash, Truck, Shield, Star } from 'lucide-react'; 
+import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { LogOut, User, Mail, Phone, MapPin, Calendar, Package, RefreshCw, Camera, Loader2, Coins, ChevronRight, ClipboardList, Archive, Tag, Heart, Wallet, Bell, HelpCircle, Edit2, X, Home, Hash, Truck, Shield, Star, Trash2 } from 'lucide-react'; 
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -12,7 +12,7 @@ const API_URL = `${API_BASE}/api`;
 const MotionLink = motion(Link);
 
 const ProfilePage = ({ user, setUser, onLogout }) => {
-  
+  const navigate = useNavigate();
   const [showAccountDetails, setShowAccountDetails] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -438,14 +438,14 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                     { to: "/wishlist", icon: Heart, title: "Wishlist", subtitle: "Saved Items", iconClass: "fill-[#6B46C1]" },
                     { to: "/wallet", icon: Wallet, title: "My Wallet", subtitle: "Credit Balance & Purchases" },
                     { to: "/notifications", icon: Bell, title: "Notifications", subtitle: "Alert Settings", iconClass: "fill-[#6B46C1]" },     
-                    { to: "/help-support", icon: HelpCircle, title: "Help & Support", subtitle: "Get Assistance", iconClass: "fill-[#6B46C1]/20", noBorder: true }
+                    { to: "/help-support", icon: HelpCircle, title: "Help & Support", subtitle: "Get Assistance", iconClass: "fill-[#6B46C1]/20" }
                   ].map((item, index) => (
                     <MotionLink 
                       key={index}
                       to={item.to}
                       whileHover={{ x: 4, backgroundColor: "#f9fafb" }}
                       whileTap={{ scale: 0.98, backgroundColor: "#f3f4f6" }}
-                      className={`flex items-center justify-between p-4 group ${!item.noBorder ? 'border-b border-gray-100' : ''}`}
+                      className={`flex items-center justify-between p-4 group border-b border-gray-100`}
                     >
                       <div className="flex items-center gap-4">
                         <item.icon className={`w-6 h-6 ${item.iconClass || 'text-[#6B46C1]'} ${item.icon === Archive ? 'text-[#4B5563]' : ''}`} />
@@ -466,6 +466,24 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                       <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-[#6B46C1] transition-colors" />
                     </MotionLink>
                   ))}
+
+                  {/* ⚡ NAYA CHANGE START: Danger Zone (Delete Account Button) ⚡ */}
+                  <MotionLink
+                    to="/delete-account"
+                    whileHover={{ x: 4, backgroundColor: "#fff5f5" }}
+                    whileTap={{ scale: 0.98, backgroundColor: "#fee2e2" }}
+                    className="flex items-center justify-between p-4 group hover:bg-red-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-4">
+                      <Trash2 className="w-6 h-6 text-red-500" />
+                      <div className="flex flex-col">
+                        <span className="text-[15px] font-bold text-red-600">Delete Account</span>
+                        <span className="text-[11px] text-red-400 font-medium mt-0.5">Permanently remove your data</span>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-red-300 group-hover:text-red-500 transition-colors" />
+                  </MotionLink>
+                  {/* ⚡ NAYA CHANGE END ⚡ */}
 
                 </div>
               </motion.div>

@@ -1,3 +1,4 @@
+// models/User.js
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
@@ -32,7 +33,6 @@ const userSchema = new mongoose.Schema({
     pincode: { type: String }
   },
 
-  // CHANGED: Added savedAddresses array for the buyer's address book
   savedAddresses: [{
     fullName: { type: String },
     phone: { type: String },
@@ -57,22 +57,19 @@ const userSchema = new mongoose.Schema({
   otpExpiry: { type: Date },
   resetPasswordOtp: { type: String },
   resetPasswordOtpExpiry: { type: Date },
+  
+
+  isDeleted: { type: Boolean, default: false },
+
+
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now }
 });
 
-// 1. Text Index for fast searching by Admin
+
 userSchema.index({ full_name: 'text', email: 'text', phone: 'text', city: 'text' });
-
-// 2. Standard Index for fast sorting (Newest users first)
 userSchema.index({ created_at: -1 });
-
-// 3. Standard Index for role filtering
 userSchema.index({ role: 1 });
-
-// -> MODIFICATION START
-// 4. Compound Index to instantly count verified users for the Admin Dashboard
 userSchema.index({ isVerified: 1, created_at: -1 });
-// -> MODIFICATION END
 
 module.exports = mongoose.model('User', userSchema);
