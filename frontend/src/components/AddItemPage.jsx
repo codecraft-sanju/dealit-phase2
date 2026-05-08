@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Plus, ChevronLeft, Gift, Image as ImageIcon, Sparkles, Wand2, Scale, Box } from 'lucide-react';
+import { X, Plus, ChevronLeft, Gift, Image as ImageIcon, Sparkles, Wand2, Scale, Box, MapPin, Home, Hash, Loader2 } from 'lucide-react';
 import axios from 'axios';
 import Cropper from 'react-easy-crop'; 
 import { toast } from 'react-toastify'; 
 import { removeBackground } from '@imgly/background-removal';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'; 
 import imageCompression from 'browser-image-compression';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -163,7 +164,29 @@ const AddItemPage = ({ user, setUser }) => {
   });
   const [images, setImages] = useState([]);
 
-  // CHANGED: Added a fresh fetch on mount to ensure user state isn't stale
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [addressForm, setAddressForm] = useState({
+    houseNo: '',
+    areaStreet: '',
+    landmark: '',
+    city: '',
+    state: '',
+    pincode: ''
+  });
+
+  useEffect(() => {
+    if (user?.pickupAddress) {
+      setAddressForm({
+        houseNo: user.pickupAddress.houseNo || '',
+        areaStreet: user.pickupAddress.areaStreet || '',
+        landmark: user.pickupAddress.landmark || '',
+        city: user.pickupAddress.city || '',
+        state: user.pickupAddress.state || '',
+        pincode: user.pickupAddress.pincode || ''
+      });
+    }
+  }, [user, isAddressModalOpen]);
+
   useEffect(() => {
     const refreshUserData = async () => {
       try {
@@ -476,6 +499,45 @@ const AddItemPage = ({ user, setUser }) => {
     generateDescMutation.mutate();
   };
 
+  const updateAddressMutation = useMutation({
+    mutationFn: async (updatedAddress) => {
+      const payload = {
+        full_name: user?.full_name,
+        phone: user?.phone,
+        city: user?.city,
+        pickupAddress: updatedAddress
+      };
+      return await axios.put(`${API_URL}/users/profile`, payload, { withCredentials: true });
+    },
+    onSuccess: async () => {
+      queryClient.invalidateQueries(['profile']);
+      setIsAddressModalOpen(false);
+      try {
+        const userRes = await axios.get(`${API_URL}/users/profile`, { withCredentials: true });
+        if (userRes.data.success && setUser) {
+          setUser(userRes.data.data);
+          localStorage.setItem('dealit_user', JSON.stringify(userRes.data.data));
+        }
+      } catch (e) {
+        console.error("Failed to update global user state", e);
+      }
+      toast.success('Pickup address updated successfully!');
+    },
+    onError: (error) => {
+      console.error('Error updating profile:', error);
+      toast.error('Failed to update pickup address.');
+    }
+  });
+
+  const handleAddressSubmit = (e) => {
+    e.preventDefault();
+    if (addressForm.houseNo && !/\d/.test(addressForm.houseNo)) {
+      toast.error('Please include at least one number in your House No. (e.g., Flat 4B, Plot 12)');
+      return;
+    }
+    updateAddressMutation.mutate(addressForm);
+  };
+
   const createItemMutation = useMutation({
     mutationFn: async (payload) => {
       const response = await axios.post(
@@ -508,10 +570,11 @@ const AddItemPage = ({ user, setUser }) => {
     e.preventDefault();
 
     if (!user?.pickupAddress || !user?.pickupAddress?.houseNo) {
-      toast.error('Please add your pickup address: Profile Page -> Account Details -> Edit', {
+      toast.error('Please add your pickup address by clicking the Pickup button in the header.', {
         position: "top-center",
         autoClose: 5000,
       });
+      setIsAddressModalOpen(true);
       return;
     }
 
@@ -589,20 +652,96 @@ const AddItemPage = ({ user, setUser }) => {
     <div className="min-h-screen bg-[#f4f2f9] md:py-10 flex justify-center font-sans">
       <div className="w-full max-w-xl bg-[#fcfbff] md:rounded-[2.5rem] shadow-2xl flex flex-col relative">
         
-        <div className="sticky top-0 z-50 bg-[#6B46C1] px-4 py-4 sm:py-5 flex items-center justify-between text-white shadow-md md:rounded-t-[2.5rem]">
+        <div className="sticky top-0 z-50 bg-[#6B46C1] px-4 py-4 sm:py-5 flex items-center justify-between text-white shadow-md md:rounded-t-[2.5rem] relative">
           <button 
             onClick={() => navigate('/dashboard')} 
             className="p-1 hover:bg-white/20 rounded-full transition-colors"
           >
             <ChevronLeft className="w-6 h-6 sm:w-7 sm:h-7" />
           </button>
-          <h2 className="text-lg sm:text-xl font-bold tracking-wide">List an Item</h2>
+          <h2 className="text-lg sm:text-xl font-bold tracking-wide absolute left-1/2 -translate-x-1/2">List an Item</h2>
+          
+          {/* Enhanced Pickup Address Trigger */}
           <button 
-            onClick={() => navigate('/dashboard')}
-            className="text-xs sm:text-sm font-medium hover:text-purple-200 transition-colors"
+            onClick={() => setIsAddressModalOpen(!isAddressModalOpen)}
+            className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 active:scale-95 border border-white/20 px-3 py-1.5 rounded-full transition-all duration-300"
           >
-            Cancel
+            <MapPin className="w-4 h-4" />
+            <span className="text-xs sm:text-sm font-semibold tracking-wide">Pickup</span>
           </button>
+          
+          {/* Animated Pickup Address Popover Modal */}
+          <AnimatePresence>
+            {isAddressModalOpen && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setIsAddressModalOpen(false)}
+                  className="fixed inset-0 z-[60] bg-black/20 backdrop-blur-[2px]"
+                />
+                <motion.div
+                  initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                  transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                  className="absolute top-[70px] right-4 left-4 sm:left-auto sm:w-[380px] bg-white rounded-[1.5rem] shadow-[0_10px_40px_rgba(0,0,0,0.15)] z-[70] overflow-hidden border border-gray-100"
+                >
+                  <div className="px-5 py-4 border-b border-gray-100 bg-[#f8f6ff] flex justify-between items-center relative">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#9F7AEA] via-[#805ad5] to-[#6B46C1]" />
+                    <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                      <MapPin className="w-5 h-5 text-[#6B46C1]" />
+                      Pickup Details
+                    </h3>
+                    <button onClick={() => setIsAddressModalOpen(false)} className="bg-white p-1.5 rounded-full text-gray-400 hover:text-gray-600 shadow-sm border border-gray-100">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  
+                  <div className="p-5 max-h-[60vh] overflow-y-auto admin-scroll">
+                    <form id="pickupAddressForm" onSubmit={handleAddressSubmit} className="space-y-3">
+                      <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 text-[10px] sm:text-xs p-2.5 rounded-xl font-medium mb-2 flex items-start gap-2">
+                         <span className="text-yellow-500 text-lg leading-none mt-0.5">•</span>
+                         Address where shipping agents will pick up your item.
+                      </div>
+                      
+                      <div className="relative">
+                        <Home className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-400" />
+                        <input type="text" placeholder="House No. / Flat No." required value={addressForm.houseNo} onChange={(e) => setAddressForm({...addressForm, houseNo: e.target.value})} className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-10 pr-3 py-3 text-sm focus:border-[#6B46C1] focus:bg-white outline-none transition-all font-medium text-gray-800" />
+                      </div>
+                      
+                      <div className="relative">
+                        <MapPin className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-400" />
+                        <input type="text" placeholder="Area, Street, Sector" required value={addressForm.areaStreet} onChange={(e) => setAddressForm({...addressForm, areaStreet: e.target.value})} className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-10 pr-3 py-3 text-sm focus:border-[#6B46C1] focus:bg-white outline-none transition-all font-medium text-gray-800" />
+                      </div>
+                      
+                      <div className="relative">
+                        <MapPin className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-300" />
+                        <input type="text" placeholder="Landmark (Optional)" value={addressForm.landmark} onChange={(e) => setAddressForm({...addressForm, landmark: e.target.value})} className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-10 pr-3 py-3 text-sm focus:border-[#6B46C1] focus:bg-white outline-none transition-all font-medium text-gray-800" />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <input type="text" placeholder="City" required value={addressForm.city} onChange={(e) => setAddressForm({...addressForm, city: e.target.value})} className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-[#6B46C1] focus:bg-white outline-none transition-all font-medium text-gray-800" />
+                        <input type="text" placeholder="State" required value={addressForm.state} onChange={(e) => setAddressForm({...addressForm, state: e.target.value})} className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-[#6B46C1] focus:bg-white outline-none transition-all font-medium text-gray-800" />
+                      </div>
+
+                      <div className="relative">
+                        <Hash className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-400" />
+                        <input type="text" placeholder="Pincode (6 Digits)" required maxLength="6" value={addressForm.pincode} onChange={(e) => setAddressForm({...addressForm, pincode: e.target.value})} className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-10 pr-3 py-3 text-sm focus:border-[#6B46C1] focus:bg-white outline-none transition-all font-medium text-gray-800" />
+                      </div>
+                    </form>
+                  </div>
+                  
+                  <div className="p-4 border-t border-gray-100 bg-white">
+                    <button type="submit" form="pickupAddressForm" disabled={updateAddressMutation.isPending} className="w-full bg-[#6B46C1] hover:bg-[#5a3aa3] text-white font-bold py-3.5 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 active:scale-[0.98]">
+                      {updateAddressMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Confirm Pickup Address'}
+                    </button>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
         </div>
 
         <div className="p-4 sm:p-6 md:p-8 overflow-y-auto custom-scrollbar">

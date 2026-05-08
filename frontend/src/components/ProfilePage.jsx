@@ -9,7 +9,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
-const MotionLink = motion(Link);
+const MotionLink = motion.create(Link);
 
 const ProfilePage = ({ user, setUser, onLogout }) => {
   const navigate = useNavigate();

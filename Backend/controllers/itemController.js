@@ -326,6 +326,39 @@ const getRelatedItems = async (req, res) => {
   }
 };
 
+const getExploreData = async (req, res) => {
+  try {
+    const topCategories = await Item.aggregate([
+      { $match: { status: 'active' } },
+      { $group: { _id: '$category', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 8 }
+    ]);
+
+    const categories = topCategories.map(cat => cat._id).filter(Boolean);
+
+    const recentItems = await Item.aggregate([
+      { $match: { status: 'active' } },
+      { $sample: { size: 10 } }
+    ]);
+
+    const trendingSearches = [...new Set(recentItems.map(item => {
+      return item.title.split(' ').slice(0, 2).join(' ');
+    }))].slice(0, 5);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        categories,
+        trendingSearches
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
 module.exports = {
   createItem,
   getItems,
@@ -334,5 +367,6 @@ module.exports = {
   updateItem,
   deleteItem,
   searchItems,
-  getRelatedItems
+  getRelatedItems,
+  getExploreData
 };
