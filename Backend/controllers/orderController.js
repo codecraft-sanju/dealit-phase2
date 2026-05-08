@@ -653,102 +653,122 @@ const autoCancelOverdueOrders = async () => {
     
     const cancelThreshold = new Date(Date.now() - cancelHours * 60 * 60 * 1000);
 
-    const overdueOrders = await Order.find({
+    // -> MODIFICATION START: Safely fetch only IDs first to avoid memory bloat and infinite loops
+    const overdueOrderDocs = await Order.find({
       orderStatus: 'pending',
       created_at: { $lt: cancelThreshold }
-    }).populate('buyer seller item');
+    }).select('_id');
 
-    for (const order of overdueOrders) {
-      order.orderStatus = 'cancelled';
-      order.cancellationReason = `System Auto-Cancel: Seller failed to dispatch within ${cancelHours} hours.`;
+    if (overdueOrderDocs.length === 0) return;
+
+    const overdueOrderIds = overdueOrderDocs.map(doc => doc._id);
+    const batchSize = 50;
+
+    for (let i = 0; i < overdueOrderIds.length; i += batchSize) {
+      const batchIds = overdueOrderIds.slice(i, i + batchSize);
       
-      // --> CHANGE START: Checking if shipping cost exists to set correct paymentStatus
-      let newPaymentStatus = 'refunded';
+      const ordersBatch = await Order.find({ _id: { $in: batchIds } })
+        .populate('buyer seller item');
 
-      // Refund shipping money via Razorpay on auto-cancel
-      if (order.shippingCost > 0 && order.razorpay_payment_id) {
-        const refundRes = await refundRazorpayPayment(order.razorpay_payment_id, order.shippingCost);
-        if (!refundRes.success) {
-          console.error('Failed to process Razorpay refund for auto-cancelled order:', order._id);
-        } else {
-           // Log shipping refund transaction if successful
-           await Transaction.create({
-             user: order.buyer._id, 
-             amount: order.shippingCost,
-             razorpay_order_id: order.razorpay_order_id,
-             razorpay_payment_id: order.razorpay_payment_id,
-             status: 'success',
-             transactionType: 'shipping_refund'
-           });
-           newPaymentStatus = 'refund_processing'; // Set status to processing since bank takes time
-        }
-      }
+      for (const order of ordersBatch) {
+        try {
+    // -> MODIFICATION END
+          order.orderStatus = 'cancelled';
+          order.cancellationReason = `System Auto-Cancel: Seller failed to dispatch within ${cancelHours} hours.`;
+          
+          // --> CHANGE START: Checking if shipping cost exists to set correct paymentStatus
+          let newPaymentStatus = 'refunded';
 
-      order.paymentStatus = newPaymentStatus;
-      // --> CHANGE END
-
-      await order.save({ validateBeforeSave: false });
-
-      /* --- CHANGE START: Use atomic update for background refunds and penalties --- */
-      const buyerId = order.buyer._id;
-      await User.findByIdAndUpdate(buyerId, {
-        $inc: { account_credits: order.itemPrice }
-      });
-      // -> NAYA CHANGE START: Save Credits Refund Transaction for Auto-Cancel
-      await Transaction.create({
-        user: buyerId,
-        amount: order.itemPrice,
-        status: 'success',
-        transactionType: 'order_refund'
-      });
-      // -> NAYA CHANGE END
-      
-      const sellerId = order.seller._id;
-      await User.findByIdAndUpdate(sellerId, [
-        {
-          $set: {
-            aura_points: {
-              $max: [0, { $subtract: [{ $ifNull: ["$aura_points", 0] }, auraPenaltyAmount] }]
+          // Refund shipping money via Razorpay on auto-cancel
+          if (order.shippingCost > 0 && order.razorpay_payment_id) {
+            const refundRes = await refundRazorpayPayment(order.razorpay_payment_id, order.shippingCost);
+            if (!refundRes.success) {
+              console.error('Failed to process Razorpay refund for auto-cancelled order:', order._id);
+            } else {
+               // Log shipping refund transaction if successful
+               await Transaction.create({
+                 user: order.buyer._id, 
+                 amount: order.shippingCost,
+                 razorpay_order_id: order.razorpay_order_id,
+                 razorpay_payment_id: order.razorpay_payment_id,
+                 status: 'success',
+                 transactionType: 'shipping_refund'
+               });
+               newPaymentStatus = 'refund_processing'; // Set status to processing since bank takes time
             }
           }
+
+          order.paymentStatus = newPaymentStatus;
+          // --> CHANGE END
+
+          await order.save({ validateBeforeSave: false });
+
+          /* --- CHANGE START: Use atomic update for background refunds and penalties --- */
+          const buyerId = order.buyer._id;
+          await User.findByIdAndUpdate(buyerId, {
+            $inc: { account_credits: order.itemPrice }
+          });
+          // -> NAYA CHANGE START: Save Credits Refund Transaction for Auto-Cancel
+          await Transaction.create({
+            user: buyerId,
+            amount: order.itemPrice,
+            status: 'success',
+            transactionType: 'order_refund'
+          });
+          // -> NAYA CHANGE END
+          
+          const sellerId = order.seller._id;
+          await User.findByIdAndUpdate(sellerId, [
+            {
+              $set: {
+                aura_points: {
+                  $max: [0, { $subtract: [{ $ifNull: ["$aura_points", 0] }, auraPenaltyAmount] }]
+                }
+              }
+            }
+          ]);
+          /* --- CHANGE END --- */
+
+          await Notification.create({
+            user: buyerId,
+            type: 'CREDIT_ADDED',
+            title: 'Order Auto-Cancelled & Refunded 🔄',
+            message: `The seller failed to dispatch your order on time. Your ${order.itemPrice} credits have been refunded.`,
+            metadata: { amount: order.itemPrice, reason: 'auto_cancel_refund', referenceId: order._id }
+          });
+
+          await AuraLog.create({
+            user: sellerId,
+            reason: "Auto-cancelled: Failed to dispatch order on time",
+            points: -auraPenaltyAmount,
+            type: "negative"
+          });
+
+          await Notification.create({
+            user: sellerId,
+            type: 'AURA_UPDATE',
+            title: 'Aura Penalty ⚠️',
+            message: `${auraPenaltyAmount} Aura points deducted. You failed to dispatch the order within ${cancelHours} hours.`,
+            metadata: { reason: 'auto_cancel_penalty', referenceId: order._id }
+          });
+
+          if (order.item) {
+            order.item.status = 'active';
+            await order.item.save();
+          }
+    // -> MODIFICATION START: Close try-catch and batching loops
+        } catch (innerError) {
+          console.error(`Failed to process auto-cancel for order ${order._id}:`, innerError);
         }
-      ]);
-      /* --- CHANGE END --- */
-
-      await Notification.create({
-        user: buyerId,
-        type: 'CREDIT_ADDED',
-        title: 'Order Auto-Cancelled & Refunded 🔄',
-        message: `The seller failed to dispatch your order on time. Your ${order.itemPrice} credits have been refunded.`,
-        metadata: { amount: order.itemPrice, reason: 'auto_cancel_refund', referenceId: order._id }
-      });
-
-      await AuraLog.create({
-        user: sellerId,
-        reason: "Auto-cancelled: Failed to dispatch order on time",
-        points: -auraPenaltyAmount,
-        type: "negative"
-      });
-
-      await Notification.create({
-        user: sellerId,
-        type: 'AURA_UPDATE',
-        title: 'Aura Penalty ⚠️',
-        message: `${auraPenaltyAmount} Aura points deducted. You failed to dispatch the order within ${cancelHours} hours.`,
-        metadata: { reason: 'auto_cancel_penalty', referenceId: order._id }
-      });
-
-      if (order.item) {
-        order.item.status = 'active';
-        await order.item.save();
       }
     }
+    // -> MODIFICATION END
   } catch (error) {
     console.error(error);
   }
 };
 
-// -> CHANGES START HERE: Added getLiveTracking function
+
 const getLiveTracking = async (req, res) => {
   try {
     const { orderId } = req.params;
