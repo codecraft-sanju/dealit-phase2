@@ -1,3 +1,4 @@
+// DashboardOverview.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Users, Package, ShoppingBag, IndianRupee, TrendingUp, Activity, CheckCircle, AlertCircle, Tag, RefreshCw, Zap, TrendingDown, Info, Rocket, ServerCrash } from 'lucide-react';
@@ -91,6 +92,8 @@ const DashboardOverview = ({ data }) => {
   } = data;
   
   const calcPercent = (part, total) => total > 0 ? Math.round((part / total) * 100) : 0;
+
+  // --- CHANGED: Removed the sorting logic from frontend since backend handles it now ---
 
   // --- SHIPROCKET SMART ADVISOR LOGIC ---
   const currentOrders = orders.currentMonth || 0;
@@ -267,6 +270,7 @@ const DashboardOverview = ({ data }) => {
           </div>
           
           <div className="flex-1 min-h-[180px] md:min-h-[200px] relative">
+            {/* --- CHANGED: Using categoryData back directly from props --- */}
             {categoryData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -304,11 +308,11 @@ const DashboardOverview = ({ data }) => {
           </div>
           
           {/* Category Legend */}
-          <div className="grid grid-cols-2 gap-2.5 md:gap-3 mt-4 overflow-y-auto max-h-24 admin-scroll shrink-0">
+          <div className="grid grid-cols-2 gap-2.5 md:gap-3 mt-4 overflow-y-auto max-h-32 admin-scroll shrink-0">
             {categoryData.map((item, index) => (
               <div key={index} className="flex items-center gap-2 truncate pr-1">
                 <div className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full shadow-sm shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                <span className="text-[10px] md:text-xs font-bold text-gray-400 truncate" title={item.name}>{item.name}</span>
+                <span className="text-[10px] md:text-xs font-bold text-gray-400 truncate" title={`${item.name} (${item.value})`}>{item.name} ({item.value})</span>
               </div>
             ))}
           </div>

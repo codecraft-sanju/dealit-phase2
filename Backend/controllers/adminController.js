@@ -1,3 +1,4 @@
+// adminController.js
 const Item = require('../models/Item');
 const User = require('../models/User'); 
 const CreditSetting = require('../models/CreditSetting'); 
@@ -584,9 +585,19 @@ const getDashboardStats = async (req, res) => {
     });
 
     const totalRevenue = successfulTxns.reduce((sum, txn) => sum + txn.amount, 0);
-    const categoryData = categoryDataRaw.filter(c => c.name);
+    
+    // -> MODIFICATION START: Backend logic for Top 4 + Others
+    const filteredCategories = categoryDataRaw.filter(c => c.name);
+    const sortedCategories = filteredCategories.sort((a, b) => b.value - a.value);
+    let categoryData = sortedCategories;
 
-    // -> MODIFICATION START
+    if (sortedCategories.length > 5) {
+      const top4 = sortedCategories.slice(0, 4);
+      const othersValue = sortedCategories.slice(4).reduce((sum, cat) => sum + cat.value, 0);
+      categoryData = [...top4, { name: 'Others', value: othersValue }];
+    }
+    // -> MODIFICATION END
+
     // 2. Loop for 7 days (Run in parallel instead of sequence)
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
@@ -620,7 +631,6 @@ const getDashboardStats = async (req, res) => {
         swaps: swapData ? swapData.swaps : 0
       });
     }
-    // -> MODIFICATION END
 
     // 3. Map Activities
     let activities = [];
@@ -683,7 +693,6 @@ const getDashboardStats = async (req, res) => {
   }
 };
 
-// -> MODIFICATION START
 const resolveFailedRefund = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -741,7 +750,7 @@ module.exports = {
   updateCreditSettings,
   getPublicCreditSettings,
   getAllTransactions,
-  getAllOrders,             
+  getAllOrders,              
   updateAdminOrderStatus,
   getDashboardStats,
   resolveFailedRefund 
