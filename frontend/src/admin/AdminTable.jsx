@@ -2,7 +2,7 @@ import React from 'react';
 import {
   User, Shield, Check, X, Package, Eye, CheckCircle,
   Edit, Trash2, ShieldAlert, ShieldCheck, ChevronLeft, ChevronRight,
-  RefreshCcw, Clock, AlertCircle // Added for refund UI
+  RefreshCcw, Clock, AlertCircle
 } from 'lucide-react';
 
 const AdminTable = ({
@@ -23,7 +23,8 @@ const AdminTable = ({
   handleDeleteUser,
   handleEditOrderClick,
   handleResolveRefundClick, 
-  handleRetryRefundClick, // NAYA PROP ADDED
+  handleRetryRefundClick,
+  handleViewRejectionReason, // ADDED: New prop for view reason modal
   currentPage,
   totalPages,
   setCurrentPage
@@ -251,10 +252,15 @@ const AdminTable = ({
                         }`}>
                           {row.status}
                         </span>
+                        
+                        {/* CHANGED: Replaced printed reason text with View Reason button */}
                         {row.status === 'rejected' && row.rejection_reason && (
-                          <span className="text-[7px] md:text-[9px] text-red-400/80 max-w-[100px] md:max-w-[150px] truncate bg-red-500/5 px-1.5 md:px-2 py-0.5 rounded border border-red-500/10 tracking-wide" title={row.rejection_reason}>
-                            {row.rejection_reason}
-                          </span>
+                          <button
+                            onClick={() => handleViewRejectionReason(row.rejection_reason)}
+                            className="text-[7px] md:text-[9px] text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 px-1.5 md:px-2 py-0.5 rounded border border-red-500/20 transition-colors w-fit flex items-center gap-1 mt-1"
+                          >
+                            <Eye className="w-2.5 h-2.5" /> View Reason
+                          </button>
                         )}
                       </div>
                     </td>
@@ -308,7 +314,6 @@ const AdminTable = ({
                     <div className="flex justify-end gap-1 md:gap-1.5">
                       {row.paymentStatus === 'refund_failed' && (
                         <>
-                          {/* -> MODIFICATION START: NAYA RETRY REFUND BUTTON <- */}
                           <button 
                             onClick={() => handleRetryRefundClick(row._id)} 
                             className="bg-blue-500/10 hover:bg-blue-500 hover:text-white text-blue-400 border border-blue-500/30 transition-all p-1.5 md:px-3 md:py-2 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold flex items-center gap-1.5 hover:shadow-[0_0_15px_rgba(59,130,246,0.4)]"
@@ -316,7 +321,6 @@ const AdminTable = ({
                           >
                             <RefreshCcw className="w-3.5 h-3.5 md:w-4 md:h-4" /> <span className="hidden sm:inline">Retry</span>
                           </button>
-                          {/* -> MODIFICATION END <- */}
                           
                           <button 
                             onClick={() => handleResolveRefundClick(row)} 

@@ -11,14 +11,12 @@ const API_URL = `${API_BASE}/api`;
 
 const MotionLink = motion(Link);
 
-// --- CHANGES MADE HERE: Added setUser to props ---
 const ProfilePage = ({ user, setUser, onLogout }) => {
   
   const [showAccountDetails, setShowAccountDetails] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   
-  // <-- CHANGED: Updated initial state for new address structure
   const [editForm, setEditForm] = useState({
     full_name: '',
     phone: '',
@@ -50,6 +48,14 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
     }
   });
 
+  // CHANGED: Instantly update the global user state as soon as fresh profile data arrives
+  useEffect(() => {
+    if (profileData && setUser) {
+      setUser(profileData);
+      localStorage.setItem('dealit_user', JSON.stringify(profileData));
+    }
+  }, [profileData, setUser]);
+
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 50) {
@@ -63,7 +69,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // <-- CHANGED: 2. Upload Image using useMutation -->
   const uploadImageMutation = useMutation({
     mutationFn: async (file) => {
       const formData = new FormData();
@@ -75,7 +80,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
       formData.append('upload_preset', uploadPreset);
       console.log("Uploading to Cloudinary...");
 
-      // Step 1: Upload to Cloudinary
       const cloudinaryRes = await axios.post(
         `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
         formData
@@ -85,7 +89,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
       const uploadedUrl = cloudinaryRes.data.secure_url;
       console.log("Sending URL to backend:", uploadedUrl);
 
-      // Step 2: Save to Backend
       const response = await axios.put(
         `${API_URL}/users/profile-pic`,
         { profilePic: uploadedUrl },
@@ -95,7 +98,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
       return response.data;
     },
     onSuccess: () => {
-      // Refresh the profile data automatically
       queryClient.invalidateQueries(['profile']);
     },
     onError: (error) => {
@@ -111,12 +113,10 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
       alert("No file selected!"); 
       return;
     }
-    // <-- CHANGED: Trigger mutation -->
     uploadImageMutation.mutate(file);
   };
 
   const openEditModal = () => {
-    // <-- CHANGED: Mapped new address fields from profileData
     setEditForm({
       full_name: profileData?.full_name || '',
       phone: profileData?.phone || '',
@@ -133,7 +133,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
     setIsEditModalOpen(true);
   };
 
-  // --- CHANGES MADE HERE: Updated editProfileMutation to update global user state ---
   const editProfileMutation = useMutation({
     mutationFn: async (updatedData) => {
       return await axios.put(`${API_URL}/users/profile`, updatedData, { withCredentials: true });
@@ -163,13 +162,11 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
   const handleEditSubmit = (e) => {
     e.preventDefault();
     
-    // CHANGED: Check for at least one digit in pickup house number if provided
     if (editForm.pickupAddress.houseNo && !/\d/.test(editForm.pickupAddress.houseNo)) {
       alert('Please include at least one number in your House No. (e.g., Flat 4B, Plot 12) for Shiprocket pickups.');
       return;
     }
 
-    // <-- CHANGED: Trigger mutation -->
     editProfileMutation.mutate(editForm);
   };
 
@@ -279,7 +276,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                     className="w-24 h-24 bg-white rounded-[1.5rem] p-1.5 shadow-sm border border-gray-100"
                   >
                     <div className="w-full h-full bg-[#f8f6ff] rounded-[1.2rem] flex items-center justify-center overflow-hidden">
-                      {/* <-- CHANGED: Read pending state from uploadImageMutation --> */}
                       {uploadImageMutation.isPending ? (
                         <Loader2 className="w-8 h-8 text-[#A388E1] animate-spin" />
                       ) : profileData?.profilePic ? (
@@ -334,7 +330,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                     <div className="flex-1 bg-[#F5F0FF] rounded-xl py-3 px-2 flex items-center justify-center gap-2 border border-[#E9DFFF]/50 shadow-sm">
                       <Shield className="w-5 h-5 text-[#6B46C1] fill-[#6B46C1]/20" />
                       <span className="font-bold text-gray-800 text-sm">{profileData?.aura_points || 0} Aura</span>
-                    
                     </div>
                   </div>
 
@@ -346,8 +341,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                       </div>
                       <div className="text-left">
                         <h3 className="font-bold text-gray-900 text-[14px]">Build your Aura!</h3>
-                        
-                        {/* <-- CHANGED: Removed the <br /> tag and added pr-2 so the text wraps naturally without breaking on narrower screens like OnePlus --> */}
                         <p className="text-[11px] text-gray-500 font-medium mt-0.5 leading-snug pr-2">
                           Complete trades, get good reviews & be active to increase your Aura.
                         </p>
@@ -357,8 +350,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                   </Link>
 
                 </div>
-                {/* <-- END NAYA CHANGE --> */}
-
               </motion.div>
 
               <motion.div variants={itemVariants} className="md:col-span-2 flex flex-col gap-4">
@@ -385,7 +376,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                         <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-[#6B46C1] transition-colors" />
                       </motion.div>
                     </button>
-                    {/* <-- NAYA CHANGE: Edit Profile Button --> */}
                     {showAccountDetails && (
                       <button onClick={openEditModal} className="pr-4 pl-2 py-4 hover:text-[#6B46C1] text-gray-400 transition-colors">
                         <Edit2 className="w-5 h-5" />
@@ -447,7 +437,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                 
                     { to: "/wishlist", icon: Heart, title: "Wishlist", subtitle: "Saved Items", iconClass: "fill-[#6B46C1]" },
                     { to: "/wallet", icon: Wallet, title: "My Wallet", subtitle: "Credit Balance & Purchases" },
-                    /* <-- NAYA CHANGE: Removed the Aura Score list item from here --> */
                     { to: "/notifications", icon: Bell, title: "Notifications", subtitle: "Alert Settings", iconClass: "fill-[#6B46C1]" },     
                     { to: "/help-support", icon: HelpCircle, title: "Help & Support", subtitle: "Get Assistance", iconClass: "fill-[#6B46C1]/20", noBorder: true }
                   ].map((item, index) => (
@@ -486,7 +475,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
         </AnimatePresence>
       </div>
 
-      {/* <-- NAYA CHANGE: Edit Profile Modal UI --> */}
       <AnimatePresence>
         {isEditModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm">
@@ -552,7 +540,7 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                       <input type="text" placeholder="City" required value={editForm.pickupAddress.city} onChange={(e) => {
                         setEditForm({
                           ...editForm, 
-                          city: e.target.value, // Keep primary city synced with pickup city
+                          city: e.target.value, 
                           pickupAddress: {...editForm.pickupAddress, city: e.target.value}
                         })
                       }}
@@ -573,7 +561,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
 
               <div className="p-5 border-t border-gray-100 bg-[#f8f6ff] flex justify-end gap-3 shrink-0">
                 <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-5 py-2.5 rounded-xl font-bold text-gray-500 hover:bg-gray-200 transition-all text-sm">Cancel</button>
-                {/* <-- CHANGED: Check pending state of editProfileMutation --> */}
                 <button type="submit" form="editProfileForm" disabled={editProfileMutation.isPending} className={`px-6 py-2.5 rounded-xl font-bold transition-all text-sm flex items-center gap-2 ${editProfileMutation.isPending ? 'bg-[#6B46C1]/50 text-white cursor-not-allowed' : 'bg-[#6B46C1] hover:bg-[#5a3aa3] text-white shadow-md shadow-[#6B46C1]/20'}`}>
                   {editProfileMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Details'}
                 </button>

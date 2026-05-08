@@ -163,6 +163,22 @@ const AddItemPage = ({ user, setUser }) => {
   });
   const [images, setImages] = useState([]);
 
+  // CHANGED: Added a fresh fetch on mount to ensure user state isn't stale
+  useEffect(() => {
+    const refreshUserData = async () => {
+      try {
+        const userRes = await axios.get(`${API_URL}/users/profile`, { withCredentials: true });
+        if (userRes.data.success && setUser) {
+          setUser(userRes.data.data);
+          localStorage.setItem('dealit_user', JSON.stringify(userRes.data.data));
+        }
+      } catch (error) {
+        console.error("Failed to refresh user data:", error);
+      }
+    };
+    refreshUserData();
+  }, [setUser]);
+
   useEffect(() => {
     const savedDraft = localStorage.getItem(DRAFT_STORAGE_KEY);
     if (savedDraft) {
@@ -663,7 +679,6 @@ const AddItemPage = ({ user, setUser }) => {
                           </div>
                         )}
 
-                        {/* CHANGED: Made the delete button always visible on mobile, hover only on md+ screens */}
                         <button 
                           type="button" 
                           onClick={() => removeImage(index)} 
