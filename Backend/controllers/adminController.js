@@ -60,7 +60,10 @@ const getAllTransactions = async (req, res) => {
     const skip = (page - 1) * limit;
     const searchQuery = req.query.search || '';
 
-    let filter = {};
+    // STRICT FILTER: Sirf Real Money (Rupees) transactions allow karni hain
+    let filter = {
+      transactionType: { $in: ['wallet_recharge', 'shipping_fee', 'shipping_refund'] }
+    };
 
     if (searchQuery) {
       const searchRegex = new RegExp(searchQuery, 'i');
@@ -70,11 +73,19 @@ const getAllTransactions = async (req, res) => {
       }).select('_id');
       const userIds = matchingUsers.map(u => u._id);
 
-      filter.$or = [
-        { razorpay_order_id: searchRegex },
-        { razorpay_payment_id: searchRegex },
-        { user: { $in: userIds } }
-      ];
+      // Search query ko Real Money filter ke saath combine kiya
+      filter = {
+        $and: [
+          { transactionType: { $in: ['wallet_recharge', 'shipping_fee', 'shipping_refund'] } },
+          {
+            $or: [
+              { razorpay_order_id: searchRegex },
+              { razorpay_payment_id: searchRegex },
+              { user: { $in: userIds } }
+            ]
+          }
+        ]
+      };
     }
 
     const total = await Transaction.countDocuments(filter);
@@ -84,15 +95,43 @@ const getAllTransactions = async (req, res) => {
       .skip(skip)
       .limit(limit);
 
+    // Aggregate mein bhi sirf Rupees wali success transactions ka total nikalenge
     const incomeAgg = await Transaction.aggregate([
-      { $match: { status: 'success' } },
-      { $group: { _id: null, total: { $sum: '$amount' } } }
+      { 
+        $match: { 
+          status: 'success', 
+          transactionType: { $in: ['wallet_recharge', 'shipping_fee', 'shipping_refund'] } 
+        } 
+      },
+      { 
+        $group: { 
+          _id: '$transactionType', 
+          total: { $sum: '$amount' } 
+        } 
+      }
     ]);
-    const totalIncome = incomeAgg.length > 0 ? incomeAgg[0].total : 0;
+
+    let totalRevenue = 0;
+    let totalRefunds = 0;
+
+    incomeAgg.forEach(item => {
+      if (item._id === 'wallet_recharge' || item._id === 'shipping_fee') {
+        totalRevenue += item.total;
+      } else if (item._id === 'shipping_refund') {
+        totalRefunds += item.total;
+      }
+    });
+
+    const netIncome = totalRevenue - totalRefunds;
 
     res.status(200).json({ 
       success: true, 
-      totalIncome: totalIncome,
+      financials: {
+        totalRevenue: totalRevenue,
+        totalRefunds: totalRefunds,
+        netIncome: netIncome
+      },
+      totalIncome: netIncome, 
       count: transactions.length, 
       totalRecords: total,
       totalPages: Math.ceil(total / limit),
@@ -529,7 +568,6 @@ const updateAdminOrderStatus = async (req, res) => {
 
 const getDashboardStats = async (req, res) => {
   try {
-
     const [
       totalUsers,
       verifiedUsers, 
@@ -540,12 +578,12 @@ const getDashboardStats = async (req, res) => {
       totalOrders,
       deliveredOrders,
       pendingOrders,
-      successfulTxns,
+      successfulTxns, // Real money only
       recentUsers,
       categoryDataRaw, 
       recentSwaps,
       recentItemsList,
-      recentTxnsList,
+      recentTxnsList, // Real money only
       recentOrdersList
     ] = await Promise.all([
       User.countDocuments(),
@@ -557,7 +595,8 @@ const getDashboardStats = async (req, res) => {
       Order.countDocuments(),
       Order.countDocuments({ orderStatus: 'delivered' }),
       Order.countDocuments({ orderStatus: 'pending' }),
-      Transaction.find({ status: 'success' }),
+      // Yaha filter lagaya hai taaki calculation mein sirf Rupees aayein
+      Transaction.find({ status: 'success', transactionType: { $in: ['wallet_recharge', 'shipping_fee', 'shipping_refund'] } }),
       User.find().select('full_name email profilePic created_at').sort({ created_at: -1 }).limit(5),
       Item.aggregate([
         { $match: { status: 'active' } },
@@ -566,11 +605,11 @@ const getDashboardStats = async (req, res) => {
       ]),
       BarterRequest.find({ status: 'ACCEPTED' }).sort({ updated_at: -1 }).limit(3).populate('item'),
       Item.find().sort({ created_at: -1 }).limit(3),
-      Transaction.find({ status: 'success' }).sort({ created_at: -1 }).limit(3),
+      // Yaha filter lagaya hai taaki recent activity mein coin refunds na dikhein
+      Transaction.find({ status: 'success', transactionType: { $in: ['wallet_recharge', 'shipping_fee', 'shipping_refund'] } }).sort({ created_at: -1 }).limit(3),
       Order.find({ orderStatus: 'delivered' }).sort({ updated_at: -1 }).limit(3).populate('item')
     ]);
 
-    // Current Month Orders
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
@@ -584,9 +623,19 @@ const getDashboardStats = async (req, res) => {
       created_at: { $gte: startOfMonth, $lte: endOfMonth }
     });
 
-    const totalRevenue = successfulTxns.reduce((sum, txn) => sum + txn.amount, 0);
+    let totalRevenue = 0;
+    let totalRefunds = 0;
+
+    successfulTxns.forEach(txn => {
+      if (txn.transactionType === 'wallet_recharge' || txn.transactionType === 'shipping_fee') {
+        totalRevenue += txn.amount;
+      } else if (txn.transactionType === 'shipping_refund') {
+        totalRefunds += txn.amount;
+      }
+    });
+
+    const netIncome = totalRevenue - totalRefunds;
     
-    // -> MODIFICATION START: Backend logic for Top 4 + Others
     const filteredCategories = categoryDataRaw.filter(c => c.name);
     const sortedCategories = filteredCategories.sort((a, b) => b.value - a.value);
     let categoryData = sortedCategories;
@@ -596,16 +645,18 @@ const getDashboardStats = async (req, res) => {
       const othersValue = sortedCategories.slice(4).reduce((sum, cat) => sum + cat.value, 0);
       categoryData = [...top4, { name: 'Others', value: othersValue }];
     }
-    // -> MODIFICATION END
 
-    // 2. Loop for 7 days (Run in parallel instead of sequence)
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
     sevenDaysAgo.setHours(0, 0, 0, 0);
 
     const [txnsAgg, swapsAgg] = await Promise.all([
       Transaction.aggregate([
-        { $match: { status: 'success', created_at: { $gte: sevenDaysAgo } } },
+        { $match: { 
+            status: 'success', 
+            created_at: { $gte: sevenDaysAgo },
+            transactionType: { $in: ['wallet_recharge', 'shipping_fee'] } // Graph sirf positive revenue ka
+        } },
         { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$created_at" } }, revenue: { $sum: "$amount" } } }
       ]),
       BarterRequest.aggregate([
@@ -632,7 +683,6 @@ const getDashboardStats = async (req, res) => {
       });
     }
 
-    // 3. Map Activities
     let activities = [];
 
     recentSwaps.forEach(swap => activities.push({
@@ -653,13 +703,14 @@ const getDashboardStats = async (req, res) => {
       bg: 'bg-blue-400/10 border-blue-400/20'
     }));
 
+    // Modified to handle Real Money UI text and colors properly
     recentTxnsList.forEach(txn => activities.push({
       id: `txn-${txn._id}`,
-      action: txn.transactionType === 'wallet_recharge' ? 'Credits Purchased' : 'Shipping Paid',
+      action: txn.transactionType === 'shipping_refund' ? 'Bank Refund Processed' : (txn.transactionType === 'wallet_recharge' ? 'Credits Purchased' : 'Shipping Paid'),
       item: `₹${txn.amount}`,
       time: txn.created_at,
-      color: 'text-yellow-400',
-      bg: 'bg-yellow-400/10 border-yellow-400/20'
+      color: txn.transactionType === 'shipping_refund' ? 'text-red-400' : 'text-yellow-400',
+      bg: txn.transactionType === 'shipping_refund' ? 'bg-red-400/10 border-red-400/20' : 'bg-yellow-400/10 border-yellow-400/20'
     }));
 
     recentOrdersList.forEach(order => activities.push({
@@ -680,7 +731,12 @@ const getDashboardStats = async (req, res) => {
         users: { total: totalUsers, verified: verifiedUsers },
         items: { total: totalItems, active: activeItems, pending: pendingItems, swapped: swappedItems },
         orders: { total: totalOrders, delivered: deliveredOrders, pending: pendingOrders, currentMonth: currentMonthOrders },
-        revenue: totalRevenue,
+        financials: {
+          totalRevenue,
+          totalRefunds,
+          netIncome
+        },
+        revenue: netIncome, 
         recentUsers,
         performanceData, 
         categoryData,   

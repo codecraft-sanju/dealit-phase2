@@ -9,7 +9,6 @@ import {
   Search, ChevronLeft, RefreshCcw 
 } from 'lucide-react'; 
 import axios from 'axios';
-import Cropper from 'react-easy-crop';
 
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -25,6 +24,8 @@ import CategoryModal from '../admin/CategoryModal';
 import EditItemModal from '../admin/EditItemModal';
 import EditOrderModal from '../admin/EditOrderModal';
 import RejectItemModal from '../admin/RejectItemModal';
+
+import ImageCropModal from '../admin/ImageCropModal';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -91,6 +92,7 @@ const AdminPanel = ({ user }) => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const [totalIncome, setTotalIncome] = useState(0);
+  const [financials, setFinancials] = useState({ totalRevenue: 0, totalRefunds: 0, netIncome: 0 });
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -227,7 +229,10 @@ const AdminPanel = ({ user }) => {
           const response = await axios.get(endpoint, { withCredentials: true });
           
           if (activeTab === 'transactions') {
-             setTotalIncome(response.data.totalIncome || 0);
+            setTotalIncome(response.data.totalIncome || 0);
+            if (response.data.financials) {
+              setFinancials(response.data.financials);
+            }
           }
           
           setData(response.data.data || []);
@@ -588,7 +593,7 @@ const AdminPanel = ({ user }) => {
       <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-purple-600/10 rounded-full blur-[140px] pointer-events-none"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] bg-emerald-600/10 rounded-full blur-[140px] pointer-events-none"></div>
 
-     
+      
       <style dangerouslySetInnerHTML={{__html: `
         .admin-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
         .admin-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -684,34 +689,47 @@ const AdminPanel = ({ user }) => {
 
             {activeTab === 'transactions' && !loading && (
               <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6 shrink-0">
-                  <div className="relative overflow-hidden bg-gradient-to-br from-emerald-500/20 to-teal-900/40 rounded-2xl md:rounded-3xl p-6 md:p-8 border border-emerald-500/30 shadow-[0_8px_32px_rgba(16,185,129,0.15)] group">
-                    <div className="absolute top-0 right-0 w-32 h-32 md:w-40 md:h-40 bg-emerald-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-emerald-500/30 transition-colors"></div>
-                    <div className="flex items-center justify-between relative z-10">
-                      <div>
-                        <p className="text-emerald-300 font-bold uppercase tracking-widest text-[10px] md:text-xs mb-1.5 md:mb-2">Total Platform Revenue</p>
-                        <h3 className="text-3xl md:text-4xl lg:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-emerald-200 truncate">
-                          ₹{totalIncome.toLocaleString('en-IN')}
+                {/* --- REDESIGNED COMPACT CARDS SIDE-BY-SIDE ON MOBILE --- */}
+                <div className="flex flex-row gap-2 md:gap-4 mb-3 md:mb-4 shrink-0">
+                  
+                  {/* Compact Card 1: Net Balance (takes up 2/3 width) */}
+                  <div className="flex-[2] relative overflow-hidden bg-gradient-to-br from-emerald-500/10 to-teal-900/30 rounded-xl md:rounded-2xl p-2.5 md:p-4 border border-emerald-500/20 shadow-sm flex flex-col justify-center gap-2 md:gap-3">
+                    <div className="flex items-center gap-2 md:gap-3">
+                      <div className="bg-emerald-500/20 p-1.5 md:p-2.5 rounded-lg border border-emerald-500/30 shrink-0">
+                        <IndianRupee className="w-4 h-4 md:w-6 md:h-6 text-emerald-400" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-emerald-400/80 font-bold uppercase tracking-widest text-[8px] md:text-[10px] mb-0.5 truncate">Net Balance</p>
+                        <h3 className="text-sm sm:text-xl md:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-emerald-200 truncate">
+                          ₹{financials.netIncome ? financials.netIncome.toLocaleString('en-IN') : totalIncome.toLocaleString('en-IN')}
                         </h3>
                       </div>
-                      <div className="bg-emerald-500/20 p-3 md:p-4 rounded-xl md:rounded-2xl border border-emerald-500/30 backdrop-blur-md hidden sm:block">
-                        <IndianRupee className="w-8 h-8 md:w-10 md:h-10 text-emerald-300" />
+                    </div>
+                    
+                    <div className="flex items-center justify-between gap-2 pt-2 md:pt-3 border-t border-emerald-500/10">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[7px] md:text-[9px] text-emerald-400/70 font-bold uppercase tracking-wider mb-0.5 truncate">Total In</p>
+                        <p className="text-[10px] sm:text-xs md:text-sm font-bold text-emerald-300 truncate">₹{financials.totalRevenue ? financials.totalRevenue.toLocaleString('en-IN') : '0'}</p>
+                      </div>
+                      <div className="w-px h-4 md:h-6 bg-emerald-500/20 shrink-0"></div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[7px] md:text-[9px] text-red-400/70 font-bold uppercase tracking-wider mb-0.5 truncate">Refunds</p>
+                        <p className="text-[10px] sm:text-xs md:text-sm font-bold text-red-300 truncate">₹{financials.totalRefunds ? financials.totalRefunds.toLocaleString('en-IN') : '0'}</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="relative overflow-hidden bg-white/[0.03] rounded-2xl md:rounded-3xl p-6 md:p-8 border border-white/10 shadow-lg group">
-                    <div className="absolute bottom-0 left-0 w-24 h-24 md:w-32 md:h-32 bg-blue-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 group-hover:bg-blue-500/20 transition-colors"></div>
-                    <div className="flex items-center justify-between relative z-10">
-                      <div>
-                        <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px] md:text-xs mb-1.5 md:mb-2">Transactions Displayed</p>
-                        <h3 className="text-3xl md:text-4xl lg:text-5xl font-black text-white">{Array.isArray(data) ? data.length : 0}</h3>
-                      </div>
-                      <div className="bg-blue-500/10 p-3 md:p-4 rounded-xl md:rounded-2xl border border-blue-500/20 backdrop-blur-md hidden sm:block">
-                        <Activity className="w-8 h-8 md:w-10 md:h-10 text-blue-400" />
-                      </div>
+                  {/* Compact Card 2: Transactions Displayed (takes up 1/3 width) */}
+                  <div className="flex-[1] relative overflow-hidden bg-white/[0.03] rounded-xl md:rounded-2xl p-2.5 md:p-4 border border-white/10 shadow-sm flex flex-col items-center justify-center text-center shrink-0">
+                    <div className="bg-blue-500/10 p-1.5 md:p-2.5 rounded-lg border border-blue-500/20 mb-1.5 md:mb-2">
+                      <Activity className="w-4 h-4 md:w-6 md:h-6 text-blue-400" />
+                    </div>
+                    <div className="min-w-0 w-full">
+                      <p className="text-gray-400 font-bold uppercase tracking-widest text-[8px] md:text-[10px] mb-0.5 truncate">Displayed</p>
+                      <h3 className="text-sm sm:text-xl md:text-2xl font-black text-white truncate">{Array.isArray(data) ? data.length : 0}</h3>
                     </div>
                   </div>
+
                 </div>
 
                 {(!Array.isArray(data) || data.length === 0) ? (
@@ -762,6 +780,10 @@ const AdminPanel = ({ user }) => {
                               {txn.transactionType === 'shipping_fee' ? (
                                 <span className="px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-[9px] md:text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center w-fit gap-1 md:gap-1.5 shadow-sm">
                                   <Package className="w-3 h-3 md:w-3.5 md:h-3.5" /> Shipping
+                                </span>
+                              ) : txn.transactionType === 'shipping_refund' || txn.transactionType === 'order_refund' ? (
+                                <span className="px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-[9px] md:text-[10px] font-bold uppercase tracking-wider bg-red-500/10 text-red-400 border border-red-500/20 flex items-center w-fit gap-1 md:gap-1.5 shadow-sm">
+                                  <RefreshCcw className="w-3 h-3 md:w-3.5 md:h-3.5" /> Refund
                                 </span>
                               ) : (
                                 <span className="px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-[9px] md:text-[10px] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center w-fit gap-1 md:gap-1.5 shadow-sm">
@@ -936,7 +958,6 @@ const AdminPanel = ({ user }) => {
         updating={updating}
       />
 
-      {/* CHANGES MADE HERE: Replaced inline Reject Item Modal with imported RejectItemModal component */}
       <RejectItemModal 
         isRejectModalOpen={isRejectModalOpen}
         setIsRejectModalOpen={setIsRejectModalOpen}
@@ -998,61 +1019,20 @@ const AdminPanel = ({ user }) => {
         updating={updating}
       />
 
-      {/* Interactive Crop Modal */}
-      {cropModalOpen && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center px-2 py-4 md:px-4 bg-black/80 backdrop-blur-md transition-opacity">
-          <div className="bg-[#0B0F19]/95 backdrop-blur-3xl w-full max-w-3xl rounded-2xl md:rounded-3xl border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col h-[70vh] md:h-[80vh] animate-in zoom-in-95 duration-200">
-            <div className="p-4 md:p-5 border-b border-white/5 flex justify-between items-center bg-white/[0.02] shrink-0">
-              <h2 className="text-sm md:text-lg font-black text-white flex items-center gap-2 tracking-tight">
-                <ImageIcon className="w-4 h-4 md:w-5 md:h-5 text-[#A388E1]" /> 
-                Crop {cropType === 'desktop' ? 'Desktop (5:1)' : 'Mobile (2.5:1)'}
-              </h2>
-              <button onClick={() => setCropModalOpen(false)} className="text-gray-400 hover:text-white transition-all p-2 bg-white/5 hover:bg-white/10 rounded-full">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            
-            <div className="relative flex-1 bg-black w-full h-full border-y border-white/5">
-              {imageToCrop && (
-                <Cropper
-                  image={imageToCrop}
-                  crop={crop}
-                  zoom={zoom}
-                  aspect={cropType === 'desktop' ? 5 / 1 : 2.5 / 1}
-                  onCropChange={setCrop}
-                  onCropComplete={onCropComplete}
-                  onZoomChange={setZoom}
-                />
-              )}
-            </div>
-
-            <div className="p-4 md:p-5 bg-white/[0.01] flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
-              <div className="flex items-center gap-3 w-full sm:w-1/2 bg-white/[0.02] p-2 md:p-3 rounded-xl border border-white/5">
-                <span className="text-gray-400 text-[10px] md:text-xs font-bold uppercase tracking-widest">Zoom</span>
-                <input
-                  type="range"
-                  value={zoom}
-                  min={1}
-                  max={3}
-                  step={0.1}
-                  onChange={(e) => setZoom(e.target.value)}
-                  className="w-full accent-[#A388E1]"
-                />
-              </div>
-              <div className="flex gap-2 md:gap-3 w-full sm:w-auto justify-end">
-                <button type="button" onClick={() => setCropModalOpen(false)} className="px-4 md:px-6 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all">Cancel</button>
-                <button
-                  onClick={handleCropAndUpload}
-                  disabled={isProcessingCrop}
-                  className={`px-5 md:px-8 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center gap-2 ${isProcessingCrop ? 'bg-[#A388E1]/30 text-white/50 cursor-not-allowed border-[#A388E1]/20' : 'bg-[#A388E1] hover:bg-[#8b70ca] text-white shadow-[0_0_15px_rgba(163,136,225,0.3)] border border-[#A388E1]/50'}`}
-                >
-                  {isProcessingCrop ? 'Processing...' : 'Upload'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* NAYA SEPARATE KIYA HUA CROP MODAL COMPONENT */}
+      <ImageCropModal 
+        cropModalOpen={cropModalOpen}
+        setCropModalOpen={setCropModalOpen}
+        imageToCrop={imageToCrop}
+        cropType={cropType}
+        crop={crop}
+        setCrop={setCrop}
+        zoom={zoom}
+        setZoom={setZoom}
+        onCropComplete={onCropComplete}
+        handleCropAndUpload={handleCropAndUpload}
+        isProcessingCrop={isProcessingCrop}
+      />
 
     </div>
   );

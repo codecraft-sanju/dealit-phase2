@@ -85,6 +85,7 @@ const DashboardOverview = ({ data }) => {
     items, 
     orders, 
     revenue, 
+    financials,
     recentUsers, 
     performanceData = [], 
     categoryData = [],    
@@ -146,19 +147,35 @@ const DashboardOverview = ({ data }) => {
 
       {/* Top Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8 relative z-10">
-        <div className="bg-gradient-to-br from-emerald-500/10 to-teal-900/40 p-5 md:p-6 rounded-2xl md:rounded-3xl border border-emerald-500/20 shadow-[0_8px_32px_rgba(16,185,129,0.1)] group">
+        
+        <div className="bg-gradient-to-br from-emerald-500/10 to-teal-900/40 p-5 md:p-6 rounded-2xl md:rounded-3xl border border-emerald-500/20 shadow-[0_8px_32px_rgba(16,185,129,0.1)] group flex flex-col justify-between">
           <div className="flex justify-between items-start mb-3 md:mb-4">
             <div>
-              <p className="text-[9px] md:text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1">Total Revenue</p>
-              <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight">₹{revenue.toLocaleString('en-IN')}</h3>
+              <p className="text-[9px] md:text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1">Net Income</p>
+              <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight">
+                ₹{financials?.netIncome !== undefined ? financials.netIncome.toLocaleString('en-IN') : (revenue || 0).toLocaleString('en-IN')}
+              </h3>
             </div>
             <div className="p-2.5 md:p-3 bg-emerald-500/20 rounded-xl border border-emerald-500/30">
               <IndianRupee className="w-5 h-5 md:w-6 md:h-6 text-emerald-400" />
             </div>
           </div>
-          <p className="text-[10px] md:text-xs text-emerald-400/80 font-medium flex items-center gap-1">
-            <TrendingUp className="w-3 h-3" /> All-time earnings
-          </p>
+          
+          <div className="flex items-center gap-3 pt-3 border-t border-emerald-500/20 mt-auto">
+            <div className="flex-1">
+              <p className="text-[8px] md:text-[9px] text-emerald-400/70 font-bold uppercase tracking-wider mb-0.5 flex items-center gap-1">
+                <TrendingUp className="w-2.5 h-2.5" /> Gross
+              </p>
+              <p className="text-xs font-bold text-emerald-300">₹{financials?.totalRevenue ? financials.totalRevenue.toLocaleString('en-IN') : '0'}</p>
+            </div>
+            <div className="w-px h-6 bg-emerald-500/20"></div>
+            <div className="flex-1">
+              <p className="text-[8px] md:text-[9px] text-red-400/70 font-bold uppercase tracking-wider mb-0.5 flex items-center gap-1">
+                <TrendingDown className="w-2.5 h-2.5" /> Refunds
+              </p>
+              <p className="text-xs font-bold text-red-300">₹{financials?.totalRefunds ? financials.totalRefunds.toLocaleString('en-IN') : '0'}</p>
+            </div>
+          </div>
         </div>
 
         <div className="bg-white/[0.02] p-5 md:p-6 rounded-2xl md:rounded-3xl border border-white/5 shadow-lg group hover:bg-white/[0.04] transition-all">

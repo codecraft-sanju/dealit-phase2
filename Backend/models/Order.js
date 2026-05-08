@@ -83,14 +83,12 @@ orderSchema.index({ orderStatus: 1, created_at: -1 });
 // 4. Admin Panel: Payment status filter ke liye
 orderSchema.index({ paymentStatus: 1, created_at: -1 });
 
-// 5. Shiprocket Webhook: AWB number se order find karna webhook me sabse frequent task hai
-// Unique false rakha hai in case starting me empty string ho.
-// -> MODIFICATION START: Replaced standard index with partial index to ignore empty strings
+
 orderSchema.index(
   { 'trackingDetails.awb_code': 1 },
   { partialFilterExpression: { 'trackingDetails.awb_code': { $exists: true, $ne: '' } } }
 );
-// -> MODIFICATION END
+
 
 // 6. Razorpay Webhook: Refund process hone par order find karne ke liye
 orderSchema.index({ razorpay_payment_id: 1 });

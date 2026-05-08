@@ -44,6 +44,6 @@ transactionSchema.index({ razorpay_payment_id: 1 });
 
 // User ki transaction history (getUserTransactions API) turant load hogi
 transactionSchema.index({ user: 1, transactionType: 1 });
-// -> MODIFICATION END
+
 
 module.exports = mongoose.model('Transaction', transactionSchema);
