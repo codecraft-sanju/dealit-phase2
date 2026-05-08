@@ -47,17 +47,17 @@ const DealDetailsPage = ({ user }) => {
     );
   }
 
-  const isRequester = user._id === deal.requester._id;
+  const isRequester = user?._id === deal.requester?._id;
   
-  const counterpart = isRequester ? deal.owner : deal.requester;
-  const counterpartItem = isRequester ? deal.item : deal.offered_item;
-  const myItem = isRequester ? deal.offered_item : deal.item;
+  const counterpart = (isRequester ? deal.owner : deal.requester) || {};
+  const counterpartItem = (isRequester ? deal.item : deal.offered_item) || {};
+  const myItem = (isRequester ? deal.offered_item : deal.item) || {};
 
   const dealDate = new Date(deal.createdAt || Date.now()).toLocaleDateString('en-US', {
     year: 'numeric', month: 'short', day: 'numeric'
   });
 
-  const whatsappMessage = `Hi ${counterpart.full_name}! 👋\n\nWe just locked a deal on *Dealit*! 🎉\n\nI will be exchanging my *${myItem.title}* for your *${counterpartItem.title}*.\n\nLet me know how you would like to proceed with the exchange. We can plan a meetup or coordinate via courier, whichever works best for you. Let's discuss!\n\nDeal ID: #${deal._id.substring(0, 8)}`;
+  const whatsappMessage = `Hi ${counterpart?.full_name || 'there'}! 👋\n\nWe just locked a deal on *Dealit*! 🎉\n\nI will be exchanging my *${myItem?.title || 'Item'}* for your *${counterpartItem?.title || 'Item'}*.\n\nLet me know how you would like to proceed with the exchange. We can plan a meetup or coordinate via courier, whichever works best for you. Let's discuss!\n\nDeal ID: #${deal._id?.substring(0, 8)}`;
 
   return (
     <div className="min-h-screen bg-[#f4f2f9] pb-10 font-sans relative">
@@ -74,7 +74,7 @@ const DealDetailsPage = ({ user }) => {
           <div>
             <h1 className="text-xl font-bold tracking-wide text-white leading-tight">Deal Summary</h1>
             <div className="flex items-center gap-1.5 text-purple-200">
-              <p className="text-xs font-medium">#{deal._id.substring(0, 8)}</p>
+              <p className="text-xs font-medium">#{deal._id?.substring(0, 8)}</p>
               <button onClick={handleCopyId} className="hover:text-white transition-colors" title="Copy Deal ID">
                 {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
               </button>
@@ -108,7 +108,7 @@ const DealDetailsPage = ({ user }) => {
             <div className="flex items-center gap-3 mb-4 border-b border-gray-100 pb-4">
               <div className="w-12 h-12 bg-[#EBE5F7] rounded-full flex items-center justify-center">
                 {/* <-- NAYA: Optimized profile pic --> */}
-                {counterpart.profilePic ? (
+                {counterpart?.profilePic ? (
                   <img src={getOptimizedCloudinaryUrl(counterpart.profilePic)} alt="Owner" className="w-full h-full rounded-full object-cover" />
                 ) : (
                   <User className="w-6 h-6 text-[#6B46C1]" />
@@ -116,10 +116,10 @@ const DealDetailsPage = ({ user }) => {
               </div>
               <div className="flex-1">
                 <p className="text-[11px] text-[#A388E1] font-extrabold uppercase tracking-wider mb-0.5">Your Partner</p>
-                <p className="text-lg font-bold text-gray-900 leading-tight">{counterpart.full_name}</p>
-                <p className="text-sm text-gray-600 font-medium">{counterpart.phone || 'Phone not available'}</p>
+                <p className="text-lg font-bold text-gray-900 leading-tight">{counterpart?.full_name || 'Unknown User'}</p>
+                <p className="text-sm text-gray-600 font-medium">{counterpart?.phone || 'Phone not available'}</p>
               </div>
-              {counterpart.phone && (
+              {counterpart?.phone && (
                 <a href={`tel:${counterpart.phone}`} className="p-2.5 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition-colors shadow-sm">
                   <Phone className="w-5 h-5" />
                 </a>
@@ -127,30 +127,30 @@ const DealDetailsPage = ({ user }) => {
             </div>
 
             <div className="grid grid-cols-2 gap-4 mb-4">
-              <Link to={`/item/${counterpartItem._id}`} className="bg-white border border-gray-100 p-3 rounded-xl shadow-sm flex flex-col hover:border-purple-300 transition-colors group">
+              <Link to={`/item/${counterpartItem?._id}`} className="bg-white border border-gray-100 p-3 rounded-xl shadow-sm flex flex-col hover:border-purple-300 transition-colors group">
                 <p className="text-[10px] text-gray-400 font-bold uppercase mb-2 group-hover:text-purple-500">They are bringing</p>
                 <div className="h-24 w-full bg-gray-50 rounded-lg mb-2 overflow-hidden flex items-center justify-center">
-                  {counterpartItem.images && counterpartItem.images.length > 0 ? (
+                  {counterpartItem?.images && counterpartItem.images.length > 0 ? (
                     // <-- NAYA: Optimized image for counterpart item -->
-                    <img src={getOptimizedCloudinaryUrl(counterpartItem.images[0])} alt={counterpartItem.title} className="h-full w-full object-cover" />
+                    <img src={getOptimizedCloudinaryUrl(counterpartItem.images[0])} alt={counterpartItem?.title || 'Item'} className="h-full w-full object-cover" />
                   ) : (
                     <Package className="w-8 h-8 text-gray-300" />
                   )}
                 </div>
-                <p className="text-sm font-bold text-gray-800 line-clamp-2">{counterpartItem.title}</p>
+                <p className="text-sm font-bold text-gray-800 line-clamp-2">{counterpartItem?.title || 'Unknown Item'}</p>
               </Link>
 
-              <Link to={`/item/${myItem._id}`} className="bg-white border border-gray-100 p-3 rounded-xl shadow-sm flex flex-col hover:border-purple-300 transition-colors group">
+              <Link to={`/item/${myItem?._id}`} className="bg-white border border-gray-100 p-3 rounded-xl shadow-sm flex flex-col hover:border-purple-300 transition-colors group">
                 <p className="text-[10px] text-[#A388E1] font-bold uppercase mb-2 group-hover:text-purple-600">You are giving</p>
                 <div className="h-24 w-full bg-gray-50 rounded-lg mb-2 overflow-hidden flex items-center justify-center">
-                  {myItem.images && myItem.images.length > 0 ? (
+                  {myItem?.images && myItem.images.length > 0 ? (
                     // <-- NAYA: Optimized image for your item -->
-                    <img src={getOptimizedCloudinaryUrl(myItem.images[0])} alt={myItem.title} className="h-full w-full object-cover" />
+                    <img src={getOptimizedCloudinaryUrl(myItem.images[0])} alt={myItem?.title || 'Item'} className="h-full w-full object-cover" />
                   ) : (
                     <Package className="w-8 h-8 text-gray-300" />
                   )}
                 </div>
-                <p className="text-sm font-bold text-gray-800 line-clamp-2">{myItem.title}</p>
+                <p className="text-sm font-bold text-gray-800 line-clamp-2">{myItem?.title || 'Unknown Item'}</p>
               </Link>
             </div>
 
@@ -158,12 +158,12 @@ const DealDetailsPage = ({ user }) => {
               <h3 className="text-[11px] text-gray-500 font-extrabold uppercase tracking-wider mb-3">Swap Details & Credits</h3>
               <div className="space-y-2 text-sm text-gray-700 font-medium">
                 <div className="flex justify-between items-center">
-                  <span className="truncate pr-2">Value of {myItem.title}:</span>
-                  <span className="whitespace-nowrap font-bold">{myItem.estimated_value || 0} 🪙</span>
+                  <span className="truncate pr-2">Value of {myItem?.title || 'Item'}:</span>
+                  <span className="whitespace-nowrap font-bold">{myItem?.estimated_value || 0} 🪙</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="truncate pr-2">Value of {counterpartItem.title}:</span>
-                  <span className="whitespace-nowrap font-bold">{counterpartItem.estimated_value || 0} 🪙</span>
+                  <span className="truncate pr-2">Value of {counterpartItem?.title || 'Item'}:</span>
+                  <span className="whitespace-nowrap font-bold">{counterpartItem?.estimated_value || 0} 🪙</span>
                 </div>
                 <div className="flex justify-between items-center border-t border-gray-100 pt-2 mt-2">
                   <span>Wallet Deduction:</span>
@@ -174,7 +174,7 @@ const DealDetailsPage = ({ user }) => {
             
           </div>
 
-          {counterpart.phone ? (
+          {counterpart?.phone ? (
             <a 
               href={`https://wa.me/${counterpart.phone.replace(/\D/g, '')}?text=${encodeURIComponent(whatsappMessage)}`}
               target="_blank" 
