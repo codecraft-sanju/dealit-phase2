@@ -1,5 +1,6 @@
 import React from 'react';
-import { Coins, ToggleRight, ToggleLeft, Package, List, Gift, Users, Target, Truck, Zap, IndianRupee, Clock, AlertTriangle, Settings } from 'lucide-react';
+// NEW CHANGE: Added 'Image as ImageIcon' to imports
+import { Coins, ToggleRight, ToggleLeft, Package, List, Gift, Users, Target, Truck, Zap, IndianRupee, Clock, AlertTriangle, Settings, Image as ImageIcon } from 'lucide-react';
 
 const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, handleSaveSettings, updating }) => {
   
@@ -62,7 +63,8 @@ const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, handleSav
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6">
+                {/* NEW CHANGE: Changed grid layout to fit 4 columns on large screens */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">
                   <div className="space-y-2 md:space-y-2.5">
                     <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest">Credits Per Listing</label>
                     <div className="relative group">
@@ -98,11 +100,11 @@ const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, handleSav
                         className="w-full bg-black/20 border border-white/10 rounded-xl pl-9 md:pl-11 pr-3 md:pr-4 py-3 md:py-3.5 text-white text-xs md:text-sm font-bold focus:outline-none focus:border-blue-500/50 focus:bg-black/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-inner" 
                       />
                     </div>
-                    <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider">Listings eligible for reward (e.g., 3).</p>
+                    <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider">Listings eligible for reward.</p>
                   </div>
 
                   <div className="space-y-2 md:space-y-2.5">
-                    <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest">Max Allowed Listings</label>
+                    <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest">Max Allowed</label>
                     <div className="relative group">
                       <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
                         <List className="w-4 h-4 text-emerald-400 group-focus-within:text-emerald-300 transition-colors" />
@@ -118,6 +120,27 @@ const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, handleSav
                     </div>
                     <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider">Total items a user can list.</p>
                   </div>
+
+                  {/* NEW CHANGE: Added Minimum Images Required Input */}
+                  <div className="space-y-2 md:space-y-2.5">
+                    <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest">Min Images Required</label>
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
+                        <ImageIcon className="w-4 h-4 text-[#A388E1] group-focus-within:text-purple-300 transition-colors" />
+                      </div>
+                      <input 
+                        type="number" 
+                        required 
+                        min="1" 
+                        max="5"
+                        value={creditSettings.minImagesRequired || 3} 
+                        onChange={(e) => setCreditSettings({...creditSettings, minImagesRequired: Number(e.target.value)})} 
+                        className="w-full bg-black/20 border border-white/10 rounded-xl pl-9 md:pl-11 pr-3 md:pr-4 py-3 md:py-3.5 text-white text-xs md:text-sm font-bold focus:outline-none focus:border-[#A388E1]/50 focus:bg-black/40 transition-all shadow-inner" 
+                      />
+                    </div>
+                    <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider">Images required to list (1-5).</p>
+                  </div>
+
                 </div>
               </div>
 

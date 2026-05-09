@@ -115,7 +115,8 @@ const AdminPanel = ({ user }) => {
     shippingMethod: 'flat',
     flatShippingCost: 60,
     auraReward: 50,
-    auraPenalty: 50
+    auraPenalty: 50,
+    minImagesRequired: 3
   });
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);

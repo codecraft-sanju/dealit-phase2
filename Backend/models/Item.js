@@ -43,11 +43,8 @@ itemSchema.index({ title: 'text', category: 'text', condition: 'text' });
 // 2. Compound Index for fast filtering and sorting (e.g., getting pending items ordered by date)
 itemSchema.index({ status: 1, created_at: -1 });
 
-
-// 3. Index for fast lookup of a user's items and credit system logic
-// Changed from { owner: 1 } to support the active items count query in adminController
 itemSchema.index({ owner: 1, status: 1, created_at: -1 });
-// -> MODIFICATION END
+
 
 // 4. For marketplace filtering
 itemSchema.index({ status: 1, estimated_value: 1, category: 1 });

@@ -387,7 +387,10 @@ const updateCreditSettings = async (req, res) => {
       milestoneReferralReward,
       autoCancelHours,
       auraReward,
-      auraPenalty
+      auraPenalty,
+      // NEW CHANGE START
+      minImagesRequired
+      // NEW CHANGE END
     } = req.body;
     
     let setting = await CreditSetting.findOne();
@@ -416,6 +419,10 @@ const updateCreditSettings = async (req, res) => {
 
     if (auraReward !== undefined) setting.auraReward = auraReward;
     if (auraPenalty !== undefined) setting.auraPenalty = auraPenalty;
+    
+    // NEW CHANGE START: Update setting value
+    if (minImagesRequired !== undefined) setting.minImagesRequired = minImagesRequired;
+    // NEW CHANGE END
 
     setting.updated_at = Date.now();
 
@@ -434,9 +441,11 @@ const updateCreditSettings = async (req, res) => {
 
 const getPublicCreditSettings = async (req, res) => {
   try {
+    // NEW CHANGE START: Added minImagesRequired in select query
     let setting = await CreditSetting.findOne().select(
-      'isReferralSystemEnabled referralRewardCredits maxAllowedListings maxReferralLimit milestoneReferralReward isWelcomeBonusEnabled welcomeBonusAmount shippingMethod flatShippingCost autoCancelHours auraReward auraPenalty'
+      'isReferralSystemEnabled referralRewardCredits maxAllowedListings maxReferralLimit milestoneReferralReward isWelcomeBonusEnabled welcomeBonusAmount shippingMethod flatShippingCost autoCancelHours auraReward auraPenalty minImagesRequired'
     );
+    // NEW CHANGE END
     
     if (!setting) {
       setting = { 
@@ -451,7 +460,10 @@ const getPublicCreditSettings = async (req, res) => {
         flatShippingCost: 60,
         autoCancelHours: 24,
         auraReward: 50,
-        auraPenalty: 50
+        auraPenalty: 50,
+        // NEW CHANGE START
+        minImagesRequired: 3
+        // NEW CHANGE END
       };
     }
     res.status(200).json({ success: true, data: setting });
@@ -571,7 +583,6 @@ const updateAdminOrderStatus = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server Error updating order' });
   }
 };
-
 
 const getDashboardStats = async (req, res) => {
   try {

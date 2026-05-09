@@ -4,8 +4,6 @@ const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const helmet = require('helmet');
 
-
-
 const connectDB = require('./database/db');
 const userRoutes = require('./routes/userRoutes');
 const itemRoutes = require('./routes/itemRoutes');
@@ -23,11 +21,11 @@ const { verifyRazorpayConnection } = require('./controllers/paymentController');
 
 const cron = require('node-cron');
 const { autoCancelOverdueOrders } = require('./controllers/orderController');
+const { autoCancelOverdueBarters } = require('./controllers/barterController');
 
 const app = express();
 
 connectDB();
-
 
 app.use(cors({
   origin: [
@@ -52,7 +50,6 @@ app.get('/', (req, res) => {
   });
 });
 
-
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     success: true, 
@@ -61,7 +58,6 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
-
 
 app.use('/api/users', userRoutes);
 app.use('/api/items', itemRoutes);
@@ -75,7 +71,6 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/notifications', notificationRoutes);
 
-
 app.use((err, req, res, next) => {
   console.error('Unhandled Error:', err);
   res.status(500).json({ 
@@ -83,7 +78,6 @@ app.use((err, req, res, next) => {
     message: 'Internal Server Error' 
   });
 });
-
 
 const PORT = process.env.PORT || 5000;
 
@@ -97,5 +91,10 @@ app.listen(PORT, async () => {
   cron.schedule('0 * * * *', async () => {
     console.log('Running auto-cancel overdue orders cron job...');
     await autoCancelOverdueOrders();
+    
+  
+    console.log('Running auto-cancel overdue barters cron job...');
+    await autoCancelOverdueBarters();
+   
   });
 });

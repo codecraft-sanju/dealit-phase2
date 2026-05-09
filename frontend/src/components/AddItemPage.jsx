@@ -241,7 +241,8 @@ const AddItemPage = ({ user, setUser }) => {
     isCreditSystemEnabled: true,
     creditsPerListing: 50,
     maxListingsRewarded: 3,
-    maxAllowedListings: 5 
+    maxAllowedListings: 5,
+    minImagesRequired: 3 // NEW CHANGE: Added default value here
   }, isLoading: loadingSettings } = useQuery({
     queryKey: ['creditSettings'],
     queryFn: async () => {
@@ -250,7 +251,8 @@ const AddItemPage = ({ user, setUser }) => {
         isCreditSystemEnabled: true,
         creditsPerListing: 50,
         maxListingsRewarded: 3,
-        maxAllowedListings: 5 
+        maxAllowedListings: 5,
+        minImagesRequired: 3 // NEW CHANGE: Added default fallback here
       };
     },
     staleTime: 1000 * 60 * 30,
@@ -267,6 +269,9 @@ const AddItemPage = ({ user, setUser }) => {
 
   const listedCount = user?.listedProductsCount || 0;
   const isLimitReached = listedCount >= systemSettings.maxAllowedListings;
+  
+  // NEW CHANGE: Helper variable for minimum images
+  const minImages = systemSettings.minImagesRequired || 3;
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -578,8 +583,9 @@ const AddItemPage = ({ user, setUser }) => {
       return;
     }
 
-    if (images.length < 3) {
-      toast.error('Please upload at least 3 images of your item.');
+    // NEW CHANGE: Replaced hardcoded 3 with dynamic minImages
+    if (images.length < minImages) {
+      toast.error(`Please upload at least ${minImages} image${minImages > 1 ? 's' : ''} of your item.`);
       return;
     }
 
@@ -789,7 +795,8 @@ const AddItemPage = ({ user, setUser }) => {
             
             <div className="pb-4 border-b border-purple-100 border-dashed">
               <label className="block text-xs sm:text-sm font-bold text-[#553c9a] mb-3 sm:mb-4">
-                Add at least 3 images*
+                {/* NEW CHANGE: Dynamic text for image count */}
+                Add at least {minImages} image{minImages > 1 ? 's' : ''}*
               </label>
               
               <div className="flex flex-wrap gap-3 sm:gap-4 items-start">

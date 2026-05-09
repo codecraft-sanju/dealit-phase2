@@ -305,9 +305,10 @@ const SwapsPage = ({ user }) => {
                       swap.status === 'GHOSTING' ? 'bg-orange-100 text-orange-700' : 
                       swap.status === 'ACCEPTED' ? 'bg-green-100 text-green-700' :
                       swap.status === 'REJECTED' ? 'bg-red-100 text-red-700' :
+                      swap.status === 'CANCELLED' ? 'bg-gray-200 text-gray-700' :
                       'bg-yellow-100 text-yellow-700'
                     }`}>
-                      {swap.status} {swap.status === 'GHOSTING' && '👻'}
+                      {swap.status} {swap.status === 'GHOSTING' && '👻'} {swap.status === 'CANCELLED' && '🚫'}
                     </span>
                   </div>
                   

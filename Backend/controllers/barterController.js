@@ -3,11 +3,11 @@ const Item = require('../models/Item');
 const User = require('../models/User'); 
 const Notification = require('../models/Notification');
 
-// -> CHANGES START HERE: Added missing imports for courier logic
+
 const crypto = require('crypto');
 const Order = require('../models/Order');
 const Transaction = require('../models/Transaction');
-// -> CHANGES END HERE
+
 
 const createBarterRequest = async (req, res) => {
   try {
