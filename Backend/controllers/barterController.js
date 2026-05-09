@@ -28,18 +28,21 @@ const createBarterRequest = async (req, res) => {
     }
 
     // --- NAYA LOGIC: Spam Protection (Check existing request) ---
+    // -> CHANGES START HERE: Added populate to fetch the owner's name
     const existingRequest = await BarterRequest.findOne({
       requester: req.user._id,
       item: requestedItem,
       status: { $in: ['PENDING', 'ACCEPTED'] } // Agar pehle se pending ya accepted hai
-    });
+    }).populate('owner', 'full_name');
 
     if (existingRequest) {
+      const ownerName = existingRequest.owner?.full_name || 'the owner';
       return res.status(400).json({ 
         success: false, 
-        message: 'You have already sent a request for this item. Please wait for the owner to respond!' 
+        message: `You have already sent a request for this item. Please wait for ${ownerName} to respond!` 
       });
     }
+    // -> CHANGES END HERE
     // -------------------------------------------------------------
 
     const currentUser = await User.findById(req.user._id);
