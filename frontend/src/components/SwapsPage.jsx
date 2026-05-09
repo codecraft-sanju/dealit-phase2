@@ -3,13 +3,45 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { 
   RefreshCw, Check, X, MessageSquare, Package, Eye, AlertCircle, 
   ArrowRightLeft, ChevronLeft, ExternalLink, Truck, Users, MapPin, 
-  Home, Hash, Phone, User as UserIcon, Loader2
+  Home, Hash, Phone, User as UserIcon, Loader2, 
+  Clock // --> MODIFICATION: Added Clock
 } from 'lucide-react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
+
+// --> MODIFICATION START: CountdownTimer Added
+const CountdownTimer = ({ createdAt, hours }) => {
+  const [timeLeft, setTimeLeft] = useState('');
+
+  useEffect(() => {
+    const calculateTime = () => {
+      if (!createdAt || !hours) return '00h 00m 00s';
+      
+      const expireDate = new Date(createdAt).getTime() + hours * 60 * 60 * 1000;
+      const now = new Date().getTime();
+      const diff = expireDate - now;
+
+      if (diff <= 0) return '00h 00m 00s';
+
+      const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+      return `${h}h ${m}m ${s}s`;
+    };
+
+    setTimeLeft(calculateTime());
+    const timer = setInterval(() => setTimeLeft(calculateTime()), 1000);
+    
+    return () => clearInterval(timer);
+  }, [createdAt, hours]);
+
+  return <span>{timeLeft}</span>;
+};
+// --> MODIFICATION END
 
 const loadRazorpayScript = () => {
   return new Promise((resolve) => {
@@ -35,7 +67,7 @@ const SwapsPage = ({ user }) => {
   // --- MODAL & COURIER STATES START ---
   const [acceptModalOpen, setAcceptModalOpen] = useState(false);
   const [activeSwap, setActiveSwap] = useState(null);
-  const [deliveryStep, setDeliveryStep] = useState(1); // 1 = Select Mode, 2 = Address & Pay
+  const [deliveryStep, setDeliveryStep] = useState(1); 
   const [deliveryMethod, setDeliveryMethod] = useState('');
   
   const savedAddresses = user?.savedAddresses || [];
@@ -53,6 +85,26 @@ const SwapsPage = ({ user }) => {
     state: user?.state || '',
     pincode: user?.pincode || ''
   });
+
+  // --> MODIFICATION START: Added settings state and fetch
+  const [autoCancelHours, setAutoCancelHours] = useState(24);
+  const [auraPenalty, setAuraPenalty] = useState(50);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await axios.get(`${API_URL}/admin/public-settings`);
+        if (res.data.success) {
+          if (res.data.data.autoCancelHours) setAutoCancelHours(res.data.data.autoCancelHours);
+          if (res.data.data.auraPenalty !== undefined) setAuraPenalty(res.data.data.auraPenalty);
+        }
+      } catch (err) {
+        console.error('Error fetching settings:', err);
+      }
+    };
+    fetchSettings();
+  }, []);
+  // --> MODIFICATION END
 
   useEffect(() => {
     if (selectedAddressIndex >= 0 && savedAddresses[selectedAddressIndex]) {
@@ -77,7 +129,7 @@ const SwapsPage = ({ user }) => {
         setActionError({ id: null, message: '' });
         try {
           const res = await axios.post(`${API_URL}/orders/calculate-shipping`, {
-            itemId: activeSwap.offeredItem._id, // User is receiving this item
+            itemId: activeSwap.offeredItem._id, 
             pincode: formData.pincode
           }, { withCredentials: true });
           
@@ -342,6 +394,35 @@ const SwapsPage = ({ user }) => {
                     )}
                   </div>
                 </div>
+
+                {/* --> MODIFICATION START: Timer Alert Box for Pending Swaps */}
+                {activeTab === 'received' && swap.status === 'PENDING' && (
+                  <div className="mb-6 bg-orange-50 border border-orange-100 p-4 rounded-xl flex items-start gap-3 shadow-sm">
+                    <AlertCircle className="w-5 h-5 text-orange-500 mt-0.5 shrink-0" />
+                    <div className="text-xs text-orange-800 font-medium leading-relaxed w-full">
+                      <span className="font-bold text-orange-900 block mb-1">Action Required:</span> 
+                      Please accept or reject this offer within <span className="font-bold">{autoCancelHours} hours</span>.
+                      <div className="text-red-600 font-bold flex items-center gap-1.5 mt-1.5 mb-1.5 bg-red-50/50 w-fit px-2 py-1 rounded-md border border-red-100">
+                        <Clock className="w-3.5 h-3.5" /> Time Left: <span className="animate-pulse"><CountdownTimer createdAt={swap.createdAt || swap.created_at} hours={autoCancelHours} /></span>
+                      </div>
+                      Failure to respond will mark this as Ghosting and result in a <span className="font-bold text-red-600">{auraPenalty} Aura point penalty</span> on Dealit.
+                    </div>
+                  </div>
+                )}
+                
+                {activeTab === 'sent' && swap.status === 'PENDING' && (
+                  <div className="mb-6 bg-blue-50 border border-blue-100 p-4 rounded-xl flex items-start gap-3 shadow-sm">
+                    <Clock className="w-5 h-5 text-blue-500 mt-0.5 shrink-0" />
+                    <div className="text-xs text-blue-800 font-medium leading-relaxed w-full">
+                      <span className="font-bold text-blue-900 block mb-1">Awaiting Response:</span> 
+                      The receiver has <span className="font-bold">{autoCancelHours} hours</span> to accept your offer.
+                      <div className="text-blue-600 font-bold flex items-center gap-1.5 mt-1.5 bg-blue-100/50 w-fit px-2 py-1 rounded-md border border-blue-200">
+                        <Clock className="w-3.5 h-3.5" /> Time Left: <span className="animate-pulse"><CountdownTimer createdAt={swap.createdAt || swap.created_at} hours={autoCancelHours} /></span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {/* --> MODIFICATION END */}
 
                 {actionError.id === swap._id && (
                   <div className="mb-6 bg-red-50 border border-red-100 p-4 rounded-xl flex items-start gap-3">
