@@ -137,7 +137,9 @@ const CheckoutPage = ({ user, setUser }) => {
         } catch (err) {
           console.error('Error calculating dynamic shipping:', err);
           setError(err.response?.data?.message || 'Failed to calculate shipping. Please check address or contact support.');
-          setShippingCost(0);
+          // --> MODIFICATION START: Set to null instead of 0 on error
+          setShippingCost(null);
+          // --> MODIFICATION END
         } finally {
           setIsCalculatingShipping(false);
         }
@@ -156,6 +158,9 @@ const CheckoutPage = ({ user, setUser }) => {
     if (selectedAddressIndex !== -1) {
       setSelectedAddressIndex(-1);
     }
+    // --> MODIFICATION START: Clear error when user types to re-enable button
+    if (error) setError('');
+    // --> MODIFICATION END
   };
 
   const itemPrice = item?.estimated_value || 0;
@@ -375,7 +380,9 @@ const CheckoutPage = ({ user, setUser }) => {
                     {savedAddresses.map((addr, idx) => (
                       <div 
                         key={idx}
-                        onClick={() => setSelectedAddressIndex(idx)}
+                        // --> MODIFICATION START: Clear error on address change
+                        onClick={() => { setSelectedAddressIndex(idx); setError(''); }}
+                        // --> MODIFICATION END
                         className={`relative p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 ${
                           selectedAddressIndex === idx 
                             ? 'border-[#6B46C1] bg-[#f8f6ff] shadow-sm' 
@@ -396,7 +403,9 @@ const CheckoutPage = ({ user, setUser }) => {
                     ))}
                     
                     <div 
-                      onClick={() => setSelectedAddressIndex(-1)}
+                      // --> MODIFICATION START: Clear error on new address select
+                      onClick={() => { setSelectedAddressIndex(-1); setError(''); }}
+                      // --> MODIFICATION END
                       className={`relative p-4 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all duration-200 min-h-[90px] ${
                         selectedAddressIndex === -1 
                           ? 'border-[#6B46C1] bg-[#f8f6ff] text-[#6B46C1]' 
@@ -482,15 +491,19 @@ const CheckoutPage = ({ user, setUser }) => {
                 </div>
                 <div className="flex justify-between items-center">
                   <span>Shipping Fee {shippingCost > 0 ? '(Pay via Razorpay)' : ''}</span>
-                  <span className={`flex items-center gap-1 font-bold ${isCalculatingShipping ? 'text-gray-400' : shippingCost === 0 ? 'text-emerald-500' : 'text-gray-900'}`}>
-                    {isCalculatingShipping ? 'Calculating...' : shippingCost === 0 ? 'FREE' : `₹ ${shippingCost}`}
+                  {/* --> MODIFICATION START: Show failed if there is an error */}
+                  <span className={`flex items-center gap-1 font-bold ${isCalculatingShipping ? 'text-gray-400' : error ? 'text-red-500' : shippingCost === 0 ? 'text-emerald-500' : 'text-gray-900'}`}>
+                    {isCalculatingShipping ? 'Calculating...' : error ? 'Failed' : shippingCost === 0 ? 'FREE' : `₹ ${shippingCost}`}
                   </span>
+                  {/* --> MODIFICATION END */}
                 </div>
                 <div className="border-t border-gray-100 pt-4 mt-2 flex justify-between items-center text-lg">
                   <span className="font-bold text-gray-900">Total to Pay</span>
+                  {/* --> MODIFICATION START: Show failed if there is an error */}
                   <span className="font-black text-[#6B46C1]">
-                    {isCalculatingShipping ? '...' : shippingCost === 0 ? 'FREE' : `₹ ${shippingCost}`}
+                    {isCalculatingShipping ? '...' : error ? 'Failed' : shippingCost === 0 ? 'FREE' : `₹ ${shippingCost}`}
                   </span>
+                  {/* --> MODIFICATION END */}
                 </div>
               </div>
 
@@ -536,19 +549,25 @@ const CheckoutPage = ({ user, setUser }) => {
 
               {hasEnoughCredits ? (
                 <motion.button 
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.98 }}
+                  // --> MODIFICATION START: Disable button and animations if there's an error
+                  whileHover={!error ? { scale: 1.01 } : {}}
+                  whileTap={!error ? { scale: 0.98 } : {}}
                   type="submit" 
-                  disabled={processing || isCalculatingShipping}
-                  className="w-full bg-[#6B46C1] hover:bg-[#5a3aa3] text-white font-bold text-lg py-4 rounded-xl mt-6 transition-all shadow-md shadow-[#6B46C1]/20 disabled:opacity-70 disabled:cursor-not-allowed"
+                  disabled={processing || isCalculatingShipping || !!error}
+                  className={`w-full text-white font-bold text-lg py-4 rounded-xl mt-6 transition-all disabled:opacity-70 disabled:cursor-not-allowed ${
+                    error 
+                      ? 'bg-gray-400 shadow-none' 
+                      : 'bg-[#6B46C1] hover:bg-[#5a3aa3] shadow-md shadow-[#6B46C1]/20'
+                  }`}
                 >
                   {processing ? (
                     <span className="flex items-center justify-center gap-2">
                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                       Processing...
                     </span>
-                  ) : isCalculatingShipping ? 'Calculating Shipping...' : shippingCost === 0 ? 'Place Order' : `Pay ₹${shippingCost} & Place Order`}
+                  ) : isCalculatingShipping ? 'Calculating Shipping...' : error ? 'Fix Error to Continue' : shippingCost === 0 ? 'Place Order' : `Pay ₹${shippingCost} & Place Order`}
                 </motion.button>
+                // --> MODIFICATION END
               ) : (
                 <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
                   <Link 

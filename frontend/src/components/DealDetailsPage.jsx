@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { Check, ArrowLeft, MessageSquare, Package, User, ShieldAlert, Phone, Calendar, Copy } from 'lucide-react';
+// --> MODIFICATION: Added Clock, X, and AlertCircle icons for different status states
+import { Check, ArrowLeft, MessageSquare, Package, User, ShieldAlert, Phone, Calendar, Copy, Clock, X, AlertCircle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query'; // <-- NAYA: Imported React Query
 import { getOptimizedCloudinaryUrl } from './HomePage'; // <-- NAYA: Imported Cloudinary optimizer
 
@@ -57,6 +58,52 @@ const DealDetailsPage = ({ user }) => {
     year: 'numeric', month: 'short', day: 'numeric'
   });
 
+  // --> MODIFICATION: Dynamic Status Configuration
+  const dealStatus = deal.status || 'PENDING';
+  const isAccepted = dealStatus === 'ACCEPTED';
+
+  const getStatusConfig = () => {
+    switch (dealStatus) {
+      case 'ACCEPTED':
+        return {
+          title: 'Deal Locked! 🎉',
+          message: 'Congratulations! The barter request has been accepted. You can now contact your exchange partner to finalize the details.',
+          icon: <Check className="w-10 h-10 text-[#137333]" />,
+          bgConfig: 'bg-[#E6F4EA]',
+          borderColor: 'border-white'
+        };
+      case 'PENDING':
+        return {
+          title: 'Offer Pending ⏳',
+          message: isRequester 
+            ? 'Waiting for the other party to review your offer.' 
+            : 'You have a pending offer. Head to your Swaps page to accept or reject it.',
+          icon: <Clock className="w-10 h-10 text-amber-500" />,
+          bgConfig: 'bg-amber-50',
+          borderColor: 'border-white'
+        };
+      case 'REJECTED':
+        return {
+          title: 'Offer Rejected ❌',
+          message: 'This barter offer was declined.',
+          icon: <X className="w-10 h-10 text-red-500" />,
+          bgConfig: 'bg-red-50',
+          borderColor: 'border-white'
+        };
+      default: // Handles CANCELLED or GHOSTING
+        return {
+          title: 'Deal Inactive 🚫',
+          message: 'This barter deal is no longer active or was cancelled.',
+          icon: <AlertCircle className="w-10 h-10 text-gray-500" />,
+          bgConfig: 'bg-gray-100',
+          borderColor: 'border-white'
+        };
+    }
+  };
+
+  const statusDisplay = getStatusConfig();
+  // --> MODIFICATION END
+
   const whatsappMessage = `Hi ${counterpart?.full_name || 'there'}! 👋\n\nWe just locked a deal on *Dealit*! 🎉\n\nI will be exchanging my *${myItem?.title || 'Item'}* for your *${counterpartItem?.title || 'Item'}*.\n\nLet me know how you would like to proceed with the exchange. We can plan a meetup or coordinate via courier, whichever works best for you. Let's discuss!\n\nDeal ID: #${deal._id?.substring(0, 8)}`;
 
   return (
@@ -90,19 +137,21 @@ const DealDetailsPage = ({ user }) => {
       <div className="max-w-xl mx-auto px-5 md:px-8 pt-24 relative z-20">
         <div className="bg-white rounded-[2rem] p-6 md:p-8 shadow-xl border border-gray-100 text-center">
           
-          <div className="w-20 h-20 bg-[#E6F4EA] rounded-full flex items-center justify-center mx-auto mb-5 border-4 border-white shadow-lg">
-            <Check className="w-10 h-10 text-[#137333]" />
+          {/* --> MODIFICATION: Dynamic Status Icon & Messaging */}
+          <div className={`w-20 h-20 ${statusDisplay.bgConfig} rounded-full flex items-center justify-center mx-auto mb-5 border-4 ${statusDisplay.borderColor} shadow-lg`}>
+            {statusDisplay.icon}
           </div>
 
-          <h2 className="text-3xl font-black text-gray-900 mb-2">Deal Locked! 🎉</h2>
+          <h2 className="text-3xl font-black text-gray-900 mb-2">{statusDisplay.title}</h2>
           <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400 font-bold uppercase mb-4 tracking-wide">
             <Calendar className="w-4 h-4" /> 
             <span>Date: {dealDate}</span>
           </div>
           
           <p className="text-sm text-gray-500 mb-8 font-medium">
-            Congratulations! The barter request has been accepted. You can now contact your exchange partner to finalize the details.
+            {statusDisplay.message}
           </p>
+          {/* --> MODIFICATION END */}
 
           <div className="bg-[#fcfbff] rounded-2xl p-5 mb-6 text-left border border-[#f0eaff]">
             <div className="flex items-center gap-3 mb-4 border-b border-gray-100 pb-4">
@@ -117,9 +166,13 @@ const DealDetailsPage = ({ user }) => {
               <div className="flex-1">
                 <p className="text-[11px] text-[#A388E1] font-extrabold uppercase tracking-wider mb-0.5">Your Partner</p>
                 <p className="text-lg font-bold text-gray-900 leading-tight">{counterpart?.full_name || 'Unknown User'}</p>
-                <p className="text-sm text-gray-600 font-medium">{counterpart?.phone || 'Phone not available'}</p>
+                {/* --> MODIFICATION: Masking Phone Number if deal is not accepted */}
+                <p className="text-sm text-gray-600 font-medium">
+                  {isAccepted ? (counterpart?.phone || 'Phone not available') : '+91 XXXXX XXXXX'}
+                </p>
               </div>
-              {counterpart?.phone && (
+              {/* --> MODIFICATION: Only show direct call button if deal is accepted */}
+              {isAccepted && counterpart?.phone && (
                 <a href={`tel:${counterpart.phone}`} className="p-2.5 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition-colors shadow-sm">
                   <Phone className="w-5 h-5" />
                 </a>
@@ -167,37 +220,51 @@ const DealDetailsPage = ({ user }) => {
                 </div>
                 <div className="flex justify-between items-center border-t border-gray-100 pt-2 mt-2">
                   <span>Wallet Deduction:</span>
-                  <span className="font-bold text-red-500">-{deal.credits_deducted || 0} 🪙</span>
+                  {/* --> MODIFICATION: Dynamic deduction visibility based on accepted status */}
+                  <span className={`font-bold ${isAccepted ? 'text-red-500' : 'text-gray-400'}`}>
+                    {isAccepted ? `-${deal.credits_deducted || 0}` : 'Pending'} 🪙
+                  </span>
                 </div>
               </div>
             </div>
             
           </div>
 
-          {counterpart?.phone ? (
-            <a 
-              href={`https://wa.me/${counterpart.phone.replace(/\D/g, '')}?text=${encodeURIComponent(whatsappMessage)}`}
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="w-full bg-[#25D366] hover:bg-[#1DA851] text-white font-black text-lg py-4 px-4 rounded-xl transition-all shadow-lg shadow-green-500/30 flex items-center justify-center gap-2 mb-4"
-            >
-              <MessageSquare className="w-5 h-5" /> Chat on WhatsApp
-            </a>
+          {/* --> MODIFICATION: Conditionally render WhatsApp button only if Deal is Accepted */}
+          {isAccepted ? (
+            counterpart?.phone ? (
+              <a 
+                href={`https://wa.me/${counterpart.phone.replace(/\D/g, '')}?text=${encodeURIComponent(whatsappMessage)}`}
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="w-full bg-[#25D366] hover:bg-[#1DA851] text-white font-black text-lg py-4 px-4 rounded-xl transition-all shadow-lg shadow-green-500/30 flex items-center justify-center gap-2 mb-4"
+              >
+                <MessageSquare className="w-5 h-5" /> Chat on WhatsApp
+              </a>
+            ) : (
+              <button disabled className="w-full bg-gray-100 text-gray-400 font-bold text-lg py-4 px-4 rounded-xl cursor-not-allowed border border-gray-200 mb-4">
+                No Phone Number Available
+              </button>
+            )
           ) : (
-            <button disabled className="w-full bg-gray-100 text-gray-400 font-bold text-lg py-4 px-4 rounded-xl cursor-not-allowed border border-gray-200 mb-4">
-              No Phone Number Available
-            </button>
+            <div className="w-full bg-gray-50 text-gray-400 font-bold text-sm py-4 px-4 rounded-xl border border-gray-200 mb-4 flex flex-col items-center justify-center gap-1">
+              <ShieldAlert className="w-5 h-5 text-gray-400" />
+              Contact details hidden until the deal is accepted.
+            </div>
           )}
 
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-3 text-left">
-            <ShieldAlert className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-xs font-bold text-amber-800 uppercase tracking-wide mb-1">Safety Tip</p>
-              <p className="text-xs text-amber-700 leading-relaxed">
-                Always meet in well-lit, public places or use trusted courier services. Thoroughly check the item condition before completing the exchange.
-              </p>
+          {/* --> MODIFICATION: Only show safety tip if deal is accepted */}
+          {isAccepted && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-3 text-left">
+              <ShieldAlert className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-bold text-amber-800 uppercase tracking-wide mb-1">Safety Tip</p>
+                <p className="text-xs text-amber-700 leading-relaxed">
+                  Always meet in well-lit, public places or use trusted courier services. Thoroughly check the item condition before completing the exchange.
+                </p>
+              </div>
             </div>
-          </div>
+          )}
 
         </div>
       </div>

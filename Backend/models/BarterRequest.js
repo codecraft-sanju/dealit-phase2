@@ -21,14 +21,42 @@ const barterRequestSchema = new mongoose.Schema({
   
   delivery_method: { type: String, enum: ['mutual', 'courier'], default: 'mutual' },
   shippingAddress: {
-    fullName: { type: String },
-    phone: { type: String },
-    houseNo: { type: String },
-    areaStreet: { type: String },
-    landmark: { type: String },
-    city: { type: String },
-    state: { type: String },
-    pincode: { type: String }
+    fullName: { 
+      type: String,
+      required: function() { return this.delivery_method === 'courier'; }
+    },
+    phone: { 
+      type: String,
+      required: function() { return this.delivery_method === 'courier'; }
+    },
+    houseNo: { 
+      type: String,
+      required: function() { return this.delivery_method === 'courier'; },
+      validate: {
+        validator: function(v) {
+          if (this.delivery_method !== 'courier') return true;
+          return v ? /\d/.test(v) : false;
+        },
+        message: 'House No must contain at least one digit for shipping purposes.'
+      }
+    },
+    areaStreet: { 
+      type: String,
+      required: function() { return this.delivery_method === 'courier'; }
+    },
+    landmark: { type: String, default: '' },
+    city: { 
+      type: String,
+      required: function() { return this.delivery_method === 'courier'; }
+    },
+    state: { 
+      type: String,
+      required: function() { return this.delivery_method === 'courier'; }
+    },
+    pincode: { 
+      type: String,
+      required: function() { return this.delivery_method === 'courier'; }
+    }
   },
   shippingCost: { type: Number, default: 0 },
   razorpay_order_id: { type: String },
