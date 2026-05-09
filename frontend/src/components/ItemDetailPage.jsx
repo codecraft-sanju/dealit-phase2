@@ -31,7 +31,7 @@ const ItemDetailPage = ({ user }) => {
   const [selectedMyItem, setSelectedMyItem] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [balanceError, setBalanceError] = useState(null);
-  // <-- NAYA CHANGE: Modal items fetch karne ke liye loading state banayi
+  
   const [loadingMyItems, setLoadingMyItems] = useState(false); 
 
   // Gallery States
@@ -148,7 +148,7 @@ const ItemDetailPage = ({ user }) => {
     }
     setShowModal(true);
     setBalanceError(null); 
-    // <-- NAYA CHANGE: Loading state ko true kiya data aane se pehle
+  
     setLoadingMyItems(true); 
     try {
       const response = await axios.get(`${API_URL}/items/me`, { withCredentials: true });
@@ -157,7 +157,7 @@ const ItemDetailPage = ({ user }) => {
     } catch (error) {
       console.error('Error fetching your items:', error);
     } finally {
-      // <-- NAYA CHANGE: Data aane ke baad loading false kar diya
+    
       setLoadingMyItems(false); 
     }
   };
@@ -197,7 +197,7 @@ const ItemDetailPage = ({ user }) => {
     navigate(`/checkout/${item._id}`);
   };
 
-  // <-- NAYA CHANGE: Page load shimmer skeleton add kiya gaya hai -->
+
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto bg-white min-h-screen pb-[150px] md:pb-32 lg:pb-12 font-sans animate-pulse lg:pt-10 lg:px-6">
@@ -371,7 +371,8 @@ const ItemDetailPage = ({ user }) => {
           </div>
         </div>
 
-        <div className="lg:col-span-5 flex flex-col h-full px-5 lg:px-0 pt-6 lg:pt-0 pb-16 lg:pb-0 lg:sticky lg:top-24">
+    
+        <div className="lg:col-span-5 flex flex-col h-full px-5 lg:px-0 pt-6 lg:pt-0 pb-2 lg:pb-0 lg:sticky lg:top-24">
           
           <div className="mb-6">
             <div className="flex justify-between items-start mb-4">
@@ -443,9 +444,10 @@ const ItemDetailPage = ({ user }) => {
             </div>
           </div>
 
-          <div className="block lg:hidden mb-4 relative">
+   
+          <div className="block lg:hidden mb-2 relative">
             <h3 className="text-sm font-bold text-slate-900 mb-2">Description</h3>
-            <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-line pb-4">
+            <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-line pb-2">
               {item.description || 'No description provided by the owner.'}
             </p>
           </div>
@@ -454,7 +456,8 @@ const ItemDetailPage = ({ user }) => {
       </div>
 
       {(!loadingRelated && relatedItems.length > 0) && (
-        <div className="mt-8 lg:mt-16 pt-8 lg:pt-12 border-t border-slate-100 px-5 lg:px-6 mb-8 lg:mb-10">
+   
+        <div className="mt-4 lg:mt-16 pt-6 lg:pt-12 border-t border-slate-100 px-5 lg:px-6 mb-8 lg:mb-10">
           <div className="flex items-center gap-2 mb-6">
             <TrendingUp className="w-5 h-5 text-[#6B46C1]" />
             <h2 className="text-xl lg:text-2xl font-black text-slate-900">More items you might like</h2>
@@ -468,7 +471,8 @@ const ItemDetailPage = ({ user }) => {
         </div>
       )}
       {loadingRelated && (
-        <div className="mt-8 lg:mt-16 pt-8 lg:pt-12 border-t border-slate-100 px-5 lg:px-6 mb-8 lg:mb-10 animate-pulse">
+  
+        <div className="mt-4 lg:mt-16 pt-6 lg:pt-12 border-t border-slate-100 px-5 lg:px-6 mb-8 lg:mb-10 animate-pulse">
            <div className="h-6 w-48 bg-slate-200 rounded-lg mb-6"></div>
            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
              {[1, 2, 3, 4].map(i => <ProductCard key={i} isLoading={true} />)}
@@ -476,7 +480,7 @@ const ItemDetailPage = ({ user }) => {
         </div>
       )}
 
-      {/* --- MODIFIED ACTION BAR: Added Buy Now Button --- */}
+    
       <div className="fixed bottom-[calc(60px+env(safe-area-inset-bottom))] md:bottom-0 left-0 right-0 z-40 pointer-events-none lg:static lg:mt-auto px-4 lg:px-0">
         <div className="pointer-events-auto max-w-lg mx-auto lg:max-w-full">
           {user && item?.owner?._id && (item.owner._id === user._id || item.owner._id === user.id) ? (
