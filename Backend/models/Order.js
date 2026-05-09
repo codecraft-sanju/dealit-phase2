@@ -31,21 +31,30 @@ const orderSchema = new mongoose.Schema({
 
   orderStatus: {
     type: String,
-    // -> MODIFICATION START: Added 'in_transit' to separate it from 'shipped'
+   
     enum: ['pending', 'processing', 'shipped', 'in_transit', 'delivered', 'cancelled'],
-    // -> MODIFICATION END
+   
     default: 'pending'
   },
   paymentStatus: {
     type: String,
-    // Note: Assuming 'refund_failed' might be needed based on earlier webhook code, 
-    // but sticking to your exact schema enum for now.
+ 
     enum: ['paid', 'refund_processing', 'refunded', 'refund_failed'], 
     default: 'paid' 
   },
   isSellerPaid: { 
     type: Boolean, 
     default: false 
+  },
+
+  orderType: { 
+    type: String, 
+    enum: ['purchase', 'barter'], 
+    default: 'purchase' 
+  },
+  barterRequestRef: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'BarterRequest' 
   },
   
   cancellationReason: {

@@ -35,7 +35,7 @@ const transactionSchema = new mongoose.Schema({
   }
 });
 
-// -> MODIFICATION START: Added Indexes for 10x Performance
+
 // Dashboard me 7 din ka revenue nikalne ke liye yeh index query ko fast karega
 transactionSchema.index({ status: 1, created_at: -1 });
 

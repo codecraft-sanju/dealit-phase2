@@ -40,7 +40,10 @@ const ItemDetailPage = ({ user }) => {
 
   // Wishlist States
   const [isWishlisted, setIsWishlisted] = useState(false);
-  const [togglingWishlist, setTogglingWishlist] = useState(false);
+  
+  // -> CHANGES START HERE: Replaced toggling state with debounce ref
+  const debounceTimerRef = useRef(null);
+  // -> CHANGES END HERE
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -123,22 +126,37 @@ const ItemDetailPage = ({ user }) => {
   };
 
   // Toggle Wishlist Handler
-  const handleToggleWishlist = async () => {
+  const handleToggleWishlist = () => {
     if (!user) {
       navigate('/login');
       return;
     }
-    setTogglingWishlist(true);
-    try {
-      const response = await axios.post(`${API_URL}/users/wishlist/${id}`, {}, { withCredentials: true });
-      if (response.data.success) {
-        setIsWishlisted(response.data.isWishlisted);
-      }
-    } catch (error) {
-      console.error('Error toggling wishlist:', error);
-    } finally {
-      setTogglingWishlist(false);
+
+    // -> CHANGES START HERE: Optimistic UI & Debouncing logic
+    const newWishlistState = !isWishlisted;
+    setIsWishlisted(newWishlistState);
+
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
     }
+
+    debounceTimerRef.current = setTimeout(async () => {
+      try {
+        const response = await axios.post(
+          `${API_URL}/users/wishlist/${id}`, 
+          { action: newWishlistState ? 'add' : 'remove' }, 
+          { withCredentials: true }
+        );
+        
+        if (response.data.success) {
+          setIsWishlisted(response.data.isWishlisted);
+        }
+      } catch (error) {
+        console.error('Error toggling wishlist:', error);
+        setIsWishlisted(!newWishlistState);
+      }
+    }, 500); 
+    // -> CHANGES END HERE
   };
 
   const handleOpenBarterModal = async () => {
@@ -199,6 +217,7 @@ const ItemDetailPage = ({ user }) => {
 
 
   if (loading) {
+    // ... Keeping shimmer loading UI exactly as is ...
     return (
       <div className="max-w-7xl mx-auto bg-white min-h-screen pb-[150px] md:pb-32 lg:pb-12 font-sans animate-pulse lg:pt-10 lg:px-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-12 items-start">
@@ -371,7 +390,7 @@ const ItemDetailPage = ({ user }) => {
           </div>
         </div>
 
-    
+   
         <div className="lg:col-span-5 flex flex-col h-full px-5 lg:px-0 pt-6 lg:pt-0 pb-2 lg:pb-0 lg:sticky lg:top-24">
           
           <div className="mb-6">
@@ -381,13 +400,14 @@ const ItemDetailPage = ({ user }) => {
               </h1>
               
               <div className="flex items-center gap-2 shrink-0">
+                {/* -> CHANGES START HERE: Removed disabled={togglingWishlist} */}
                 <button 
                   onClick={handleToggleWishlist} 
-                  disabled={togglingWishlist}
                   className="flex w-10 h-10 bg-slate-50 hover:bg-red-50 border border-slate-100 shadow-sm rounded-full items-center justify-center transition-colors active:scale-95 group"
                 >
                   <Heart className={`w-4 h-4 transition-colors ${isWishlisted ? 'fill-red-500 text-red-500' : 'text-slate-400 group-hover:text-red-500'}`} />
                 </button>
+                {/* -> CHANGES END HERE */}
                 <button 
                   onClick={handleShare} 
                   className="flex w-10 h-10 bg-slate-50 hover:bg-slate-100 border border-slate-100 shadow-sm rounded-full items-center justify-center text-[#6B46C1] transition-colors active:scale-95"

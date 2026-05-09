@@ -3,6 +3,12 @@ const Item = require('../models/Item');
 const User = require('../models/User'); 
 const Notification = require('../models/Notification');
 
+// -> CHANGES START HERE: Added missing imports for courier logic
+const crypto = require('crypto');
+const Order = require('../models/Order');
+const Transaction = require('../models/Transaction');
+// -> CHANGES END HERE
+
 const createBarterRequest = async (req, res) => {
   try {
     const { requestedItem, offeredItem, receiver, message, delivery_method } = req.body;
@@ -227,7 +233,9 @@ const deleteBarterRequest = async (req, res) => {
 const updateSwapStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body; 
+    // -> CHANGES START HERE: Extracted new fields for courier logic
+    const { status, delivery_method, shippingAddress, paymentDetails } = req.body; 
+    // -> CHANGES END HERE
     const userId = req.user._id;
 
     // 1. item aur offered_item ke sath requester aur owner ka name aur phone bhi populate karo
@@ -255,6 +263,48 @@ const updateSwapStatus = async (req, res) => {
       const targetValue = barter.item.estimated_value || 0;
       const offeredValue = barter.offered_item.estimated_value || 0;
       const requiredCredits = Math.max(0, targetValue - offeredValue);
+
+      // -> CHANGES START HERE: Razorpay payment verification logic
+      let finalShippingCost = 0;
+      let rzpOrderId, rzpPaymentId;
+
+      if (delivery_method === 'courier') {
+        if (!paymentDetails || !paymentDetails.razorpay_payment_id) {
+          return res.status(400).json({ success: false, message: 'Shipping payment details missing' });
+        }
+
+        finalShippingCost = paymentDetails.amount; 
+        rzpOrderId = paymentDetails.razorpay_order_id;
+        rzpPaymentId = paymentDetails.razorpay_payment_id;
+        const { razorpay_signature } = paymentDetails;
+
+        const body = rzpOrderId + "|" + rzpPaymentId;
+        const expectedSignature = crypto
+          .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+          .update(body.toString())
+          .digest('hex');
+
+        if (expectedSignature !== razorpay_signature) {
+          return res.status(400).json({ success: false, message: 'Invalid payment signature. Shipping verification failed.' });
+        }
+
+        await Transaction.create({
+          user: userId,
+          amount: finalShippingCost, 
+          razorpay_order_id: rzpOrderId,
+          razorpay_payment_id: rzpPaymentId,
+          razorpay_signature: razorpay_signature,
+          status: 'success',
+          transactionType: 'shipping_fee'
+        });
+
+        barter.delivery_method = 'courier';
+        barter.shippingAddress = shippingAddress;
+        barter.shippingCost = finalShippingCost;
+        barter.razorpay_order_id = rzpOrderId;
+        barter.razorpay_payment_id = rzpPaymentId;
+      }
+      // -> CHANGES END HERE
 
       if (requiredCredits > 0) {
         const updatedRequester = await User.findOneAndUpdate(
@@ -305,6 +355,35 @@ const updateSwapStatus = async (req, res) => {
         { status: 'CANCELLED', updated_at: Date.now() }
       );
 
+      // -> CHANGES START HERE: Create Order document for Shiprocket dispatch
+      if (delivery_method === 'courier') {
+        await Order.create({
+          buyer: userId, 
+          seller: barter.requester._id, 
+          item: barter.offered_item._id, 
+          orderType: 'barter',
+          barterRequestRef: barter._id,
+          itemPrice: 0, 
+          shippingCost: finalShippingCost,
+          totalAmount: finalShippingCost, 
+          shippingAddress: shippingAddress,
+          orderStatus: 'pending',
+          paymentStatus: 'paid', 
+          isSellerPaid: true, 
+          razorpay_order_id: rzpOrderId,
+          razorpay_payment_id: rzpPaymentId,
+        });
+
+        await Notification.create({
+          user: barter.requester._id,
+          type: 'ORDER_UPDATE',
+          title: 'Courier Requested! 📦',
+          message: `The owner has accepted the trade and paid for courier. Please pack your item "${barter.offered_item.title}" for dispatch.`,
+          metadata: { referenceId: barter._id }
+        });
+      }
+      // -> CHANGES END HERE
+
       // 3. Frontend ke liye WhatsApp contact data taiyar karo
       matchData = {
         owner: {
@@ -335,7 +414,9 @@ const updateSwapStatus = async (req, res) => {
 
     res.status(200).json({ 
       success: true, 
-      message: status === 'ACCEPTED' ? 'Deal Locked Successfully! You can now chat on WhatsApp.' : `Swap ${status.toLowerCase()} successfully`, 
+      message: status === 'ACCEPTED' 
+        ? (delivery_method === 'courier' ? 'Deal Locked and Order Placed!' : 'Deal Locked Successfully! You can now chat on WhatsApp.') 
+        : `Swap ${status.toLowerCase()} successfully`, 
       data: barter,
       matchData: matchData 
     });

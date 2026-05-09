@@ -49,9 +49,9 @@ const DealDetailsPage = smartLazy(() => import('./components/DealDetailsPage'));
 const WishlistPage = smartLazy(() => import('./components/WishlistPage'));
 const CheckoutPage = smartLazy(() => import('./components/CheckoutPage'));
 const OrdersPage = smartLazy(() => import('./components/OrdersPage'));
-// -> CHANGES START HERE: Added OrderDetailsPage import
+
 const OrderDetailsPage = smartLazy(() => import('./components/OrderDetailsPage'));
-// -> CHANGES END HERE
+
 const DeleteAccountPage = smartLazy(() => import('./components/DeleteAccountPage'));
 const NotificationsPage = smartLazy(() => import('./notification/NotificationsPage'));
 const EditItemPage = smartLazy(() => import('./components/EditItemPage'));
