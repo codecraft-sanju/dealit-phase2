@@ -7,8 +7,10 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import ProductCard from './ProductCard'; 
-// <-- NAYA CHANGE: Import helper function from HomePage
+
 import { getOptimizedCloudinaryUrl } from './HomePage';
+
+import TradeModal from '../TradeModal/TradeModal';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -29,6 +31,8 @@ const ItemDetailPage = ({ user }) => {
   const [selectedMyItem, setSelectedMyItem] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [balanceError, setBalanceError] = useState(null);
+  // <-- NAYA CHANGE: Modal items fetch karne ke liye loading state banayi
+  const [loadingMyItems, setLoadingMyItems] = useState(false); 
 
   // Gallery States
   const [activeIndex, setActiveIndex] = useState(0);
@@ -144,12 +148,17 @@ const ItemDetailPage = ({ user }) => {
     }
     setShowModal(true);
     setBalanceError(null); 
+    // <-- NAYA CHANGE: Loading state ko true kiya data aane se pehle
+    setLoadingMyItems(true); 
     try {
       const response = await axios.get(`${API_URL}/items/me`, { withCredentials: true });
       const myActiveItems = response.data.data.filter(i => i.status === 'active');
       setMyItems(myActiveItems);
     } catch (error) {
       console.error('Error fetching your items:', error);
+    } finally {
+      // <-- NAYA CHANGE: Data aane ke baad loading false kar diya
+      setLoadingMyItems(false); 
     }
   };
 
@@ -188,13 +197,82 @@ const ItemDetailPage = ({ user }) => {
     navigate(`/checkout/${item._id}`);
   };
 
+  // <-- NAYA CHANGE: Page load shimmer skeleton add kiya gaya hai -->
   if (loading) {
     return (
-      <div className="max-w-md mx-auto bg-white min-h-screen flex flex-col items-center justify-center lg:max-w-7xl">
-        <div className="w-16 h-16 bg-[#f8f6ff] rounded-2xl flex items-center justify-center animate-bounce mb-4 border border-[#EBE5F7]">
-          <Package className="w-8 h-8 text-[#6B46C1]" />
+      <div className="max-w-7xl mx-auto bg-white min-h-screen pb-[150px] md:pb-32 lg:pb-12 font-sans animate-pulse lg:pt-10 lg:px-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-12 items-start">
+          
+          {/* Left Column Shimmer (Image & Details) */}
+          <div className="lg:col-span-7 w-full mx-auto space-y-6 px-5 lg:px-0 mt-6 lg:mt-0">
+            <div className="w-full aspect-square bg-slate-100 lg:rounded-[2rem] rounded-xl mb-4"></div>
+            
+            {/* Thumbnails Shimmer */}
+            <div className="hidden lg:flex gap-3 overflow-x-hidden">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="w-20 h-20 bg-slate-100 rounded-xl flex-shrink-0"></div>
+              ))}
+            </div>
+            
+            {/* Description Box Shimmer */}
+            <div className="hidden lg:block bg-white rounded-3xl p-7 border border-slate-100 mt-6">
+              <div className="h-6 bg-slate-100 rounded-md w-1/3 mb-4"></div>
+              <div className="space-y-3">
+                <div className="h-3.5 bg-slate-100 rounded-md w-full"></div>
+                <div className="h-3.5 bg-slate-100 rounded-md w-full"></div>
+                <div className="h-3.5 bg-slate-100 rounded-md w-3/4"></div>
+                <div className="h-3.5 bg-slate-100 rounded-md w-5/6"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column Shimmer (Info & Actions) */}
+          <div className="lg:col-span-5 flex flex-col px-5 lg:px-0 pt-6 lg:pt-0">
+            
+            {/* Title & Icons Shimmer */}
+            <div className="flex justify-between items-start mb-6">
+              <div className="h-8 bg-slate-100 rounded-lg w-2/3"></div>
+              <div className="flex gap-2">
+                <div className="w-10 h-10 bg-slate-100 rounded-full"></div>
+                <div className="w-10 h-10 bg-slate-100 rounded-full"></div>
+              </div>
+            </div>
+
+            {/* Price/Credits Shimmer */}
+            <div className="flex items-center gap-4 pb-6 border-b border-slate-100 mb-6">
+              <div className="w-12 h-12 bg-slate-100 rounded-full"></div>
+              <div className="space-y-2">
+                <div className="h-3 bg-slate-100 rounded-md w-24"></div>
+                <div className="h-8 bg-slate-100 rounded-md w-32"></div>
+              </div>
+            </div>
+
+            {/* Grid Attributes Shimmer */}
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              <div className="bg-slate-50 border border-slate-100 rounded-2xl h-20"></div>
+              <div className="bg-slate-50 border border-slate-100 rounded-2xl h-20"></div>
+              <div className="bg-slate-50 border border-slate-100 rounded-2xl h-20 col-span-2"></div>
+            </div>
+
+            {/* Owner Details Shimmer */}
+            <div className="bg-slate-50 border border-slate-100 rounded-2xl h-20 mb-6 flex items-center p-4 gap-4">
+              <div className="w-12 h-12 bg-slate-200 rounded-full shrink-0"></div>
+              <div className="space-y-2 w-full">
+                <div className="h-3 bg-slate-200 rounded-md w-16"></div>
+                <div className="h-4 bg-slate-200 rounded-md w-1/2"></div>
+              </div>
+            </div>
+            
+            {/* Mobile Description Shimmer */}
+            <div className="block lg:hidden space-y-3 mt-4">
+              <div className="h-4 bg-slate-100 rounded-md w-1/3 mb-4"></div>
+              <div className="h-3 bg-slate-100 rounded-md w-full"></div>
+              <div className="h-3 bg-slate-100 rounded-md w-full"></div>
+              <div className="h-3 bg-slate-100 rounded-md w-5/6"></div>
+            </div>
+
+          </div>
         </div>
-        <div className="text-slate-500 font-medium animate-pulse text-sm">Loading details...</div>
       </div>
     );
   }
@@ -243,7 +321,6 @@ const ItemDetailPage = ({ user }) => {
               {item.images && item.images.length > 0 ? (
                 item.images.map((img, idx) => (
                   <div key={idx} className="w-full h-full flex-shrink-0 snap-center relative">
-                    {/* <-- NAYA CHANGE: Wrap img with getOptimizedCloudinaryUrl for Main Carousel --> */}
                     <img 
                       src={getOptimizedCloudinaryUrl(img)} 
                       alt={`${item.title} ${idx + 1}`} 
@@ -278,7 +355,6 @@ const ItemDetailPage = ({ user }) => {
                   onClick={() => handleThumbnailClick(idx)}
                   className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all bg-[#f8f9fb] ${activeIndex === idx ? 'border-[#6B46C1] shadow-sm scale-[0.98]' : 'border-slate-100 hover:border-slate-300'}`}
                 >
-                  {/* <-- NAYA CHANGE: Wrap img with getOptimizedCloudinaryUrl for Thumbnails --> */}
                   <img src={getOptimizedCloudinaryUrl(img)} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover mix-blend-multiply" />
                 </button>
               ))}
@@ -356,7 +432,6 @@ const ItemDetailPage = ({ user }) => {
           <div className="bg-white border border-slate-100 rounded-2xl p-4 flex items-center gap-4 shadow-sm mb-6 lg:mb-8 hover:border-[#EBE5F7] hover:shadow-md transition-all cursor-default">
             <div className="w-12 h-12 bg-[#F8F6FF] rounded-full flex items-center justify-center overflow-hidden border border-[#EBE5F7] shrink-0">
               {item.owner?.profilePic ? (
-                // <-- NAYA CHANGE: Optimizing Owner's Profile Pic as well -->
                 <img src={getOptimizedCloudinaryUrl(item.owner.profilePic)} alt="Owner" className="w-full h-full object-cover" />
               ) : (
                 <User className="w-6 h-6 text-[#A388E1]" />
@@ -440,134 +515,20 @@ const ItemDetailPage = ({ user }) => {
         </div>
       </div>
 
-      {/* ================= Modern Barter Modal ================= */}
-      {showModal && (
-        <div className="fixed inset-0 z-[100] flex items-end lg:items-center justify-center bg-slate-900/50 backdrop-blur-sm sm:px-4 transition-opacity">
-          <div className="bg-white w-full max-w-lg rounded-t-[2rem] lg:rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] lg:max-h-[85vh] animate-in slide-in-from-bottom-10 lg:slide-in-from-bottom-0 lg:zoom-in-95 duration-200">
-            
-            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-white relative z-10">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">Select an Item</h2>
-                <p className="text-xs text-slate-500 font-medium mt-0.5">Choose what you want to offer in return</p>
-              </div>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-700 transition p-2 bg-slate-50 hover:bg-slate-100 rounded-full">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="p-6 overflow-y-auto flex-1 bg-[#f8f9fb]">
-              {balanceError && (
-                <div className="mb-5 bg-red-50 border border-red-100 p-4 rounded-2xl flex items-start gap-3 shadow-sm animate-in fade-in slide-in-from-top-2">
-                  <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-bold text-red-700 mb-0.5">Trade Cannot Proceed</p>
-                    <p className="text-xs text-red-600 mb-2 leading-relaxed">{balanceError}</p>
-                    <Link 
-                      to="/wallet" 
-                      onClick={() => setShowModal(false)} 
-                      className="inline-block bg-white border border-red-200 text-red-600 px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-red-50 transition mt-1"
-                    >
-                      Get Credits
-                    </Link>
-                  </div>
-                </div>
-              )}
-
-              {myItems.length === 0 ? (
-                <div className="text-center py-10 bg-white rounded-3xl border border-slate-100 shadow-sm">
-                  <div className="w-16 h-16 bg-[#f8f6ff] rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Package className="w-8 h-8 text-[#A388E1]" />
-                  </div>
-                  <p className="text-sm text-slate-500 font-medium mb-4 px-4">You don't have any items to offer yet.</p>
-                  <Link to="/add-item" onClick={() => setShowModal(false)} className="inline-block bg-[#EBE5F7] text-[#6B46C1] px-6 py-2.5 rounded-full text-sm font-bold hover:bg-[#d6bcfa] transition">
-                    Add an Item Now
-                  </Link>
-                </div>
-              ) : (
-                <>
-                  <div className="grid grid-cols-2 gap-3 mb-2">
-                    {myItems.map(myItem => (
-                      <div 
-                        key={myItem._id} 
-                        onClick={() => setSelectedMyItem(myItem._id)}
-                        className={`cursor-pointer rounded-2xl overflow-hidden border-2 transition-all flex flex-col bg-white ${
-                          selectedMyItem === myItem._id 
-                            ? 'border-[#6B46C1] shadow-md shadow-[#6B46C1]/10 bg-[#f8f6ff] scale-[0.98]' 
-                            : 'border-transparent shadow-sm hover:border-slate-200'
-                        }`}
-                      >
-                        <div className="aspect-square bg-[#f8f9fb] flex items-center justify-center overflow-hidden">
-                          {myItem.images && myItem.images.length > 0 && myItem.images[0] ? (
-                            // <-- NAYA CHANGE: Optimization for Trade Modal selection images -->
-                            <img src={getOptimizedCloudinaryUrl(myItem.images[0])} alt={myItem.title} className="w-full h-full object-cover mix-blend-multiply" />
-                          ) : (
-                            <Package className="w-8 h-8 text-[#A388E1]/40" />
-                          )}
-                        </div>
-                        <div className="p-3 border-t border-slate-50">
-                          <p className="text-xs font-bold text-slate-900 truncate mb-1">{myItem.title}</p>
-                          <p className="text-[11px] text-slate-500 font-semibold flex items-center gap-1 bg-slate-50 w-fit px-2 py-0.5 rounded-md border border-slate-100">
-                            <Coins className="w-3 h-3 text-yellow-600" /> {myItem.estimated_value || '0'}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {selectedMyItem && selectedItemObj && (
-                    <div className="mt-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                      {requiredCredits > 0 ? (
-                        <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm text-sm">
-                          <div className="flex items-center gap-2 mb-2">
-                            <RefreshCw className="w-4 h-4 text-[#6B46C1]" />
-                            <span className="font-bold text-slate-900">Trade Summary</span>
-                          </div>
-                          <p className="text-slate-500 text-xs leading-relaxed">
-                            Target item is <span className="font-bold text-slate-900">{targetValue} Credits</span>. Your offer is <span className="font-bold text-slate-900">{offeredValue} Credits</span>. 
-                            If accepted, <span className="font-bold text-[#6B46C1]">{requiredCredits} Credits</span> will be deducted from your wallet.
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="bg-[#E6F4EA] border border-[#CEEAD6] p-4 rounded-2xl shadow-sm text-sm">
-                          <div className="flex items-center gap-2 mb-1">
-                            <CheckCircle2 className="w-4 h-4 text-[#137333]" />
-                            <span className="font-bold text-[#137333]">Fair Trade Match!</span>
-                          </div>
-                          <p className="text-[#137333]/80 text-xs">No extra credits will be required for this swap.</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-
-            <div className="p-5 border-t border-slate-100 bg-white flex gap-3 pb-safe">
-              <button 
-                onClick={() => setShowModal(false)}
-                className="flex-1 px-4 py-3.5 rounded-xl font-bold text-sm text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleConfirmOrder}
-                disabled={!selectedMyItem || submitting}
-                className={`flex-[2] px-4 py-3.5 rounded-xl font-bold text-sm transition flex items-center justify-center gap-2 ${
-                  !selectedMyItem || submitting 
-                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
-                    : 'bg-[#6B46C1] hover:bg-[#5a3aa8] text-white shadow-lg shadow-[#6B46C1]/20 active:scale-[0.98]'
-                }`}
-              >
-                {submitting ? (
-                  <><RefreshCw className="w-4 h-4 animate-spin" /> Processing...</>
-                ) : (
-                  'Confirm Offer'
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <TradeModal 
+        isOpen={showModal}
+        isLoading={loadingMyItems}
+        onClose={() => setShowModal(false)}
+        myItems={myItems}
+        selectedMyItem={selectedMyItem}
+        setSelectedMyItem={setSelectedMyItem}
+        balanceError={balanceError}
+        targetValue={targetValue}
+        offeredValue={offeredValue}
+        requiredCredits={requiredCredits}
+        submitting={submitting}
+        onConfirm={handleConfirmOrder}
+      />
 
       <style>{`
         .hide-scrollbar::-webkit-scrollbar {

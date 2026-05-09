@@ -4,8 +4,7 @@ import { Package, Coins } from 'lucide-react';
 // <-- NAYA CHANGE: Import helper function from HomePage
 import { getOptimizedCloudinaryUrl } from './HomePage';
 
-const ProductCard = ({ item, isLoading, className = '' }) => {
-  // Skeleton Loader State
+const ProductCard = ({ item, isLoading, className = '', onClick, isSelected }) => {
   if (isLoading) {
     return (
       <div className={`bg-[#F8F6FF] rounded-2xl p-2.5 relative block border border-gray-50 animate-pulse ${className}`}>
@@ -27,11 +26,15 @@ const ProductCard = ({ item, isLoading, className = '' }) => {
 
   if (!item) return null;
 
-  return (
-    <Link 
-      to={`/item/${item._id}`} 
-      className={`bg-[#F8F6FF] rounded-2xl p-2.5 relative block hover:shadow-md transition-shadow ${className}`}
-    >
+  const baseClasses = `rounded-2xl p-2.5 relative block transition-all ${className}`;
+  const selectedClasses = isSelected
+    ? 'border-2 border-[#6B46C1] shadow-md shadow-[#6B46C1]/10 bg-[#f8f6ff] scale-[0.98]'
+    : 'border-2 border-transparent bg-[#F8F6FF] hover:shadow-md hover:border-slate-200';
+  
+  const combinedClasses = `${baseClasses} ${selectedClasses}`;
+
+  const cardContent = (
+    <>
       <div className="w-full aspect-square flex items-center justify-center mb-3 bg-white/40 rounded-xl overflow-hidden">
         {item.images && item.images.length > 0 && item.images[0] ? (
           // <-- NAYA CHANGE: Wrap item.images[0] with getOptimizedCloudinaryUrl -->
@@ -58,6 +61,26 @@ const ProductCard = ({ item, isLoading, className = '' }) => {
           )}
         </div>
       </div>
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <div 
+        onClick={() => onClick(item._id)} 
+        className={`cursor-pointer ${combinedClasses}`}
+      >
+        {cardContent}
+      </div>
+    );
+  }
+
+  return (
+    <Link 
+      to={`/item/${item._id}`} 
+      className={combinedClasses}
+    >
+      {cardContent}
     </Link>
   );
 };
