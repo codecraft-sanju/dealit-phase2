@@ -3,11 +3,9 @@ const Item = require('../models/Item');
 const User = require('../models/User'); 
 const Notification = require('../models/Notification');
 
-
 const crypto = require('crypto');
 const Order = require('../models/Order');
 const Transaction = require('../models/Transaction');
-
 
 const createBarterRequest = async (req, res) => {
   try {
@@ -272,6 +270,16 @@ const updateSwapStatus = async (req, res) => {
       let rzpOrderId, rzpPaymentId;
 
       if (delivery_method === 'courier') {
+        
+        // --- NAYA LOGIC: Strict Shipping Address Validation ---
+        if (!shippingAddress || !shippingAddress.fullName || !shippingAddress.phone || !shippingAddress.houseNo || !shippingAddress.areaStreet || !shippingAddress.city || !shippingAddress.state || !shippingAddress.pincode) {
+          return res.status(400).json({ 
+            success: false, 
+            message: 'Incomplete shipping address. Please fill all the fields including State and Area/Street.' 
+          });
+        }
+        // ------------------------------------------------------
+
         if (!paymentDetails || !paymentDetails.razorpay_payment_id) {
           return res.status(400).json({ success: false, message: 'Shipping payment details missing' });
         }
@@ -426,6 +434,14 @@ const updateSwapStatus = async (req, res) => {
 
   } catch (error) {
     console.error('Error in updateSwapStatus:', error);
+
+    // --- NAYA LOGIC: Handle Mongoose Validation Errors Gracefully ---
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(val => val.message).join(' | ');
+      return res.status(400).json({ success: false, message: `Validation Error: ${messages}` });
+    }
+    // ----------------------------------------------------------------
+
     res.status(500).json({ success: false, message: 'Server error while updating swap status' });
   }
 };

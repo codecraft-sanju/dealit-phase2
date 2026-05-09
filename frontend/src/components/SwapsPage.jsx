@@ -4,7 +4,7 @@ import {
   RefreshCw, Check, X, MessageSquare, Package, Eye, AlertCircle, 
   ArrowRightLeft, ChevronLeft, ExternalLink, Truck, Users, MapPin, 
   Home, Hash, Phone, User as UserIcon, Loader2, 
-  Clock // --> MODIFICATION: Added Clock
+  Clock
 } from 'lucide-react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -12,7 +12,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
-// --> MODIFICATION START: CountdownTimer Added
 const CountdownTimer = ({ createdAt, hours }) => {
   const [timeLeft, setTimeLeft] = useState('');
 
@@ -41,7 +40,6 @@ const CountdownTimer = ({ createdAt, hours }) => {
 
   return <span>{timeLeft}</span>;
 };
-// --> MODIFICATION END
 
 const loadRazorpayScript = () => {
   return new Promise((resolve) => {
@@ -86,7 +84,6 @@ const SwapsPage = ({ user }) => {
     pincode: user?.pincode || ''
   });
 
-  // --> MODIFICATION START: Added settings state and fetch
   const [autoCancelHours, setAutoCancelHours] = useState(24);
   const [auraPenalty, setAuraPenalty] = useState(50);
 
@@ -104,7 +101,6 @@ const SwapsPage = ({ user }) => {
     };
     fetchSettings();
   }, []);
-  // --> MODIFICATION END
 
   useEffect(() => {
     if (selectedAddressIndex >= 0 && savedAddresses[selectedAddressIndex]) {
@@ -395,7 +391,6 @@ const SwapsPage = ({ user }) => {
                   </div>
                 </div>
 
-                {/* --> MODIFICATION START: Timer Alert Box for Pending Swaps */}
                 {activeTab === 'received' && swap.status === 'PENDING' && (
                   <div className="mb-6 bg-orange-50 border border-orange-100 p-4 rounded-xl flex items-start gap-3 shadow-sm">
                     <AlertCircle className="w-5 h-5 text-orange-500 mt-0.5 shrink-0" />
@@ -422,7 +417,6 @@ const SwapsPage = ({ user }) => {
                     </div>
                   </div>
                 )}
-                {/* --> MODIFICATION END */}
 
                 {actionError.id === swap._id && (
                   <div className="mb-6 bg-red-50 border border-red-100 p-4 rounded-xl flex items-start gap-3">
@@ -488,7 +482,6 @@ const SwapsPage = ({ user }) => {
         </div>
       </div>
 
-      {/* --- COURIER VS MUTUAL SELECTION MODAL --- */}
       <AnimatePresence>
         {acceptModalOpen && (
           <motion.div 
@@ -599,16 +592,36 @@ const SwapsPage = ({ user }) => {
                           <Home className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                           <input type="text" name="houseNo" placeholder="House No. (Required)" required value={formData.houseNo} onChange={handleInputChange} className="w-full bg-gray-50 border border-gray-100 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#6B46C1]" />
                         </div>
+                        
+                        {/* --> MODIFICATION START: Added missing areaStreet and landmark inputs */}
+                        <div className="relative">
+                          <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                          <input type="text" name="areaStreet" placeholder="Area, Street, Sector" required value={formData.areaStreet} onChange={handleInputChange} className="w-full bg-gray-50 border border-gray-100 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#6B46C1]" />
+                        </div>
+                        <div className="relative">
+                          <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400 opacity-50" />
+                          <input type="text" name="landmark" placeholder="Landmark (Optional)" value={formData.landmark} onChange={handleInputChange} className="w-full bg-gray-50 border border-gray-100 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#6B46C1]" />
+                        </div>
+                        {/* --> MODIFICATION END */}
+
+                        {/* --> MODIFICATION START: Adjusted grid to include City, State, and Pincode */}
                         <div className="grid grid-cols-2 gap-3">
                           <div className="relative">
                             <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                             <input type="text" name="city" placeholder="City" required value={formData.city} onChange={handleInputChange} className="w-full bg-gray-50 border border-gray-100 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#6B46C1]" />
                           </div>
                           <div className="relative">
-                            <Hash className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                            <input type="text" name="pincode" placeholder="Pincode" required value={formData.pincode} onChange={handleInputChange} maxLength="6" className="w-full bg-gray-50 border border-gray-100 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#6B46C1]" />
+                            <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                            <input type="text" name="state" placeholder="State" required value={formData.state} onChange={handleInputChange} className="w-full bg-gray-50 border border-gray-100 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#6B46C1]" />
                           </div>
                         </div>
+
+                        <div className="relative">
+                          <Hash className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                          <input type="text" name="pincode" placeholder="Pincode" required value={formData.pincode} onChange={handleInputChange} maxLength="6" className="w-full bg-gray-50 border border-gray-100 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#6B46C1]" />
+                        </div>
+                        {/* --> MODIFICATION END */}
+
                       </div>
                     )}
                   </form>
