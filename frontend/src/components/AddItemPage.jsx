@@ -331,7 +331,7 @@ const AddItemPage = ({ user, setUser }) => {
       const croppedImageBlob = await getCroppedImg(imageToCrop, croppedAreaPixels);
       const data = new FormData();
       data.append('file', croppedImageBlob);
-     
+      
       data.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
 
       
@@ -612,10 +612,10 @@ const AddItemPage = ({ user, setUser }) => {
           
           const uploadData = new FormData();
           uploadData.append('file', file);
-          /* CHANGED: Replaced hardcoded preset with environment variable */
+        
           uploadData.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
 
-          /* CHANGED: Replaced hardcoded cloud name with environment variable */
+          
           const cloudRes = await axios.post(
             `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`,
             uploadData
