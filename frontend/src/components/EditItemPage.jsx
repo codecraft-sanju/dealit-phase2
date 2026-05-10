@@ -11,6 +11,9 @@ import { removeBackground } from '@imgly/background-removal';
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
+const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+const CLOUDINARY_UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+
 export const getOptimizedCloudinaryUrl = (url) => {
   if (!url || typeof url !== 'string' || !url.includes('cloudinary.com') || url.includes('q_auto')) {
     return url;
@@ -266,10 +269,10 @@ const EditItemPage = () => {
       const croppedImageBlob = await getCroppedImg(imageToCrop, croppedAreaPixels);
       const data = new FormData();
       data.append('file', croppedImageBlob);
-      data.append('upload_preset', 'salon_preset');
+      data.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
 
       const response = await axios.post(
-        `https://api.cloudinary.com/v1_1/dvoenforj/image/upload`,
+        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
         data
       );
       return response.data.secure_url;
@@ -470,10 +473,10 @@ const EditItemPage = () => {
           
           const uploadData = new FormData();
           uploadData.append('file', file);
-          uploadData.append('upload_preset', 'salon_preset');
+          uploadData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
 
           const cloudRes = await axios.post(
-            `https://api.cloudinary.com/v1_1/dvoenforj/image/upload`,
+            `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
             uploadData
           );
           

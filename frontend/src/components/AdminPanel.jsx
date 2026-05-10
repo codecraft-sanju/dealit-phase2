@@ -29,8 +29,10 @@ import ImageCropModal from '../admin/ImageCropModal';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
-const UPLOAD_PRESET = import.meta.env.VITE_UPLOAD_PRESET || 'salon_preset';
-const CLOUD_NAME = import.meta.env.VITE_CLOUD_NAME || 'dvoenforj';
+
+
+const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
 
 const createImage = (url) =>
   new Promise((resolve, reject) => {

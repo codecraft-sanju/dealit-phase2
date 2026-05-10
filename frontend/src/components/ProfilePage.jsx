@@ -74,8 +74,8 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
       const formData = new FormData();
       formData.append('file', file);
       
-      const uploadPreset = import.meta.env.VITE_UPLOAD_PRESET || 'salon_preset';
-      const cloudName = import.meta.env.VITE_CLOUD_NAME || 'dvoenforj';
+      const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET ;
+      const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
       
       formData.append('upload_preset', uploadPreset);
       console.log("Uploading to Cloudinary...");
