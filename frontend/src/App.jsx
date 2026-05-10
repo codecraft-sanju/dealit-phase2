@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, Suspense, lazy, useCallback } from 'react'; /* --- CHANGES MADE: Added useCallback --- */
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate, Navigate, useLocation, useParams } from 'react-router-dom';
 import { Package, X, AlertCircle, ArrowLeft, Edit2, Trash2 } from 'lucide-react';
 import axios from 'axios';
@@ -68,20 +68,7 @@ const queryClient = new QueryClient({
   },
 });
 
-axios.interceptors.request.use(
-  (config) => {
-    if (config.url && config.url.includes(API_BASE)) {
-      const token = localStorage.getItem('dealit_token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+
 
 const ZeroPriceAlert = ({ user, onCheckComplete }) => {
   const [show, setShow] = useState(false);
@@ -198,8 +185,42 @@ const PremiumLoader = () => (
 
 const MainAppContent = ({ user, handleLogout, setUser }) => {
   const location = useLocation();
+  const navigate = useNavigate(); 
   const [hasZeroPriceIssue, setHasZeroPriceIssue] = useState(null);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth > 1024);
+
+
+  useEffect(() => {
+    const reqInterceptor = axios.interceptors.request.use(
+      (config) => {
+        if (config.url && config.url.includes(API_BASE)) {
+          const token = localStorage.getItem('dealit_token');
+          if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+          }
+        }
+        return config;
+      },
+      (error) => Promise.reject(error)
+    );
+
+    const resInterceptor = axios.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+          await handleLogout();
+          navigate('/login', { replace: true });
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => {
+      axios.interceptors.request.eject(reqInterceptor);
+      axios.interceptors.response.eject(resInterceptor);
+    };
+  }, [navigate, handleLogout]);
+
 
   useEffect(() => {
     const handleResize = () => {
@@ -212,7 +233,7 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
   const hideNavbarRoutes = ['/login', '/signup', '/forgot-password'];
   const shouldShowBottomNav = !hideNavbarRoutes.includes(location.pathname) && !location.pathname.startsWith('/admin');
 
-  /* NEW CHANGES: Updated desktop check so policy pages show correctly on desktop */
+ 
   const publicDesktopRoutes = ['/login', '/privacy', '/terms', '/refund-policy', '/cancellation-policy'];
 
   if (isDesktop && !location.pathname.startsWith('/admin') && !publicDesktopRoutes.includes(location.pathname)) {
@@ -269,7 +290,7 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
           
             <Route path="/orders" element={user ? <OrdersPage user={user} /> : <Navigate to="/login" />} />
             <Route path="/order/:orderId" element={user ? <OrderDetailsPage user={user} /> : <Navigate to="/login" />} />
-           
+            
             
             <Route path="/add-item" element={user ? <AddItemPage user={user} setUser={setUser} /> : <Navigate to="/login" />} />
             <Route path="/delete-account" element={user ? <DeleteAccountPage user={user} /> : <Navigate to="/login" />} />
@@ -306,7 +327,8 @@ function App() {
     return savedUser ? JSON.parse(savedUser) : null;
   });
 
-const handleLogout = async () => {
+ 
+  const handleLogout = useCallback(async () => {
     try {
       await axios.post(`${API_URL}/users/logout`, {}, { withCredentials: true });
       setUser(null);
@@ -319,7 +341,8 @@ const handleLogout = async () => {
     } catch (error) {
       console.error('Error logging out:', error);
     }
-  };
+  }, []);
+
 
   return (
     <QueryClientProvider client={queryClient}>

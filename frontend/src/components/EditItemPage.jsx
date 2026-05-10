@@ -173,6 +173,19 @@ const EditItemPage = () => {
     staleTime: 1000 * 60 * 30,
   });
 
+  // --- ADDED: Fetch systemSettings to get dynamic minImagesRequired ---
+  const { data: systemSettings = { minImagesRequired: 3 }, isLoading: loadingSettings } = useQuery({
+    queryKey: ['creditSettings'],
+    queryFn: async () => {
+      const res = await axios.get(`${API_URL}/admin/credit-settings`, { withCredentials: true });
+      return res.data.success && res.data.data ? res.data.data : { minImagesRequired: 3 };
+    },
+    staleTime: 1000 * 60 * 30,
+  });
+
+  // Dynamic min images limit
+  const minImages = systemSettings.minImagesRequired || 3;
+
   useEffect(() => {
     const fetchItemDetails = async () => {
       try {
@@ -445,8 +458,9 @@ const EditItemPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (images.length < 3) {
-      toast.error('Please upload at least 3 images of your item.');
+    // --- UPDATED: Use dynamic minImages logic ---
+    if (images.length < minImages) {
+      toast.error(`Please upload at least ${minImages} image${minImages > 1 ? 's' : ''} of your item.`);
       return;
     }
 
@@ -517,7 +531,8 @@ const EditItemPage = () => {
     }
   };
 
-  if (loading || loadingCategories) {
+  // --- UPDATED: Added loadingSettings to check ---
+  if (loading || loadingCategories || loadingSettings) {
     return <ShimmerLoading />;
   }
 
@@ -547,7 +562,8 @@ const EditItemPage = () => {
             
             <div className="pb-4 border-b border-purple-100 border-dashed">
               <label className="block text-xs sm:text-sm font-bold text-[#553c9a] mb-3 sm:mb-4">
-                Update Images (Min 3 required)*
+                {/* --- UPDATED: Using dynamic minImages here --- */}
+                Update Images (Min {minImages} required)*
               </label>
               
               <div className="flex flex-wrap gap-3 sm:gap-4 items-start">
