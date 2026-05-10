@@ -7,7 +7,10 @@ const {
   getBarterRequestById, 
   updateBarterRequest, 
   deleteBarterRequest,
-  updateSwapStatus 
+  updateSwapStatus,
+
+  completeSwapPayment
+
 } = require('../controllers/barterController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -16,6 +19,10 @@ router.route('/').post(protect, createBarterRequest);
 router.route('/received').get(protect, getReceivedRequests);
 router.route('/sent').get(protect, getSentRequests);
 router.route('/:id/status').put(protect, updateSwapStatus);
+
+
+router.route('/:id/complete-payment').put(protect, completeSwapPayment);
+
 
 router.route('/:id')
   .get(protect, getBarterRequestById)

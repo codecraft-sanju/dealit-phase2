@@ -7,60 +7,67 @@ const barterRequestSchema = new mongoose.Schema({
   item: { type: mongoose.Schema.Types.ObjectId, ref: 'Item' },
   offered_item: { type: mongoose.Schema.Types.ObjectId, ref: 'Item' },
   
-
   status: { 
     type: String, 
-    enum: ['PENDING', 'ACCEPTED', 'REJECTED', 'GHOSTING', 'CANCELLED'],
+ 
+    enum: ['PENDING', 'AWAITING_PAYMENT', 'ACCEPTED', 'REJECTED', 'GHOSTING', 'CANCELLED'],
     default: 'PENDING' 
   },
- 
   
   message: { type: String },
   requester_accepted: { type: Boolean, default: false },
   owner_accepted: { type: Boolean, default: false },
   
-  delivery_method: { type: String, enum: ['mutual', 'courier'], default: 'mutual' },
-  shippingAddress: {
-    fullName: { 
-      type: String,
-      required: function() { return this.delivery_method === 'courier'; }
-    },
-    phone: { 
-      type: String,
-      required: function() { return this.delivery_method === 'courier'; }
-    },
+  requesterShippingAddress: {
+    fullName: { type: String, required: true },
+    phone: { type: String, required: true },
     houseNo: { 
       type: String,
-      required: function() { return this.delivery_method === 'courier'; },
+      required: true,
       validate: {
         validator: function(v) {
-          if (this.delivery_method !== 'courier') return true;
           return v ? /\d/.test(v) : false;
         },
         message: 'House No must contain at least one digit for shipping purposes.'
       }
     },
-    areaStreet: { 
-      type: String,
-      required: function() { return this.delivery_method === 'courier'; }
-    },
+    areaStreet: { type: String, required: true },
     landmark: { type: String, default: '' },
-    city: { 
-      type: String,
-      required: function() { return this.delivery_method === 'courier'; }
-    },
-    state: { 
-      type: String,
-      required: function() { return this.delivery_method === 'courier'; }
-    },
-    pincode: { 
-      type: String,
-      required: function() { return this.delivery_method === 'courier'; }
-    }
+    city: { type: String, required: true },
+    state: { type: String, required: true },
+    pincode: { type: String, required: true }
   },
-  shippingCost: { type: Number, default: 0 },
-  razorpay_order_id: { type: String },
-  razorpay_payment_id: { type: String },
+  requesterShippingCost: { type: Number, default: 0 },
+  requester_razorpay_order_id: { type: String },
+  requester_razorpay_payment_id: { type: String },
+  requesterPaymentStatus: { type: String, enum: ['pending', 'paid', 'refunded'], default: 'pending' },
+
+  ownerShippingAddress: {
+    fullName: { type: String, required: true },
+    phone: { type: String, required: true },
+    houseNo: { 
+      type: String,
+      required: true,
+      validate: {
+        validator: function(v) {
+          return v ? /\d/.test(v) : false;
+        },
+        message: 'House No must contain at least one digit for shipping purposes.'
+      }
+    },
+    areaStreet: { type: String, required: true },
+    landmark: { type: String, default: '' },
+    city: { type: String, required: true },
+    state: { type: String, required: true },
+    pincode: { type: String, required: true }
+  },
+  ownerShippingCost: { type: Number, default: 0 },
+  owner_razorpay_order_id: { type: String },
+  owner_razorpay_payment_id: { type: String },
+  ownerPaymentStatus: { type: String, enum: ['pending', 'paid', 'refunded'], default: 'pending' },
+
+  
+  expiresAt: { type: Date },
 
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now }

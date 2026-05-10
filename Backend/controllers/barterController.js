@@ -7,9 +7,15 @@ const crypto = require('crypto');
 const Order = require('../models/Order');
 const Transaction = require('../models/Transaction');
 
+// --- NAYA CHANGE START: Added refundRazorpayPayment import ---
+const { refundRazorpayPayment } = require('./paymentController');
+// --- NAYA CHANGE END ---
+
 const createBarterRequest = async (req, res) => {
   try {
-    const { requestedItem, offeredItem, receiver, message, delivery_method } = req.body;
+    // -> CHANGES START HERE: removed delivery_method
+    const { requestedItem, offeredItem, receiver, message } = req.body;
+    // -> CHANGES END HERE
 
     const targetItem = await Item.findById(requestedItem);
     if (!targetItem) {
@@ -30,7 +36,7 @@ const createBarterRequest = async (req, res) => {
     const existingRequest = await BarterRequest.findOne({
       requester: req.user._id,
       item: requestedItem,
-      status: { $in: ['PENDING', 'ACCEPTED'] } // Agar pehle se pending ya accepted hai
+      status: { $in: ['PENDING', 'ACCEPTED', 'AWAITING_PAYMENT'] } // -> CHANGES START HERE: Added AWAITING_PAYMENT
     }).populate('owner', 'full_name');
 
     if (existingRequest) {
@@ -67,7 +73,7 @@ const createBarterRequest = async (req, res) => {
       offered_item: offeredItem, 
       status: 'PENDING',
       message: message || 'I want to trade this item!',
-      delivery_method: delivery_method || 'mutual',
+      // -> CHANGES START HERE: removed delivery_method assignment
       created_at: Date.now(),
       updated_at: Date.now()
     });
@@ -234,8 +240,8 @@ const deleteBarterRequest = async (req, res) => {
 const updateSwapStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    // -> CHANGES START HERE: Extracted new fields for courier logic
-    const { status, delivery_method, shippingAddress, paymentDetails } = req.body; 
+    // -> CHANGES START HERE: removed delivery_method, focus on owner action only
+    const { status, shippingAddress, paymentDetails } = req.body; 
     // -> CHANGES END HERE
     const userId = req.user._id;
 
@@ -258,156 +264,62 @@ const updateSwapStatus = async (req, res) => {
       return res.status(400).json({ success: false, message: 'This request has already been processed' });
     }
 
-    let matchData = null;
-
     if (status === 'ACCEPTED') {
-      const targetValue = barter.item.estimated_value || 0;
-      const offeredValue = barter.offered_item.estimated_value || 0;
-      const requiredCredits = Math.max(0, targetValue - offeredValue);
-
-      // -> CHANGES START HERE: Razorpay payment verification logic
-      let finalShippingCost = 0;
-      let rzpOrderId, rzpPaymentId;
-
-      if (delivery_method === 'courier') {
-        
-        // --- NAYA LOGIC: Strict Shipping Address Validation ---
-        if (!shippingAddress || !shippingAddress.fullName || !shippingAddress.phone || !shippingAddress.houseNo || !shippingAddress.areaStreet || !shippingAddress.city || !shippingAddress.state || !shippingAddress.pincode) {
-          return res.status(400).json({ 
-            success: false, 
-            message: 'Incomplete shipping address. Please fill all the fields including State and Area/Street.' 
-          });
-        }
-        // ------------------------------------------------------
-
-        if (!paymentDetails || !paymentDetails.razorpay_payment_id) {
-          return res.status(400).json({ success: false, message: 'Shipping payment details missing' });
-        }
-
-        finalShippingCost = paymentDetails.amount; 
-        rzpOrderId = paymentDetails.razorpay_order_id;
-        rzpPaymentId = paymentDetails.razorpay_payment_id;
-        const { razorpay_signature } = paymentDetails;
-
-        const body = rzpOrderId + "|" + rzpPaymentId;
-        const expectedSignature = crypto
-          .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
-          .update(body.toString())
-          .digest('hex');
-
-        if (expectedSignature !== razorpay_signature) {
-          return res.status(400).json({ success: false, message: 'Invalid payment signature. Shipping verification failed.' });
-        }
-
-        await Transaction.create({
-          user: userId,
-          amount: finalShippingCost, 
-          razorpay_order_id: rzpOrderId,
-          razorpay_payment_id: rzpPaymentId,
-          razorpay_signature: razorpay_signature,
-          status: 'success',
-          transactionType: 'shipping_fee'
+      // -> CHANGES START HERE: Owner accepts, pays shipping, status goes to AWAITING_PAYMENT
+      if (!shippingAddress || !shippingAddress.fullName || !shippingAddress.phone || !shippingAddress.houseNo || !shippingAddress.areaStreet || !shippingAddress.city || !shippingAddress.state || !shippingAddress.pincode) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Incomplete shipping address. Please fill all the fields.' 
         });
-
-        barter.delivery_method = 'courier';
-        barter.shippingAddress = shippingAddress;
-        barter.shippingCost = finalShippingCost;
-        barter.razorpay_order_id = rzpOrderId;
-        barter.razorpay_payment_id = rzpPaymentId;
       }
+
+      if (!paymentDetails || !paymentDetails.razorpay_payment_id) {
+        return res.status(400).json({ success: false, message: 'Shipping payment details missing' });
+      }
+
+      const finalShippingCost = paymentDetails.amount; 
+      const rzpOrderId = paymentDetails.razorpay_order_id;
+      const rzpPaymentId = paymentDetails.razorpay_payment_id;
+      const { razorpay_signature } = paymentDetails;
+
+      const body = rzpOrderId + "|" + rzpPaymentId;
+      const expectedSignature = crypto
+        .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+        .update(body.toString())
+        .digest('hex');
+
+      if (expectedSignature !== razorpay_signature) {
+        return res.status(400).json({ success: false, message: 'Invalid payment signature. Shipping verification failed.' });
+      }
+
+      await Transaction.create({
+        user: userId,
+        amount: finalShippingCost, 
+        razorpay_order_id: rzpOrderId,
+        razorpay_payment_id: rzpPaymentId,
+        razorpay_signature: razorpay_signature,
+        status: 'success',
+        transactionType: 'shipping_fee'
+      });
+
+      barter.ownerShippingAddress = shippingAddress;
+      barter.ownerShippingCost = finalShippingCost;
+      barter.owner_razorpay_order_id = rzpOrderId;
+      barter.owner_razorpay_payment_id = rzpPaymentId;
+      barter.ownerPaymentStatus = 'paid';
+      
+      barter.status = 'AWAITING_PAYMENT';
+      barter.expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); 
+
+      await Notification.create({
+        user: barter.requester._id,
+        type: 'TRADE_ALERT',
+        title: 'Action Required! ⏳',
+        message: `${barter.owner.full_name} has accepted your swap and paid their shipping. Pay your shipping cost within 24 hours to confirm the deal.`,
+        metadata: { reason: 'payment_pending', referenceId: barter._id }
+      });
       // -> CHANGES END HERE
 
-      if (requiredCredits > 0) {
-        const updatedRequester = await User.findOneAndUpdate(
-          { _id: barter.requester._id, account_credits: { $gte: requiredCredits } },
-          { $inc: { account_credits: -requiredCredits } },
-          { new: true }
-        );
-
-        if (!updatedRequester) {
-          return res.status(400).json({ 
-            success: false, 
-            message: 'Cannot accept swap. The requester no longer has enough credits.' 
-          });
-        }
-
-        // CHANGED: Agar credit diff tha, toh requester ko deduction ki notification
-        await Notification.create({
-          user: barter.requester._id,
-          type: 'CREDIT_DEDUCTED',
-          title: 'Trade Accepted! ',
-          message: `Aapka trade offer accept ho gaya hai. Difference cover karne ke liye ${requiredCredits} credits deduct hue.`,
-          metadata: { amount: requiredCredits, reason: 'trade_difference', referenceId: barter._id }
-        });
-      } else {
-         // CHANGED: Agar koi credit diff nahi tha, toh sirf acceptance ki notification
-         await Notification.create({
-          user: barter.requester._id,
-          type: 'TRADE_ALERT',
-          title: 'Trade Accepted! ',
-          message: `Aapka offer accept ho gaya hai! Deal lock karke chat start karein.`,
-          metadata: { reason: 'trade_accepted', referenceId: barter._id }
-        });
-      }
-
-      // 2. 'swapped' ki jagah 'reserved' status set karo taaki deal process me dikhe
-      await Item.findByIdAndUpdate(barter.item._id, { status: 'reserved' });
-      await Item.findByIdAndUpdate(barter.offered_item._id, { status: 'reserved' });
-
-      await BarterRequest.updateMany(
-        {
-          _id: { $ne: barter._id },
-          status: 'PENDING',
-          $or: [
-            { item: { $in: [barter.item._id, barter.offered_item._id] } },
-            { offered_item: { $in: [barter.item._id, barter.offered_item._id] } }
-          ]
-        },
-        { status: 'CANCELLED', updated_at: Date.now() }
-      );
-
-      // -> CHANGES START HERE: Create Order document for Shiprocket dispatch
-      if (delivery_method === 'courier') {
-        await Order.create({
-          buyer: userId, 
-          seller: barter.requester._id, 
-          item: barter.offered_item._id, 
-          orderType: 'barter',
-          barterRequestRef: barter._id,
-          itemPrice: 0, 
-          shippingCost: finalShippingCost,
-          totalAmount: finalShippingCost, 
-          shippingAddress: shippingAddress,
-          orderStatus: 'pending',
-          paymentStatus: 'paid', 
-          isSellerPaid: true, 
-          razorpay_order_id: rzpOrderId,
-          razorpay_payment_id: rzpPaymentId,
-        });
-
-        await Notification.create({
-          user: barter.requester._id,
-          type: 'ORDER_UPDATE',
-          title: 'Courier Requested! 📦',
-          message: `The owner has accepted the trade and paid for courier. Please pack your item "${barter.offered_item.title}" for dispatch.`,
-          metadata: { referenceId: barter._id }
-        });
-      }
-      // -> CHANGES END HERE
-
-      // 3. Frontend ke liye WhatsApp contact data taiyar karo
-      matchData = {
-        owner: {
-          name: barter.owner.full_name,
-          phone: barter.owner.phone,
-          item: barter.item.title
-        },
-        requester: {
-          name: barter.requester.full_name,
-          phone: barter.requester.phone,
-          offered_item: barter.offered_item.title
-        }
-      };
     } else if (status === 'REJECTED') {
       // CHANGED: Reject hone par requester ko notify karo
       await Notification.create({
@@ -417,19 +329,18 @@ const updateSwapStatus = async (req, res) => {
         message: `Aapka offer "${barter.item.title}" ke liye decline kar diya gaya hai.`,
         metadata: { reason: 'trade_rejected', referenceId: barter._id }
       });
+      barter.status = status;
     }
 
-    barter.status = status;
     barter.updated_at = Date.now();
     await barter.save();
 
     res.status(200).json({ 
       success: true, 
       message: status === 'ACCEPTED' 
-        ? (delivery_method === 'courier' ? 'Deal Locked and Order Placed!' : 'Deal Locked Successfully! You can now chat on WhatsApp.') 
+        ? 'Shipping paid! Waiting for the requester to complete their payment within 24 hours.' 
         : `Swap ${status.toLowerCase()} successfully`, 
-      data: barter,
-      matchData: matchData 
+      data: barter
     });
 
   } catch (error) {
@@ -446,6 +357,274 @@ const updateSwapStatus = async (req, res) => {
   }
 };
 
+// -> CHANGES START HERE: Naya function for requester to pay and lock the deal
+const completeSwapPayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { shippingAddress, paymentDetails } = req.body;
+    const userId = req.user._id;
+
+    const barter = await BarterRequest.findById(id)
+      .populate('item offered_item')
+      .populate('requester', 'full_name phone')
+      .populate('owner', 'full_name phone');
+
+    if (!barter) {
+      return res.status(404).json({ success: false, message: 'Swap request not found' });
+    }
+
+    if (barter.requester._id.toString() !== userId.toString()) {
+      return res.status(403).json({ success: false, message: 'Not authorized to complete this payment' });
+    }
+
+    if (barter.status !== 'AWAITING_PAYMENT') {
+      return res.status(400).json({ success: false, message: 'This request is not waiting for payment' });
+    }
+
+    if (new Date() > barter.expiresAt) {
+      return res.status(400).json({ success: false, message: 'Payment time has expired' });
+    }
+
+    if (!shippingAddress || !shippingAddress.fullName || !shippingAddress.phone || !shippingAddress.houseNo || !shippingAddress.areaStreet || !shippingAddress.city || !shippingAddress.state || !shippingAddress.pincode) {
+      return res.status(400).json({ success: false, message: 'Incomplete shipping address.' });
+    }
+
+    if (!paymentDetails || !paymentDetails.razorpay_payment_id) {
+      return res.status(400).json({ success: false, message: 'Shipping payment details missing' });
+    }
+
+    const finalShippingCost = paymentDetails.amount; 
+    const rzpOrderId = paymentDetails.razorpay_order_id;
+    const rzpPaymentId = paymentDetails.razorpay_payment_id;
+    const { razorpay_signature } = paymentDetails;
+
+    const body = rzpOrderId + "|" + rzpPaymentId;
+    const expectedSignature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(body.toString())
+      .digest('hex');
+
+    if (expectedSignature !== razorpay_signature) {
+      return res.status(400).json({ success: false, message: 'Invalid payment signature.' });
+    }
+
+    await Transaction.create({
+      user: userId,
+      amount: finalShippingCost, 
+      razorpay_order_id: rzpOrderId,
+      razorpay_payment_id: rzpPaymentId,
+      razorpay_signature: razorpay_signature,
+      status: 'success',
+      transactionType: 'shipping_fee'
+    });
+
+    const targetValue = barter.item.estimated_value || 0;
+    const offeredValue = barter.offered_item.estimated_value || 0;
+    const requiredCredits = Math.max(0, targetValue - offeredValue);
+
+    if (requiredCredits > 0) {
+      const updatedRequester = await User.findOneAndUpdate(
+        { _id: barter.requester._id, account_credits: { $gte: requiredCredits } },
+        { $inc: { account_credits: -requiredCredits } },
+        { new: true }
+      );
+
+      if (!updatedRequester) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Cannot confirm swap. You do not have enough credits.' 
+        });
+      }
+
+      await Notification.create({
+        user: barter.requester._id,
+        type: 'CREDIT_DEDUCTED',
+        title: 'Trade Confirmed! ',
+        message: `Aapka trade lock ho gaya hai. Difference cover karne ke liye ${requiredCredits} credits deduct hue.`,
+        metadata: { amount: requiredCredits, reason: 'trade_difference', referenceId: barter._id }
+      });
+    }
+
+    // Mark items as reserved
+    await Item.findByIdAndUpdate(barter.item._id, { status: 'reserved' });
+    await Item.findByIdAndUpdate(barter.offered_item._id, { status: 'reserved' });
+
+    // Cancel other pending requests
+    await BarterRequest.updateMany(
+      {
+        _id: { $ne: barter._id },
+        status: { $in: ['PENDING', 'AWAITING_PAYMENT'] },
+        $or: [
+          { item: { $in: [barter.item._id, barter.offered_item._id] } },
+          { offered_item: { $in: [barter.item._id, barter.offered_item._id] } }
+        ]
+      },
+      { status: 'CANCELLED', updated_at: Date.now() }
+    );
+
+    // Create Order 1: Rahul gets Amit's item
+    await Order.create({
+      buyer: barter.requester._id, 
+      seller: barter.owner._id, 
+      item: barter.item._id, 
+      orderType: 'barter',
+      barterRequestRef: barter._id,
+      itemPrice: 0, 
+      shippingCost: finalShippingCost,
+      totalAmount: finalShippingCost, 
+      shippingAddress: shippingAddress,
+      orderStatus: 'pending',
+      paymentStatus: 'paid', 
+      isSellerPaid: true, 
+      razorpay_order_id: rzpOrderId,
+      razorpay_payment_id: rzpPaymentId,
+    });
+
+    
+    await Order.create({
+      buyer: barter.owner._id, 
+      seller: barter.requester._id, 
+      item: barter.offered_item._id, 
+      orderType: 'barter',
+      barterRequestRef: barter._id,
+      itemPrice: 0, 
+      shippingCost: barter.ownerShippingCost,
+      totalAmount: barter.ownerShippingCost, 
+      shippingAddress: barter.ownerShippingAddress,
+      orderStatus: 'pending',
+      paymentStatus: 'paid', 
+      isSellerPaid: true, 
+      razorpay_order_id: barter.owner_razorpay_order_id,
+      razorpay_payment_id: barter.owner_razorpay_payment_id,
+    });
+
+    await Notification.create({
+      user: barter.owner._id,
+      type: 'ORDER_UPDATE',
+      title: 'Deal Locked! 📦',
+      message: `${barter.requester.full_name} has paid their shipping. Both orders are placed! Pack your item for dispatch.`,
+      metadata: { referenceId: barter._id }
+    });
+
+    barter.requesterShippingAddress = shippingAddress;
+    barter.requesterShippingCost = finalShippingCost;
+    barter.requester_razorpay_order_id = rzpOrderId;
+    barter.requester_razorpay_payment_id = rzpPaymentId;
+    barter.requesterPaymentStatus = 'paid';
+    
+    barter.status = 'ACCEPTED';
+    barter.updated_at = Date.now();
+    await barter.save();
+
+    res.status(200).json({ 
+      success: true, 
+      message: 'Deal completely locked and both orders placed successfully!', 
+      data: barter
+    });
+
+  } catch (error) {
+    console.error('Error in completeSwapPayment:', error);
+    res.status(500).json({ success: false, message: 'Server error while completing swap payment' });
+  }
+};
+
+
+const autoCancelOverdueBarters = async () => {
+  try {
+    const now = new Date();
+
+    const overdueAwaiting = await BarterRequest.find({
+      status: 'AWAITING_PAYMENT',
+      expiresAt: { $lte: now }
+    }).populate('owner requester');
+
+    for (const barter of overdueAwaiting) {
+      try {
+        if (barter.ownerPaymentStatus === 'paid' && barter.owner_razorpay_payment_id) {
+         
+          const refundRes = await refundRazorpayPayment(barter.owner_razorpay_payment_id, barter.ownerShippingCost);
+
+          if (refundRes.success) {
+            await Transaction.create({
+              user: barter.owner._id,
+              amount: barter.ownerShippingCost,
+              razorpay_order_id: barter.owner_razorpay_order_id,
+              razorpay_payment_id: barter.owner_razorpay_payment_id,
+              transactionType: 'shipping_refund',
+              status: 'success'
+            });
+            barter.ownerPaymentStatus = 'refunded'; 
+          } else {
+             console.error(`Refund failed for barter ${barter._id}`);
+          }
+        }
+
+        barter.status = 'CANCELLED';
+        barter.updated_at = now;
+        await barter.save();
+
+        await Notification.create({
+          user: barter.owner._id,
+          type: 'SYSTEM',
+          title: 'Swap Cancelled & Refunded 🚫',
+          message: `The requester didn't pay within 24 hours. The swap is cancelled and your shipping fee of ₹${barter.ownerShippingCost} has been refunded.`,
+          metadata: { referenceId: barter._id }
+        });
+
+        await Notification.create({
+          user: barter.requester._id,
+          type: 'SYSTEM',
+          title: 'Swap Timeout ⏰',
+          message: `You didn't complete the shipping payment in 24 hours. The swap request has been cancelled.`,
+          metadata: { referenceId: barter._id }
+        });
+
+      } catch (innerError) {
+        console.error(`Failed to auto-cancel AWAITING_PAYMENT barter ${barter._id}:`, innerError);
+      }
+    }
+
+  
+    const cancelHours = 24;
+    const cancelThreshold = new Date(Date.now() - cancelHours * 60 * 60 * 1000);
+
+    const overduePending = await BarterRequest.find({
+      status: 'PENDING',
+      created_at: { $lt: cancelThreshold }
+    });
+
+    for (const request of overduePending) {
+      try {
+        request.status = 'CANCELLED';
+        request.updated_at = now;
+        await request.save();
+
+        await Notification.create({
+          user: request.requester,
+          type: 'TRADE_ALERT',
+          title: 'Offer Auto-Cancelled ⏱️',
+          message: `Aapka offer automatically cancel ho gaya hai kyunki 24 hours tak koi response nahi mila. Aap ab apna item kisi aur ko offer kar sakte hain.`,
+          metadata: { reason: 'auto_cancel_barter', referenceId: request._id }
+        });
+
+        await Notification.create({
+          user: request.owner,
+          type: 'TRADE_ALERT',
+          title: 'Offer Expired ⏳',
+          message: `Ek pending offer expire ho gaya hai kyunki 24 hours tak koi response nahi mila.`,
+          metadata: { reason: 'auto_cancel_barter', referenceId: request._id }
+        });
+      } catch (innerErr) {
+         console.error(`Failed to auto-cancel PENDING barter ${request._id}:`, innerErr);
+      }
+    }
+
+  } catch (error) {
+    console.error('Error in autoCancelOverdueBarters cron job:', error);
+  }
+};
+
+
 module.exports = {
   createBarterRequest,
   getReceivedRequests,
@@ -453,5 +632,9 @@ module.exports = {
   getBarterRequestById,
   updateBarterRequest,
   deleteBarterRequest,
-  updateSwapStatus
+  updateSwapStatus,
+  completeSwapPayment,
+ 
+  autoCancelOverdueBarters 
+
 };

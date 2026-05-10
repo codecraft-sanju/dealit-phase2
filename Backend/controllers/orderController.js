@@ -15,9 +15,8 @@ const calculateShippingCost = async (req, res) => {
   try {
     const { itemId, pincode } = req.body;
     
-    /* --- CHANGE START --- */
     const item = await Item.findById(itemId).populate('owner', 'pickupAddress');
-    /* --- CHANGE END --- */
+    
 
     if (!item) return res.status(404).json({ success: false, message: 'Item not found' });
 
@@ -824,44 +823,6 @@ const getOrderById = async (req, res) => {
   }
 };
 
-const autoCancelOverdueBarters = async () => {
-  try {
-    const cancelHours = 24;
-    const cancelThreshold = new Date(Date.now() - cancelHours * 60 * 60 * 1000);
-
-    const overdueRequests = await BarterRequest.find({
-      status: 'PENDING',
-      created_at: { $lt: cancelThreshold }
-    });
-
-    if (overdueRequests.length === 0) return;
-
-    for (const request of overdueRequests) {
-      request.status = 'CANCELLED';
-      request.updated_at = Date.now();
-      await request.save();
-
-      await Notification.create({
-        user: request.requester,
-        type: 'TRADE_ALERT',
-        title: 'Offer Auto-Cancelled ⏱️',
-        message: `Aapka offer automatically cancel ho gaya hai kyunki 24 hours tak koi response nahi mila. Aap ab apna item kisi aur ko offer kar sakte hain.`,
-        metadata: { reason: 'auto_cancel_barter', referenceId: request._id }
-      });
-
-      await Notification.create({
-        user: request.owner,
-        type: 'TRADE_ALERT',
-        title: 'Offer Expired ⏳',
-        message: `Ek pending offer expire ho gaya hai kyunki 24 hours tak koi response nahi mila.`,
-        metadata: { reason: 'auto_cancel_barter', referenceId: request._id }
-      });
-    }
-  } catch (error) {
-    console.error(error);
-  }
-};
-
 module.exports = {
   calculateShippingCost, 
   createOrder,
@@ -873,6 +834,5 @@ module.exports = {
   handleShiprocketWebhook,
   autoCancelOverdueOrders,
   getLiveTracking ,
-  getOrderById,
-  autoCancelOverdueBarters
+  getOrderById
 };
