@@ -21,7 +21,7 @@ const FloatInput = ({ icon: Icon, label, name, type = 'text', value, onChange, r
   return (
     <div className={`fi-wrap ${isActive ? 'active' : ''} ${focused ? 'focused' : ''}`}>
       {/* Icon safe render check */}
-      <span className="fi-icon">{Icon && <Icon size={16} />}</span>
+      <span className="fi-icon">{Icon && <Icon size={18} />}</span>
       <div className="fi-inner">
         <label className="fi-label">{label}</label>
         <input
@@ -42,7 +42,7 @@ const FloatInput = ({ icon: Icon, label, name, type = 'text', value, onChange, r
       </div>
       {isPassword && (
         <button type="button" className="fi-eye" onClick={() => setShowPass(p => !p)} tabIndex={-1}>
-          {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+          {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
         </button>
       )}
     </div>
@@ -217,7 +217,7 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
 
             {/* LOGIN */}
             <div className="aw-form-pane login-pane">
-              <div className="aw-form-scroll">
+              <div className="aw-form-scroll admin-scroll">
                 <div className="aw-brand">
                   <img src="/logo.png" alt="Dealit logo" className="brand-logo" />
                   <span>dealit</span>
@@ -236,7 +236,7 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                   </div>
 
                   <button type="submit" className="aw-btn" disabled={loading}>
-                    {loading ? <span className="aw-spinner" /> : <><span>Sign In</span><ArrowRight size={16} /></>}
+                    {loading ? <span className="aw-spinner" /> : <><span>Sign In</span><ArrowRight size={18} /></>}
                   </button>
                 </form>
 
@@ -249,7 +249,7 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
 
             {/* SIGNUP / OTP */}
             <div className="aw-form-pane signup-pane">
-              <div className="aw-form-scroll">
+              <div className="aw-form-scroll admin-scroll">
                 <div className="aw-brand">
                   <img src="/logo.png" alt="Dealit logo" className="brand-logo" />
                   <span>dealit</span>
@@ -277,7 +277,7 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                       </div>
 
                       <button type="submit" className="aw-btn" disabled={loading}>
-                        {loading ? <span className="aw-spinner" /> : <><span>Create Account</span><ArrowRight size={16} /></>}
+                        {loading ? <span className="aw-spinner" /> : <><span>Create Account</span><ArrowRight size={18} /></>}
                       </button>
                     </form>
 
@@ -297,7 +297,7 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                       <OtpInput value={otp} onChange={setOtp} />
 
                       <button type="submit" className="aw-btn" disabled={loading || otp.length < 6}>
-                        {loading ? <span className="aw-spinner" /> : <><span>Verify &amp; Login</span><CheckCircle size={16} /></>}
+                        {loading ? <span className="aw-spinner" /> : <><span>Verify &amp; Login</span><CheckCircle size={18} /></>}
                       </button>
                     </form>
 
@@ -314,14 +314,12 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
           {/* Sliding hero panel */}
           <div className="aw-hero">
             <div className="hero-login-view">
-              {/* CHANGE: Added marginBottom: '20px' */}
               {signupAnimData && <LottieComponent animationData={signupAnimData} loop={true} className="hero-img" style={{ width: '350px', height: 'auto', marginBottom: '20px' }} />}
               <h2 className="hero-title">New here?</h2>
               <p className="hero-body">Trade what you have for what you need — no money required.</p>
               <button className="hero-btn" onClick={() => handleModeSwitch('signup')}>Create Account</button>
             </div>
             <div className="hero-signup-view">
-              {/* CHANGE: Added marginBottom: '20px' */}
               {loginAnimData && <LottieComponent animationData={loginAnimData} loop={true} className="hero-img" style={{ width: '350px', height: 'auto', marginBottom: '20px' }} />}
               <h2 className="hero-title">One of us?</h2>
               <p className="hero-body">Welcome back! Your dashboard is waiting with fresh offers.</p>
@@ -336,10 +334,8 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
         {/* Top hero area */}
         <div className="mb-hero">
           {isSignUpMode ? (
-            /* CHANGE: Added marginBottom: '20px' */
             signupAnimData && <LottieComponent animationData={signupAnimData} loop={true} className="mb-hero-img" style={{ width: '250px', height: 'auto', marginBottom: '20px' }} />
           ) : (
-            /* CHANGE: Added marginBottom: '20px' */
             loginAnimData && <LottieComponent animationData={loginAnimData} loop={true} className="mb-hero-img" style={{ width: '250px', height: 'auto', marginBottom: '20px' }} />
           )}
           <div className="mb-brand">
@@ -357,10 +353,11 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
             <div className={`mb-tab-indicator ${isSignUpMode ? 'right' : 'left'}`} />
           </div>
 
-          <div className="mb-form-area">
+          <div className="mb-form-area custom-scrollbar">
             {/* LOGIN MOBILE */}
             {!isSignUpMode && (
               <>
+                <h2 className="aw-heading" style={{ fontSize: '1.4rem', marginTop: '0.5rem', marginBottom: '1.25rem' }}>Welcome back!</h2>
                 {error && <div className="aw-error">{error}</div>}
                 <form onSubmit={handleLogin} className="aw-form" noValidate>
                   <FloatInput icon={Mail} label="Email address" name="email" type="email" value={formData.email} onChange={handleChange} required autoCapitalize="none" autoCorrect="off" />
@@ -369,7 +366,7 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                     <Link to="/forgot-password" className="aw-link">Forgot password?</Link>
                   </div>
                   <button type="submit" className="aw-btn" disabled={loading}>
-                    {loading ? <span className="aw-spinner" /> : <><span>Sign In</span><ArrowRight size={16} /></>}
+                    {loading ? <span className="aw-spinner" /> : <><span>Sign In</span><ArrowRight size={18} /></>}
                   </button>
                 </form>
               </>
@@ -380,6 +377,7 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
               <>
                 {!showOtp ? (
                   <>
+                    <h2 className="aw-heading" style={{ fontSize: '1.4rem', marginTop: '0.5rem', marginBottom: '1.25rem' }}>Create account</h2>
                     {error && <div className="aw-error">{error}</div>}
                     <form onSubmit={handleSignup} className="aw-form" noValidate>
                       <FloatInput icon={User} label="Full name" name="full_name" value={formData.full_name} onChange={handleChange} required />
@@ -396,20 +394,21 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                       </div>
 
                       <button type="submit" className="aw-btn" disabled={loading}>
-                        {loading ? <span className="aw-spinner" /> : <><span>Create Account</span><ArrowRight size={16} /></>}
+                        {loading ? <span className="aw-spinner" /> : <><span>Create Account</span><ArrowRight size={18} /></>}
                       </button>
                     </form>
                   </>
                 ) : (
                   <>
-                    <p className="aw-sub" style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-                      Code sent to<br /><strong>{registeredEmail}</strong>
+                    <h2 className="aw-heading" style={{ fontSize: '1.4rem', marginTop: '0.5rem', marginBottom: '0.2rem' }}>Verify email</h2>
+                    <p className="aw-sub" style={{ marginBottom: '1.5rem' }}>
+                      Code sent to <strong>{registeredEmail}</strong>
                     </p>
                     {error && <div className="aw-error">{error}</div>}
                     <form onSubmit={handleVerifyOtp} className="aw-form" noValidate>
                       <OtpInput value={otp} onChange={setOtp} />
                       <button type="submit" className="aw-btn" disabled={loading || otp.length < 6}>
-                        {loading ? <span className="aw-spinner" /> : <><span>Verify &amp; Login</span><CheckCircle size={16} /></>}
+                        {loading ? <span className="aw-spinner" /> : <><span>Verify &amp; Login</span><CheckCircle size={18} /></>}
                       </button>
                     </form>
                     <p className="aw-switch-txt">

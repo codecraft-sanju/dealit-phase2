@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Mail, Lock, CheckCircle, ArrowLeft, ArrowRight, Eye, EyeOff, Sparkles } from 'lucide-react';
+import { Mail, Lock, CheckCircle, ArrowLeft, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import Lottie from 'lottie-react';
 import './ForgotPassword.css';
 
@@ -20,7 +20,7 @@ const FloatInput = ({ icon: Icon, label, name, type = 'text', value, onChange, r
 
   return (
     <div className={`fi-wrap ${isActive ? 'active' : ''} ${focused ? 'focused' : ''}`}>
-      <span className="fi-icon">{Icon && <Icon size={16} />}</span>
+      <span className="fi-icon">{Icon && <Icon size={18} />}</span>
       <div className="fi-inner">
         <label className="fi-label">{label}</label>
         <input
@@ -41,7 +41,7 @@ const FloatInput = ({ icon: Icon, label, name, type = 'text', value, onChange, r
       </div>
       {isPassword && (
         <button type="button" className="fi-eye" onClick={() => setShowPass(p => !p)} tabIndex={-1}>
-          {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+          {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
         </button>
       )}
     </div>
@@ -185,9 +185,9 @@ const ForgotPasswordPage = ({ setUser }) => {
 
             {/* STEP 1: REQUEST OTP */}
             <div className="aw-form-pane step1-pane">
-              <div className="aw-form-scroll">
+              <div className="aw-form-scroll admin-scroll">
                 <div className="aw-brand">
-                  <Sparkles size={20} className="brand-spark" />
+                  <img src="/logo.png" alt="Dealit logo" className="brand-logo" />
                   <span>dealit</span>
                 </div>
                 <h1 className="aw-heading">Reset Password</h1>
@@ -209,7 +209,7 @@ const ForgotPasswordPage = ({ setUser }) => {
                   />
 
                   <button type="submit" className="aw-btn" disabled={loading}>
-                    {loading ? <span className="aw-spinner" /> : <><span>Send OTP</span><ArrowRight size={16} /></>}
+                    {loading ? <span className="aw-spinner" /> : <><span>Send OTP</span><ArrowRight size={18} /></>}
                   </button>
 
                   <Link to="/login" className="aw-link" style={{ textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '1.5rem', fontSize: '0.85rem' }}>
@@ -221,9 +221,9 @@ const ForgotPasswordPage = ({ setUser }) => {
 
             {/* STEP 2: VERIFY OTP & NEW PASSWORD */}
             <div className="aw-form-pane step2-pane">
-              <div className="aw-form-scroll">
+              <div className="aw-form-scroll admin-scroll">
                 <div className="aw-brand">
-                  <Sparkles size={20} className="brand-spark" />
+                  <img src="/logo.png" alt="Dealit logo" className="brand-logo" />
                   <span>dealit</span>
                 </div>
                 
@@ -249,7 +249,7 @@ const ForgotPasswordPage = ({ setUser }) => {
                   />
 
                   <button type="submit" className="aw-btn" disabled={loading || otp.length < 6 || !newPassword}>
-                    {loading ? <span className="aw-spinner" /> : <><span>Reset & Login</span><CheckCircle size={16} /></>}
+                    {loading ? <span className="aw-spinner" /> : <><span>Reset & Login</span><CheckCircle size={18} /></>}
                   </button>
                 </form>
 
@@ -265,12 +265,12 @@ const ForgotPasswordPage = ({ setUser }) => {
           {/* Sliding hero panel */}
           <div className="aw-hero">
             <div className="hero-step1-view">
-              {forgotAnimData && <LottieComponent animationData={forgotAnimData} loop={true} className="hero-img" />}
+              {forgotAnimData && <LottieComponent animationData={forgotAnimData} loop={true} className="hero-img" style={{ width: '350px', height: 'auto', marginBottom: '20px' }} />}
               <h2 className="hero-title">Forgot it?</h2>
               <p className="hero-body">No worries, we will help you get back into your account safely.</p>
             </div>
             <div className="hero-step2-view">
-              {forgotAnimData && <LottieComponent animationData={forgotAnimData} loop={true} className="hero-img" />}
+              {forgotAnimData && <LottieComponent animationData={forgotAnimData} loop={true} className="hero-img" style={{ width: '350px', height: 'auto', marginBottom: '20px' }} />}
               <h2 className="hero-title">Check your inbox!</h2>
               <p className="hero-body">Enter the verification code to set your new password and regain access.</p>
             </div>
@@ -281,18 +281,18 @@ const ForgotPasswordPage = ({ setUser }) => {
       {/* ── MOBILE LAYOUT (bottom sheet style) ── */}
       <div className={`aw-mobile ${step === 2 ? 'is-step2' : ''}`}>
         <div className="mb-hero">
-          {forgotAnimData && <LottieComponent animationData={forgotAnimData} loop={true} className="mb-hero-img" />}
+          {forgotAnimData && <LottieComponent animationData={forgotAnimData} loop={true} className="mb-hero-img" style={{ width: '250px', height: 'auto', marginBottom: '20px' }} />}
           <div className="mb-brand">
-            <Sparkles size={18} className="brand-spark" />
+            <img src="/logo.png" alt="Dealit logo" className="brand-logo" />
             <span>dealit</span>
           </div>
         </div>
 
         <div className="mb-sheet">
-          <div className="mb-form-area">
+          <div className="mb-form-area custom-scrollbar">
             {step === 1 ? (
               <div className="mb-form-content">
-                <h1 className="aw-heading" style={{ fontSize: '1.8rem', textAlign: 'center' }}>Reset Password</h1>
+                <h1 className="aw-heading" style={{ fontSize: '1.6rem', textAlign: 'center', marginTop: '1rem' }}>Reset Password</h1>
                 <p className="aw-sub" style={{ textAlign: 'center' }}>Enter your registered email address</p>
                 
                 {error && step === 1 && <div className="aw-error">{error}</div>}
@@ -300,7 +300,7 @@ const ForgotPasswordPage = ({ setUser }) => {
                 <form onSubmit={handleSendOtp} className="aw-form" noValidate style={{ marginTop: '1.5rem' }}>
                   <FloatInput icon={Mail} label="Email address" name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoCapitalize="none" autoCorrect="off" />
                   <button type="submit" className="aw-btn" disabled={loading}>
-                    {loading ? <span className="aw-spinner" /> : <><span>Send OTP</span><ArrowRight size={16} /></>}
+                    {loading ? <span className="aw-spinner" /> : <><span>Send OTP</span><ArrowRight size={18} /></>}
                   </button>
                 </form>
                 
@@ -312,8 +312,8 @@ const ForgotPasswordPage = ({ setUser }) => {
               </div>
             ) : (
               <div className="mb-form-content">
-                <h1 className="aw-heading" style={{ fontSize: '1.8rem', textAlign: 'center' }}>Secure Account</h1>
-                <p className="aw-sub" style={{ textAlign: 'center' }}>
+                <h1 className="aw-heading" style={{ fontSize: '1.6rem', textAlign: 'center', marginTop: '1rem' }}>Secure Account</h1>
+                <p className="aw-sub" style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
                   Code sent to<br /><strong>{email}</strong>
                 </p>
 
@@ -325,7 +325,7 @@ const ForgotPasswordPage = ({ setUser }) => {
                   <FloatInput icon={Lock} label="New Password" name="newPassword" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
                   
                   <button type="submit" className="aw-btn" disabled={loading || otp.length < 6 || !newPassword}>
-                    {loading ? <span className="aw-spinner" /> : <><span>Reset & Login</span><CheckCircle size={16} /></>}
+                    {loading ? <span className="aw-spinner" /> : <><span>Reset & Login</span><CheckCircle size={18} /></>}
                   </button>
                 </form>
 
