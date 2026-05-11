@@ -362,6 +362,8 @@ const AddItemPage = ({ user, setUser }) => {
         const updatedImages = [...images];
         updatedImages[index] = originalUrl;
         setImages(updatedImages);
+        URL.revokeObjectURL(currentUrl);
+        blobToOriginalMap.delete(currentUrl);
       }
       setProcessingAIIndex(null);
       return;
@@ -374,6 +376,10 @@ const AddItemPage = ({ user, setUser }) => {
       blobToOriginalMap.set(transparentImageUrl, currentUrl);
 
       const updatedImages = [...images];
+      if (updatedImages[index].startsWith('blob:')) {
+         URL.revokeObjectURL(updatedImages[index]);
+         blobToOriginalMap.delete(updatedImages[index]);
+      }
       updatedImages[index] = transparentImageUrl;
       setImages(updatedImages);
       
@@ -387,6 +393,11 @@ const AddItemPage = ({ user, setUser }) => {
   };
 
   const removeImage = (indexToRemove) => {
+    const urlToRemove = images[indexToRemove];
+    if (urlToRemove && urlToRemove.startsWith('blob:')) {
+      URL.revokeObjectURL(urlToRemove);
+      blobToOriginalMap.delete(urlToRemove);
+    }
     setImages(images.filter((_, index) => index !== indexToRemove));
   };
 
@@ -585,6 +596,14 @@ const AddItemPage = ({ user, setUser }) => {
       return;
     }
 
+    if (formData.weightCategory === 'custom') {
+      const parsedWeight = parseFloat(formData.exactWeight);
+      if (isNaN(parsedWeight) || parsedWeight <= 0) {
+        toast.error("Please enter a valid custom weight greater than 0 Kg.");
+        return;
+      }
+    }
+
     // NEW CHANGE: Replaced hardcoded 3 with dynamic minImages
     if (images.length < minImages) {
       toast.error(`Please upload at least ${minImages} image${minImages > 1 ? 's' : ''} of your item.`);
@@ -603,8 +622,7 @@ const AddItemPage = ({ user, setUser }) => {
     const toastId = toast.loading("Processing your images...");
 
     try {
-      const finalImages = [];
-      for (let imgUrl of images) {
+      const uploadPromises = images.map(async (imgUrl) => {
         if (imgUrl.startsWith('blob:')) {
           const response = await fetch(imgUrl);
           const blobData = await response.blob();
@@ -612,20 +630,20 @@ const AddItemPage = ({ user, setUser }) => {
           
           const uploadData = new FormData();
           uploadData.append('file', file);
-        
           uploadData.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
 
-          
           const cloudRes = await axios.post(
             `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`,
             uploadData
           );
           
-          finalImages.push(cloudRes.data.secure_url);
+          return cloudRes.data.secure_url;
         } else {
-          finalImages.push(imgUrl);
+          return imgUrl;
         }
-      }
+      });
+
+      const finalImages = await Promise.all(uploadPromises);
 
       toast.update(toastId, { render: "Listing your item...", type: "info", isLoading: true });
 

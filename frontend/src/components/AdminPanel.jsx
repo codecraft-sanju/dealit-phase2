@@ -31,7 +31,6 @@ import ImageCropModal from '../admin/ImageCropModal';
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
-
 const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
 
@@ -605,6 +604,8 @@ const AdminPanel = ({ user }) => {
       const response = await axios.put(`${API_URL}/admin/credit-settings`, creditSettings, { withCredentials: true });
       if (response.data.success) {
         toast.success('Credit settings successfully updated! 🎉'); 
+        queryClient.invalidateQueries({ queryKey: ['creditSettings'] });
+        queryClient.invalidateQueries({ queryKey: ['publicSettings'] });
       }
     } catch (error) {
       console.error('Error saving settings:', error);
