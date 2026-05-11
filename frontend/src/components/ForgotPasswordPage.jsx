@@ -1,11 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Mail, Lock, CheckCircle, ArrowLeft, ArrowRight, Eye, EyeOff, Sparkles } from 'lucide-react';
+import Lottie from 'lottie-react';
 import './ForgotPassword.css';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
+
+/* ── Workaround for Vite/Webpack default export issue ── */
+const LottieComponent = Lottie && Lottie.default ? Lottie.default : Lottie;
 
 /* ── Floating-label input ── */
 const FloatInput = ({ icon: Icon, label, name, type = 'text', value, onChange, required, maxLength, inputMode, autoCapitalize, autoCorrect, style }) => {
@@ -16,7 +20,7 @@ const FloatInput = ({ icon: Icon, label, name, type = 'text', value, onChange, r
 
   return (
     <div className={`fi-wrap ${isActive ? 'active' : ''} ${focused ? 'focused' : ''}`}>
-      <span className="fi-icon"><Icon size={16} /></span>
+      <span className="fi-icon">{Icon && <Icon size={16} />}</span>
       <div className="fi-inner">
         <label className="fi-label">{label}</label>
         <input
@@ -102,6 +106,15 @@ const ForgotPasswordPage = ({ setUser }) => {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const [forgotAnimData, setForgotAnimData] = useState(null);
+
+  useEffect(() => {
+    fetch('/forgotpassword.json')
+      .then(res => res.json())
+      .then(setForgotAnimData)
+      .catch(() => {});
+  }, []);
 
   const handleSendOtp = async (e) => {
     e.preventDefault();
@@ -252,12 +265,12 @@ const ForgotPasswordPage = ({ setUser }) => {
           {/* Sliding hero panel */}
           <div className="aw-hero">
             <div className="hero-step1-view">
-              <img src="https://www.pngkey.com/png/full/444-4444270_ia-press-play-website.png" alt="Forgot Password" className="hero-img" />
+              {forgotAnimData && <LottieComponent animationData={forgotAnimData} loop={true} className="hero-img" />}
               <h2 className="hero-title">Forgot it?</h2>
               <p className="hero-body">No worries, we will help you get back into your account safely.</p>
             </div>
             <div className="hero-step2-view">
-              <img src="https://stories.freepiklabs.com/storage/11588/market-launch-amico-2628.png" alt="Secure Account" className="hero-img" />
+              {forgotAnimData && <LottieComponent animationData={forgotAnimData} loop={true} className="hero-img" />}
               <h2 className="hero-title">Check your inbox!</h2>
               <p className="hero-body">Enter the verification code to set your new password and regain access.</p>
             </div>
@@ -268,13 +281,7 @@ const ForgotPasswordPage = ({ setUser }) => {
       {/* ── MOBILE LAYOUT (bottom sheet style) ── */}
       <div className={`aw-mobile ${step === 2 ? 'is-step2' : ''}`}>
         <div className="mb-hero">
-          <img
-            src={step === 2 
-              ? "https://stories.freepiklabs.com/storage/11588/market-launch-amico-2628.png"
-              : "https://www.pngkey.com/png/full/444-4444270_ia-press-play-website.png"}
-            alt="Hero Illustration"
-            className="mb-hero-img"
-          />
+          {forgotAnimData && <LottieComponent animationData={forgotAnimData} loop={true} className="mb-hero-img" />}
           <div className="mb-brand">
             <Sparkles size={18} className="brand-spark" />
             <span>dealit</span>

@@ -2,10 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import axios from 'axios';
 import { User, Lock, Mail, Phone, MapPin, CheckCircle, Gift, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import Lottie from 'lottie-react';
 import './AuthPage.css';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
+
+/* ── Workaround for Vite/Webpack default export issue ── */
+const LottieComponent = Lottie && Lottie.default ? Lottie.default : Lottie;
 
 /* ── Floating-label input ── */
 const FloatInput = ({ icon: Icon, label, name, type = 'text', value, onChange, required, maxLength, inputMode, autoCapitalize, autoCorrect, style }) => {
@@ -16,7 +20,8 @@ const FloatInput = ({ icon: Icon, label, name, type = 'text', value, onChange, r
 
   return (
     <div className={`fi-wrap ${isActive ? 'active' : ''} ${focused ? 'focused' : ''}`}>
-      <span className="fi-icon"><Icon size={16} /></span>
+      {/* Icon safe render check */}
+      <span className="fi-icon">{Icon && <Icon size={16} />}</span>
       <div className="fi-inner">
         <label className="fi-label">{label}</label>
         <input
@@ -102,6 +107,14 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
   const [registeredEmail, setRegisteredEmail] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  const [loginAnimData, setLoginAnimData] = useState(null);
+  const [signupAnimData, setSignupAnimData] = useState(null);
+
+  useEffect(() => {
+    fetch('/Login.json').then(res => res.json()).then(setLoginAnimData).catch(() => {});
+    fetch('/signup.json').then(res => res.json()).then(setSignupAnimData).catch(() => {});
+  }, []);
 
   useEffect(() => {
     setIsSignUpMode(defaultMode === 'signup');
@@ -301,13 +314,13 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
           {/* Sliding hero panel */}
           <div className="aw-hero">
             <div className="hero-login-view">
-              <img src="https://stories.freepiklabs.com/storage/11588/market-launch-amico-2628.png" alt="" className="hero-img" />
+              {signupAnimData && <LottieComponent animationData={signupAnimData} loop={true} className="hero-img" />}
               <h2 className="hero-title">New here?</h2>
               <p className="hero-body">Trade what you have for what you need — no money required.</p>
               <button className="hero-btn" onClick={() => handleModeSwitch('signup')}>Create Account</button>
             </div>
             <div className="hero-signup-view">
-              <img src="https://www.pngkey.com/png/full/444-4444270_ia-press-play-website.png" alt="" className="hero-img" />
+              {loginAnimData && <LottieComponent animationData={loginAnimData} loop={true} className="hero-img" />}
               <h2 className="hero-title">One of us?</h2>
               <p className="hero-body">Welcome back! Your dashboard is waiting with fresh offers.</p>
               <button className="hero-btn" onClick={() => handleModeSwitch('login')}>Sign In</button>
@@ -320,13 +333,11 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
       <div className={`aw-mobile ${isSignUpMode ? 'is-signup' : ''}`}>
         {/* Top hero area */}
         <div className="mb-hero">
-          <img
-            src={isSignUpMode
-              ? "https://stories.freepiklabs.com/storage/11588/market-launch-amico-2628.png"
-              : "https://www.pngkey.com/png/full/444-4444270_ia-press-play-website.png"}
-            alt=""
-            className="mb-hero-img"
-          />
+          {isSignUpMode ? (
+            signupAnimData && <LottieComponent animationData={signupAnimData} loop={true} className="mb-hero-img" />
+          ) : (
+            loginAnimData && <LottieComponent animationData={loginAnimData} loop={true} className="mb-hero-img" />
+          )}
           <div className="mb-brand">
             <img src="/logo.png" alt="Dealit logo" className="brand-logo" />
             <span>dealit</span>

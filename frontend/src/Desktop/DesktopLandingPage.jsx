@@ -13,9 +13,9 @@ import {
 import { ReactLenis } from 'lenis/react'; 
 import 'lenis/dist/lenis.css'; 
 
-// <-- MODIFICATION START: Changed to useLottie hook to fix Vite ESM Error -->
+
 import { useLottie } from 'lottie-react';
-// YAHAN APNI DOWNLOADED LOTTIE JSON FILE KA PATH DAALO:
+
 import downloadedLottieAnimation from './SmartphonesApplications.json'; 
 
 const LottieHero = () => {
@@ -672,9 +672,9 @@ const DesktopLandingPage = ({ onLoginClick }) => {
                  <div className="absolute inset-0 z-10 transition-all duration-700 ease-out" style={{ backgroundColor: 'var(--panel-bg)', opacity: 0.1 }} />
                  <div className="w-full h-full bg-[#111] flex flex-col items-center justify-center relative overflow-hidden transform scale-105 group-hover:scale-100 transition-transform duration-1000 ease-out rounded-2xl">
                    
-                   {/* <-- MODIFICATION START: LottieAnimation replaced the <Lottie /> tag --> */}
+                  
                    <LottieHero />
-                   {/* <-- MODIFICATION END --> */}
+                 
 
                  </div>
               </BentoBox3D>
