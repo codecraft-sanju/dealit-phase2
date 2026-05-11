@@ -11,6 +11,17 @@ const API_URL = `${API_BASE}/api`;
 /* ── Workaround for Vite/Webpack default export issue ── */
 const LottieComponent = Lottie && Lottie.default ? Lottie.default : Lottie;
 
+const calculateStrength = (pass) => {
+  let score = 0;
+  if (!pass) return 0;
+  if (pass.length > 5) score += 20;
+  if (pass.length > 8) score += 20;
+  if (/[A-Z]/.test(pass)) score += 20;
+  if (/[0-9]/.test(pass)) score += 20;
+  if (/[^A-Za-z0-9]/.test(pass)) score += 20;
+  return score;
+};
+
 /* ── Floating-label input ── */
 const FloatInput = ({ icon: Icon, label, name, type = 'text', value, onChange, required, maxLength, inputMode, autoCapitalize, autoCorrect, style }) => {
   const [focused, setFocused] = useState(false);
@@ -82,6 +93,7 @@ const OtpInput = ({ value, onChange }) => {
           type="text"
           inputMode="numeric"
           pattern="[0-9]*"
+          autoComplete="one-time-code"
           maxLength={1}
           value={d}
           onChange={() => {}}
@@ -238,15 +250,26 @@ const ForgotPasswordPage = ({ setUser }) => {
                     <OtpInput value={otp} onChange={setOtp} />
                   </div>
                   
-                  <FloatInput 
-                    icon={Lock} 
-                    label="New Password" 
-                    name="newPassword" 
-                    type="password" 
-                    value={newPassword} 
-                    onChange={(e) => setNewPassword(e.target.value)} 
-                    required 
-                  />
+                  <div className="pwd-wrap">
+                    <FloatInput 
+                      icon={Lock} 
+                      label="New Password" 
+                      name="newPassword" 
+                      type="password" 
+                      value={newPassword} 
+                      onChange={(e) => setNewPassword(e.target.value)} 
+                      required 
+                    />
+                    <div className="pwd-strength-bar">
+                      <div 
+                        className="pwd-strength-fill" 
+                        style={{ 
+                          width: `${calculateStrength(newPassword)}%`,
+                          backgroundColor: `hsl(${calculateStrength(newPassword) * 1.2}, 100%, 45%)` 
+                        }} 
+                      />
+                    </div>
+                  </div>
 
                   <button type="submit" className="aw-btn" disabled={loading || otp.length < 6 || !newPassword}>
                     {loading ? <span className="aw-spinner" /> : <><span>Reset & Login</span><CheckCircle size={18} /></>}
@@ -322,7 +345,19 @@ const ForgotPasswordPage = ({ setUser }) => {
 
                 <form onSubmit={handleResetPassword} className="aw-form" noValidate>
                   <OtpInput value={otp} onChange={setOtp} />
-                  <FloatInput icon={Lock} label="New Password" name="newPassword" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
+                  
+                  <div className="pwd-wrap">
+                    <FloatInput icon={Lock} label="New Password" name="newPassword" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
+                    <div className="pwd-strength-bar">
+                      <div 
+                        className="pwd-strength-fill" 
+                        style={{ 
+                          width: `${calculateStrength(newPassword)}%`,
+                          backgroundColor: `hsl(${calculateStrength(newPassword) * 1.2}, 100%, 45%)` 
+                        }} 
+                      />
+                    </div>
+                  </div>
                   
                   <button type="submit" className="aw-btn" disabled={loading || otp.length < 6 || !newPassword}>
                     {loading ? <span className="aw-spinner" /> : <><span>Reset & Login</span><CheckCircle size={18} /></>}

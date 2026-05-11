@@ -1,13 +1,13 @@
 .aw-root {
   font-family: 'Sora', 'Poppins', sans-serif;
-  min-height: 100vh;
+  min-height: 100dvh;
   width: 100%;
   position: relative;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f4f2f9; /* Matched the main app background */
+  background: #f4f2f9; 
 }
 
 /* ═══════════════════════════════════════════════
@@ -55,7 +55,6 @@
   to   { transform: translate(40px, 30px) scale(1.08); }
 }
 
-/* Subtle noise overlay for texture */
 .aw-noise {
   position: absolute;
   inset: 0;
@@ -68,7 +67,6 @@
    SHARED ELEMENTS
 ═══════════════════════════════════════════════ */
 
-/* Brand */
 .aw-brand {
   display: flex;
   align-items: center;
@@ -85,25 +83,23 @@
   object-fit: contain;
 }
 
-/* Headings */
 .aw-heading {
   font-size: 2rem;
   font-weight: 800;
-  color: #111827; /* Dark Gray for light mode */
+  color: #111827;
   letter-spacing: -0.04em;
   line-height: 1.1;
   margin-bottom: 0.4rem;
 }
 .aw-sub {
   font-size: 0.875rem;
-  color: #6b7280; /* Medium Gray */
+  color: #6b7280; 
   margin-bottom: 1.75rem;
   line-height: 1.5;
   font-weight: 500;
 }
 .aw-sub strong { color: #4b5563; font-weight: 700; }
 
-/* Error Message */
 .aw-error {
   background: #fef2f2;
   border: 1px solid #fecaca;
@@ -122,7 +118,6 @@
   75%     { transform: translateX(6px); }
 }
 
-/* Form Structure */
 .aw-form { display: flex; flex-direction: column; gap: 0.85rem; width: 100%; }
 
 .aw-form-row {
@@ -135,7 +130,6 @@
   min-width: 0;
 }
 
-/* Forgot Password */
 .aw-forgot-row {
   display: flex;
   justify-content: flex-end;
@@ -150,7 +144,6 @@
 }
 .aw-link:hover { color: #6B46C1; }
 
-/* Primary Button */
 .aw-btn {
   display: flex;
   align-items: center;
@@ -190,7 +183,18 @@
   box-shadow: none;
 }
 
-/* Spinner inside button */
+.aw-btn.loading {
+  background: linear-gradient(90deg, #805ad5, #a78bfa, #805ad5);
+  background-size: 200% 100%;
+  animation: btnShimmer 1.5s infinite linear;
+  pointer-events: none;
+  opacity: 0.85;
+}
+@keyframes btnShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 .aw-spinner {
   width: 20px; height: 20px;
   border: 2px solid rgba(255,255,255,0.3);
@@ -201,7 +205,6 @@
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Switch mode text */
 .aw-switch-txt {
   text-align: center;
   font-size: 0.85rem;
@@ -234,7 +237,7 @@
   border: 1.5px solid #e9d8ff;
   border-radius: 14px;
   padding: 0 1rem;
-  transition: border-color 0.25s, background 0.25s, box-shadow 0.25s;
+  transition: border-color 0.3s, background 0.3s, box-shadow 0.3s, transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
   overflow: hidden;
 }
 
@@ -242,9 +245,9 @@
   border-color: #6B46C1;
   background: #ffffff;
   box-shadow: 0 0 0 3px rgba(107, 70, 193, 0.15);
+  transform: scale(1.02); 
 }
 
-/* Icon */
 .fi-icon {
   display: flex;
   align-items: center;
@@ -255,7 +258,6 @@
 }
 .fi-wrap.focused .fi-icon { color: #6B46C1; }
 
-/* Inner wrapper */
 .fi-inner {
   flex: 1;
   position: relative;
@@ -278,7 +280,6 @@
   white-space: nowrap;
 }
 
-/* Float up when active */
 .fi-wrap.active .fi-label {
   transform: translateY(-1rem);
   font-size: 0.65rem;
@@ -309,7 +310,6 @@
   border-radius: 14px;
 }
 
-/* Eye toggle */
 .fi-eye {
   background: none;
   border: none;
@@ -325,6 +325,30 @@
   -webkit-tap-highlight-color: transparent;
 }
 .fi-eye:hover { color: #6B46C1; background: rgba(107, 70, 193, 0.08); }
+
+/* ═══════════════════════════════════════════════
+   PASSWORD STRENGTH METER
+═══════════════════════════════════════════════ */
+.pwd-wrap {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.pwd-strength-bar {
+  width: 100%;
+  height: 4px;
+  background: #e9d8ff;
+  border-radius: 4px;
+  margin-top: 0.3rem;
+  overflow: hidden;
+}
+
+.pwd-strength-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
 
 /* ═══════════════════════════════════════════════
    OTP INPUT
@@ -366,6 +390,15 @@
   transform: scale(1.04);
 }
 
+.otp-fade-in {
+  animation: fadeIn 0.4s ease forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* ═══════════════════════════════════════════════
    DESKTOP LAYOUT  (≥ 870px)
 ═══════════════════════════════════════════════ */
@@ -380,7 +413,6 @@
   margin: 2rem;
   border-radius: 2.5rem;
   overflow: hidden;
-  /* Premium Light Card Background */
   background: #ffffff;
   border: 1px solid #f3e8ff;
   box-shadow: 0 20px 50px rgba(107, 70, 193, 0.08), 0 0 0 1px rgba(255,255,255,0.5) inset;
@@ -388,7 +420,6 @@
   grid-template-columns: 1fr;
 }
 
-/* Card inner: forms + hero side by side */
 .aw-card {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -397,7 +428,6 @@
   overflow: hidden;
 }
 
-/* ── Forms side ── */
 .aw-forms {
   position: relative;
   overflow: hidden;
@@ -424,14 +454,12 @@
   flex-direction: column;
 }
 
-/* login visible, signup hidden by default */
 .login-pane  { opacity: 1; transform: translateX(0);    pointer-events: all; }
 .signup-pane { opacity: 0; transform: translateX(40px); pointer-events: none; }
 
 .aw-desk.is-signup .login-pane  { opacity: 0; transform: translateX(-40px); pointer-events: none; }
 .aw-desk.is-signup .signup-pane { opacity: 1; transform: translateX(0);      pointer-events: all; }
 
-/* ── Hero side (Darker Purple Side for contrast) ── */
 .aw-hero {
   background: linear-gradient(145deg, #805ad5 0%, #6B46C1 100%);
   display: flex;
@@ -516,9 +544,8 @@
 ═══════════════════════════════════════════════ */
 @media (max-width: 869px) {
   .aw-desk   { display: none; }
-  .aw-mobile { display: flex; flex-direction: column; height: 100vh; width: 100%; position: relative; z-index: 1; background: #f4f2f9; }
+  .aw-mobile { display: flex; flex-direction: column; height: 100dvh; width: 100%; position: relative; z-index: 1; background: #f4f2f9; }
 
-  /* Hero top (Purple background for Mobile) */
   .mb-hero {
     flex: 0 0 auto;
     height: 35vh;
@@ -546,18 +573,29 @@
   .mb-brand .brand-logo {
     width: 20px;
     height: 20px;
-    filter: brightness(0) invert(1); /* Makes logo white on purple */
+    filter: brightness(0) invert(1);
+  }
+  
+  .mb-hero-img-wrap {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -40%) scale(0.9);
+    opacity: 0;
+    transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+    pointer-events: none;
+  }
+  .mb-hero-img-wrap.active {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
   }
   .mb-hero-img {
-    height: 100%;
-    max-height: 180px;
-    width: auto;
+    height: 180px;
+    width: 250px;
     object-fit: contain;
     filter: drop-shadow(0 12px 30px rgba(0,0,0,0.15));
-    transition: opacity 0.4s ease;
   }
 
-  /* Bottom sheet style */
   .mb-sheet {
     flex: 1;
     background: #ffffff;
@@ -568,11 +606,10 @@
     flex-direction: column;
     overflow: hidden;
     position: relative;
-    margin-top: -2rem; /* Pull up over the hero */
+    margin-top: -2rem; 
     z-index: 10;
   }
 
-  /* Handle bar */
   .mb-sheet::before {
     content: '';
     display: block;
@@ -584,7 +621,6 @@
     flex-shrink: 0;
   }
 
-  /* Tab pills */
   .mb-tabs {
     position: relative;
     display: grid;
@@ -614,7 +650,6 @@
   }
   .mb-tab.active { color: #ffffff; }
 
-  /* Sliding pill indicator */
   .mb-tab-indicator {
     position: absolute;
     top: 4px; bottom: 4px;
@@ -628,22 +663,30 @@
   .mb-tab-indicator.left  { left: 4px; }
   .mb-tab-indicator.right { left: calc(50%); }
 
-  /* Scrollable form area */
   .mb-form-area {
     flex: 1;
+    position: relative;
+    overflow-x: hidden;
+    overflow-y: hidden;
+  }
+  .mb-slider {
+    display: flex;
+    width: 200%;
+    height: 100%;
+    transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+  }
+  .mb-slider.show-login { transform: translateX(0); }
+  .mb-slider.show-signup { transform: translateX(-50%); }
+
+  .mb-slide {
+    width: 50%;
+    height: 100%;
     overflow-y: auto;
     overflow-x: hidden;
     padding: 1.5rem 1.5rem 2.5rem;
     -webkit-overflow-scrolling: touch;
-    animation: mbFormIn 0.35s cubic-bezier(.4,0,.2,1) both;
   }
 
-  @keyframes mbFormIn {
-    from { opacity: 0; transform: translateY(18px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  /* Larger tap targets on mobile */
   .fi-wrap {
     height: 3.65rem;
     border-radius: 16px;
@@ -654,7 +697,6 @@
     font-size: 1rem;
   }
   
-  /* Adjusted mobile dimensions so they don't get huge */
   .otp-box {
     width: 38px;
     height: 44px;
@@ -669,14 +711,12 @@
   .aw-sub { margin-bottom: 1.25rem; }
 }
 
-/* Extra small phones */
 @media (max-width: 380px) {
-  .mb-form-area { padding: 1rem 1.25rem 2.5rem; }
+  .mb-slide { padding: 1rem 1.25rem 2.5rem; }
   .aw-form { gap: 0.7rem; }
   .aw-form-row { gap: 0.7rem; }
   .fi-wrap { height: 3.4rem; }
   
-  /* Tighter gap and smaller boxes for tiny screens */
   .otp-grid { gap: 0.35rem; }
   .otp-box { 
     width: 34px; 
