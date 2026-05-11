@@ -1,24 +1,105 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom'; // ⚡ ADDED Link
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import axios from 'axios';
-import { User, Lock, Mail, Phone, MapPin, CheckCircle, Gift } from 'lucide-react';
-import './AuthPage.css'; 
+import { User, Lock, Mail, Phone, MapPin, CheckCircle, Gift, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import './AuthPage.css';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
+/* ── Floating-label input ── */
+const FloatInput = ({ icon: Icon, label, name, type = 'text', value, onChange, required, maxLength, inputMode, autoCapitalize, autoCorrect, style }) => {
+  const [focused, setFocused] = useState(false);
+  const [showPass, setShowPass] = useState(false);
+  const isPassword = type === 'password';
+  const isActive = focused || value?.length > 0;
+
+  return (
+    <div className={`fi-wrap ${isActive ? 'active' : ''} ${focused ? 'focused' : ''}`}>
+      <span className="fi-icon"><Icon size={16} /></span>
+      <div className="fi-inner">
+        <label className="fi-label">{label}</label>
+        <input
+          className="fi-input"
+          type={isPassword ? (showPass ? 'text' : 'password') : type}
+          name={name}
+          required={required}
+          value={value}
+          onChange={onChange}
+          maxLength={maxLength}
+          inputMode={inputMode}
+          autoCapitalize={autoCapitalize}
+          autoCorrect={autoCorrect}
+          style={style}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+        />
+      </div>
+      {isPassword && (
+        <button type="button" className="fi-eye" onClick={() => setShowPass(p => !p)} tabIndex={-1}>
+          {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+        </button>
+      )}
+    </div>
+  );
+};
+
+/* ── OTP Input (6 boxes) ── */
+const OtpInput = ({ value, onChange }) => {
+  const digits = Array.from({ length: 6 }, (_, i) => value[i] || '');
+
+  const handleKey = (e, idx) => {
+    const { key } = e;
+    if (key === 'Backspace') {
+      const next = value.slice(0, idx) + value.slice(idx + 1);
+      onChange(next);
+      if (idx > 0) e.target.previousElementSibling?.focus();
+      return;
+    }
+    if (/^\d$/.test(key)) {
+      const next = value.slice(0, idx) + key + value.slice(idx + 1);
+      onChange(next.slice(0, 6));
+      if (idx < 5) e.target.nextElementSibling?.focus();
+    }
+  };
+
+  const handlePaste = (e) => {
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    onChange(pasted);
+    e.preventDefault();
+  };
+
+  return (
+    <div className="otp-grid">
+      {digits.map((d, i) => (
+        <input
+          key={i}
+          className={`otp-box ${d ? 'filled' : ''}`}
+          type="text"
+          inputMode="numeric"
+          maxLength={1}
+          value={d}
+          onChange={() => {}}
+          onKeyDown={(e) => handleKey(e, i)}
+          onPaste={handlePaste}
+          onFocus={(e) => e.target.select()}
+        />
+      ))}
+    </div>
+  );
+};
+
+/* ── Main Component ── */
 const AuthPage = ({ setUser, defaultMode = 'login' }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   const [isSignUpMode, setIsSignUpMode] = useState(defaultMode === 'signup');
   const [formData, setFormData] = useState({ full_name: '', email: '', password: '', phone: '', city: '', referralCode: '' });
   const [appSettings, setAppSettings] = useState({ isReferralSystemEnabled: true });
-
   const [showOtp, setShowOtp] = useState(false);
   const [otp, setOtp] = useState('');
   const [registeredEmail, setRegisteredEmail] = useState('');
-  
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -26,24 +107,17 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
     setIsSignUpMode(defaultMode === 'signup');
     setError('');
     setShowOtp(false);
-    
+
     const fetchSettings = async () => {
       try {
         const res = await axios.get(`${API_URL}/admin/public-settings`);
-        if(res.data.success) {
-          setAppSettings(res.data.data);
-        }
-      } catch (error) {
-        console.log("Using default settings");
-      }
+        if (res.data.success) setAppSettings(res.data.data);
+      } catch { /* use defaults */ }
     };
     fetchSettings();
-
   }, [defaultMode, location.pathname]);
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleModeSwitch = (mode) => {
     setIsSignUpMode(mode === 'signup');
@@ -54,241 +128,285 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setError('');
-    setLoading(true);
-
+    setError(''); setLoading(true);
     try {
-      const response = await axios.post(`${API_URL}/users/login`, 
-        { email: formData.email, password: formData.password },
-        { withCredentials: true }
-      );
-      
-      if (response.data.success) {
-        setUser(response.data.user);
-        localStorage.setItem('dealit_user', JSON.stringify(response.data.user));
-        if(response.data.token) {
-          localStorage.setItem('dealit_token', response.data.token);
-        }
+      const res = await axios.post(`${API_URL}/users/login`, { email: formData.email, password: formData.password }, { withCredentials: true });
+      if (res.data.success) {
+        setUser(res.data.user);
+        localStorage.setItem('dealit_user', JSON.stringify(res.data.user));
+        if (res.data.token) localStorage.setItem('dealit_token', res.data.token);
         navigate('/');
       }
     } catch (err) {
-      console.error("[DEBUG] Login Error Details:", err);
-      // ⚡ NAYA LOGIC: iOS ke network errors ko pakadne ke liye
-      if (err.response) {
-        setError(err.response.data.message || 'Invalid email or password.');
-      } else if (err.request) {
-        setError('Network Error: Cannot reach server. Please check your internet or HTTP/HTTPS settings.');
-      } else {
-        setError('Error: ' + err.message);
-      }
-    } finally {
-      setLoading(false);
-    }
+      if (err.response) setError(err.response.data.message || 'Invalid email or password.');
+      else if (err.request) setError('Network Error: Cannot reach server.');
+      else setError('Error: ' + err.message);
+    } finally { setLoading(false); }
   };
 
   const handleSignup = async (e) => {
     e.preventDefault();
-    setError('');
-    setLoading(true);
-
+    setError(''); setLoading(true);
     try {
-      const response = await axios.post(`${API_URL}/users/register`, formData, { withCredentials: true });
-      if (response.data.success) {
-        if (response.data.requiresOtp) {
-          setRegisteredEmail(response.data.email || formData.email);
-          setShowOtp(true); 
+      const res = await axios.post(`${API_URL}/users/register`, formData, { withCredentials: true });
+      if (res.data.success) {
+        if (res.data.requiresOtp) {
+          setRegisteredEmail(res.data.email || formData.email);
+          setShowOtp(true);
         } else {
           localStorage.setItem('showWelcomeBonus', 'true');
-          
-          setUser(response.data.user);
-          localStorage.setItem('dealit_user', JSON.stringify(response.data.user));
-          if(response.data.token) {
-            localStorage.setItem('dealit_token', response.data.token);
-          }
-          navigate('/'); 
+          setUser(res.data.user);
+          localStorage.setItem('dealit_user', JSON.stringify(res.data.user));
+          if (res.data.token) localStorage.setItem('dealit_token', res.data.token);
+          navigate('/');
         }
       }
     } catch (err) {
-      console.error("[DEBUG] Signup Error Details:", err);
-      if (err.response) {
-        setError(err.response.data.message || 'Something went wrong during signup.');
-      } else if (err.request) {
-        setError('Network Error: Cannot reach server.');
-      } else {
-        setError('Error: ' + err.message);
-      }
-    } finally {
-      setLoading(false);
-    }
+      if (err.response) setError(err.response.data.message || 'Something went wrong during signup.');
+      else if (err.request) setError('Network Error: Cannot reach server.');
+      else setError('Error: ' + err.message);
+    } finally { setLoading(false); }
   };
 
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
-    setError('');
-    setLoading(true);
-
+    setError(''); setLoading(true);
     try {
-      const response = await axios.post(`${API_URL}/users/verify-otp`, 
-        { email: registeredEmail, otp }, 
-        { withCredentials: true }
-      );
-      
-      if (response.data.success) {
+      const res = await axios.post(`${API_URL}/users/verify-otp`, { email: registeredEmail, otp }, { withCredentials: true });
+      if (res.data.success) {
         localStorage.setItem('showWelcomeBonus', 'true');
-        
-        setUser(response.data.user);
-        localStorage.setItem('dealit_user', JSON.stringify(response.data.user));
-        if(response.data.token) {
-          localStorage.setItem('dealit_token', response.data.token);
-        }
+        setUser(res.data.user);
+        localStorage.setItem('dealit_user', JSON.stringify(res.data.user));
+        if (res.data.token) localStorage.setItem('dealit_token', res.data.token);
         navigate('/');
       }
     } catch (err) {
-      if (err.response) {
-        setError(err.response.data.message || 'Invalid or expired OTP.');
-      } else {
-        setError('Network Error: Cannot reach server.');
-      }
-    } finally {
-      setLoading(false);
-    }
+      setError(err.response?.data?.message || 'Invalid or expired OTP.');
+    } finally { setLoading(false); }
   };
 
   return (
-    <div className="auth-wrapper">
-      <div className={`auth-container ${isSignUpMode ? 'sign-up-mode' : ''}`}>
-        
-        <div className="auth-container__forms">
-          <div className="auth-form">
-            
-            <form onSubmit={handleLogin} className="auth-form-wrap form__sign-in">
-              <h2 className="form__title">Sign In</h2>
-              {error && !isSignUpMode && <div className="error-message bg-red-100 text-red-600 p-3 rounded-lg text-xs mb-3 font-bold">{error}</div>}
-              
-              <div className="form__input-field">
-                <Mail />
-                {/* ⚡ iOS FIX: autoCapitalize aur autoCorrect band kiya */}
-                <input type="email" name="email" placeholder="Email Address" required value={formData.email} onChange={handleChange} autoCapitalize="none" autoCorrect="off" />
+    <div className="aw-root">
+      {/* Animated background orbs */}
+      <div className="aw-bg">
+        <div className="aw-orb aw-orb1" />
+        <div className="aw-orb aw-orb2" />
+        <div className="aw-orb aw-orb3" />
+        <div className="aw-noise" />
+      </div>
+
+      {/* ── DESKTOP LAYOUT ── */}
+      <div className={`aw-desk ${isSignUpMode ? 'is-signup' : ''}`}>
+        {/* Glass card holding both forms */}
+        <div className="aw-card">
+          {/* Sliding form area */}
+          <div className="aw-forms">
+
+            {/* LOGIN */}
+            <div className="aw-form-pane login-pane">
+              <div className="aw-form-scroll">
+                <div className="aw-brand">
+                  <img src="/logo.png" alt="Dealit logo" className="brand-logo" />
+                  <span>dealit</span>
+                </div>
+                <h1 className="aw-heading">Welcome back</h1>
+                <p className="aw-sub">Sign in to your account</p>
+
+                {error && !isSignUpMode && <div className="aw-error">{error}</div>}
+
+                <form onSubmit={handleLogin} className="aw-form" noValidate>
+                  <FloatInput icon={Mail} label="Email address" name="email" type="email" value={formData.email} onChange={handleChange} required autoCapitalize="none" autoCorrect="off" />
+                  <FloatInput icon={Lock} label="Password" name="password" type="password" value={formData.password} onChange={handleChange} required />
+
+                  <div className="aw-forgot-row">
+                    <Link to="/forgot-password" className="aw-link">Forgot password?</Link>
+                  </div>
+
+                  <button type="submit" className="aw-btn" disabled={loading}>
+                    {loading ? <span className="aw-spinner" /> : <><span>Sign In</span><ArrowRight size={16} /></>}
+                  </button>
+                </form>
+
+                <p className="aw-switch-txt">
+                  Don't have an account?{' '}
+                  <button className="aw-switch-btn" onClick={() => handleModeSwitch('signup')}>Sign Up</button>
+                </p>
               </div>
-              
-              <div className="form__input-field">
-                <Lock />
-                <input type="password" name="password" placeholder="Password" required value={formData.password} onChange={handleChange} />
+            </div>
+
+            {/* SIGNUP / OTP */}
+            <div className="aw-form-pane signup-pane">
+              <div className="aw-form-scroll">
+                <div className="aw-brand">
+                  <img src="/logo.png" alt="Dealit logo" className="brand-logo" />
+                  <span>dealit</span>
+                </div>
+
+                {!showOtp ? (
+                  <>
+                    <h1 className="aw-heading">Create account</h1>
+                    <p className="aw-sub">Join and start trading smarter</p>
+
+                    {error && isSignUpMode && <div className="aw-error">{error}</div>}
+
+                    <form onSubmit={handleSignup} className="aw-form" noValidate>
+                      <FloatInput icon={User} label="Full name" name="full_name" value={formData.full_name} onChange={handleChange} required />
+                      <FloatInput icon={Mail} label="Email address" name="email" type="email" value={formData.email} onChange={handleChange} required autoCapitalize="none" autoCorrect="off" />
+                      <FloatInput icon={Lock} label="Password" name="password" type="password" value={formData.password} onChange={handleChange} required />
+                      <FloatInput icon={Phone} label="Phone number" name="phone" value={formData.phone} onChange={handleChange} inputMode="tel" />
+                      
+                      {/* Side-by-side row for City and Referral */}
+                      <div className="aw-form-row">
+                        <FloatInput icon={MapPin} label="City" name="city" value={formData.city} onChange={handleChange} />
+                        {appSettings.isReferralSystemEnabled && (
+                          <FloatInput icon={Gift} label="Refer code" name="referralCode" value={formData.referralCode} onChange={handleChange} autoCapitalize="characters" style={{ textTransform: 'uppercase' }} />
+                        )}
+                      </div>
+
+                      <button type="submit" className="aw-btn" disabled={loading}>
+                        {loading ? <span className="aw-spinner" /> : <><span>Create Account</span><ArrowRight size={16} /></>}
+                      </button>
+                    </form>
+
+                    <p className="aw-switch-txt">
+                      Already have an account?{' '}
+                      <button className="aw-switch-btn" onClick={() => handleModeSwitch('login')}>Sign In</button>
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h1 className="aw-heading">Verify email</h1>
+                    <p className="aw-sub">Enter the 6-digit code sent to<br /><strong>{registeredEmail}</strong></p>
+
+                    {error && isSignUpMode && <div className="aw-error">{error}</div>}
+
+                    <form onSubmit={handleVerifyOtp} className="aw-form" noValidate>
+                      <OtpInput value={otp} onChange={setOtp} />
+
+                      <button type="submit" className="aw-btn" disabled={loading || otp.length < 6}>
+                        {loading ? <span className="aw-spinner" /> : <><span>Verify &amp; Login</span><CheckCircle size={16} /></>}
+                      </button>
+                    </form>
+
+                    <p className="aw-switch-txt">
+                      Wrong email?{' '}
+                      <button className="aw-switch-btn" onClick={() => setShowOtp(false)}>Go back</button>
+                    </p>
+                  </>
+                )}
               </div>
-              
-              <input type="submit" className="form__submit" value={loading ? "Signing In..." : "Sign In"} disabled={loading} />
-              
-              <p className="form__footer-text">
-                {/* ⚡ FIXED: <a> tag removed, <Link> used to prevent page reload */}
-                <Link to="/forgot-password">Forgot your password?</Link>
-              </p>
-            </form>
+            </div>
+          </div>
 
-            <form onSubmit={showOtp ? handleVerifyOtp : handleSignup} className="auth-form-wrap form__sign-up">
-              
-              {!showOtp ? (
-                <>
-                  <h2 className="form__title">Sign Up</h2>
-                  {error && isSignUpMode && <div className="error-message bg-red-100 text-red-600 p-3 rounded-lg text-xs mb-3 font-bold">{error}</div>}
-                  
-                  <div className="form__input-field">
-                    <User />
-                    <input type="text" name="full_name" placeholder="Full Name" required value={formData.full_name} onChange={handleChange} />
-                  </div>
-                  
-                  <div className="form__input-field">
-                    <Mail />
-                    <input type="email" name="email" placeholder="Email Address" required value={formData.email} onChange={handleChange} autoCapitalize="none" autoCorrect="off" />
-                  </div>
-                  
-                  <div className="form__input-field">
-                    <Lock />
-                    <input type="password" name="password" placeholder="Password" required value={formData.password} onChange={handleChange} />
-                  </div>
+          {/* Sliding hero panel */}
+          <div className="aw-hero">
+            <div className="hero-login-view">
+              <img src="https://stories.freepiklabs.com/storage/11588/market-launch-amico-2628.png" alt="" className="hero-img" />
+              <h2 className="hero-title">New here?</h2>
+              <p className="hero-body">Trade what you have for what you need — no money required.</p>
+              <button className="hero-btn" onClick={() => handleModeSwitch('signup')}>Create Account</button>
+            </div>
+            <div className="hero-signup-view">
+              <img src="https://www.pngkey.com/png/full/444-4444270_ia-press-play-website.png" alt="" className="hero-img" />
+              <h2 className="hero-title">One of us?</h2>
+              <p className="hero-body">Welcome back! Your dashboard is waiting with fresh offers.</p>
+              <button className="hero-btn" onClick={() => handleModeSwitch('login')}>Sign In</button>
+            </div>
+          </div>
+        </div>
+      </div>
 
-                  <div className="form__input-field">
-                    <Phone />
-                    <input type="text" name="phone" placeholder="Phone Number" value={formData.phone} onChange={handleChange} />
-                  </div>
-
-                  <div className="form__input-field">
-                    <MapPin />
-                    <input type="text" name="city" placeholder="City" value={formData.city} onChange={handleChange} />
-                  </div>
-
-                  {appSettings.isReferralSystemEnabled && (
-                    <div className="form__input-field">
-                      <Gift />
-                      <input type="text" name="referralCode" placeholder="Referral Code (Optional)" value={formData.referralCode} onChange={handleChange} style={{textTransform: 'uppercase'}} autoCapitalize="characters" />
-                    </div>
-                  )}
-
-                  <input type="submit" className="form__submit" value={loading ? "Please wait..." : "Sign Up"} disabled={loading} />
-                </>
-              ) : (
-                <>
-                  <h2 className="form__title">Verify Email</h2>
-                  <p className="form__text">
-                    We sent a 6-digit code to <strong>{registeredEmail}</strong>
-                  </p>
-                  
-                  {error && isSignUpMode && <div className="error-message bg-red-100 text-red-600 p-3 rounded-lg text-xs mb-3 font-bold">{error}</div>}
-                  
-                  <div className="form__input-field" style={{ gridTemplateColumns: "15% 85%" }}>
-                    <CheckCircle />
-                    <input 
-                      type="text" 
-                      required 
-                      maxLength="6"
-                      value={otp} 
-                      onChange={(e) => setOtp(e.target.value)} 
-                      placeholder="------" 
-                      style={{ letterSpacing: '0.4em', fontWeight: 'bold' }}
-                      inputMode="numeric"
-                    />
-                  </div>
-                  
-                  <input type="submit" className="form__submit" value={loading ? "Verifying..." : "Verify & Login"} disabled={loading || otp.length < 6} />
-                  
-                  <p className="form__footer-text">
-                    Wrong email? <span onClick={() => setShowOtp(false)} className="go-back-btn" style={{cursor:'pointer', color:'#6B46C1', fontWeight:'bold'}}>Go back</span>
-                  </p>
-                </>
-              )}
-            </form>
-
+      {/* ── MOBILE LAYOUT (bottom sheet style) ── */}
+      <div className={`aw-mobile ${isSignUpMode ? 'is-signup' : ''}`}>
+        {/* Top hero area */}
+        <div className="mb-hero">
+          <img
+            src={isSignUpMode
+              ? "https://stories.freepiklabs.com/storage/11588/market-launch-amico-2628.png"
+              : "https://www.pngkey.com/png/full/444-4444270_ia-press-play-website.png"}
+            alt=""
+            className="mb-hero-img"
+          />
+          <div className="mb-brand">
+            <img src="/logo.png" alt="Dealit logo" className="brand-logo" />
+            <span>dealit</span>
           </div>
         </div>
 
-        {/* ... Rest of the panels remain exactly the same ... */}
-        <div className="auth-container__panels">
-          <div className="panel panel__left">
-            <div className="panel__content">
-              <h3 className="panel__title">New to Dealit?</h3>
-              <p className="panel__paragraph">
-                Join our community today! Trade unused items for things you actually want without spending money.
-              </p>
-              <button className="auth-btn-transparent" onClick={() => handleModeSwitch('signup')}>
-                Sign Up
-              </button>
-            </div>
-            <img className="panel__image" src="https://stories.freepiklabs.com/storage/11588/market-launch-amico-2628.png" alt="Sign up illustration" />
+        {/* Bottom sheet card */}
+        <div className="mb-sheet">
+          {/* Pill tabs */}
+          <div className="mb-tabs">
+            <button className={`mb-tab ${!isSignUpMode ? 'active' : ''}`} onClick={() => handleModeSwitch('login')}>Sign In</button>
+            <button className={`mb-tab ${isSignUpMode ? 'active' : ''}`} onClick={() => handleModeSwitch('signup')}>Sign Up</button>
+            <div className={`mb-tab-indicator ${isSignUpMode ? 'right' : 'left'}`} />
           </div>
-          
-          <div className="panel panel__right">
-            <div className="panel__content">
-              <h3 className="panel__title">One of us?</h3>
-              <p className="panel__paragraph">
-                If you already have an account, just sign in. We've missed you! Check your dashboard for new offers.
-              </p>
-              <button className="auth-btn-transparent" onClick={() => handleModeSwitch('login')}>
-                Sign In
-              </button>
-            </div>
-            <img className="panel__image" src="https://www.pngkey.com/png/full/444-4444270_ia-press-play-website.png" alt="Sign in illustration" />
+
+          <div className="mb-form-area">
+            {/* LOGIN MOBILE */}
+            {!isSignUpMode && (
+              <>
+                {error && <div className="aw-error">{error}</div>}
+                <form onSubmit={handleLogin} className="aw-form" noValidate>
+                  <FloatInput icon={Mail} label="Email address" name="email" type="email" value={formData.email} onChange={handleChange} required autoCapitalize="none" autoCorrect="off" />
+                  <FloatInput icon={Lock} label="Password" name="password" type="password" value={formData.password} onChange={handleChange} required />
+                  <div className="aw-forgot-row">
+                    <Link to="/forgot-password" className="aw-link">Forgot password?</Link>
+                  </div>
+                  <button type="submit" className="aw-btn" disabled={loading}>
+                    {loading ? <span className="aw-spinner" /> : <><span>Sign In</span><ArrowRight size={16} /></>}
+                  </button>
+                </form>
+              </>
+            )}
+
+            {/* SIGNUP / OTP MOBILE */}
+            {isSignUpMode && (
+              <>
+                {!showOtp ? (
+                  <>
+                    {error && <div className="aw-error">{error}</div>}
+                    <form onSubmit={handleSignup} className="aw-form" noValidate>
+                      <FloatInput icon={User} label="Full name" name="full_name" value={formData.full_name} onChange={handleChange} required />
+                      <FloatInput icon={Mail} label="Email address" name="email" type="email" value={formData.email} onChange={handleChange} required autoCapitalize="none" autoCorrect="off" />
+                      <FloatInput icon={Lock} label="Password" name="password" type="password" value={formData.password} onChange={handleChange} required />
+                      <FloatInput icon={Phone} label="Phone number" name="phone" value={formData.phone} onChange={handleChange} inputMode="tel" />
+                      
+                      {/* Side-by-side row for City and Referral */}
+                      <div className="aw-form-row">
+                        <FloatInput icon={MapPin} label="City" name="city" value={formData.city} onChange={handleChange} />
+                        {appSettings.isReferralSystemEnabled && (
+                          <FloatInput icon={Gift} label="Refer code" name="referralCode" value={formData.referralCode} onChange={handleChange} autoCapitalize="characters" style={{ textTransform: 'uppercase' }} />
+                        )}
+                      </div>
+
+                      <button type="submit" className="aw-btn" disabled={loading}>
+                        {loading ? <span className="aw-spinner" /> : <><span>Create Account</span><ArrowRight size={16} /></>}
+                      </button>
+                    </form>
+                  </>
+                ) : (
+                  <>
+                    <p className="aw-sub" style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+                      Code sent to<br /><strong>{registeredEmail}</strong>
+                    </p>
+                    {error && <div className="aw-error">{error}</div>}
+                    <form onSubmit={handleVerifyOtp} className="aw-form" noValidate>
+                      <OtpInput value={otp} onChange={setOtp} />
+                      <button type="submit" className="aw-btn" disabled={loading || otp.length < 6}>
+                        {loading ? <span className="aw-spinner" /> : <><span>Verify &amp; Login</span><CheckCircle size={16} /></>}
+                      </button>
+                    </form>
+                    <p className="aw-switch-txt">
+                      Wrong email?{' '}
+                      <button className="aw-switch-btn" onClick={() => setShowOtp(false)}>Go back</button>
+                    </p>
+                  </>
+                )}
+              </>
+            )}
           </div>
         </div>
-
       </div>
     </div>
   );
