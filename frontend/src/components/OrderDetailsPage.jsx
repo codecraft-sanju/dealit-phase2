@@ -308,7 +308,7 @@ const OrderDetailsPage = ({ user }) => {
 
   const getEstimatedDelivery = () => {
     if (!order) return { date: '', source: '' };
-   
+    
     const expectedStr = liveTrackingData?.etd || 
                         liveTrackingData?.shipment_track?.[0]?.expected_date || 
                         order.trackingDetails?.expected_date;
@@ -522,7 +522,12 @@ const OrderDetailsPage = ({ user }) => {
                   
                   <div className="flex items-start gap-1.5 mt-1">
                     <Info className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
-                    {userType === 'purchases' ? (
+                    {/* --- CHANGES START HERE: Barter text formatting for Details --- */}
+                    {order.orderType === 'barter' ? (
+                      <p className="text-[10px] sm:text-[11px] text-gray-500 font-medium leading-tight">
+                        <strong className="text-[#6B46C1]">Barter Deal:</strong> This item is part of an exchange. You paid ₹{order.shippingCost} online for shipping.
+                      </p>
+                    ) : userType === 'purchases' ? (
                       <p className="text-[10px] sm:text-[11px] text-gray-500 font-medium leading-tight">
                         <strong className="text-gray-700">Paid:</strong> {order.itemPrice} credits from wallet & ₹{order.shippingCost} online.
                       </p>
@@ -531,6 +536,7 @@ const OrderDetailsPage = ({ user }) => {
                         <strong className="text-gray-700">Earnings:</strong> You get <strong className="text-emerald-600">{order.itemPrice} Credits</strong> on delivery. (Buyer paid shipping).
                       </p>
                     )}
+                    {/* --- CHANGES END HERE --- */}
                   </div>
                 </div>
               </div>

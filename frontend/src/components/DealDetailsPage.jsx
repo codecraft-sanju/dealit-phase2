@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-// --> MODIFICATION: Added Clock, X, and AlertCircle icons for different status states
 import { Check, ArrowLeft, MessageSquare, Package, User, ShieldAlert, Phone, Calendar, Copy, Clock, X, AlertCircle } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query'; // <-- NAYA: Imported React Query
-import { getOptimizedCloudinaryUrl } from './HomePage'; // <-- NAYA: Imported Cloudinary optimizer
+import { useQuery } from '@tanstack/react-query'; 
+import { getOptimizedCloudinaryUrl } from './HomePage'; 
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -14,7 +13,6 @@ const DealDetailsPage = ({ user }) => {
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
 
-  // <-- NAYA: Fetching deal details with useQuery -->
   const { data: deal, isLoading: loading, error } = useQuery({
     queryKey: ['dealDetails', id],
     queryFn: async () => {
@@ -24,7 +22,7 @@ const DealDetailsPage = ({ user }) => {
       }
       return response.data.data;
     },
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    staleTime: 1000 * 60 * 5, 
   });
 
   const handleCopyId = () => {
@@ -58,7 +56,6 @@ const DealDetailsPage = ({ user }) => {
     year: 'numeric', month: 'short', day: 'numeric'
   });
 
-  // --> MODIFICATION: Dynamic Status Configuration
   const dealStatus = deal.status || 'PENDING';
   const isAccepted = dealStatus === 'ACCEPTED';
 
@@ -67,11 +64,21 @@ const DealDetailsPage = ({ user }) => {
       case 'ACCEPTED':
         return {
           title: 'Deal Locked! 🎉',
-          message: 'Congratulations! The barter request has been accepted. You can now contact your exchange partner to finalize the details.',
+          message: 'Congratulations! The barter request has been completed. You can now contact your exchange partner.',
           icon: <Check className="w-10 h-10 text-[#137333]" />,
           bgConfig: 'bg-[#E6F4EA]',
           borderColor: 'border-white'
         };
+      // --- CHANGES START HERE: Added AWAITING_PAYMENT block ---
+      case 'AWAITING_PAYMENT':
+        return {
+          title: 'Awaiting Payment ⏳',
+          message: 'The owner has accepted. Waiting for the requester to complete the payment within 24 hours.',
+          icon: <Clock className="w-10 h-10 text-purple-500" />,
+          bgConfig: 'bg-purple-100',
+          borderColor: 'border-white'
+        };
+      // --- CHANGES END HERE ---
       case 'PENDING':
         return {
           title: 'Offer Pending ⏳',
@@ -90,7 +97,7 @@ const DealDetailsPage = ({ user }) => {
           bgConfig: 'bg-red-50',
           borderColor: 'border-white'
         };
-      default: // Handles CANCELLED or GHOSTING
+      default: 
         return {
           title: 'Deal Inactive 🚫',
           message: 'This barter deal is no longer active or was cancelled.',
@@ -102,14 +109,11 @@ const DealDetailsPage = ({ user }) => {
   };
 
   const statusDisplay = getStatusConfig();
-  // --> MODIFICATION END
-
   const whatsappMessage = `Hi ${counterpart?.full_name || 'there'}! 👋\n\nWe just locked a deal on *Dealit*! 🎉\n\nI will be exchanging my *${myItem?.title || 'Item'}* for your *${counterpartItem?.title || 'Item'}*.\n\nLet me know how you would like to proceed with the exchange. We can plan a meetup or coordinate via courier, whichever works best for you. Let's discuss!\n\nDeal ID: #${deal._id?.substring(0, 8)}`;
 
   return (
     <div className="min-h-screen bg-[#f4f2f9] pb-10 font-sans relative">
       
-      {/* Fixed Sticky Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-[#6B46C1] px-5 py-4 shadow-md flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button 
@@ -130,14 +134,11 @@ const DealDetailsPage = ({ user }) => {
         </div>
       </header>
 
-      {/* Decorative curved background (behind the main card) */}
       <div className="absolute top-0 left-0 right-0 bg-[#6B46C1] h-48 rounded-b-[2rem] z-0"></div>
 
-      {/* Main Content Container with top padding to offset the fixed header */}
       <div className="max-w-xl mx-auto px-5 md:px-8 pt-24 relative z-20">
         <div className="bg-white rounded-[2rem] p-6 md:p-8 shadow-xl border border-gray-100 text-center">
           
-          {/* --> MODIFICATION: Dynamic Status Icon & Messaging */}
           <div className={`w-20 h-20 ${statusDisplay.bgConfig} rounded-full flex items-center justify-center mx-auto mb-5 border-4 ${statusDisplay.borderColor} shadow-lg`}>
             {statusDisplay.icon}
           </div>
@@ -151,12 +152,10 @@ const DealDetailsPage = ({ user }) => {
           <p className="text-sm text-gray-500 mb-8 font-medium">
             {statusDisplay.message}
           </p>
-          {/* --> MODIFICATION END */}
 
           <div className="bg-[#fcfbff] rounded-2xl p-5 mb-6 text-left border border-[#f0eaff]">
             <div className="flex items-center gap-3 mb-4 border-b border-gray-100 pb-4">
               <div className="w-12 h-12 bg-[#EBE5F7] rounded-full flex items-center justify-center">
-                {/* <-- NAYA: Optimized profile pic --> */}
                 {counterpart?.profilePic ? (
                   <img src={getOptimizedCloudinaryUrl(counterpart.profilePic)} alt="Owner" className="w-full h-full rounded-full object-cover" />
                 ) : (
@@ -166,12 +165,10 @@ const DealDetailsPage = ({ user }) => {
               <div className="flex-1">
                 <p className="text-[11px] text-[#A388E1] font-extrabold uppercase tracking-wider mb-0.5">Your Partner</p>
                 <p className="text-lg font-bold text-gray-900 leading-tight">{counterpart?.full_name || 'Unknown User'}</p>
-                {/* --> MODIFICATION: Masking Phone Number if deal is not accepted */}
                 <p className="text-sm text-gray-600 font-medium">
                   {isAccepted ? (counterpart?.phone || 'Phone not available') : '+91 XXXXX XXXXX'}
                 </p>
               </div>
-              {/* --> MODIFICATION: Only show direct call button if deal is accepted */}
               {isAccepted && counterpart?.phone && (
                 <a href={`tel:${counterpart.phone}`} className="p-2.5 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition-colors shadow-sm">
                   <Phone className="w-5 h-5" />
@@ -184,7 +181,6 @@ const DealDetailsPage = ({ user }) => {
                 <p className="text-[10px] text-gray-400 font-bold uppercase mb-2 group-hover:text-purple-500">They are bringing</p>
                 <div className="h-24 w-full bg-gray-50 rounded-lg mb-2 overflow-hidden flex items-center justify-center">
                   {counterpartItem?.images && counterpartItem.images.length > 0 ? (
-                    // <-- NAYA: Optimized image for counterpart item -->
                     <img src={getOptimizedCloudinaryUrl(counterpartItem.images[0])} alt={counterpartItem?.title || 'Item'} className="h-full w-full object-cover" />
                   ) : (
                     <Package className="w-8 h-8 text-gray-300" />
@@ -197,7 +193,6 @@ const DealDetailsPage = ({ user }) => {
                 <p className="text-[10px] text-[#A388E1] font-bold uppercase mb-2 group-hover:text-purple-600">You are giving</p>
                 <div className="h-24 w-full bg-gray-50 rounded-lg mb-2 overflow-hidden flex items-center justify-center">
                   {myItem?.images && myItem.images.length > 0 ? (
-                    // <-- NAYA: Optimized image for your item -->
                     <img src={getOptimizedCloudinaryUrl(myItem.images[0])} alt={myItem?.title || 'Item'} className="h-full w-full object-cover" />
                   ) : (
                     <Package className="w-8 h-8 text-gray-300" />
@@ -220,7 +215,6 @@ const DealDetailsPage = ({ user }) => {
                 </div>
                 <div className="flex justify-between items-center border-t border-gray-100 pt-2 mt-2">
                   <span>Wallet Deduction:</span>
-                  {/* --> MODIFICATION: Dynamic deduction visibility based on accepted status */}
                   <span className={`font-bold ${isAccepted ? 'text-red-500' : 'text-gray-400'}`}>
                     {isAccepted ? `-${deal.credits_deducted || 0}` : 'Pending'} 🪙
                   </span>
@@ -230,7 +224,6 @@ const DealDetailsPage = ({ user }) => {
             
           </div>
 
-          {/* --> MODIFICATION: Conditionally render WhatsApp button only if Deal is Accepted */}
           {isAccepted ? (
             counterpart?.phone ? (
               <a 
@@ -253,7 +246,6 @@ const DealDetailsPage = ({ user }) => {
             </div>
           )}
 
-          {/* --> MODIFICATION: Only show safety tip if deal is accepted */}
           {isAccepted && (
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-3 text-left">
               <ShieldAlert className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />

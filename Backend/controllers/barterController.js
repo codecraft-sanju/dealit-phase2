@@ -3,19 +3,18 @@ const Item = require('../models/Item');
 const User = require('../models/User'); 
 const Notification = require('../models/Notification');
 
+const CreditSetting = require('../models/CreditSetting');
+
+
 const crypto = require('crypto');
 const Order = require('../models/Order');
 const Transaction = require('../models/Transaction');
 
-// --- NAYA CHANGE START: Added refundRazorpayPayment import ---
 const { refundRazorpayPayment } = require('./paymentController');
-// --- NAYA CHANGE END ---
 
 const createBarterRequest = async (req, res) => {
   try {
-    // -> CHANGES START HERE: removed delivery_method
     const { requestedItem, offeredItem, receiver, message } = req.body;
-    // -> CHANGES END HERE
 
     const targetItem = await Item.findById(requestedItem);
     if (!targetItem) {
@@ -27,16 +26,18 @@ const createBarterRequest = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Offered item not found' });
     }
 
+    if (offeredItemData.owner.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'You can only offer items that you own!' });
+    }
+
     if (targetItem.owner.toString() === req.user._id.toString()) {
       return res.status(400).json({ success: false, message: 'You cannot make an offer on your own item' });
     }
 
-    // --- NAYA LOGIC: Spam Protection (Check existing request) ---
-    // -> CHANGES START HERE: Added populate to fetch the owner's name
     const existingRequest = await BarterRequest.findOne({
       requester: req.user._id,
       item: requestedItem,
-      status: { $in: ['PENDING', 'ACCEPTED', 'AWAITING_PAYMENT'] } // -> CHANGES START HERE: Added AWAITING_PAYMENT
+      status: { $in: ['PENDING', 'ACCEPTED', 'AWAITING_PAYMENT'] } 
     }).populate('owner', 'full_name');
 
     if (existingRequest) {
@@ -46,8 +47,6 @@ const createBarterRequest = async (req, res) => {
         message: `You have already sent a request for this item. Please wait for ${ownerName} to respond!` 
       });
     }
-    // -> CHANGES END HERE
-    // -------------------------------------------------------------
 
     const currentUser = await User.findById(req.user._id);
     
@@ -73,14 +72,12 @@ const createBarterRequest = async (req, res) => {
       offered_item: offeredItem, 
       status: 'PENDING',
       message: message || 'I want to trade this item!',
-      // -> CHANGES START HERE: removed delivery_method assignment
       created_at: Date.now(),
       updated_at: Date.now()
     });
 
     const savedRequest = await newRequest.save();
 
-    // CHANGED: Target item ke owner ko naye offer ki notification bheji
     await Notification.create({
       user: targetOwnerId,
       type: 'TRADE_ALERT',
@@ -117,7 +114,7 @@ const getReceivedRequests = async (req, res) => {
     const total = await BarterRequest.countDocuments({ owner: req.user._id });
 
     const requests = await BarterRequest.find({ owner: req.user._id })
-      .populate('requester', 'full_name email phone') // UPDATE: Phone number add kiya
+      .populate('requester', 'full_name email phone') 
       .populate('item')
       .populate('offered_item')
       .sort({ created_at: -1 })
@@ -147,7 +144,7 @@ const getSentRequests = async (req, res) => {
     const total = await BarterRequest.countDocuments({ requester: req.user._id });
 
     const requests = await BarterRequest.find({ requester: req.user._id })
-      .populate('owner', 'full_name email phone') // UPDATE: Phone number add kiya
+      .populate('owner', 'full_name email phone') 
       .populate('item')
       .populate('offered_item')
       .sort({ created_at: -1 })
@@ -240,12 +237,9 @@ const deleteBarterRequest = async (req, res) => {
 const updateSwapStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    // -> CHANGES START HERE: removed delivery_method, focus on owner action only
     const { status, shippingAddress, paymentDetails } = req.body; 
-    // -> CHANGES END HERE
     const userId = req.user._id;
 
-    // 1. item aur offered_item ke sath requester aur owner ka name aur phone bhi populate karo
     const barter = await BarterRequest.findById(id)
       .populate('item offered_item')
       .populate('requester', 'full_name phone')
@@ -255,7 +249,6 @@ const updateSwapStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Swap request not found' });
     }
 
-    // Kyunki ab owner populate ho chuka hai, toh owner._id check karna hoga
     if (barter.owner._id.toString() !== userId.toString()) {
       return res.status(403).json({ success: false, message: 'Not authorized to respond to this request' });
     }
@@ -265,7 +258,6 @@ const updateSwapStatus = async (req, res) => {
     }
 
     if (status === 'ACCEPTED') {
-      // -> CHANGES START HERE: Owner accepts, pays shipping, status goes to AWAITING_PAYMENT
       if (!shippingAddress || !shippingAddress.fullName || !shippingAddress.phone || !shippingAddress.houseNo || !shippingAddress.areaStreet || !shippingAddress.city || !shippingAddress.state || !shippingAddress.pincode) {
         return res.status(400).json({ 
           success: false, 
@@ -278,6 +270,13 @@ const updateSwapStatus = async (req, res) => {
       }
 
       const finalShippingCost = paymentDetails.amount; 
+      
+      // --- NAYA CHANGE START: Sanity check to prevent manual tampering of shipping cost to Rs 1 ---
+      if (finalShippingCost < 30) {
+        return res.status(400).json({ success: false, message: 'Invalid shipping amount detected.' });
+      }
+      // --- NAYA CHANGE END ---
+
       const rzpOrderId = paymentDetails.razorpay_order_id;
       const rzpPaymentId = paymentDetails.razorpay_payment_id;
       const { razorpay_signature } = paymentDetails;
@@ -318,10 +317,8 @@ const updateSwapStatus = async (req, res) => {
         message: `${barter.owner.full_name} has accepted your swap and paid their shipping. Pay your shipping cost within 24 hours to confirm the deal.`,
         metadata: { reason: 'payment_pending', referenceId: barter._id }
       });
-      // -> CHANGES END HERE
 
     } else if (status === 'REJECTED') {
-      // CHANGED: Reject hone par requester ko notify karo
       await Notification.create({
         user: barter.requester._id,
         type: 'TRADE_ALERT',
@@ -346,18 +343,15 @@ const updateSwapStatus = async (req, res) => {
   } catch (error) {
     console.error('Error in updateSwapStatus:', error);
 
-    // --- NAYA LOGIC: Handle Mongoose Validation Errors Gracefully ---
     if (error.name === 'ValidationError') {
       const messages = Object.values(error.errors).map(val => val.message).join(' | ');
       return res.status(400).json({ success: false, message: `Validation Error: ${messages}` });
     }
-    // ----------------------------------------------------------------
 
     res.status(500).json({ success: false, message: 'Server error while updating swap status' });
   }
 };
 
-// -> CHANGES START HERE: Naya function for requester to pay and lock the deal
 const completeSwapPayment = async (req, res) => {
   try {
     const { id } = req.params;
@@ -385,6 +379,20 @@ const completeSwapPayment = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Payment time has expired' });
     }
 
+    // --- NAYA CHANGE START: Check credits BEFORE processing Razorpay to prevent trap ---
+    const targetValue = barter.item.estimated_value || 0;
+    const offeredValue = barter.offered_item.estimated_value || 0;
+    const requiredCredits = Math.max(0, targetValue - offeredValue);
+
+    const currentUser = await User.findById(userId);
+    if (requiredCredits > 0 && currentUser.account_credits < requiredCredits) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Insufficient credits. You need ${requiredCredits} credits to cover the difference.` 
+      });
+    }
+    // --- NAYA CHANGE END ---
+
     if (!shippingAddress || !shippingAddress.fullName || !shippingAddress.phone || !shippingAddress.houseNo || !shippingAddress.areaStreet || !shippingAddress.city || !shippingAddress.state || !shippingAddress.pincode) {
       return res.status(400).json({ success: false, message: 'Incomplete shipping address.' });
     }
@@ -394,6 +402,13 @@ const completeSwapPayment = async (req, res) => {
     }
 
     const finalShippingCost = paymentDetails.amount; 
+
+    // --- NAYA CHANGE START: Sanity Check ---
+    if (finalShippingCost < 30) {
+      return res.status(400).json({ success: false, message: 'Invalid shipping amount detected.' });
+    }
+    // --- NAYA CHANGE END ---
+
     const rzpOrderId = paymentDetails.razorpay_order_id;
     const rzpPaymentId = paymentDetails.razorpay_payment_id;
     const { razorpay_signature } = paymentDetails;
@@ -418,11 +433,8 @@ const completeSwapPayment = async (req, res) => {
       transactionType: 'shipping_fee'
     });
 
-    const targetValue = barter.item.estimated_value || 0;
-    const offeredValue = barter.offered_item.estimated_value || 0;
-    const requiredCredits = Math.max(0, targetValue - offeredValue);
-
     if (requiredCredits > 0) {
+      // --- NAYA CHANGE START: Atomic deduction with fallback Razorpay refund ---
       const updatedRequester = await User.findOneAndUpdate(
         { _id: barter.requester._id, account_credits: { $gte: requiredCredits } },
         { $inc: { account_credits: -requiredCredits } },
@@ -430,11 +442,26 @@ const completeSwapPayment = async (req, res) => {
       );
 
       if (!updatedRequester) {
+        // CRITICAL RACE CONDITION CAUGHT! User spent credits elsewhere. Refund their shipping fee!
+        const refundRes = await refundRazorpayPayment(rzpPaymentId, finalShippingCost);
+        
+        if (refundRes.success) {
+          await Transaction.create({
+            user: userId,
+            amount: finalShippingCost,
+            razorpay_order_id: rzpOrderId,
+            razorpay_payment_id: rzpPaymentId,
+            status: 'success',
+            transactionType: 'shipping_refund'
+          });
+        }
+        
         return res.status(400).json({ 
           success: false, 
-          message: 'Cannot confirm swap. You do not have enough credits.' 
+          message: 'Swap failed. You spent your credits while this was processing. Your shipping fee has been refunded.' 
         });
       }
+      // --- NAYA CHANGE END ---
 
       await Notification.create({
         user: barter.requester._id,
@@ -462,7 +489,7 @@ const completeSwapPayment = async (req, res) => {
       { status: 'CANCELLED', updated_at: Date.now() }
     );
 
-    // Create Order 1: Rahul gets Amit's item
+   
     await Order.create({
       buyer: barter.requester._id, 
       seller: barter.owner._id, 
@@ -541,7 +568,7 @@ const autoCancelOverdueBarters = async () => {
     for (const barter of overdueAwaiting) {
       try {
         if (barter.ownerPaymentStatus === 'paid' && barter.owner_razorpay_payment_id) {
-         
+          
           const refundRes = await refundRazorpayPayment(barter.owner_razorpay_payment_id, barter.ownerShippingCost);
 
           if (refundRes.success) {
@@ -634,7 +661,7 @@ module.exports = {
   deleteBarterRequest,
   updateSwapStatus,
   completeSwapPayment,
- 
+  
   autoCancelOverdueBarters 
 
 };

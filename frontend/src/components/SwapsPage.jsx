@@ -12,14 +12,21 @@ import { motion, AnimatePresence } from 'framer-motion';
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
-const CountdownTimer = ({ createdAt, hours }) => {
+// --- CHANGES START HERE: Modified CountdownTimer to support precise expiresAt from backend ---
+const CountdownTimer = ({ createdAt, hours, expiresAt }) => {
   const [timeLeft, setTimeLeft] = useState('');
 
   useEffect(() => {
     const calculateTime = () => {
-      if (!createdAt || !hours) return '00h 00m 00s';
+      let expireDate;
+      if (expiresAt) {
+        expireDate = new Date(expiresAt).getTime();
+      } else if (createdAt && hours) {
+        expireDate = new Date(createdAt).getTime() + hours * 60 * 60 * 1000;
+      } else {
+        return '00h 00m 00s';
+      }
       
-      const expireDate = new Date(createdAt).getTime() + hours * 60 * 60 * 1000;
       const now = new Date().getTime();
       const diff = expireDate - now;
 
@@ -36,10 +43,11 @@ const CountdownTimer = ({ createdAt, hours }) => {
     const timer = setInterval(() => setTimeLeft(calculateTime()), 1000);
     
     return () => clearInterval(timer);
-  }, [createdAt, hours]);
+  }, [createdAt, hours, expiresAt]);
 
   return <span>{timeLeft}</span>;
 };
+// --- CHANGES END HERE ---
 
 const loadRazorpayScript = () => {
   return new Promise((resolve) => {
@@ -68,6 +76,10 @@ const SwapsPage = ({ user }) => {
   const [deliveryStep, setDeliveryStep] = useState(1); 
   const [deliveryMethod, setDeliveryMethod] = useState('');
   
+  // --- CHANGES START HERE: Added flowType to differentiate Owner Accept vs Requester Pay ---
+  const [flowType, setFlowType] = useState('owner_accept'); 
+  // --- CHANGES END HERE ---
+
   const savedAddresses = user?.savedAddresses || [];
   const [selectedAddressIndex, setSelectedAddressIndex] = useState(savedAddresses.length > 0 ? 0 : -1);
   const [shippingCost, setShippingCost] = useState(60);
@@ -183,12 +195,15 @@ const SwapsPage = ({ user }) => {
         { withCredentials: true }
       );
       if (response.data.success) {
-        setReceivedSwaps(receivedSwaps.map(s => s._id === swapId ? { ...s, status: newStatus } : s));
-        setSentSwaps(sentSwaps.map(s => s._id === swapId ? { ...s, status: newStatus } : s));
+        // --- CHANGES START HERE: Used response.data.data.status to handle AWAITING_PAYMENT dynamically ---
+        const updatedStatus = response.data.data.status || newStatus;
+        setReceivedSwaps(receivedSwaps.map(s => s._id === swapId ? { ...s, status: updatedStatus, expiresAt: response.data.data.expiresAt } : s));
+        setSentSwaps(sentSwaps.map(s => s._id === swapId ? { ...s, status: updatedStatus, expiresAt: response.data.data.expiresAt } : s));
         
-        if (newStatus === 'ACCEPTED') {
+        if (updatedStatus === 'ACCEPTED') {
           navigate(`/deal/${swapId}`);
         }
+        // --- CHANGES END HERE ---
       }
     } catch (error) {
       console.error('Error updating status:', error);
@@ -201,13 +216,40 @@ const SwapsPage = ({ user }) => {
     }
   };
 
-  const openAcceptFlow = (swap) => {
+  // --- CHANGES START HERE: Added completePayment API Call ---
+  const handleRequesterPaymentComplete = async (swapId, extraPayload = {}) => {
+    setProcessingId(swapId);
+    setActionError({ id: null, message: '' });
+    try {
+      const response = await axios.put(`${API_URL}/barter/${swapId}/complete-payment`, 
+        extraPayload,
+        { withCredentials: true }
+      );
+      if (response.data.success) {
+        const updatedStatus = response.data.data.status;
+        setReceivedSwaps(receivedSwaps.map(s => s._id === swapId ? { ...s, status: updatedStatus } : s));
+        setSentSwaps(sentSwaps.map(s => s._id === swapId ? { ...s, status: updatedStatus } : s));
+        navigate(`/deal/${swapId}`);
+      }
+    } catch (error) {
+      console.error('Error completing payment:', error);
+      setActionError({ id: 'modal', message: error.response?.data?.message || 'Failed to complete payment' });
+    } finally {
+      setProcessingId(null);
+    }
+  };
+  // --- CHANGES END HERE ---
+
+  // --- CHANGES START HERE: Modified to support both flows ---
+  const openAcceptFlow = (swap, type = 'owner_accept') => {
     setActiveSwap(swap);
+    setFlowType(type);
     setAcceptModalOpen(true);
-    setDeliveryStep(1);
+    setDeliveryStep(type === 'requester_pay' ? 2 : 1); // Skip to step 2 if requester is paying
     setDeliveryMethod('');
     setActionError({ id: null, message: '' });
   };
+  // --- CHANGES END HERE ---
 
   const handleCourierPayment = async (e) => {
     e.preventDefault();
@@ -246,11 +288,21 @@ const SwapsPage = ({ user }) => {
             razorpay_payment_id: response.razorpay_payment_id,
             razorpay_signature: response.razorpay_signature,
           };
-          await handleStatusUpdate(activeSwap._id, 'ACCEPTED', {
-            delivery_method: 'courier',
-            shippingAddress: formData,
-            paymentDetails: paymentData
-          });
+          
+          // --- CHANGES START HERE: Call correct function based on flowType ---
+          if (flowType === 'owner_accept') {
+            await handleStatusUpdate(activeSwap._id, 'ACCEPTED', {
+              delivery_method: 'courier',
+              shippingAddress: formData,
+              paymentDetails: paymentData
+            });
+          } else if (flowType === 'requester_pay') {
+            await handleRequesterPaymentComplete(activeSwap._id, {
+              shippingAddress: formData,
+              paymentDetails: paymentData
+            });
+          }
+          // --- CHANGES END HERE ---
           setAcceptModalOpen(false);
         },
         prefill: {
@@ -352,11 +404,12 @@ const SwapsPage = ({ user }) => {
                     <span className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide ${
                       swap.status === 'GHOSTING' ? 'bg-orange-100 text-orange-700' : 
                       swap.status === 'ACCEPTED' ? 'bg-green-100 text-green-700' :
+                      swap.status === 'AWAITING_PAYMENT' ? 'bg-purple-100 text-purple-700' :
                       swap.status === 'REJECTED' ? 'bg-red-100 text-red-700' :
                       swap.status === 'CANCELLED' ? 'bg-gray-200 text-gray-700' :
                       'bg-yellow-100 text-yellow-700'
                     }`}>
-                      {swap.status} {swap.status === 'GHOSTING' && '👻'} {swap.status === 'CANCELLED' && '🚫'}
+                      {swap.status.replace('_', ' ')} {swap.status === 'GHOSTING' && '👻'} {swap.status === 'CANCELLED' && '🚫'} {swap.status === 'AWAITING_PAYMENT' && '⏳'}
                     </span>
                   </div>
                   
@@ -364,7 +417,7 @@ const SwapsPage = ({ user }) => {
                     {activeTab === 'received' && swap.status === 'PENDING' && (
                       <>
                         <button
-                          onClick={() => openAcceptFlow(swap)}
+                          onClick={() => openAcceptFlow(swap, 'owner_accept')}
                           disabled={processingId === swap._id}
                           className="flex-1 md:flex-none bg-[#E6F4EA] hover:bg-[#CEEAD6] text-[#137333] px-5 py-2.5 rounded-xl text-sm font-bold transition flex items-center justify-center gap-1.5 disabled:opacity-50"
                         >
@@ -379,6 +432,18 @@ const SwapsPage = ({ user }) => {
                         </button>
                       </>
                     )}
+
+                    {/* --- CHANGES START HERE: Requester Payment Button --- */}
+                    {activeTab === 'sent' && swap.status === 'AWAITING_PAYMENT' && (
+                      <button
+                        onClick={() => openAcceptFlow(swap, 'requester_pay')}
+                        disabled={processingId === swap._id}
+                        className="flex-1 md:flex-none bg-[#6B46C1] hover:bg-[#5a3aa3] text-white px-5 py-2.5 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 disabled:opacity-50 shadow-md"
+                      >
+                        {processingId === swap._id ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Complete Payment
+                      </button>
+                    )}
+                    {/* --- CHANGES END HERE --- */}
                     
                     {swap.status === 'ACCEPTED' && (
                       <Link
@@ -398,12 +463,40 @@ const SwapsPage = ({ user }) => {
                       <span className="font-bold text-orange-900 block mb-1">Action Required:</span> 
                       Please accept or reject this offer within <span className="font-bold">{autoCancelHours} hours</span>.
                       <div className="text-red-600 font-bold flex items-center gap-1.5 mt-1.5 mb-1.5 bg-red-50/50 w-fit px-2 py-1 rounded-md border border-red-100">
-                        <Clock className="w-3.5 h-3.5" /> Time Left: <span className="animate-pulse"><CountdownTimer createdAt={swap.createdAt || swap.created_at} hours={autoCancelHours} /></span>
+                        <Clock className="w-3.5 h-3.5" /> Time Left: <span className="animate-pulse"><CountdownTimer createdAt={swap.created_at} hours={autoCancelHours} /></span>
                       </div>
                       Failure to respond will mark this as Ghosting and result in a <span className="font-bold text-red-600">{auraPenalty} Aura point penalty</span> on Dealit.
                     </div>
                   </div>
                 )}
+
+                {/* --- CHANGES START HERE: AWAITING_PAYMENT Information Banners --- */}
+                {activeTab === 'received' && swap.status === 'AWAITING_PAYMENT' && (
+                  <div className="mb-6 bg-purple-50 border border-purple-100 p-4 rounded-xl flex items-start gap-3 shadow-sm">
+                    <Clock className="w-5 h-5 text-purple-500 mt-0.5 shrink-0" />
+                    <div className="text-xs text-purple-800 font-medium leading-relaxed w-full">
+                      <span className="font-bold text-purple-900 block mb-1">Waiting for Partner:</span> 
+                      You have accepted and paid your shipping. The requester has 24 hours to pay their side.
+                      <div className="text-purple-600 font-bold flex items-center gap-1.5 mt-1.5 bg-purple-100/50 w-fit px-2 py-1 rounded-md border border-purple-200">
+                        <Clock className="w-3.5 h-3.5" /> Time Left: <span className="animate-pulse"><CountdownTimer expiresAt={swap.expiresAt} /></span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'sent' && swap.status === 'AWAITING_PAYMENT' && (
+                  <div className="mb-6 bg-green-50 border border-green-200 p-4 rounded-xl flex items-start gap-3 shadow-sm">
+                    <AlertCircle className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
+                    <div className="text-xs text-green-800 font-medium leading-relaxed w-full">
+                      <span className="font-bold text-green-900 block mb-1">Partner Accepted! 🎉</span> 
+                      The owner has accepted your deal and paid shipping. Complete your payment to lock the deal.
+                      <div className="text-red-600 font-bold flex items-center gap-1.5 mt-1.5 mb-1 bg-red-50/50 w-fit px-2 py-1 rounded-md border border-red-100">
+                        <Clock className="w-3.5 h-3.5" /> Time Left: <span className="animate-pulse"><CountdownTimer expiresAt={swap.expiresAt} /></span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {/* --- CHANGES END HERE --- */}
                 
                 {activeTab === 'sent' && swap.status === 'PENDING' && (
                   <div className="mb-6 bg-blue-50 border border-blue-100 p-4 rounded-xl flex items-start gap-3 shadow-sm">
@@ -412,7 +505,7 @@ const SwapsPage = ({ user }) => {
                       <span className="font-bold text-blue-900 block mb-1">Awaiting Response:</span> 
                       The receiver has <span className="font-bold">{autoCancelHours} hours</span> to accept your offer.
                       <div className="text-blue-600 font-bold flex items-center gap-1.5 mt-1.5 bg-blue-100/50 w-fit px-2 py-1 rounded-md border border-blue-200">
-                        <Clock className="w-3.5 h-3.5" /> Time Left: <span className="animate-pulse"><CountdownTimer createdAt={swap.createdAt || swap.created_at} hours={autoCancelHours} /></span>
+                        <Clock className="w-3.5 h-3.5" /> Time Left: <span className="animate-pulse"><CountdownTimer createdAt={swap.created_at} hours={autoCancelHours} /></span>
                       </div>
                     </div>
                   </div>
@@ -593,7 +686,6 @@ const SwapsPage = ({ user }) => {
                           <input type="text" name="houseNo" placeholder="House No. (Required)" required value={formData.houseNo} onChange={handleInputChange} className="w-full bg-gray-50 border border-gray-100 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#6B46C1]" />
                         </div>
                         
-                        {/* --> MODIFICATION START: Added missing areaStreet and landmark inputs */}
                         <div className="relative">
                           <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                           <input type="text" name="areaStreet" placeholder="Area, Street, Sector" required value={formData.areaStreet} onChange={handleInputChange} className="w-full bg-gray-50 border border-gray-100 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#6B46C1]" />
@@ -602,9 +694,7 @@ const SwapsPage = ({ user }) => {
                           <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400 opacity-50" />
                           <input type="text" name="landmark" placeholder="Landmark (Optional)" value={formData.landmark} onChange={handleInputChange} className="w-full bg-gray-50 border border-gray-100 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#6B46C1]" />
                         </div>
-                        {/* --> MODIFICATION END */}
 
-                        {/* --> MODIFICATION START: Adjusted grid to include City, State, and Pincode */}
                         <div className="grid grid-cols-2 gap-3">
                           <div className="relative">
                             <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
@@ -620,7 +710,6 @@ const SwapsPage = ({ user }) => {
                           <Hash className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                           <input type="text" name="pincode" placeholder="Pincode" required value={formData.pincode} onChange={handleInputChange} maxLength="6" className="w-full bg-gray-50 border border-gray-100 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#6B46C1]" />
                         </div>
-                        {/* --> MODIFICATION END */}
 
                       </div>
                     )}
@@ -637,13 +726,16 @@ const SwapsPage = ({ user }) => {
                     </span>
                   </div>
                   <div className="flex gap-3">
-                    <button onClick={() => setDeliveryStep(1)} className="px-5 py-3.5 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">Back</button>
+                    {/* --- CHANGES START: Hidden back button if flowType is requester_pay as they don't pick mutual --- */}
+                    {flowType === 'owner_accept' && (
+                      <button onClick={() => setDeliveryStep(1)} className="px-5 py-3.5 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">Back</button>
+                    )}
                     <button 
                       type="submit" form="courier-form"
                       disabled={processingId === activeSwap?._id || isCalculatingShipping}
                       className="flex-1 bg-[#6B46C1] text-white rounded-xl font-bold shadow-md hover:bg-[#5a3aa3] transition disabled:opacity-70 flex justify-center items-center gap-2"
                     >
-                      {processingId === activeSwap?._id ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Pay & Accept Order'}
+                      {processingId === activeSwap?._id ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Pay & Confirm'}
                     </button>
                   </div>
                 </div>

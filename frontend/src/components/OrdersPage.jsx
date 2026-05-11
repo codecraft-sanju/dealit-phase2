@@ -253,10 +253,19 @@ const OrdersPage = ({ user }) => {
                       <p className="text-[11px] text-gray-500 font-bold mb-2.5 truncate uppercase tracking-wider">{order.item?.category}</p>
                       
                       <div className="flex flex-wrap items-center gap-2">
-                        <div className="inline-flex items-center gap-1 bg-gradient-to-br from-[#FFF4D2] to-[#fffaeb] border border-[#FFE28A]/60 px-2 py-0.5 rounded-md shadow-sm">
-                          <Coins className="w-3 h-3 text-yellow-600 drop-shadow-sm" />
-                          <span className="font-black text-[10px] text-gray-900">{order.itemPrice || 0} CR</span>
-                        </div>
+                       
+                        {order.orderType === 'barter' ? (
+                          <div className="inline-flex items-center gap-1 bg-gradient-to-br from-[#EBE5F7] to-[#f8f6ff] border border-[#d6bcfa]/60 px-2 py-0.5 rounded-md shadow-sm">
+                            <Package className="w-3 h-3 text-[#6B46C1] drop-shadow-sm" />
+                            <span className="font-black text-[10px] text-[#6B46C1]">BARTER EXCHANGE</span>
+                          </div>
+                        ) : (
+                          <div className="inline-flex items-center gap-1 bg-gradient-to-br from-[#FFF4D2] to-[#fffaeb] border border-[#FFE28A]/60 px-2 py-0.5 rounded-md shadow-sm">
+                            <Coins className="w-3 h-3 text-yellow-600 drop-shadow-sm" />
+                            <span className="font-black text-[10px] text-gray-900">{order.itemPrice || 0} CR</span>
+                          </div>
+                        )}
+                        {/* --- CHANGES END HERE --- */}
 
                         {/* NEW: Shipping Cost Badge */}
                         <div className={`inline-flex items-center gap-1 border px-2 py-0.5 rounded-md shadow-sm ${order.shippingCost > 0 ? 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200' : 'bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200'}`}>

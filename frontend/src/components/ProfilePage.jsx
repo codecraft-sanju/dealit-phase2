@@ -37,9 +37,9 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
   const { data: profileData, isLoading: loading } = useQuery({
     queryKey: ['profile'],
     queryFn: async () => {
-      console.log("Fetching profile from:", `${API_URL}/users/profile`);
+    
       const response = await axios.get(`${API_URL}/users/profile`, { withCredentials: true });
-      console.log("Profile Data received:", response.data);
+     
       return response.data.data;
     },
     onError: (error) => {
@@ -48,7 +48,7 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
     }
   });
 
-  // CHANGED: Instantly update the global user state as soon as fresh profile data arrives
+ 
   useEffect(() => {
     if (profileData && setUser) {
       setUser(profileData);
@@ -85,30 +85,30 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
         formData
       );
       
-      console.log("Cloudinary response:", cloudinaryRes.data);
+     
       const uploadedUrl = cloudinaryRes.data.secure_url;
-      console.log("Sending URL to backend:", uploadedUrl);
+     
 
       const response = await axios.put(
         `${API_URL}/users/profile-pic`,
         { profilePic: uploadedUrl },
         { withCredentials: true }
       );
-      console.log("Backend response:", response.data);
+      
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['profile']);
     },
     onError: (error) => {
-      console.error('Error uploading image:', error);
+     
       alert(`Upload Failed: ${error.message}\nDetails: ${JSON.stringify(error.response?.data || 'No extra data')}`);
     }
   });
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
-    console.log("Selected file:", file);
+  
     if (!file) {
       alert("No file selected!"); 
       return;
