@@ -173,7 +173,7 @@ const EditItemPage = () => {
     staleTime: 1000 * 60 * 30,
   });
 
-  // --- ADDED: Fetch systemSettings to get dynamic minImagesRequired ---
+  
   const { data: systemSettings = { minImagesRequired: 3 }, isLoading: loadingSettings } = useQuery({
     queryKey: ['creditSettings'],
     queryFn: async () => {

@@ -242,7 +242,7 @@ const AddItemPage = ({ user, setUser }) => {
     creditsPerListing: 50,
     maxListingsRewarded: 3,
     maxAllowedListings: 5,
-    minImagesRequired: 3 // NEW CHANGE: Added default value here
+    minImagesRequired: 3 
   }, isLoading: loadingSettings } = useQuery({
     queryKey: ['creditSettings'],
     queryFn: async () => {

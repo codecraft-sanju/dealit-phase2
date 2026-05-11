@@ -12,6 +12,7 @@ import axios from 'axios';
 
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { useQueryClient } from '@tanstack/react-query';
 
 import SettingsPanel from '../admin/SettingsPanel';
 import AdminTable from '../admin/AdminTable';
@@ -87,6 +88,7 @@ const getCroppedImg = async (imageSrc, pixelCrop) => {
 };
 
 const AdminPanel = ({ user }) => {
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('overview'); 
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -144,7 +146,6 @@ const AdminPanel = ({ user }) => {
   const [rejectingItemId, setRejectingItemId] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
 
-  // ADDED: State for rejection reason modal
   const [isRejectionReasonModalOpen, setIsRejectionReasonModalOpen] = useState(false);
   const [currentRejectionReason, setCurrentRejectionReason] = useState('');
 
@@ -294,7 +295,6 @@ const AdminPanel = ({ user }) => {
     }
   };
 
-  // ADDED: Function to handle opening the view reason modal
   const handleViewRejectionReason = (reason) => {
     setCurrentRejectionReason(reason);
     setIsRejectionReasonModalOpen(true);
@@ -566,13 +566,16 @@ const AdminPanel = ({ user }) => {
       if (editingCategoryId) {
         const res = await axios.put(`${API_URL}/categories/${editingCategoryId}`, categoryForm, { withCredentials: true });
         setData(Array.isArray(data) ? data.map(c => c._id === editingCategoryId ? res.data.data : c) : data);
+        setDropdownCategories(prev => prev.map(c => c._id === editingCategoryId ? res.data.data : c).filter(c => c.isActive));
         toast.success('Category updated! 📑'); 
       } else {
         const res = await axios.post(`${API_URL}/categories`, categoryForm, { withCredentials: true });
         setData(Array.isArray(data) ? [...data, res.data.data].sort((a,b) => a.name.localeCompare(b.name)) : [res.data.data]);
+        setDropdownCategories(prev => [...prev, res.data.data].filter(c => c.isActive).sort((a,b) => a.name.localeCompare(b.name)));
         toast.success('Category created! ✨'); 
       }
       setIsCategoryModalOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
     } catch (error) {
       console.error('Error saving category:', error);
       toast.error(error.response?.data?.message || 'Failed to save category.'); 
@@ -586,7 +589,9 @@ const AdminPanel = ({ user }) => {
     try {
       await axios.delete(`${API_URL}/categories/${id}`, { withCredentials: true });
       setData(Array.isArray(data) ? data.filter(c => c._id !== id) : data);
+      setDropdownCategories(prev => prev.filter(c => c._id !== id));
       toast.success('Category deleted.'); 
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
     } catch (error) {
       console.error('Error deleting category:', error);
       toast.error('Failed to delete category.'); 
@@ -910,7 +915,7 @@ const AdminPanel = ({ user }) => {
                   handleEditOrderClick={handleEditOrderClick} 
                   handleResolveRefundClick={handleResolveRefundClick}
                   handleRetryRefundClick={handleRetryRefundClick} 
-                  handleViewRejectionReason={handleViewRejectionReason} // ADDED: Passing new prop
+                  handleViewRejectionReason={handleViewRejectionReason}
                   currentPage={currentPage}
                   totalPages={totalPages}
                   setCurrentPage={setCurrentPage}
