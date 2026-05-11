@@ -314,13 +314,15 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
           {/* Sliding hero panel */}
           <div className="aw-hero">
             <div className="hero-login-view">
-              {signupAnimData && <LottieComponent animationData={signupAnimData} loop={true} className="hero-img" />}
+              {/* CHANGE: Added marginBottom: '20px' */}
+              {signupAnimData && <LottieComponent animationData={signupAnimData} loop={true} className="hero-img" style={{ width: '350px', height: 'auto', marginBottom: '20px' }} />}
               <h2 className="hero-title">New here?</h2>
               <p className="hero-body">Trade what you have for what you need — no money required.</p>
               <button className="hero-btn" onClick={() => handleModeSwitch('signup')}>Create Account</button>
             </div>
             <div className="hero-signup-view">
-              {loginAnimData && <LottieComponent animationData={loginAnimData} loop={true} className="hero-img" />}
+              {/* CHANGE: Added marginBottom: '20px' */}
+              {loginAnimData && <LottieComponent animationData={loginAnimData} loop={true} className="hero-img" style={{ width: '350px', height: 'auto', marginBottom: '20px' }} />}
               <h2 className="hero-title">One of us?</h2>
               <p className="hero-body">Welcome back! Your dashboard is waiting with fresh offers.</p>
               <button className="hero-btn" onClick={() => handleModeSwitch('login')}>Sign In</button>
@@ -334,9 +336,11 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
         {/* Top hero area */}
         <div className="mb-hero">
           {isSignUpMode ? (
-            signupAnimData && <LottieComponent animationData={signupAnimData} loop={true} className="mb-hero-img" />
+            /* CHANGE: Added marginBottom: '20px' */
+            signupAnimData && <LottieComponent animationData={signupAnimData} loop={true} className="mb-hero-img" style={{ width: '250px', height: 'auto', marginBottom: '20px' }} />
           ) : (
-            loginAnimData && <LottieComponent animationData={loginAnimData} loop={true} className="mb-hero-img" />
+            /* CHANGE: Added marginBottom: '20px' */
+            loginAnimData && <LottieComponent animationData={loginAnimData} loop={true} className="mb-hero-img" style={{ width: '250px', height: 'auto', marginBottom: '20px' }} />
           )}
           <div className="mb-brand">
             <img src="/logo.png" alt="Dealit logo" className="brand-logo" />
