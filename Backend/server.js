@@ -31,7 +31,9 @@ app.use(cors({
   origin: [
     process.env.FRONTEND_URL, 
     'https://dealit.xyz', 
-    'https://www.dealit.xyz'
+    'https://www.dealit.xyz',
+    'https://dealiit.com',      
+    'https://www.dealiit.com'   
   ], 
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization'], 
@@ -95,6 +97,6 @@ app.listen(PORT, async () => {
   
     console.log('Running auto-cancel overdue barters cron job...');
     await autoCancelOverdueBarters();
-   
+    
   });
 });
