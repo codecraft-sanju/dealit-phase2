@@ -101,7 +101,8 @@ const formatRequestsForFrontend = (requests) => {
     offeredItem: req.offered_item,
     receiver: req.owner,
     sender: req.requester,
-    created_at: req.created_at
+    created_at: req.created_at,
+    expiresAt: req.expiresAt
   }));
 };
 
