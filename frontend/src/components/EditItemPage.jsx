@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Save, Loader2, Image as ImageIcon, X, Plus, Box, Scale, Sparkles, Wand2 } from 'lucide-react'; 
+import { ChevronLeft, Save, Loader2, Image as ImageIcon, X, Plus, Box, Scale, Sparkles, Wand2, ChevronDown, Check } from 'lucide-react'; 
 import axios from 'axios';
 import Cropper from 'react-easy-crop';
 import { toast } from 'react-toastify';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'; 
 import imageCompression from 'browser-image-compression';
 import { removeBackground } from '@imgly/background-removal'; 
+import { motion, AnimatePresence } from 'framer-motion';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -74,6 +75,81 @@ const getCroppedImg = async (imageSrc, pixelCrop) => {
     }, 'image/jpeg', 0.9);
   });
 };
+
+// ==========================================
+// MAKHAN SMOOTH CUSTOM DROPDOWN
+// ==========================================
+const CustomDropdown = ({ label, options, value, onChange, placeholder, icon: Icon, disabled }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const selectedOption = options.find(opt => opt.value === value);
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <label className="block text-[11px] sm:text-sm font-bold text-[#553c9a] mb-1.5 sm:mb-2 flex items-center gap-1.5">
+        {Icon && <Icon className="w-3.5 h-3.5" />} {label}
+      </label>
+      
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setIsOpen(!isOpen)}
+        className={`w-full bg-white border ${isOpen ? 'border-[#805ad5] ring-2 ring-[#805ad5]/10' : 'border-gray-200'} shadow-sm rounded-xl px-3 sm:px-4 py-2.5 sm:py-3.5 flex items-center justify-between transition-all duration-300 disabled:bg-gray-100 disabled:cursor-not-allowed`}
+      >
+        <span className={`text-xs sm:text-sm truncate pr-2 ${value ? 'text-gray-800 font-medium' : 'text-gray-400'}`}>
+          {selectedOption ? selectedOption.label : placeholder}
+        </span>
+        <ChevronDown className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-300 ${isOpen ? 'rotate-180 text-[#805ad5]' : ''}`} />
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 4, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="absolute z-[100] w-full mt-1 bg-white border border-gray-100 shadow-xl rounded-2xl overflow-hidden py-1.5"
+          >
+            <div className="max-h-[200px] overflow-y-auto custom-scrollbar">
+              {options.map((opt) => {
+                const isSelected = value === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      onChange(opt.value);
+                      setIsOpen(false);
+                    }}
+                    className={`w-full px-4 py-2.5 text-left text-xs sm:text-sm flex items-center justify-between transition-colors ${
+                      isSelected ? 'bg-purple-50 text-purple-700 font-bold' : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="truncate pr-2">{opt.label}</span>
+                    {isSelected && <Check className="w-4 h-4 shrink-0" />}
+                  </button>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+// ==========================================
 
 const ShimmerLoading = () => {
   return (
@@ -172,7 +248,6 @@ const EditItemPage = () => {
     },
     staleTime: 1000 * 60 * 30,
   });
-
   
   const { data: systemSettings = { minImagesRequired: 3 }, isLoading: loadingSettings } = useQuery({
     queryKey: ['creditSettings'],
@@ -183,7 +258,6 @@ const EditItemPage = () => {
     staleTime: 1000 * 60 * 30,
   });
 
-  // Dynamic min images limit
   const minImages = systemSettings.minImagesRequired || 3;
 
   useEffect(() => {
@@ -477,7 +551,6 @@ const EditItemPage = () => {
       }
     }
 
-    // --- UPDATED: Use dynamic minImages logic ---
     if (images.length < minImages) {
       toast.error(`Please upload at least ${minImages} image${minImages > 1 ? 's' : ''} of your item.`);
       return;
@@ -551,10 +624,30 @@ const EditItemPage = () => {
     }
   };
 
-  // --- UPDATED: Added loadingSettings to check ---
   if (loading || loadingCategories || loadingSettings) {
     return <ShimmerLoading />;
   }
+
+  // Define Custom Dropdown Options
+  const categoryOptions = [
+    ...categories.map(cat => ({ label: cat.name || cat.title, value: cat.name || cat.title })),
+    { label: 'Other', value: 'Other' }
+  ];
+
+  const conditionOptions = [
+    { label: 'Brand New', value: 'New' },
+    { label: 'Like New', value: 'Like New' },
+    { label: 'Used - Good', value: 'Used' },
+    { label: 'Fair', value: 'Fair' }
+  ];
+
+  const weightOptions = [
+    { label: 'Up to 500g (Phones, Clothes)', value: '0.5' },
+    { label: '500g to 1 Kg (Shoes, Books)', value: '1' },
+    { label: '1 Kg to 2 Kg (Laptops, Appliances)', value: '2' },
+    { label: '2 Kg to 5 Kg (Heavy items)', value: '5' },
+    { label: 'Custom Weight (Kg)', value: 'custom' }
+  ];
 
   return (
     <div className="min-h-screen bg-[#f4f2f9] md:py-10 flex justify-center font-sans">
@@ -582,7 +675,6 @@ const EditItemPage = () => {
             
             <div className="pb-4 border-b border-purple-100 border-dashed">
               <label className="block text-xs sm:text-sm font-bold text-[#553c9a] mb-3 sm:mb-4">
-                {/* --- UPDATED: Using dynamic minImages here --- */}
                 Update Images (Min {minImages} required)*
               </label>
               
@@ -696,7 +788,7 @@ const EditItemPage = () => {
                        <button
                          type="button"
                          onClick={handleAutoFillFromImages}
-                         disabled={autoFillMutation.isPending || generateDescMutation.isPending}
+                         disabled={autoFillMutation.isPending}
                          className="group relative flex items-center justify-center gap-2 text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-[#9F7AEA] via-[#805ad5] to-[#6B46C1] bg-[length:200%_auto] hover:bg-right hover:shadow-[0_4px_15px_rgba(128,90,213,0.4)] px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl transition-all duration-500 disabled:opacity-70 disabled:cursor-not-allowed w-full sm:w-auto overflow-hidden"
                        >
                          <span className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out rounded-xl"></span>
@@ -724,39 +816,36 @@ const EditItemPage = () => {
                 />
               </div>
 
+              {/* MAKHAN SMOOTH DROPDOWNS INTEGRATED HERE */}
               <div className="grid grid-cols-2 gap-3 sm:gap-5">
                 <div>
-                  <label className="block text-[11px] sm:text-sm font-bold text-[#553c9a] mb-1.5 sm:mb-2">Choose Category</label>
-                  <select 
-                    name="category" 
-                    required 
-                    value={formData.category} 
-                    onChange={handleInputChange} 
-                    className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-2 sm:px-4 py-2.5 sm:py-3.5 text-xs sm:text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#805ad5] focus:border-transparent transition-all appearance-none"
-                  >
-                    <option value="" disabled className="text-gray-400">Select</option>
-                    {categories.map((cat) => (
-                      <option key={cat._id} value={cat.name}>{cat.name}</option>
-                    ))}
-                    <option value="Other">Other</option>
-                  </select>
+                  {loadingCategories ? (
+                    <div>
+                      <label className="block text-[11px] sm:text-sm font-bold text-[#553c9a] mb-1.5 sm:mb-2">Choose Category</label>
+                      <div className="w-full bg-gray-50 border border-gray-200 shadow-sm rounded-xl px-2 sm:px-4 py-2.5 sm:py-3.5 flex items-center justify-center text-gray-500">
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        <span className="text-[11px] sm:text-xs font-medium">Loading...</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <CustomDropdown
+                      label="Choose Category"
+                      placeholder="Select"
+                      options={categoryOptions}
+                      value={formData.category}
+                      onChange={(val) => setFormData({ ...formData, category: val })}
+                    />
+                  )}
                 </div>
 
                 <div>
-                  <label className="block text-[11px] sm:text-sm font-bold text-[#553c9a] mb-1.5 sm:mb-2">Item Condition</label>
-                  <select 
-                    name="condition" 
-                    required 
-                    value={formData.condition} 
-                    onChange={handleInputChange} 
-                    className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-2 sm:px-4 py-2.5 sm:py-3.5 text-xs sm:text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#805ad5] focus:border-transparent transition-all appearance-none"
-                  >
-                    <option value="" disabled>Select</option>
-                    <option value="New">Brand New</option>
-                    <option value="Like New">Like New</option>
-                    <option value="Used">Used - Good</option>
-                    <option value="Fair">Fair</option>
-                  </select>
+                  <CustomDropdown
+                    label="Item Condition"
+                    placeholder="Select"
+                    options={conditionOptions}
+                    value={formData.condition}
+                    onChange={(val) => setFormData({ ...formData, condition: val })}
+                  />
                 </div>
               </div>
 
@@ -794,19 +883,14 @@ const EditItemPage = () => {
                 <h3 className="text-xs sm:text-sm font-bold text-[#553c9a] flex items-center gap-1.5"><Box className="w-4 h-4" /> Shipping Details</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
                   <div>
-                    <label className="block text-[11px] sm:text-sm font-bold text-gray-600 mb-1.5 sm:mb-2 flex items-center gap-1"><Scale className="w-3.5 h-3.5" /> Item Weight (Approx)</label>
-                    <select
-                      name="weightCategory"
+                    <CustomDropdown
+                      label="Item Weight (Approx)"
+                      icon={Scale}
+                      placeholder="Select Weight"
+                      options={weightOptions}
                       value={formData.weightCategory}
-                      onChange={handleInputChange}
-                      className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-2 sm:px-4 py-2.5 sm:py-3.5 text-xs sm:text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#805ad5] focus:border-transparent transition-all"
-                    >
-                      <option value="0.5">Up to 500g (Phones, Clothes)</option>
-                      <option value="1">500g to 1 Kg (Shoes, Books)</option>
-                      <option value="2">1 Kg to 2 Kg (Laptops, Appliances)</option>
-                      <option value="5">2 Kg to 5 Kg (Heavy items)</option>
-                      <option value="custom">Custom Weight (Kg)</option>
-                    </select>
+                      onChange={(val) => setFormData({ ...formData, weightCategory: val })}
+                    />
 
                     {formData.weightCategory === 'custom' && (
                       <div className="relative mt-2">

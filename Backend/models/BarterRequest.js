@@ -9,7 +9,6 @@ const barterRequestSchema = new mongoose.Schema({
   
   status: { 
     type: String, 
- 
     enum: ['PENDING', 'AWAITING_PAYMENT', 'ACCEPTED', 'REJECTED', 'GHOSTING', 'CANCELLED'],
     default: 'PENDING' 
   },
@@ -19,23 +18,23 @@ const barterRequestSchema = new mongoose.Schema({
   owner_accepted: { type: Boolean, default: false },
   
   requesterShippingAddress: {
-    fullName: { type: String, required: true },
-    phone: { type: String, required: true },
+    fullName: { type: String },
+    phone: { type: String },
     houseNo: { 
       type: String,
-      required: true,
       validate: {
         validator: function(v) {
-          return v ? /\d/.test(v) : false;
+          if (!v) return true;
+          return /\d/.test(v);
         },
         message: 'House No must contain at least one digit for shipping purposes.'
       }
     },
-    areaStreet: { type: String, required: true },
+    areaStreet: { type: String },
     landmark: { type: String, default: '' },
-    city: { type: String, required: true },
-    state: { type: String, required: true },
-    pincode: { type: String, required: true }
+    city: { type: String },
+    state: { type: String },
+    pincode: { type: String }
   },
   requesterShippingCost: { type: Number, default: 0 },
   requester_razorpay_order_id: { type: String },
@@ -43,30 +42,29 @@ const barterRequestSchema = new mongoose.Schema({
   requesterPaymentStatus: { type: String, enum: ['pending', 'paid', 'refunded'], default: 'pending' },
 
   ownerShippingAddress: {
-    fullName: { type: String, required: true },
-    phone: { type: String, required: true },
+    fullName: { type: String },
+    phone: { type: String },
     houseNo: { 
       type: String,
-      required: true,
       validate: {
         validator: function(v) {
-          return v ? /\d/.test(v) : false;
+          if (!v) return true;
+          return /\d/.test(v);
         },
         message: 'House No must contain at least one digit for shipping purposes.'
       }
     },
-    areaStreet: { type: String, required: true },
+    areaStreet: { type: String },
     landmark: { type: String, default: '' },
-    city: { type: String, required: true },
-    state: { type: String, required: true },
-    pincode: { type: String, required: true }
+    city: { type: String },
+    state: { type: String },
+    pincode: { type: String }
   },
   ownerShippingCost: { type: Number, default: 0 },
   owner_razorpay_order_id: { type: String },
   owner_razorpay_payment_id: { type: String },
   ownerPaymentStatus: { type: String, enum: ['pending', 'paid', 'refunded'], default: 'pending' },
 
-  
   expiresAt: { type: Date },
 
   created_at: { type: Date, default: Date.now },

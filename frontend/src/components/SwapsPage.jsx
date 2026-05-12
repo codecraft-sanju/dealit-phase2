@@ -4,7 +4,7 @@ import {
   RefreshCw, Check, X, MessageSquare, Package, Eye, AlertCircle, 
   ArrowRightLeft, ChevronLeft, ExternalLink, Truck, Users, MapPin, 
   Home, Hash, Phone, User as UserIcon, Loader2, 
-  Clock
+  Clock, Coins // --- CHANGES: Added Coins icon ---
 } from 'lucide-react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -12,7 +12,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
-// --- CHANGES START HERE: Modified CountdownTimer to support precise expiresAt from backend ---
 const CountdownTimer = ({ createdAt, hours, expiresAt }) => {
   const [timeLeft, setTimeLeft] = useState('');
 
@@ -47,7 +46,6 @@ const CountdownTimer = ({ createdAt, hours, expiresAt }) => {
 
   return <span>{timeLeft}</span>;
 };
-// --- CHANGES END HERE ---
 
 const loadRazorpayScript = () => {
   return new Promise((resolve) => {
@@ -70,15 +68,10 @@ const SwapsPage = ({ user }) => {
   const [processingId, setProcessingId] = useState(null);
   const [actionError, setActionError] = useState({ id: null, message: '' });
 
-  // --- MODAL & COURIER STATES START ---
   const [acceptModalOpen, setAcceptModalOpen] = useState(false);
   const [activeSwap, setActiveSwap] = useState(null);
-  const [deliveryStep, setDeliveryStep] = useState(1); 
-  const [deliveryMethod, setDeliveryMethod] = useState('');
   
-  // --- CHANGES START HERE: Added flowType to differentiate Owner Accept vs Requester Pay ---
   const [flowType, setFlowType] = useState('owner_accept'); 
-  // --- CHANGES END HERE ---
 
   const savedAddresses = user?.savedAddresses || [];
   const [selectedAddressIndex, setSelectedAddressIndex] = useState(savedAddresses.length > 0 ? 0 : -1);
@@ -160,7 +153,6 @@ const SwapsPage = ({ user }) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     if (selectedAddressIndex !== -1) setSelectedAddressIndex(-1);
   };
-  // --- MODAL & COURIER STATES END ---
 
   useEffect(() => {
     if (!user) return;
@@ -195,7 +187,6 @@ const SwapsPage = ({ user }) => {
         { withCredentials: true }
       );
       if (response.data.success) {
-        // --- CHANGES START HERE: Used response.data.data.status to handle AWAITING_PAYMENT dynamically ---
         const updatedStatus = response.data.data.status || newStatus;
         setReceivedSwaps(receivedSwaps.map(s => s._id === swapId ? { ...s, status: updatedStatus, expiresAt: response.data.data.expiresAt } : s));
         setSentSwaps(sentSwaps.map(s => s._id === swapId ? { ...s, status: updatedStatus, expiresAt: response.data.data.expiresAt } : s));
@@ -203,12 +194,11 @@ const SwapsPage = ({ user }) => {
         if (updatedStatus === 'ACCEPTED') {
           navigate(`/deal/${swapId}`);
         }
-        // --- CHANGES END HERE ---
       }
     } catch (error) {
       console.error('Error updating status:', error);
       setActionError({ 
-        id: extraPayload.delivery_method ? 'modal' : swapId, 
+        id: swapId, 
         message: error.response?.data?.message || 'Failed to update status' 
       });
     } finally {
@@ -216,7 +206,6 @@ const SwapsPage = ({ user }) => {
     }
   };
 
-  // --- CHANGES START HERE: Added completePayment API Call ---
   const handleRequesterPaymentComplete = async (swapId, extraPayload = {}) => {
     setProcessingId(swapId);
     setActionError({ id: null, message: '' });
@@ -238,18 +227,13 @@ const SwapsPage = ({ user }) => {
       setProcessingId(null);
     }
   };
-  // --- CHANGES END HERE ---
 
-  // --- CHANGES START HERE: Modified to support both flows ---
   const openAcceptFlow = (swap, type = 'owner_accept') => {
     setActiveSwap(swap);
     setFlowType(type);
     setAcceptModalOpen(true);
-    setDeliveryStep(type === 'requester_pay' ? 2 : 1); // Skip to step 2 if requester is paying
-    setDeliveryMethod('');
     setActionError({ id: null, message: '' });
   };
-  // --- CHANGES END HERE ---
 
   const handleCourierPayment = async (e) => {
     e.preventDefault();
@@ -289,10 +273,8 @@ const SwapsPage = ({ user }) => {
             razorpay_signature: response.razorpay_signature,
           };
           
-          // --- CHANGES START HERE: Call correct function based on flowType ---
           if (flowType === 'owner_accept') {
             await handleStatusUpdate(activeSwap._id, 'ACCEPTED', {
-              delivery_method: 'courier',
               shippingAddress: formData,
               paymentDetails: paymentData
             });
@@ -302,7 +284,6 @@ const SwapsPage = ({ user }) => {
               paymentDetails: paymentData
             });
           }
-          // --- CHANGES END HERE ---
           setAcceptModalOpen(false);
         },
         prefill: {
@@ -327,6 +308,14 @@ const SwapsPage = ({ user }) => {
   };
 
   const displaySwaps = activeTab === 'received' ? receivedSwaps : sentSwaps;
+
+  // --- CHANGES START HERE: Computed values for credit differences ---
+  const targetValue = activeSwap?.requestedItem?.estimated_value || 0;
+  const offeredValue = activeSwap?.offeredItem?.estimated_value || 0;
+  const requiredCredits = Math.max(0, targetValue - offeredValue);
+  const userCredits = user?.account_credits || 0;
+  const hasEnoughCredits = flowType === 'requester_pay' ? userCredits >= requiredCredits : true;
+  // --- CHANGES END HERE ---
 
   return (
     <div className="max-w-md mx-auto bg-[#f4f2f9] min-h-screen pb-2 md:max-w-7xl relative font-sans">
@@ -433,7 +422,6 @@ const SwapsPage = ({ user }) => {
                       </>
                     )}
 
-                    {/* --- CHANGES START HERE: Requester Payment Button --- */}
                     {activeTab === 'sent' && swap.status === 'AWAITING_PAYMENT' && (
                       <button
                         onClick={() => openAcceptFlow(swap, 'requester_pay')}
@@ -443,7 +431,6 @@ const SwapsPage = ({ user }) => {
                         {processingId === swap._id ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Complete Payment
                       </button>
                     )}
-                    {/* --- CHANGES END HERE --- */}
                     
                     {swap.status === 'ACCEPTED' && (
                       <Link
@@ -470,7 +457,6 @@ const SwapsPage = ({ user }) => {
                   </div>
                 )}
 
-                {/* --- CHANGES START HERE: AWAITING_PAYMENT Information Banners --- */}
                 {activeTab === 'received' && swap.status === 'AWAITING_PAYMENT' && (
                   <div className="mb-6 bg-purple-50 border border-purple-100 p-4 rounded-xl flex items-start gap-3 shadow-sm">
                     <Clock className="w-5 h-5 text-purple-500 mt-0.5 shrink-0" />
@@ -496,7 +482,6 @@ const SwapsPage = ({ user }) => {
                     </div>
                   </div>
                 )}
-                {/* --- CHANGES END HERE --- */}
                 
                 {activeTab === 'sent' && swap.status === 'PENDING' && (
                   <div className="mb-6 bg-blue-50 border border-blue-100 p-4 rounded-xl flex items-start gap-3 shadow-sm">
@@ -591,7 +576,7 @@ const SwapsPage = ({ user }) => {
               <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-white relative z-10 shrink-0">
                 <div>
                   <h2 className="text-xl font-bold text-slate-900">
-                    {deliveryStep === 1 ? 'Choose Delivery Mode' : 'Shipping Details'}
+                    Shipping Details
                   </h2>
                 </div>
                 <button onClick={() => setAcceptModalOpen(false)} className="text-slate-400 hover:text-slate-700 transition p-2 bg-slate-50 hover:bg-slate-100 rounded-full">
@@ -607,139 +592,152 @@ const SwapsPage = ({ user }) => {
                   </div>
                 )}
 
-                {deliveryStep === 1 && (
-                  <div className="space-y-4">
-                    <button 
-                      onClick={() => {
-                        handleStatusUpdate(activeSwap._id, 'ACCEPTED', { delivery_method: 'mutual' });
-                        setAcceptModalOpen(false);
-                      }}
-                      className="w-full text-left bg-white border border-gray-200 hover:border-[#6B46C1] hover:bg-[#f8f6ff] p-5 rounded-2xl transition-all flex items-start gap-4 group"
-                    >
-                      <div className="p-3 bg-blue-50 text-blue-600 rounded-xl group-hover:bg-[#6B46C1] group-hover:text-white transition-colors">
-                        <Users className="w-6 h-6" />
+                {/* --- CHANGES START HERE: Added Deal Summary & Credit Context --- */}
+                <div className="mb-6 bg-white p-4 rounded-2xl border border-purple-100 shadow-sm">
+                  <h3 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    <Package className="w-4 h-4 text-[#6B46C1]" /> Deal Summary
+                  </h3>
+                  
+                  {flowType === 'owner_accept' ? (
+                    <div className="space-y-2 text-sm text-gray-600">
+                      <p>You are accepting <strong>{activeSwap?.offeredItem?.title}</strong> in exchange for your <strong>{activeSwap?.requestedItem?.title}</strong>.</p>
+                      <div className="bg-purple-50 p-3 rounded-xl mt-3 flex gap-2 border border-purple-100">
+                        <Clock className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
+                        <p className="text-xs text-purple-800">
+                          Pay the shipping fee to lock this deal. The requester will then have 24 hours to pay their side. 
+                        </p>
                       </div>
-                      <div>
-                        <h3 className="font-bold text-gray-900 text-lg">Mutual Meetup</h3>
-                        <p className="text-sm text-gray-500 mt-1">Chat on WhatsApp, decide a location, and exchange items in person. Zero platform fees.</p>
-                      </div>
-                    </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 text-sm text-gray-600">
+                      <p>The owner accepted your offer for <strong>{activeSwap?.requestedItem?.title}</strong>!</p>
+                      
+                      {requiredCredits > 0 ? (
+                        <div className="bg-orange-50 border border-orange-200 p-3 rounded-xl mt-2">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-xs font-bold text-orange-800 flex items-center gap-1"><Coins className="w-3.5 h-3.5"/> Value Difference:</span>
+                            <span className="text-sm font-black text-orange-700">{requiredCredits} Credits</span>
+                          </div>
+                          <p className="text-[11px] text-orange-700/80 leading-tight mb-2">
+                            The requested item has a higher value than your offer. You need to pay the difference in credits to finalize the deal.
+                          </p>
+                          <div className="flex justify-between items-center text-xs pt-2 border-t border-orange-200/60 mt-2">
+                            <span className="text-orange-900">Your Balance: <strong>{userCredits} Credits</strong></span>
+                            {!hasEnoughCredits && <span className="text-red-600 font-bold bg-red-100 px-2 py-0.5 rounded-md">Insufficient</span>}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="bg-green-50 border border-green-100 p-3 rounded-xl mt-2 text-xs text-green-800 flex gap-2">
+                          <Check className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
+                          <p>No credit difference to pay. This is an equal or better value swap!</p>
+                        </div>
+                      )}
 
-                    <button 
-                      onClick={() => setDeliveryStep(2)}
-                      className="w-full text-left bg-white border border-gray-200 hover:border-[#6B46C1] hover:bg-[#f8f6ff] p-5 rounded-2xl transition-all flex items-start gap-4 group"
-                    >
-                      <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl group-hover:bg-[#6B46C1] group-hover:text-white transition-colors">
-                        <Truck className="w-6 h-6" />
+                      <div className="bg-purple-50 p-3 rounded-xl mt-3 flex gap-2 border border-purple-100">
+                        <Truck className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
+                        <p className="text-xs text-purple-800">
+                          Pay your shipping fee below to fully lock the deal and generate the shipping labels.
+                        </p>
                       </div>
-                      <div>
-                        <h3 className="font-bold text-gray-900 text-lg">Ship via Courier</h3>
-                        <p className="text-sm text-gray-500 mt-1">Get the item delivered directly to your address. Small shipping fee applies.</p>
-                      </div>
-                    </button>
-                  </div>
-                )}
+                    </div>
+                  )}
+                </div>
+                {/* --- CHANGES END HERE --- */}
 
-                {deliveryStep === 2 && (
-                  <form id="courier-form" onSubmit={handleCourierPayment} className="space-y-5">
-                    {savedAddresses.length > 0 && (
-                      <div className="space-y-3">
-                        <p className="text-sm font-bold text-gray-700">Select Delivery Address</p>
-                        <div className="grid grid-cols-1 gap-3 max-h-48 overflow-y-auto hide-scrollbar">
-                          {savedAddresses.map((addr, idx) => (
-                            <div 
-                              key={idx} onClick={() => setSelectedAddressIndex(idx)}
-                              className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                                selectedAddressIndex === idx ? 'border-[#6B46C1] bg-[#f8f6ff]' : 'border-gray-100 bg-white'
-                              }`}
-                            >
-                              <h4 className="font-bold text-gray-900 text-sm mb-1">{addr.fullName}</h4>
-                              <p className="text-xs text-gray-500 truncate">{addr.houseNo}, {addr.city} - {addr.pincode}</p>
-                            </div>
-                          ))}
+                <form id="courier-form" onSubmit={handleCourierPayment} className="space-y-5">
+                  {savedAddresses.length > 0 && (
+                    <div className="space-y-3">
+                      <p className="text-sm font-bold text-gray-700">Select Delivery Address</p>
+                      <div className="grid grid-cols-1 gap-3 max-h-48 overflow-y-auto hide-scrollbar">
+                        {savedAddresses.map((addr, idx) => (
                           <div 
-                            onClick={() => setSelectedAddressIndex(-1)}
-                            className={`p-3 text-center rounded-xl border-2 border-dashed cursor-pointer font-bold text-sm ${
-                              selectedAddressIndex === -1 ? 'border-[#6B46C1] text-[#6B46C1] bg-[#f8f6ff]' : 'border-gray-200 text-gray-500 bg-white'
+                            key={idx} onClick={() => setSelectedAddressIndex(idx)}
+                            className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                              selectedAddressIndex === idx ? 'border-[#6B46C1] bg-[#f8f6ff]' : 'border-gray-100 bg-white'
                             }`}
                           >
-                            + Add New Address
+                            <h4 className="font-bold text-gray-900 text-sm mb-1">{addr.fullName}</h4>
+                            <p className="text-xs text-gray-500 truncate">{addr.houseNo}, {addr.city} - {addr.pincode}</p>
                           </div>
+                        ))}
+                        <div 
+                          onClick={() => setSelectedAddressIndex(-1)}
+                          className={`p-3 text-center rounded-xl border-2 border-dashed cursor-pointer font-bold text-sm ${
+                            selectedAddressIndex === -1 ? 'border-[#6B46C1] text-[#6B46C1] bg-[#f8f6ff]' : 'border-gray-200 text-gray-500 bg-white'
+                          }`}
+                        >
+                          + Add New Address
                         </div>
                       </div>
-                    )}
+                    </div>
+                  )}
 
-                    {(selectedAddressIndex === -1 || savedAddresses.length === 0) && (
-                      <div className="space-y-3 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="relative">
-                            <UserIcon className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                            <input type="text" name="fullName" placeholder="Full Name" required value={formData.fullName} onChange={handleInputChange} className="w-full bg-gray-50 border border-gray-100 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#6B46C1]" />
-                          </div>
-                          <div className="relative">
-                            <Phone className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                            <input type="tel" name="phone" placeholder="Phone" required value={formData.phone} onChange={handleInputChange} className="w-full bg-gray-50 border border-gray-100 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#6B46C1]" />
-                          </div>
+                  {(selectedAddressIndex === -1 || savedAddresses.length === 0) && (
+                    <div className="space-y-3 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="relative">
+                          <UserIcon className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                          <input type="text" name="fullName" placeholder="Full Name" required value={formData.fullName} onChange={handleInputChange} className="w-full bg-gray-50 border border-gray-100 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#6B46C1]" />
                         </div>
                         <div className="relative">
-                          <Home className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                          <input type="text" name="houseNo" placeholder="House No. (Required)" required value={formData.houseNo} onChange={handleInputChange} className="w-full bg-gray-50 border border-gray-100 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#6B46C1]" />
+                          <Phone className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                          <input type="tel" name="phone" placeholder="Phone" required value={formData.phone} onChange={handleInputChange} className="w-full bg-gray-50 border border-gray-100 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#6B46C1]" />
                         </div>
-                        
+                      </div>
+                      <div className="relative">
+                        <Home className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                        <input type="text" name="houseNo" placeholder="House No. (Required)" required value={formData.houseNo} onChange={handleInputChange} className="w-full bg-gray-50 border border-gray-100 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#6B46C1]" />
+                      </div>
+                      
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                        <input type="text" name="areaStreet" placeholder="Area, Street, Sector" required value={formData.areaStreet} onChange={handleInputChange} className="w-full bg-gray-50 border border-gray-100 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#6B46C1]" />
+                      </div>
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400 opacity-50" />
+                        <input type="text" name="landmark" placeholder="Landmark (Optional)" value={formData.landmark} onChange={handleInputChange} className="w-full bg-gray-50 border border-gray-100 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#6B46C1]" />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
                         <div className="relative">
                           <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                          <input type="text" name="areaStreet" placeholder="Area, Street, Sector" required value={formData.areaStreet} onChange={handleInputChange} className="w-full bg-gray-50 border border-gray-100 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#6B46C1]" />
+                          <input type="text" name="city" placeholder="City" required value={formData.city} onChange={handleInputChange} className="w-full bg-gray-50 border border-gray-100 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#6B46C1]" />
                         </div>
                         <div className="relative">
-                          <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400 opacity-50" />
-                          <input type="text" name="landmark" placeholder="Landmark (Optional)" value={formData.landmark} onChange={handleInputChange} className="w-full bg-gray-50 border border-gray-100 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#6B46C1]" />
+                          <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                          <input type="text" name="state" placeholder="State" required value={formData.state} onChange={handleInputChange} className="w-full bg-gray-50 border border-gray-100 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#6B46C1]" />
                         </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="relative">
-                            <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                            <input type="text" name="city" placeholder="City" required value={formData.city} onChange={handleInputChange} className="w-full bg-gray-50 border border-gray-100 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#6B46C1]" />
-                          </div>
-                          <div className="relative">
-                            <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                            <input type="text" name="state" placeholder="State" required value={formData.state} onChange={handleInputChange} className="w-full bg-gray-50 border border-gray-100 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#6B46C1]" />
-                          </div>
-                        </div>
-
-                        <div className="relative">
-                          <Hash className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                          <input type="text" name="pincode" placeholder="Pincode" required value={formData.pincode} onChange={handleInputChange} maxLength="6" className="w-full bg-gray-50 border border-gray-100 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#6B46C1]" />
-                        </div>
-
                       </div>
-                    )}
-                  </form>
-                )}
+
+                      <div className="relative">
+                        <Hash className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                        <input type="text" name="pincode" placeholder="Pincode" required value={formData.pincode} onChange={handleInputChange} maxLength="6" className="w-full bg-gray-50 border border-gray-100 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#6B46C1]" />
+                      </div>
+
+                    </div>
+                  )}
+                </form>
               </div>
 
-              {deliveryStep === 2 && (
-                <div className="p-5 border-t border-slate-100 bg-white">
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="font-bold text-gray-600 text-sm">Shipping Fee</span>
-                    <span className="font-black text-[#6B46C1] text-lg">
-                      {isCalculatingShipping ? <Loader2 className="w-5 h-5 animate-spin" /> : `₹ ${shippingCost}`}
-                    </span>
-                  </div>
-                  <div className="flex gap-3">
-                    {/* --- CHANGES START: Hidden back button if flowType is requester_pay as they don't pick mutual --- */}
-                    {flowType === 'owner_accept' && (
-                      <button onClick={() => setDeliveryStep(1)} className="px-5 py-3.5 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">Back</button>
-                    )}
-                    <button 
-                      type="submit" form="courier-form"
-                      disabled={processingId === activeSwap?._id || isCalculatingShipping}
-                      className="flex-1 bg-[#6B46C1] text-white rounded-xl font-bold shadow-md hover:bg-[#5a3aa3] transition disabled:opacity-70 flex justify-center items-center gap-2"
-                    >
-                      {processingId === activeSwap?._id ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Pay & Confirm'}
-                    </button>
-                  </div>
+              <div className="p-5 border-t border-slate-100 bg-white">
+                <div className="flex justify-between items-center mb-4">
+                  <span className="font-bold text-gray-600 text-sm">Shipping Fee</span>
+                  <span className="font-black text-[#6B46C1] text-lg">
+                    {isCalculatingShipping ? <Loader2 className="w-5 h-5 animate-spin" /> : `₹ ${shippingCost}`}
+                  </span>
                 </div>
-              )}
+                <div className="flex gap-3">
+                  {/* --- CHANGES START HERE: Disabled button based on sufficient credits --- */}
+                  <button 
+                    type="submit" form="courier-form"
+                    disabled={processingId === activeSwap?._id || isCalculatingShipping || !hasEnoughCredits}
+                    className="flex-1 bg-[#6B46C1] text-white rounded-xl font-bold shadow-md hover:bg-[#5a3aa3] transition disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+                  >
+                    {processingId === activeSwap?._id ? <Loader2 className="w-5 h-5 animate-spin" /> : (!hasEnoughCredits ? 'Insufficient Credits' : 'Pay & Confirm')}
+                  </button>
+                  {/* --- CHANGES END HERE --- */}
+                </div>
+              </div>
             </motion.div>
           </motion.div>
         )}
