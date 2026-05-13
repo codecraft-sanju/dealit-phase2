@@ -1,23 +1,26 @@
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middleware/authMiddleware'); // Aapka auth middleware path match kar lena
+const { protect } = require('../middleware/authMiddleware'); 
 
 const {
   getUserNotifications,
   markAsRead,
-  markAllAsRead
+  markAllAsRead,
+
+  subscribePush,
+  unsubscribePush
+ 
 } = require('../controllers/notificationController');
 
-// Saare routes ko protect karna zaroori hai
+
 router.use(protect);
 
-// 1. Get all notifications for the logged-in user
+
+router.post('/subscribe', subscribePush);
+router.post('/unsubscribe', unsubscribePush);
+
 router.get('/', getUserNotifications);
-
-// 2. Mark ALL notifications as read
 router.put('/read-all', markAllAsRead);
-
-// 3. Mark a SINGLE notification as read
 router.put('/:id/read', markAsRead);
 
 module.exports = router;

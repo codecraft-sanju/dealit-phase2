@@ -1,5 +1,8 @@
 const Notification = require('../models/Notification');
 
+const PushSubscription = require('../models/PushSubscription');
+
+
 const getUserNotifications = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
@@ -66,8 +69,49 @@ const markAllAsRead = async (req, res) => {
   }
 };
 
+
+const subscribePush = async (req, res) => {
+  try {
+    const subscription = req.body;
+    
+    await PushSubscription.findOneAndUpdate(
+      { endpoint: subscription.endpoint },
+      { 
+        user: req.user._id,
+        endpoint: subscription.endpoint,
+        keys: subscription.keys,
+        expirationTime: subscription.expirationTime
+      },
+      { upsert: true, new: true }
+    );
+
+    res.status(201).json({ success: true, message: 'Subscribed to push notifications' });
+  } catch (error) {
+    console.error('Error saving push subscription:', error);
+    res.status(500).json({ success: false, message: 'Server error saving subscription' });
+  }
+};
+
+const unsubscribePush = async (req, res) => {
+  try {
+    const { endpoint } = req.body;
+    
+    await PushSubscription.findOneAndDelete({ endpoint, user: req.user._id });
+    
+    res.status(200).json({ success: true, message: 'Unsubscribed from push notifications' });
+  } catch (error) {
+    console.error('Error deleting push subscription:', error);
+    res.status(500).json({ success: false, message: 'Server error deleting subscription' });
+  }
+};
+
+
 module.exports = {
   getUserNotifications,
   markAsRead,
-  markAllAsRead
+  markAllAsRead,
+
+  subscribePush,
+  unsubscribePush
+  
 };

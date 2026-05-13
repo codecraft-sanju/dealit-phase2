@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-// --- NAYA CHANGE START: Import rate limit ---
+
 const rateLimit = require('express-rate-limit');
-// --- NAYA CHANGE END ---
+
 
 const { 
   registerUser, 

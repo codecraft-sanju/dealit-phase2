@@ -189,6 +189,19 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
   const [hasZeroPriceIssue, setHasZeroPriceIssue] = useState(null);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth > 1024);
 
+  // --- CHANGE START: Added Service Worker Registration ---
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then((registration) => {
+          console.log('ServiceWorker registration successful with scope: ', registration.scope);
+        })
+        .catch((err) => {
+          console.error('ServiceWorker registration failed: ', err);
+        });
+    }
+  }, []);
+  // --- CHANGE END ---
 
   useEffect(() => {
     const reqInterceptor = axios.interceptors.request.use(

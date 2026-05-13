@@ -1,9 +1,10 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
   Bell,
+  BellOff,
   Zap,
   RefreshCw,
   Coins,
@@ -46,6 +47,81 @@ const NotificationsPage = () => {
   const observerTarget = useRef(null);
   const navigate = useNavigate();
 
+  // --> Push Notification Logic
+  const [isPushEnabled, setIsPushEnabled] = useState(false);
+  const publicVapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+
+  useEffect(() => {
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+      navigator.serviceWorker.ready.then((registration) => {
+        registration.pushManager.getSubscription().then((subscription) => {
+          setIsPushEnabled(!!subscription);
+        });
+      });
+    }
+  }, []);
+
+  const urlBase64ToUint8Array = (base64String) => {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+      .replace(/\-/g, '+')
+      .replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  };
+
+  const handlePushToggle = async () => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      alert('Push notifications are not supported by your browser.');
+      return;
+    }
+
+    if (!publicVapidKey) {
+      alert("Push notification configuration is missing. Please contact admin.");
+      console.error("VITE_VAPID_PUBLIC_KEY is not defined in frontend .env");
+      return;
+    }
+
+    // Optimistic UI update: instantly change the button state to feel buttery smooth
+    const previousState = isPushEnabled;
+    setIsPushEnabled(!previousState); 
+
+    try {
+      const registration = await navigator.serviceWorker.ready;
+
+      if (previousState) {
+        // Was enabled, now disabling
+        const subscription = await registration.pushManager.getSubscription();
+        if (subscription) {
+          await subscription.unsubscribe();
+          await axios.post(`${API_URL}/notifications/unsubscribe`, { endpoint: subscription.endpoint }, { withCredentials: true });
+        }
+      } else {
+        // Was disabled, now enabling
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          const subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
+          });
+          await axios.post(`${API_URL}/notifications/subscribe`, subscription, { withCredentials: true });
+        } else {
+          alert('Notification permission denied.');
+          // Revert UI if permission is denied
+          setIsPushEnabled(false); 
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling push notifications:', error);
+      // Revert UI if anything fails in the background
+      setIsPushEnabled(previousState); 
+    }
+  };
+
   // <-- 1. Fetching notifications with useInfiniteQuery -->
   const {
     data,
@@ -71,7 +147,6 @@ const NotificationsPage = () => {
     staleTime: 1000 * 60,
   });
 
-  // Flatten the pages array into a single continuous list of notifications
   const notifications = data?.pages.flatMap(page => page.data) || [];
 
   // <-- Intersection Observer to trigger fetchNextPage when scrolling to bottom -->
@@ -153,7 +228,6 @@ const NotificationsPage = () => {
     },
   });
 
-  // Auto-mark notifications as read when the page loads
   useEffect(() => {
     if (!isLoading && notifications.length > 0) {
       const hasUnread = notifications.some(n => !n.isRead);
@@ -163,7 +237,6 @@ const NotificationsPage = () => {
     }
   }, [isLoading, notifications]);
 
-  // MODIFIED: Added handleNotificationClick logic based on the schema
   const handleNotificationClick = (notif) => {
     const refId = notif.metadata?.referenceId;
 
@@ -182,7 +255,6 @@ const NotificationsPage = () => {
         break;
 
       case 'ORDER_UPDATE':
-      // --> CHANGE START: Backend system alerts ke liye logic
       case 'SYSTEM_ALERT':
         if (refId) {
           navigate(`/order/${refId}`); 
@@ -190,7 +262,6 @@ const NotificationsPage = () => {
           navigate('/orders');
         }
         break;
-      // --> CHANGE END
 
       case 'AURA_UPDATE':
         navigate('/aura');
@@ -218,10 +289,8 @@ const NotificationsPage = () => {
         return { icon: ShoppingBag, color: 'text-purple-500', bg: 'bg-purple-500/10' };
       case 'AURA_UPDATE': 
         return { icon: Sparkles, color: 'text-amber-500', bg: 'bg-amber-500/10' };
-      // --> CHANGE START: Red alert icon SYSTEM_ALERT ke liye
       case 'SYSTEM_ALERT':
         return { icon: AlertCircle, color: 'text-red-600', bg: 'bg-red-500/10' };
-      // --> CHANGE END
       case 'SYSTEM':
         return { icon: Package, color: 'text-yellow-500', bg: 'bg-yellow-500/10' };
       default:
@@ -242,6 +311,18 @@ const NotificationsPage = () => {
               Notifications
             </h1>
           </div>
+          
+          <button
+            onClick={handlePushToggle}
+            className="p-2 hover:bg-white/10 rounded-full transition-colors flex items-center justify-center"
+            title={isPushEnabled ? "Disable Push Notifications" : "Enable Push Notifications"}
+          >
+            {isPushEnabled ? (
+              <Bell className="w-5 h-5 text-emerald-300" />
+            ) : (
+              <BellOff className="w-5 h-5 text-white/70" />
+            )}
+          </button>
         </div>
       </header>
 
@@ -313,10 +394,8 @@ const NotificationsPage = () => {
               })}
             </AnimatePresence>
 
-            {/* Invisible element to trigger the Intersection Observer */}
             <div ref={observerTarget} className="h-10 w-full" />
             
-            {/* Loading spinner for when fetching the next page */}
             {isFetchingNextPage && (
               <div className="flex justify-center py-4">
                 <Loader2 className="w-6 h-6 text-[#6B46C1] animate-spin" />
