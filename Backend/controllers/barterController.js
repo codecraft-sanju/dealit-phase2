@@ -78,11 +78,11 @@ const createBarterRequest = async (req, res) => {
 
     const savedRequest = await newRequest.save();
 
-    await Notification.create({
+  await Notification.create({
       user: targetOwnerId,
       type: 'TRADE_ALERT',
       title: 'New Trade Offer! 🤝',
-      message: `Aapke item "${targetItem.title}" ke badle ek naya offer aaya hai.`,
+      message: `A new offer has been received for your item "${targetItem.title}".`,
       metadata: { reason: 'new_offer', referenceId: savedRequest._id }
     });
 
@@ -319,12 +319,12 @@ const updateSwapStatus = async (req, res) => {
         metadata: { reason: 'payment_pending', referenceId: barter._id }
       });
 
-    } else if (status === 'REJECTED') {
+  } else if (status === 'REJECTED') {
       await Notification.create({
         user: barter.requester._id,
         type: 'TRADE_ALERT',
         title: 'Offer Declined ',
-        message: `Aapka offer "${barter.item.title}" ke liye decline kar diya gaya hai.`,
+        message: `Your offer for "${barter.item.title}" has been declined.`,
         metadata: { reason: 'trade_rejected', referenceId: barter._id }
       });
       barter.status = status;
@@ -435,7 +435,7 @@ const completeSwapPayment = async (req, res) => {
     });
 
     if (requiredCredits > 0) {
-      // --- NAYA CHANGE START: Atomic deduction with fallback Razorpay refund ---
+     
       const updatedRequester = await User.findOneAndUpdate(
         { _id: barter.requester._id, account_credits: { $gte: requiredCredits } },
         { $inc: { account_credits: -requiredCredits } },
@@ -443,7 +443,7 @@ const completeSwapPayment = async (req, res) => {
       );
 
       if (!updatedRequester) {
-        // CRITICAL RACE CONDITION CAUGHT! User spent credits elsewhere. Refund their shipping fee!
+     
         const refundRes = await refundRazorpayPayment(rzpPaymentId, finalShippingCost);
         
         if (refundRes.success) {
@@ -462,13 +462,13 @@ const completeSwapPayment = async (req, res) => {
           message: 'Swap failed. You spent your credits while this was processing. Your shipping fee has been refunded.' 
         });
       }
-      // --- NAYA CHANGE END ---
+     
 
       await Notification.create({
         user: barter.requester._id,
         type: 'CREDIT_DEDUCTED',
         title: 'Trade Confirmed! ',
-        message: `Aapka trade lock ho gaya hai. Difference cover karne ke liye ${requiredCredits} credits deduct hue.`,
+        message: `Your trade is locked. ${requiredCredits} credits were deducted to cover the difference.`,
         metadata: { amount: requiredCredits, reason: 'trade_difference', referenceId: barter._id }
       });
     }
@@ -627,19 +627,19 @@ const autoCancelOverdueBarters = async () => {
         request.updated_at = now;
         await request.save();
 
-        await Notification.create({
+     await Notification.create({
           user: request.requester,
           type: 'TRADE_ALERT',
           title: 'Offer Auto-Cancelled ⏱️',
-          message: `Aapka offer automatically cancel ho gaya hai kyunki 24 hours tak koi response nahi mila. Aap ab apna item kisi aur ko offer kar sakte hain.`,
+          message: `Your offer has been automatically cancelled because there was no response within 24 hours. You can now offer your item to someone else.`,
           metadata: { reason: 'auto_cancel_barter', referenceId: request._id }
         });
 
-        await Notification.create({
+      await Notification.create({
           user: request.owner,
           type: 'TRADE_ALERT',
           title: 'Offer Expired ⏳',
-          message: `Ek pending offer expire ho gaya hai kyunki 24 hours tak koi response nahi mila.`,
+          message: `A pending offer has expired because there was no response within 24 hours.`,
           metadata: { reason: 'auto_cancel_barter', referenceId: request._id }
         });
       } catch (innerErr) {

@@ -212,7 +212,7 @@ const updateItem = async (req, res) => {
     }
    
 
-    item = await Item.findByIdAndUpdate(req.params.id, updateData, { // --- CHANGED: req.body to updateData ---
+    item = await Item.findByIdAndUpdate(req.params.id, updateData, { 
       new: true,
       runValidators: true
     });

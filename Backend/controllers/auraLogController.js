@@ -14,7 +14,7 @@ const avatarColors = [
   'bg-teal-500', 'bg-orange-500'
 ];
 
-// Helper for consistent date formatting
+
 const formatDate = (dateString) => {
   const dateObj = new Date(dateString);
   const today = new Date();

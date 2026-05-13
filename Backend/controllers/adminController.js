@@ -63,7 +63,7 @@ const getAllTransactions = async (req, res) => {
     const skip = (page - 1) * limit;
     const searchQuery = req.query.search || '';
 
-    // STRICT FILTER: Sirf Real Money (Rupees) transactions allow karni hain
+    // STRICT FILTER: Only Real Money (Rupees) transactions are allowed
     let filter = {
       transactionType: { $in: ['wallet_recharge', 'shipping_fee', 'shipping_refund'] }
     };
@@ -76,7 +76,7 @@ const getAllTransactions = async (req, res) => {
       }).select('_id');
       const userIds = matchingUsers.map(u => u._id);
 
-      // Search query ko Real Money filter ke saath combine kiya
+      // Combined the search query with the Real Money filter
       filter = {
         $and: [
           { transactionType: { $in: ['wallet_recharge', 'shipping_fee', 'shipping_refund'] } },
@@ -98,7 +98,7 @@ const getAllTransactions = async (req, res) => {
       .skip(skip)
       .limit(limit);
 
-    // Aggregate mein bhi sirf Rupees wali success transactions ka total nikalenge
+    // In aggregate also, only calculate total for successful Real Money transactions
     const incomeAgg = await Transaction.aggregate([
       { 
         $match: { 
@@ -181,8 +181,8 @@ const updateItemStatus = async (req, res) => {
     if ((status === 'active' && !wasAlreadyActive) || status === 'rejected') {
       const notifTitle = status === 'active' ? 'Item Approved! ✅' : 'Item Rejected ❌';
       const notifMessage = status === 'active' 
-        ? `Aapka item "${item.title}" approve ho gaya hai aur ab live hai.` 
-        : `Aapka item "${item.title}" reject kar diya gaya hai. Reason: ${item.rejection_reason}`;
+        ? `Your item "${item.title}" has been approved and is now live.` 
+        : `Your item "${item.title}" has been rejected. Reason: ${item.rejection_reason}`;
       
       await Notification.create({
         user: item.owner,
@@ -430,7 +430,7 @@ const updateCreditSettings = async (req, res) => {
     
     res.status(200).json({ 
       success: true, 
-      message: 'Credit settings successfully update ho gayi hain', 
+      message: 'Credit settings updated successfully', 
       data: setting 
     });
   } catch (error) {
@@ -675,7 +675,7 @@ const getDashboardStats = async (req, res) => {
         { $match: { 
             status: 'success', 
             created_at: { $gte: sevenDaysAgo },
-            transactionType: { $in: ['wallet_recharge', 'shipping_fee'] } // Graph sirf positive revenue ka
+            transactionType: { $in: ['wallet_recharge', 'shipping_fee'] } // Graph for positive revenue only
         } },
         { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$created_at" } }, revenue: { $sum: "$amount" } } }
       ]),
@@ -799,7 +799,7 @@ const resolveFailedRefund = async (req, res) => {
     await Notification.create({
       user: order.buyer._id,
       type: 'CREDIT_ADDED',
-      title: 'Refund Resolved Manually ✅',
+      title: 'Refund Resolved Manually',
       message: `Your shipping refund of ₹${order.shippingCost} has been processed manually by our support team. Note: ${adminNote || 'Processed via UPI/Bank transfer'}`,
       metadata: { amount: order.shippingCost, reason: 'manual_refund_resolved', referenceId: order._id }
     });
@@ -815,7 +815,7 @@ const resolveFailedRefund = async (req, res) => {
   }
 };
 
-// NAYA FUNCTION: Auto Retry Refund using Razorpay
+// NEW FUNCTION: Auto Retry Refund using Razorpay
 const retryFailedRefund = async (req, res) => {
   try {
     const { orderId } = req.params;
