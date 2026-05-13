@@ -155,7 +155,7 @@ const getAllTransactions = async (req, res) => {
 
 const updateItemStatus = async (req, res) => {
   try {
-    const { status, rejection_reason } = req.body; 
+    const { status, rejection_reason, awarded_credits } = req.body; 
     if (!['pending', 'active', 'rejected', 'reserved', 'swapped'].includes(status)) {
       return res.status(400).json({ success: false, message: 'Invalid status value' });
     }
@@ -178,6 +178,7 @@ const updateItemStatus = async (req, res) => {
 
     await item.save();
 
+    // BASIC STATUS NOTIFICATION
     if ((status === 'active' && !wasAlreadyActive) || status === 'rejected') {
       const notifTitle = status === 'active' ? 'Item Approved! ✅' : 'Item Rejected ❌';
       const notifMessage = status === 'active' 
@@ -193,6 +194,7 @@ const updateItemStatus = async (req, res) => {
       });
     }
 
+    // SMART CREDIT ASSIGNMENT AND DETAILED NOTIFICATIONS
     if (status === 'active' && !wasAlreadyActive) {
       let setting = await CreditSetting.findOne();
       if (!setting) {
@@ -200,16 +202,60 @@ const updateItemStatus = async (req, res) => {
       }
 
       if (setting.isCreditSystemEnabled) {
-        
-        const activeItemsCount = await Item.countDocuments({ owner: item.owner, status: 'active' });
+        const user = await User.findById(item.owner);
+        if (user) {
+          let creditsToGive = 0;
+          let detailedMessage = '';
 
-        if (activeItemsCount <= setting.maxListingsRewarded) {
-          const user = await User.findById(item.owner);
-          if (user) {
-            user.account_credits += setting.creditsPerListing;
+          // 1. Admin provided a manual credit amount
+          if (awarded_credits !== undefined && awarded_credits !== null && awarded_credits !== '') {
+            creditsToGive = Number(awarded_credits);
+            detailedMessage = `Admin has manually awarded you ${creditsToGive} credits for your approved item "${item.title}".`;
+          } else {
+            // 2. Automated System Logic
+            const activeItemsCount = await Item.countDocuments({ owner: item.owner, status: 'active' });
+
+            if (activeItemsCount <= setting.maxListingsRewarded) {
+              creditsToGive = setting.creditsPerListing;
+              detailedMessage = `You received the standard reward of ${creditsToGive} credits for successfully listing your item "${item.title}".`;
+            } else {
+              creditsToGive = 0;
+              detailedMessage = `Your item "${item.title}" was approved, but you did not receive credits because you have already reached the maximum reward limit of ${setting.maxListingsRewarded} rewarded listings.`;
+            }
+          }
+
+          // Apply credits if > 0 and send the specific notification
+          if (creditsToGive > 0) {
+            user.account_credits = (user.account_credits || 0) + creditsToGive;
             await user.save();
+
+            await Notification.create({
+              user: item.owner,
+              type: 'CREDIT_ADDED',
+              title: 'Credits Received! 💰',
+              message: detailedMessage,
+              metadata: { referenceId: item._id, amount: creditsToGive }
+            });
+          } else {
+             // Notify user why they got 0 credits
+             await Notification.create({
+              user: item.owner,
+              type: 'SYSTEM_ALERT',
+              title: 'Credit Limit Reached ℹ️',
+              message: detailedMessage,
+              metadata: { referenceId: item._id, amount: 0 }
+            });
           }
         }
+      } else {
+         // Credit system is paused globally
+         await Notification.create({
+            user: item.owner,
+            type: 'SYSTEM_ALERT',
+            title: 'Credit System Paused ⏸️',
+            message: `Your item "${item.title}" was approved, but the credit reward system is currently paused by the administration.`,
+            metadata: { referenceId: item._id, amount: 0 }
+          });
       }
     }
 
@@ -388,9 +434,7 @@ const updateCreditSettings = async (req, res) => {
       autoCancelHours,
       auraReward,
       auraPenalty,
-      // NEW CHANGE START
       minImagesRequired
-      // NEW CHANGE END
     } = req.body;
     
     let setting = await CreditSetting.findOne();
@@ -420,9 +464,7 @@ const updateCreditSettings = async (req, res) => {
     if (auraReward !== undefined) setting.auraReward = auraReward;
     if (auraPenalty !== undefined) setting.auraPenalty = auraPenalty;
     
-    // NEW CHANGE START: Update setting value
     if (minImagesRequired !== undefined) setting.minImagesRequired = minImagesRequired;
-    // NEW CHANGE END
 
     setting.updated_at = Date.now();
 
@@ -441,11 +483,9 @@ const updateCreditSettings = async (req, res) => {
 
 const getPublicCreditSettings = async (req, res) => {
   try {
-    // NEW CHANGE START: Added minImagesRequired in select query
     let setting = await CreditSetting.findOne().select(
       'isReferralSystemEnabled referralRewardCredits maxAllowedListings maxReferralLimit milestoneReferralReward isWelcomeBonusEnabled welcomeBonusAmount shippingMethod flatShippingCost autoCancelHours auraReward auraPenalty minImagesRequired'
     );
-    // NEW CHANGE END
     
     if (!setting) {
       setting = { 
@@ -461,9 +501,7 @@ const getPublicCreditSettings = async (req, res) => {
         autoCancelHours: 24,
         auraReward: 50,
         auraPenalty: 50,
-        // NEW CHANGE START
         minImagesRequired: 3
-        // NEW CHANGE END
       };
     }
     res.status(200).json({ success: true, data: setting });
@@ -877,7 +915,6 @@ const retryFailedRefund = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server Error retrying refund' });
   }
 };
-
 
 module.exports = {
   getPendingItems,

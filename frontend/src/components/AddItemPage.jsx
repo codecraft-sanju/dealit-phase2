@@ -883,23 +883,35 @@ const AddItemPage = ({ user, setUser }) => {
               </div>
               <div className="w-full">
                 {systemSettings.isCreditSystemEnabled ? (
-                  <>
-                    <div className="flex justify-between items-center">
-                      <h4 className="text-[11px] sm:text-xs font-bold text-purple-800">Earn Credits on Approval! 🪙</h4>
-                      <span className="text-[9px] sm:text-[10px] font-bold bg-purple-200 text-purple-800 px-1.5 py-0.5 rounded-md">{listedCount}/{systemSettings.maxAllowedListings} Listed</span>
-                    </div>
-                    <p className="text-[10px] sm:text-[11px] text-purple-600 mt-0.5 leading-tight">
-                      Max <strong>{systemSettings.maxAllowedListings} items</strong>. Earn <strong>{systemSettings.creditsPerListing} Credits</strong> for first {systemSettings.maxListingsRewarded} approvals.
-                    </p>
-                  </>
+                  listedCount < systemSettings.maxListingsRewarded ? (
+                    <>
+                      <div className="flex justify-between items-center">
+                        <h4 className="text-[11px] sm:text-xs font-bold text-purple-800">Earn {systemSettings.creditsPerListing} Credits! 🪙</h4>
+                        <span className="text-[9px] sm:text-[10px] font-bold bg-purple-200 text-purple-800 px-1.5 py-0.5 rounded-md">{listedCount}/{systemSettings.maxAllowedListings} Listed</span>
+                      </div>
+                      <p className="text-[10px] sm:text-[11px] text-purple-600 mt-0.5 leading-tight">
+                        Reward valid for your next <strong>{systemSettings.maxListingsRewarded - listedCount} approval(s)</strong>. Max <strong>{systemSettings.maxAllowedListings} items</strong> allowed.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex justify-between items-center">
+                        <h4 className="text-[11px] sm:text-xs font-bold text-purple-800">Free Listing Available 📦</h4>
+                        <span className="text-[9px] sm:text-[10px] font-bold bg-purple-200 text-purple-800 px-1.5 py-0.5 rounded-md">{listedCount}/{systemSettings.maxAllowedListings} Listed</span>
+                      </div>
+                      <p className="text-[10px] sm:text-[11px] text-purple-600 mt-0.5 leading-tight">
+                        You've claimed all rewards! You can still list <strong>{systemSettings.maxAllowedListings - listedCount} more item(s)</strong> for free.
+                      </p>
+                    </>
+                  )
                 ) : (
                   <>
                     <div className="flex justify-between items-center">
-                      <h4 className="text-[11px] sm:text-xs font-bold text-purple-800">List Your Items! 📦</h4>
+                      <h4 className="text-[11px] sm:text-xs font-bold text-purple-800">Free Listing Available 📦</h4>
                       <span className="text-[9px] sm:text-[10px] font-bold bg-purple-200 text-purple-800 px-1.5 py-0.5 rounded-md">{listedCount}/{systemSettings.maxAllowedListings} Listed</span>
                     </div>
                     <p className="text-[10px] sm:text-[11px] text-purple-600 mt-0.5 leading-tight">
-                      Max <strong>{systemSettings.maxAllowedListings} items</strong>. Add clear pictures and details!
+                      You can list <strong>{systemSettings.maxAllowedListings - listedCount} more item(s)</strong>. Add clear pictures and details!
                     </p>
                   </>
                 )}

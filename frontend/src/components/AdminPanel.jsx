@@ -262,7 +262,7 @@ const AdminPanel = ({ user }) => {
 
   const handleApprove = async (id) => {
     try {
-      await axios.put(`${API_URL}/items/${id}`, { status: 'active' }, { withCredentials: true });
+      await axios.put(`${API_URL}/admin/item-status/${id}`, { status: 'active' }, { withCredentials: true });
       setData(Array.isArray(data) ? data.filter(item => item._id !== id) : data);
       toast.success('Item approved successfully! 🎉'); 
     } catch (error) {
@@ -281,7 +281,7 @@ const AdminPanel = ({ user }) => {
     e.preventDefault();
     try {
       await axios.put(
-        `${API_URL}/items/${rejectingItemId}`, 
+        `${API_URL}/admin/item-status/${rejectingItemId}`, 
         { status: 'rejected', rejection_reason: rejectionReason }, 
         { withCredentials: true }
       );
