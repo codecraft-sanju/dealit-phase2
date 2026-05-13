@@ -6,6 +6,7 @@ const Transaction = require('../models/Transaction');
 const Order = require('../models/Order');
 const BarterRequest = require('../models/BarterRequest');
 const Notification = require('../models/Notification');
+const AuraLog = require('../models/AuraLog'); 
 
 // IMPORT PAYMENT CONTROLLER FOR RAZORPAY RETRY
 const { refundRazorpayPayment } = require('./paymentController');
@@ -194,32 +195,52 @@ const updateItemStatus = async (req, res) => {
       });
     }
 
-    // SMART CREDIT ASSIGNMENT LOGIC (With Lifetime Limit Tracker)
+    // AURA & SMART CREDIT ASSIGNMENT LOGIC
     if (status === 'active' && !wasAlreadyActive) {
-      let setting = await CreditSetting.findOne();
-      if (!setting) {
-        setting = { isCreditSystemEnabled: true, creditsPerListing: 50, maxListingsRewarded: 3 };
-      }
+      const user = await User.findById(item.owner);
+      
+      if (user) {
+        // --- 1. AURA POINTS LOGIC (Admin approve par bhi milega) ---
+        user.aura_points = (user.aura_points || 0) + 10;
+        
+        await AuraLog.create({
+          user: user._id,
+          reason: "Item Approved by Admin",
+          points: 10,
+          type: "positive"
+        });
 
-      if (setting.isCreditSystemEnabled) {
-        const user = await User.findById(item.owner);
-        if (user) {
+        await Notification.create({
+          user: user._id,
+          type: 'AURA_UPDATE',
+          title: 'Aura Reward! 🎉',
+          message: `Your item "${item.title}" was approved. You received 10 Aura points for your contribution!`,
+          metadata: { reason: 'item_approved', referenceId: item._id }
+        });
+
+        // --- 2. CREDIT SYSTEM LOGIC WITH LIFETIME TRACKER ---
+        let setting = await CreditSetting.findOne();
+        if (!setting) {
+          setting = { isCreditSystemEnabled: true, creditsPerListing: 50, maxListingsRewarded: 3 };
+        }
+
+        if (setting.isCreditSystemEnabled) {
           let creditsToGive = 0;
           let detailedMessage = '';
 
-          // 1. Admin provided a manual credit amount
+          // Admin provided a manual credit amount
           if (awarded_credits !== undefined && awarded_credits !== null && awarded_credits !== '') {
             creditsToGive = Number(awarded_credits);
             detailedMessage = `Admin has manually awarded you ${creditsToGive} credits for your approved item "${item.title}".`;
           } else {
-            // 2. Automated System Logic - LOOPHOLE FIXED HERE
+            // Automated System Logic (Loophole fixed)
             const rewardedCount = user.rewardedListingsCount || 0;
 
             if (rewardedCount < setting.maxListingsRewarded) {
               creditsToGive = setting.creditsPerListing;
               detailedMessage = `You received the standard reward of ${creditsToGive} credits for successfully listing your item "${item.title}".`;
               
-              // Increment lifetime reward counter to prevent future farming
+              // Increment lifetime reward counter
               user.rewardedListingsCount = rewardedCount + 1;
             } else {
               creditsToGive = 0;
@@ -227,11 +248,9 @@ const updateItemStatus = async (req, res) => {
             }
           }
 
-          // Apply credits if > 0 and send the specific notification
+          // Apply credits if > 0
           if (creditsToGive > 0) {
             user.account_credits = (user.account_credits || 0) + creditsToGive;
-            await user.save();
-
             await Notification.create({
               user: item.owner,
               type: 'CREDIT_ADDED',
@@ -240,8 +259,6 @@ const updateItemStatus = async (req, res) => {
               metadata: { referenceId: item._id, amount: creditsToGive }
             });
           } else {
-             // Save changes if any (even if credits were 0 but count updated)
-             await user.save();
              // Notify user why they got 0 credits
              await Notification.create({
               user: item.owner,
@@ -251,16 +268,19 @@ const updateItemStatus = async (req, res) => {
               metadata: { referenceId: item._id, amount: 0 }
             });
           }
+        } else {
+           // Credit system is paused globally
+           await Notification.create({
+              user: item.owner,
+              type: 'SYSTEM_ALERT',
+              title: 'Credit System Paused ⏸️',
+              message: `Your item "${item.title}" was approved, but the credit reward system is currently paused by the administration.`,
+              metadata: { referenceId: item._id, amount: 0 }
+            });
         }
-      } else {
-         // Credit system is paused globally
-         await Notification.create({
-            user: item.owner,
-            type: 'SYSTEM_ALERT',
-            title: 'Credit System Paused ⏸️',
-            message: `Your item "${item.title}" was approved, but the credit reward system is currently paused by the administration.`,
-            metadata: { referenceId: item._id, amount: 0 }
-          });
+        
+        // Save user after all Aura & Credit updates
+        await user.save();
       }
     }
 
