@@ -62,7 +62,7 @@ const API_URL = `${API_BASE}/api`;
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      refetchOnWindowFocus: false, 
+      refetchOnWindowFocus: true, 
       retry: 1, 
     },
   },

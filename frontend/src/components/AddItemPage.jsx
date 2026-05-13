@@ -317,7 +317,8 @@ const AddItemPage = ({ user, setUser }) => {
         return [];
       }
     },
-    staleTime: 1000 * 60 * 30,
+    staleTime:0,
+    refetchOnWindowFocus: true,
   });
 
   const { data: systemSettings = {
