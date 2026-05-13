@@ -1,10 +1,11 @@
+// barterController.js
 const BarterRequest = require('../models/BarterRequest');
 const Item = require('../models/Item');
 const User = require('../models/User'); 
-const Notification = require('../models/Notification');
+
+const { queueNotification } = require('../services/queue');
 
 const CreditSetting = require('../models/CreditSetting');
-
 
 const crypto = require('crypto');
 const Order = require('../models/Order');
@@ -78,7 +79,8 @@ const createBarterRequest = async (req, res) => {
 
     const savedRequest = await newRequest.save();
 
-  await Notification.create({
+    // CHANGED: Replaced await Notification.create with queueNotification
+    queueNotification({
       user: targetOwnerId,
       type: 'TRADE_ALERT',
       title: 'New Trade Offer! 🤝',
@@ -311,7 +313,8 @@ const updateSwapStatus = async (req, res) => {
       barter.status = 'AWAITING_PAYMENT';
       barter.expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); 
 
-      await Notification.create({
+      // CHANGED: Replaced await Notification.create with queueNotification
+      queueNotification({
         user: barter.requester._id,
         type: 'TRADE_ALERT',
         title: 'Action Required! ⏳',
@@ -320,7 +323,8 @@ const updateSwapStatus = async (req, res) => {
       });
 
   } else if (status === 'REJECTED') {
-      await Notification.create({
+      // CHANGED: Replaced await Notification.create with queueNotification
+      queueNotification({
         user: barter.requester._id,
         type: 'TRADE_ALERT',
         title: 'Offer Declined ',
@@ -435,7 +439,7 @@ const completeSwapPayment = async (req, res) => {
     });
 
     if (requiredCredits > 0) {
-     
+      
       const updatedRequester = await User.findOneAndUpdate(
         { _id: barter.requester._id, account_credits: { $gte: requiredCredits } },
         { $inc: { account_credits: -requiredCredits } },
@@ -443,7 +447,7 @@ const completeSwapPayment = async (req, res) => {
       );
 
       if (!updatedRequester) {
-     
+      
         const refundRes = await refundRazorpayPayment(rzpPaymentId, finalShippingCost);
         
         if (refundRes.success) {
@@ -462,9 +466,9 @@ const completeSwapPayment = async (req, res) => {
           message: 'Swap failed. You spent your credits while this was processing. Your shipping fee has been refunded.' 
         });
       }
-     
-
-      await Notification.create({
+      
+      // CHANGED: Replaced await Notification.create with queueNotification
+      queueNotification({
         user: barter.requester._id,
         type: 'CREDIT_DEDUCTED',
         title: 'Trade Confirmed! ',
@@ -490,7 +494,7 @@ const completeSwapPayment = async (req, res) => {
       { status: 'CANCELLED', updated_at: Date.now() }
     );
 
-   
+    
     await Order.create({
       buyer: barter.requester._id, 
       seller: barter.owner._id, 
@@ -526,7 +530,8 @@ const completeSwapPayment = async (req, res) => {
       razorpay_payment_id: barter.owner_razorpay_payment_id,
     });
 
-    await Notification.create({
+    // CHANGED: Replaced await Notification.create with queueNotification
+    queueNotification({
       user: barter.owner._id,
       type: 'ORDER_UPDATE',
       title: 'Deal Locked! 📦',
@@ -555,7 +560,6 @@ const completeSwapPayment = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error while completing swap payment' });
   }
 };
-
 
 const autoCancelOverdueBarters = async () => {
   try {
@@ -591,7 +595,8 @@ const autoCancelOverdueBarters = async () => {
         barter.updated_at = now;
         await barter.save();
 
-        await Notification.create({
+        // CHANGED: Replaced await Notification.create with queueNotification
+        queueNotification({
           user: barter.owner._id,
           type: 'SYSTEM',
           title: 'Swap Cancelled & Refunded 🚫',
@@ -599,7 +604,8 @@ const autoCancelOverdueBarters = async () => {
           metadata: { referenceId: barter._id }
         });
 
-        await Notification.create({
+        // CHANGED: Replaced await Notification.create with queueNotification
+        queueNotification({
           user: barter.requester._id,
           type: 'SYSTEM',
           title: 'Swap Timeout ⏰',
@@ -627,7 +633,8 @@ const autoCancelOverdueBarters = async () => {
         request.updated_at = now;
         await request.save();
 
-     await Notification.create({
+        // CHANGED: Replaced await Notification.create with queueNotification
+        queueNotification({
           user: request.requester,
           type: 'TRADE_ALERT',
           title: 'Offer Auto-Cancelled ⏱️',
@@ -635,7 +642,8 @@ const autoCancelOverdueBarters = async () => {
           metadata: { reason: 'auto_cancel_barter', referenceId: request._id }
         });
 
-      await Notification.create({
+        // CHANGED: Replaced await Notification.create with queueNotification
+        queueNotification({
           user: request.owner,
           type: 'TRADE_ALERT',
           title: 'Offer Expired ⏳',
@@ -651,7 +659,6 @@ const autoCancelOverdueBarters = async () => {
     console.error('Error in autoCancelOverdueBarters cron job:', error);
   }
 };
-
 
 module.exports = {
   createBarterRequest,

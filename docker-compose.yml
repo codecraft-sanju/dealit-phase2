@@ -1,16 +1,41 @@
 version: '3.8'
 
 services:
+  # Redis Service (Naya Addition)
+  redis:
+    image: redis:alpine
+    container_name: dealit-redis
+    restart: always
+    # Ports 6379 expose karne ki zaroorat nahi hai bahar ke liye, 
+    # kyunki backend Docker network ke andar se hi connect kar lega.
+    networks:
+      - dealit-network
+
   backend:
-    build: ./Backend  # Yahan 'B' capital kar do kyunki tumhare folder ka naam 'Backend' hai
+    build: ./Backend
+    container_name: dealit-backend
     ports:
       - "5000:5000"
     restart: always
+    environment:
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    networks:
+      - dealit-network
 
   frontend:
-    build: ./frontend # Isko 'frontend' hi rehne do agar folder small 'f' se hai
+    build: ./frontend
+    container_name: dealit-frontend
     ports:
-      - "5173:80"     # YAHAN CHANGE KARNA HAI: Isko wapas 5173 kar do taaki port 80 Nginx ke liye free ho jaye
+      - "5173:80"
     depends_on:
       - backend
     restart: always
+    networks:
+      - dealit-network
+
+# Networks define karna zaroori hai taaki containers 'redis' name se connect kar sakein
+networks:
+  dealit-network:
+    driver: bridge

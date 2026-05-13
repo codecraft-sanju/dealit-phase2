@@ -16,6 +16,7 @@ const categoryRoutes = require('./routes/categoryRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const aiRoutes = require('./routes/aiRoutes')
 const notificationRoutes = require('./routes/notificationRoutes');
+require('./workers/notificationWorker');
 const { verifyShiprocketConnection } = require('./utils/shiprocket');
 const { verifyRazorpayConnection } = require('./controllers/paymentController');
 

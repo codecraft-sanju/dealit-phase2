@@ -32,6 +32,11 @@ const userSchema = new mongoose.Schema({
     state: { type: String },
     pincode: { type: String }
   },
+  
+unreadNotificationsCount: { 
+  type: Number, 
+  default: 0 
+},
 
   savedAddresses: [{
     fullName: { type: String },

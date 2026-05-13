@@ -8,7 +8,9 @@ const BarterRequest = require('../models/BarterRequest');
 const Notification = require('../models/Notification');
 const AuraLog = require('../models/AuraLog'); 
 
-// IMPORT PAYMENT CONTROLLER FOR RAZORPAY RETRY
+// CHANGED: Imported queueNotification
+const { queueNotification } = require('../services/queue');
+
 const { refundRazorpayPayment } = require('./paymentController');
 
 const getPendingItems = async (req, res) => {
@@ -186,7 +188,8 @@ const updateItemStatus = async (req, res) => {
         ? `Your item "${item.title}" has been approved and is now live.` 
         : `Your item "${item.title}" has been rejected. Reason: ${item.rejection_reason}`;
       
-      await Notification.create({
+      // CHANGED: Replaced await Notification.create with queueNotification
+      queueNotification({
         user: item.owner,
         type: 'SYSTEM',
         title: notifTitle,
@@ -210,7 +213,8 @@ const updateItemStatus = async (req, res) => {
           type: "positive"
         });
 
-        await Notification.create({
+        // CHANGED: Replaced await Notification.create with queueNotification
+        queueNotification({
           user: user._id,
           type: 'AURA_UPDATE',
           title: 'Aura Reward! 🎉',
@@ -251,7 +255,8 @@ const updateItemStatus = async (req, res) => {
           // Apply credits if > 0
           if (creditsToGive > 0) {
             user.account_credits = (user.account_credits || 0) + creditsToGive;
-            await Notification.create({
+            // CHANGED: Replaced await Notification.create with queueNotification
+            queueNotification({
               user: item.owner,
               type: 'CREDIT_ADDED',
               title: 'Credits Received! 💰',
@@ -260,7 +265,8 @@ const updateItemStatus = async (req, res) => {
             });
           } else {
              // Notify user why they got 0 credits
-             await Notification.create({
+             // CHANGED: Replaced await Notification.create with queueNotification
+             queueNotification({
               user: item.owner,
               type: 'SYSTEM_ALERT',
               title: 'Credit Limit Reached ℹ️',
@@ -270,7 +276,8 @@ const updateItemStatus = async (req, res) => {
           }
         } else {
            // Credit system is paused globally
-           await Notification.create({
+           // CHANGED: Replaced await Notification.create with queueNotification
+           queueNotification({
               user: item.owner,
               type: 'SYSTEM_ALERT',
               title: 'Credit System Paused ⏸️',
@@ -659,12 +666,12 @@ const getDashboardStats = async (req, res) => {
       totalOrders,
       deliveredOrders,
       pendingOrders,
-      successfulTxns, // Real money only
+      successfulTxns, 
       recentUsers,
       categoryDataRaw, 
       recentSwaps,
       recentItemsList,
-      recentTxnsList, // Real money only
+      recentTxnsList, 
       recentOrdersList
     ] = await Promise.all([
       User.countDocuments(),
@@ -859,7 +866,8 @@ const resolveFailedRefund = async (req, res) => {
       transactionType: 'shipping_refund'
     });
 
-    await Notification.create({
+    // CHANGED: Replaced await Notification.create with queueNotification
+    queueNotification({
       user: order.buyer._id,
       type: 'CREDIT_ADDED',
       title: 'Refund Resolved Manually',
@@ -921,7 +929,8 @@ const retryFailedRefund = async (req, res) => {
       transactionType: 'shipping_refund' 
     });
 
-    await Notification.create({
+    // CHANGED: Replaced await Notification.create with queueNotification
+    queueNotification({
       user: order.buyer._id,
       type: 'SYSTEM_ALERT',
       title: 'Refund Retried Successfully 🔄',

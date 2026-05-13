@@ -1,6 +1,8 @@
 const Notification = require('../models/Notification');
 const PushSubscription = require('../models/PushSubscription');
 
+const User = require('../models/User');
+
 const getUserNotifications = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
@@ -9,15 +11,15 @@ const getUserNotifications = async (req, res) => {
 
     const total = await Notification.countDocuments({ user: req.user._id });
 
+    //  Added .lean() for faster read performance
     const notifications = await Notification.find({ user: req.user._id })
       .sort({ created_at: -1 })
       .skip(skip)
-      .limit(limit);
+      .limit(limit)
+      .lean();
 
-    const unreadCount = await Notification.countDocuments({ 
-      user: req.user._id, 
-      isRead: false 
-    });
+    // Count queries hata kar seedha User model se pre-calculated count fetch kiya
+    const user = await User.findById(req.user._id).select('unreadNotificationsCount');
 
     res.status(200).json({
       success: true,
@@ -25,7 +27,7 @@ const getUserNotifications = async (req, res) => {
       total,
       totalPages: Math.ceil(total / limit),
       currentPage: page,
-      unreadCount: unreadCount,
+      unreadCount: user ? user.unreadNotificationsCount : 0, // Using pre-calculated count
       data: notifications
     });
   } catch (error) {
@@ -36,15 +38,21 @@ const getUserNotifications = async (req, res) => {
 
 const markAsRead = async (req, res) => {
   try {
+    // CHANGED: Sirf tab update karega agar isRead false hai
     const notification = await Notification.findOneAndUpdate(
-      { _id: req.params.id, user: req.user._id },
+      { _id: req.params.id, user: req.user._id, isRead: false },
       { isRead: true },
       { new: true }
     );
 
     if (!notification) {
-      return res.status(404).json({ success: false, message: 'Notification not found' });
+      return res.status(404).json({ success: false, message: 'Notification not found or already read' });
     }
+
+    // CHANGED: User model mein counter decrement kiya
+    await User.findByIdAndUpdate(req.user._id, {
+      $inc: { unreadNotificationsCount: -1 }
+    });
 
     res.status(200).json({ success: true, data: notification });
   } catch (error) {
@@ -60,6 +68,11 @@ const markAllAsRead = async (req, res) => {
       { isRead: true }
     );
 
+    // CHANGED: User model mein counter ko reset karke 0 kar diya
+    await User.findByIdAndUpdate(req.user._id, {
+      unreadNotificationsCount: 0
+    });
+
     res.status(200).json({ success: true, message: 'All notifications marked as read' });
   } catch (error) {
     console.error('Error marking all notifications as read:', error);
@@ -67,7 +80,7 @@ const markAllAsRead = async (req, res) => {
   }
 };
 
-// CHANGED: Logic to handle both expo and web subscriptions
+//  Logic to handle both expo and web subscriptions
 const subscribePush = async (req, res) => {
   try {
     const { type, token, endpoint, keys, expirationTime } = req.body;
@@ -99,7 +112,7 @@ const subscribePush = async (req, res) => {
   }
 };
 
-// CHANGED: Logic to handle unsubscribe for both expo and web
+// Logic to handle unsubscribe for both expo and web
 const unsubscribePush = async (req, res) => {
   try {
     const { type, token, endpoint } = req.body;

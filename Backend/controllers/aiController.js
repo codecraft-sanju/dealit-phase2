@@ -123,7 +123,7 @@ const analyzeImages = async (req, res) => {
       throw new Error("All Gemini Vision models failed or are not found.");
     }
 
-    // NAYA CHANGE: Super strict JSON extraction (Ignores extra text from AI)
+    //  Super strict JSON extraction (Ignores extra text from AI)
     const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
     
     if (!jsonMatch) {

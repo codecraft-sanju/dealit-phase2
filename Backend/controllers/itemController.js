@@ -3,7 +3,10 @@ const Item = require('../models/Item');
 const User = require('../models/User'); 
 const CreditSetting = require('../models/CreditSetting'); 
 const mongoose = require('mongoose');
-const Notification = require('../models/Notification');
+
+
+const { queueNotification } = require('../services/queue');
+
 const sendEmail = require('../utils/sendEmail');
 const AuraLog = require('../models/AuraLog'); 
 
@@ -54,8 +57,8 @@ const createItem = async (req, res) => {
     user.listedProductsCount = actualItemCount + 1;
     await user.save();
 
-    // CLEAR ENGLISH NOTIFICATION FOR SUBMISSION
-    await Notification.create({
+    // CHANGED: Replaced await Notification.create with queueNotification
+    queueNotification({
       user: req.user._id,
       type: 'SYSTEM',
       title: 'Item Submitted! 📦',
@@ -185,7 +188,7 @@ const updateItem = async (req, res) => {
     }
 
     updateData.updated_at = Date.now();
-   
+    
     // IF ITEM STATUS CHANGES TO ACTIVE
     if (updateData.status === 'active' && item.status !== 'active') { 
       try {
@@ -202,7 +205,8 @@ const updateItem = async (req, res) => {
             type: "positive"
           });
 
-          await Notification.create({
+          // CHANGED: Replaced await Notification.create with queueNotification
+          queueNotification({
             user: owner._id,
             type: 'AURA_UPDATE',
             title: 'Item Approved! 🎉',
@@ -241,7 +245,9 @@ const updateItem = async (req, res) => {
 
             if (creditsToGive > 0) {
               owner.account_credits = (owner.account_credits || 0) + creditsToGive;
-              await Notification.create({
+              
+              // CHANGED: Replaced await Notification.create with queueNotification
+              queueNotification({
                 user: owner._id,
                 type: 'CREDIT_ADDED',
                 title: 'Credits Received! 💰',
@@ -249,7 +255,8 @@ const updateItem = async (req, res) => {
                 metadata: { referenceId: item._id, amount: creditsToGive }
               });
             } else {
-              await Notification.create({
+              // CHANGED: Replaced await Notification.create with queueNotification
+              queueNotification({
                 user: owner._id,
                 type: 'SYSTEM_ALERT',
                 title: 'Credit Limit Reached ℹ️',
@@ -258,7 +265,8 @@ const updateItem = async (req, res) => {
               });
             }
           } else {
-            await Notification.create({
+            // CHANGED: Replaced await Notification.create with queueNotification
+            queueNotification({
               user: owner._id,
               type: 'SYSTEM_ALERT',
               title: 'Credit System Paused ⏸️',
@@ -274,7 +282,7 @@ const updateItem = async (req, res) => {
         console.error("Error giving rewards (Aura/Credits): ", rewardError);
       }
     }
-   
+    
     item = await Item.findByIdAndUpdate(req.params.id, updateData, { 
       new: true,
       runValidators: true

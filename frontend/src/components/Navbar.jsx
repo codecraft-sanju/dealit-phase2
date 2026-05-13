@@ -6,7 +6,6 @@ import axios from 'axios';
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
-// Animated Dealit Logo Text Component
 const DealitText = () => (
   <>
     <span className="dealit-logo-text">Dealit</span>
@@ -64,7 +63,7 @@ const Navbar = ({ user }) => {
           }
         }
 
-        // Fetch Unread Notification Count
+        // Fetch Unread Notification Count (Ab ye backend se optimized aayega)
         const notifResponse = await axios.get(`${API_URL}/notifications?limit=1`, { withCredentials: true });
         if (notifResponse.data.success) {
           setUnreadCount(notifResponse.data.unreadCount || 0);
@@ -128,7 +127,7 @@ const Navbar = ({ user }) => {
                     <span className="text-sm font-bold">{credits}</span>
                   </Link>
 
-                  {/* <-- NAYA CHANGE: Desktop ke liye notification icon with badge --> */}
+                  {/* Desktop ke liye notification icon with badge */}
                   <Link to="/notifications" className="text-gray-500 hover:text-[#A388E1] transition flex items-center gap-1.5 relative">
                     <div className="relative">
                       <Bell className="w-5 h-5" />

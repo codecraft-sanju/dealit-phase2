@@ -13,7 +13,8 @@ import {
   ShoppingBag,
   Info,
   Loader2,
-  AlertCircle 
+  AlertCircle,
+  CheckCheck // NAYA ICON ADD KIYA
 } from 'lucide-react';
 import axios from 'axios';
 import { formatDistanceToNow } from 'date-fns';
@@ -47,7 +48,6 @@ const NotificationsPage = () => {
   const observerTarget = useRef(null);
   const navigate = useNavigate();
 
-  // --> Push Notification Logic
   const [isPushEnabled, setIsPushEnabled] = useState(false);
   const [toast, setToast] = useState(null);
   const toastTimeoutRef = useRef(null);
@@ -151,7 +151,6 @@ const NotificationsPage = () => {
     }
   };
 
-  // <-- Fetching notifications -->
   const {
     data,
     isLoading,
@@ -178,6 +177,9 @@ const NotificationsPage = () => {
 
   const notifications = data?.pages.flatMap(page => page.data) || [];
 
+  // NAYA: Unread notifications ka count check karne ke liye taaki button dikhe
+  const hasUnread = notifications.some(n => !n.isRead);
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -199,6 +201,7 @@ const NotificationsPage = () => {
     };
   }, [observerTarget, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+  // NAYA: Individual notification read mutation
   const markAsReadMutation = useMutation({
     mutationFn: async (id) => {
       return await axios.put(`${API_URL}/notifications/${id}/read`, {}, { withCredentials: true });
@@ -225,6 +228,7 @@ const NotificationsPage = () => {
     },
   });
 
+  // NAYA: Mark All As Read mutation
   const markAllAsReadMutation = useMutation({
     mutationFn: async () => {
       return await axios.put(`${API_URL}/notifications/read-all`, {}, { withCredentials: true });
@@ -254,16 +258,12 @@ const NotificationsPage = () => {
     },
   });
 
-  useEffect(() => {
-    if (!isLoading && notifications.length > 0) {
-      const hasUnread = notifications.some(n => !n.isRead);
-      if (hasUnread) {
-        markAllAsReadMutation.mutate();
-      }
-    }
-  }, [isLoading, notifications]);
-
   const handleNotificationClick = (notif) => {
+    // NAYA: Sirf click karne par read mark hoga
+    if (!notif.isRead) {
+      markAsReadMutation.mutate(notif._id);
+    }
+
     const refId = notif.metadata?.referenceId;
 
     switch (notif.type) {
@@ -338,17 +338,30 @@ const NotificationsPage = () => {
             </h1>
           </div>
           
-          <button
-            onClick={handlePushToggle}
-            className="p-2 hover:bg-white/10 rounded-full transition-colors flex items-center justify-center relative"
-            title={isPushEnabled ? "Disable Push Notifications" : "Enable Push Notifications"}
-          >
-            {isPushEnabled ? (
-              <Bell className="w-5 h-5 text-emerald-300" />
-            ) : (
-              <BellOff className="w-5 h-5 text-white/70" />
+          <div className="flex items-center gap-2">
+            {/* NAYA: Mark all as read button, sirf tab dikhega jab unread hongi */}
+            {hasUnread && (
+              <button
+                onClick={() => markAllAsReadMutation.mutate()}
+                className="p-2 hover:bg-white/10 rounded-full transition-colors flex items-center justify-center relative"
+                title="Mark all as read"
+              >
+                <CheckCheck className="w-5 h-5 text-white/90" />
+              </button>
             )}
-          </button>
+
+            <button
+              onClick={handlePushToggle}
+              className="p-2 hover:bg-white/10 rounded-full transition-colors flex items-center justify-center relative"
+              title={isPushEnabled ? "Disable Push Notifications" : "Enable Push Notifications"}
+            >
+              {isPushEnabled ? (
+                <Bell className="w-5 h-5 text-emerald-300" />
+              ) : (
+                <BellOff className="w-5 h-5 text-white/70" />
+              )}
+            </button>
+          </div>
         </div>
       </header>
 

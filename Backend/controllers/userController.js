@@ -1,6 +1,9 @@
 const User = require('../models/User');
 const CreditSetting = require('../models/CreditSetting'); 
-const Notification = require('../models/Notification');
+
+
+const { queueNotification } = require('../services/queue');
+
 const AuraLog = require('../models/AuraLog'); 
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -125,7 +128,8 @@ const registerUser = async (req, res) => {
                 referrer.account_credits += setting.referralRewardCredits;
                 referrer.aura_points = (referrer.aura_points || 0) + 20; 
                 
-                await Notification.create({
+                // CHANGED: Replaced await Notification.create with queueNotification
+                queueNotification({
                   user: referrer._id,
                   type: 'CREDIT_ADDED',
                   title: 'Referral Bonus! ',
@@ -145,7 +149,8 @@ const registerUser = async (req, res) => {
                 referrer.account_credits += setting.milestoneReferralReward;
                 referrer.aura_points = (referrer.aura_points || 0) + 50; 
                 
-                await Notification.create({
+                // CHANGED: Replaced await Notification.create with queueNotification
+                queueNotification({
                   user: referrer._id,
                   type: 'CREDIT_ADDED',
                   title: 'Milestone Unlocked! 🚀',
@@ -524,7 +529,8 @@ const claimWelcomeBonus = async (req, res) => {
     user.hasClaimedWelcomeBonus = true;
     await user.save();
 
-    await Notification.create({
+    // CHANGED: Replaced await Notification.create with queueNotification
+    queueNotification({
       user: user._id,
       type: 'CREDIT_ADDED',
       title: 'Welcome Bonus! ',
@@ -642,7 +648,5 @@ module.exports = {
   toggleWishlist,
   getWishlist,
   claimWelcomeBonus,
-
   deleteUserProfile 
-
 };

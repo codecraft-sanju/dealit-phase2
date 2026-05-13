@@ -44,6 +44,8 @@ const notificationSchema = new mongoose.Schema({
 
 notificationSchema.index({ user: 1, created_at: -1 });
 
+notificationSchema.index({ user: 1, isRead: 1 });
+
 
 notificationSchema.post('save', async function(doc) {
   try {
@@ -83,6 +85,5 @@ notificationSchema.post('save', async function(doc) {
     console.error('Error in notification post-save hook:', error);
   }
 });
-
 
 module.exports = mongoose.model('Notification', notificationSchema);

@@ -9,12 +9,12 @@ const BottomNav = ({ user }) => {
   const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // Jab bhi user route change kare, unread notifications ka count update ho jaye
   useEffect(() => {
     if (!user) return;
     
     const fetchUnreadCount = async () => {
       try {
+        // Ab ye API backend optimizations ki wajah se instant response degi
         const response = await axios.get(`${API_URL}/notifications?limit=1`, { withCredentials: true });
         if (response.data.success) {
           setUnreadCount(response.data.unreadCount || 0);

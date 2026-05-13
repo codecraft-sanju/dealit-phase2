@@ -5,8 +5,10 @@ const CreditSetting = require('../models/CreditSetting');
 const Transaction = require('../models/Transaction'); 
 const crypto = require('crypto'); 
 
+// CHANGED: queueNotification ko import kiya aur purane Notification model ko hata diya (queue will handle it)
+const { queueNotification } = require('../services/queue');
+
 const { checkServiceability, createShiprocketOrder, addPickupLocation, generateAWB, generateLabel, schedulePickup, getTrackingByAWB } = require('../utils/shiprocket'); 
-const Notification = require('../models/Notification');
 const AuraLog = require('../models/AuraLog'); 
 
 const { refundRazorpayPayment } = require('./paymentController');
@@ -179,7 +181,8 @@ const createOrder = async (req, res) => {
       }
     });
 
-    await Notification.create({
+    // CHANGED: Replaced await Notification.create with queueNotification
+    queueNotification({
       user: buyerId,
       type: 'CREDIT_DEDUCTED',
       title: 'Order Confirmed! 🛒',
@@ -187,7 +190,8 @@ const createOrder = async (req, res) => {
       metadata: { amount: itemPrice, reason: 'item_purchase', referenceId: order._id }
     });
 
-    await Notification.create({
+    // CHANGED: Replaced await Notification.create with queueNotification
+    queueNotification({
       user: item.owner._id,
       type: 'ORDER_UPDATE',
       title: 'New Order Received! 🎉',
@@ -272,7 +276,8 @@ const updateOrderStatus = async (req, res) => {
       if (seller) {
         order.isSellerPaid = true;
 
-        await Notification.create({
+        // CHANGED: Replaced await Notification.create with queueNotification
+        queueNotification({
           user: seller._id,
           type: 'CREDIT_ADDED',
           title: 'Payment Released! 💰',
@@ -333,9 +338,9 @@ const updateOrderStatus = async (req, res) => {
         }
         
         order.paymentStatus = newPaymentStatus;
-        // --> CHANGE END
-
-        await Notification.create({
+        
+        // CHANGED: Replaced await Notification.create with queueNotification
+        queueNotification({
           user: buyer._id,
           type: 'CREDIT_ADDED',
           title: 'Order Cancelled & Refunded 🔄',
@@ -343,7 +348,6 @@ const updateOrderStatus = async (req, res) => {
           metadata: { amount: order.itemPrice, reason: 'order_refund', referenceId: order._id }
         });
         
-        /* --- CHANGE START: Use pipeline for atomic Math.max logic --- */
         const seller = await User.findByIdAndUpdate(order.seller, [
           {
             $set: {
@@ -363,7 +367,8 @@ const updateOrderStatus = async (req, res) => {
             type: "negative"
           });
 
-          await Notification.create({
+          // CHANGED: Replaced await Notification.create with queueNotification
+          queueNotification({
             user: seller._id,
             type: 'AURA_UPDATE', 
             title: 'Aura Penalty ⚠️',
@@ -600,7 +605,8 @@ const handleShiprocketWebhook = async (req, res) => {
         if (seller) {
           order.isSellerPaid = true;
 
-          await Notification.create({
+          // CHANGED: Replaced await Notification.create with queueNotification
+          queueNotification({
             user: seller._id,
             type: 'CREDIT_ADDED',
             title: 'Payment Released! 💰',
@@ -728,7 +734,8 @@ const autoCancelOverdueOrders = async () => {
           ]);
           /* --- CHANGE END --- */
 
-          await Notification.create({
+          // CHANGED: Replaced await Notification.create with queueNotification
+          queueNotification({
             user: buyerId,
             type: 'CREDIT_ADDED',
             title: 'Order Auto-Cancelled & Refunded 🔄',
@@ -743,7 +750,8 @@ const autoCancelOverdueOrders = async () => {
             type: "negative"
           });
 
-          await Notification.create({
+          // CHANGED: Replaced await Notification.create with queueNotification
+          queueNotification({
             user: sellerId,
             type: 'AURA_UPDATE',
             title: 'Aura Penalty ⚠️',
