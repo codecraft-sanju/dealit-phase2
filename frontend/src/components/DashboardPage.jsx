@@ -28,7 +28,7 @@ const DashboardPage = ({ user, setUser }) => {
   const { data: systemSettings = { maxAllowedListings: 5 } } = useQuery({
     queryKey: ['creditSettings'],
     queryFn: async () => {
-      const res = await axios.get(`${API_URL}/admin/credit-settings`, { withCredentials: true });
+      const res = await axios.get(`${API_URL}/admin/public-settings`, { withCredentials: true });
       return res.data.success && res.data.data ? res.data.data : { maxAllowedListings: 5 };
     },
     staleTime: 1000 * 60 * 30,
