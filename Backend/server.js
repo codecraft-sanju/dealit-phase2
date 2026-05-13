@@ -24,6 +24,10 @@ const cron = require('node-cron');
 const { autoCancelOverdueOrders } = require('./controllers/orderController');
 const { autoCancelOverdueBarters } = require('./controllers/barterController');
 
+// Models for the new sync cron job
+const User = require('./models/User');
+const Notification = require('./models/Notification');
+
 const app = express();
 
 connectDB();
@@ -99,5 +103,20 @@ app.listen(PORT, async () => {
     console.log('Running auto-cancel overdue barters cron job...');
     await autoCancelOverdueBarters();
     
+  });
+
+  //  Daily cron job to sync actual notification counts for all users (Runs at midnight)
+  cron.schedule('0 0 * * *', async () => {
+    console.log('Running daily notification count sync job...');
+    try {
+      const users = await User.find({}, '_id');
+      for (const user of users) {
+        const actualCount = await Notification.countDocuments({ user: user._id, isRead: false });
+        await User.findByIdAndUpdate(user._id, { unreadNotificationsCount: actualCount });
+      }
+      console.log(`Successfully synced notification counts for ${users.length} users.`);
+    } catch (error) {
+      console.error('Error running notification count sync job:', error);
+    }
   });
 });

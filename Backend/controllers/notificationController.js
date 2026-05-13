@@ -1,6 +1,5 @@
 const Notification = require('../models/Notification');
 const PushSubscription = require('../models/PushSubscription');
-
 const User = require('../models/User');
 
 const getUserNotifications = async (req, res) => {
@@ -49,10 +48,12 @@ const markAsRead = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Notification not found or already read' });
     }
 
-    // CHANGED: User model mein counter decrement kiya
-    await User.findByIdAndUpdate(req.user._id, {
-      $inc: { unreadNotificationsCount: -1 }
-    });
+    // CHANGED: User fetch karke check kiya taaki counter zero se niche na jaye
+    const user = await User.findById(req.user._id);
+    if (user && user.unreadNotificationsCount > 0) {
+      user.unreadNotificationsCount -= 1;
+      await user.save();
+    }
 
     res.status(200).json({ success: true, data: notification });
   } catch (error) {
@@ -130,10 +131,37 @@ const unsubscribePush = async (req, res) => {
   }
 };
 
+// ADDED: API route controller agar manual sync karna ho future mein
+const syncUnreadCount = async (req, res) => {
+  try {
+    const userId = req.user ? req.user._id : req.body.userId;
+    
+    if (!userId) {
+      return res.status(400).json({ success: false, message: 'User ID is required' });
+    }
+
+    const actualUnreadCount = await Notification.countDocuments({ user: userId, isRead: false });
+
+    await User.findByIdAndUpdate(userId, {
+      unreadNotificationsCount: actualUnreadCount
+    });
+
+    res.status(200).json({ 
+      success: true, 
+      message: 'Counter synced successfully',
+      actualUnreadCount 
+    });
+  } catch (error) {
+    console.error('Error syncing counter:', error);
+    res.status(500).json({ success: false, message: 'Server Error syncing counter' });
+  }
+};
+
 module.exports = {
   getUserNotifications,
   markAsRead,
   markAllAsRead,
   subscribePush,
-  unsubscribePush
+  unsubscribePush,
+  syncUnreadCount
 };

@@ -1,13 +1,19 @@
 version: '3.8'
 
 services:
-  # Redis Service (Naya Addition)
+ 
   redis:
     image: redis:alpine
     container_name: dealit-redis
     restart: always
+    # ADDED: Memory limit and eviction policy so it never crashes your t2.micro
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
     # Ports 6379 expose karne ki zaroorat nahi hai bahar ke liye, 
     # kyunki backend Docker network ke andar se hi connect kar lega.
+    deploy:
+      resources:
+        limits:
+          memory: 256M
     networks:
       - dealit-network
 
