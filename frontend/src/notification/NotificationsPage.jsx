@@ -12,7 +12,7 @@ import {
   ShoppingBag,
   Info,
   Loader2,
-  AlertCircle // <-- Pehle se imported hai, bas use karna hai
+  AlertCircle 
 } from 'lucide-react';
 import axios from 'axios';
 import { formatDistanceToNow } from 'date-fns';
