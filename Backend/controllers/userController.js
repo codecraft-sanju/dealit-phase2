@@ -10,7 +10,6 @@ const Item = require('../models/Item');
 const Order = require('../models/Order');
 const BarterRequest = require('../models/BarterRequest');
 
-
 const sendTokenResponse = (user, statusCode, res, message) => {
   const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
     expiresIn: '36500d' 
@@ -40,6 +39,7 @@ const sendTokenResponse = (user, statusCode, res, message) => {
       referralCode: user.referralCode,
       totalReferrals: user.totalReferrals,
       listedProductsCount: user.listedProductsCount || 0,
+      rewardedListingsCount: user.rewardedListingsCount || 0, // NEW CHANGE: Added to payload
       savedAddresses: user.savedAddresses || [] 
     }
   });
@@ -532,7 +532,7 @@ const claimWelcomeBonus = async (req, res) => {
       metadata: { amount: amount, reason: 'signup_bonus' }
     });
 
-   
+    
     await AuraLog.create({
       user: user._id,
       reason: "Welcome Bonus Claimed",
@@ -591,6 +591,8 @@ const deleteUserProfile = async (req, res) => {
     user.profilePic = ''; 
     user.account_credits = 0; 
     user.aura_points = 0;
+    user.listedProductsCount = 0;
+    user.rewardedListingsCount = 0; // NEW CHANGE: Reset rewarded listings count to 0
     user.referralCode = `DEL_${Date.now()}`;
     user.otp = undefined;
     user.resetPasswordOtp = undefined;
