@@ -49,80 +49,109 @@ const NotificationsPage = () => {
 
   // --> Push Notification Logic
   const [isPushEnabled, setIsPushEnabled] = useState(false);
+  const [toast, setToast] = useState(null);
+  const toastTimeoutRef = useRef(null);
   const publicVapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
 
+  const showToast = (text, type = 'info') => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    setToast({ text, type });
+    toastTimeoutRef.current = setTimeout(() => setToast(null), 3000);
+  };
+
   useEffect(() => {
-    if ('serviceWorker' in navigator && 'PushManager' in window) {
+    const mobileToken = localStorage.getItem('dealit_mobile_token');
+    if (mobileToken) {
+      const isMobilePushEnabled = localStorage.getItem('dealit_push_enabled') === 'true';
+      setIsPushEnabled(isMobilePushEnabled);
+    } else if ('serviceWorker' in navigator && 'PushManager' in window) {
       navigator.serviceWorker.ready.then((registration) => {
         registration.pushManager.getSubscription().then((subscription) => {
           setIsPushEnabled(!!subscription);
         });
       });
     }
+    
+    return () => {
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    };
   }, []);
 
   const urlBase64ToUint8Array = (base64String) => {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding)
-      .replace(/\-/g, '+')
-      .replace(/_/g, '/');
+    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
     const rawData = window.atob(base64);
     const outputArray = new Uint8Array(rawData.length);
-    for (let i = 0; i < rawData.length; ++i) {
-      outputArray[i] = rawData.charCodeAt(i);
+    for (let i = 0; i < rawData.length; ++i) { 
+      outputArray[i] = rawData.charCodeAt(i); 
     }
     return outputArray;
   };
 
   const handlePushToggle = async () => {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-      alert('Push notifications are not supported by your browser.');
-      return;
-    }
-
-    if (!publicVapidKey) {
-      alert("Push notification configuration is missing. Please contact admin.");
-      console.error("VITE_VAPID_PUBLIC_KEY is not defined in frontend .env");
-      return;
-    }
-
-    // Optimistic UI update: instantly change the button state to feel buttery smooth
+    const mobileToken = localStorage.getItem('dealit_mobile_token');
     const previousState = isPushEnabled;
     setIsPushEnabled(!previousState); 
 
     try {
-      const registration = await navigator.serviceWorker.ready;
+      if (mobileToken) {
+        if (previousState) {
+          await axios.post(`${API_URL}/notifications/unsubscribe`, { type: 'expo', token: mobileToken }, { withCredentials: true });
+          localStorage.setItem('dealit_push_enabled', 'false');
+          showToast('Push Alerts Disabled', 'off');
+        } else {
+          await axios.post(`${API_URL}/notifications/subscribe`, { type: 'expo', token: mobileToken }, { withCredentials: true });
+          localStorage.setItem('dealit_push_enabled', 'true');
+          showToast('Push Alerts Enabled', 'on');
+        }
+        return; 
+      }
 
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        showToast('Not supported on this browser', 'error');
+        setIsPushEnabled(previousState);
+        return;
+      }
+      
+      if (!publicVapidKey) {
+        showToast('Configuration missing', 'error');
+        console.error("VITE_VAPID_PUBLIC_KEY is not defined");
+        setIsPushEnabled(previousState);
+        return;
+      }
+
+      const registration = await navigator.serviceWorker.ready;
+      
       if (previousState) {
-        // Was enabled, now disabling
         const subscription = await registration.pushManager.getSubscription();
         if (subscription) {
           await subscription.unsubscribe();
-          await axios.post(`${API_URL}/notifications/unsubscribe`, { endpoint: subscription.endpoint }, { withCredentials: true });
+          await axios.post(`${API_URL}/notifications/unsubscribe`, { type: 'web', endpoint: subscription.endpoint }, { withCredentials: true });
         }
+        showToast('Push Alerts Disabled', 'off');
       } else {
-        // Was disabled, now enabling
         const permission = await Notification.requestPermission();
         if (permission === 'granted') {
           const subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
           });
-          await axios.post(`${API_URL}/notifications/subscribe`, subscription, { withCredentials: true });
+          const subData = subscription.toJSON();
+          await axios.post(`${API_URL}/notifications/subscribe`, { type: 'web', ...subData }, { withCredentials: true });
+          showToast('Push Alerts Enabled', 'on');
         } else {
-          alert('Notification permission denied.');
-          // Revert UI if permission is denied
-          setIsPushEnabled(false); 
+          showToast('Permission Denied', 'error');
+          setIsPushEnabled(false);
         }
       }
     } catch (error) {
       console.error('Error toggling push notifications:', error);
-      // Revert UI if anything fails in the background
+      showToast('Action Failed', 'error');
       setIsPushEnabled(previousState); 
     }
   };
 
-  // <-- 1. Fetching notifications with useInfiniteQuery -->
+  // <-- Fetching notifications -->
   const {
     data,
     isLoading,
@@ -149,7 +178,6 @@ const NotificationsPage = () => {
 
   const notifications = data?.pages.flatMap(page => page.data) || [];
 
-  // <-- Intersection Observer to trigger fetchNextPage when scrolling to bottom -->
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -171,7 +199,6 @@ const NotificationsPage = () => {
     };
   }, [observerTarget, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // <-- 2. Mark Single as Read with Optimistic Update (Updated for Infinite Query structure) -->
   const markAsReadMutation = useMutation({
     mutationFn: async (id) => {
       return await axios.put(`${API_URL}/notifications/${id}/read`, {}, { withCredentials: true });
@@ -198,7 +225,6 @@ const NotificationsPage = () => {
     },
   });
 
-  // <-- 3. Mark All as Read with Optimistic Update (Updated for Infinite Query structure) -->
   const markAllAsReadMutation = useMutation({
     mutationFn: async () => {
       return await axios.put(`${API_URL}/notifications/read-all`, {}, { withCredentials: true });
@@ -314,7 +340,7 @@ const NotificationsPage = () => {
           
           <button
             onClick={handlePushToggle}
-            className="p-2 hover:bg-white/10 rounded-full transition-colors flex items-center justify-center"
+            className="p-2 hover:bg-white/10 rounded-full transition-colors flex items-center justify-center relative"
             title={isPushEnabled ? "Disable Push Notifications" : "Enable Push Notifications"}
           >
             {isPushEnabled ? (
@@ -404,6 +430,29 @@ const NotificationsPage = () => {
           </div>
         )}
       </main>
+
+      {/* Floating Animated Toast */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9, x: "-50%" }}
+            animate={{ opacity: 1, y: 0, scale: 1, x: "-50%" }}
+            exit={{ opacity: 0, y: 20, scale: 0.9, x: "-50%" }}
+            transition={{ type: "spring", stiffness: 400, damping: 25 }}
+            className="fixed bottom-24 left-1/2 z-[100] flex items-center gap-3 bg-gray-900/95 backdrop-blur-md text-white px-5 py-3 rounded-full shadow-[0_10px_40px_rgba(0,0,0,0.3)] border border-white/10 whitespace-nowrap"
+          >
+            {toast.type === 'on' ? (
+              <Bell className="w-5 h-5 text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
+            ) : toast.type === 'off' ? (
+              <BellOff className="w-5 h-5 text-gray-400" />
+            ) : (
+              <AlertCircle className="w-5 h-5 text-red-400" />
+            )}
+            <span className="font-semibold text-sm tracking-wide">{toast.text}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 };

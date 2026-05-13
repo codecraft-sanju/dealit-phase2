@@ -6,18 +6,24 @@ const pushSubscriptionSchema = new mongoose.Schema({
     ref: 'User', 
     required: true 
   },
+  
+  type: {
+    type: String,
+    enum: ['web', 'expo'],
+    default: 'web'
+  },
+
+  expoToken: { type: String },
   endpoint: { 
-    type: String, 
-    required: true,
-    unique: true 
+    type: String
   },
   expirationTime: {
     type: Date,
     default: null
   },
   keys: {
-    p256dh: { type: String, required: true },
-    auth: { type: String, required: true }
+    p256dh: { type: String },
+    auth: { type: String }
   },
   created_at: { 
     type: Date, 

@@ -1,7 +1,5 @@
 const Notification = require('../models/Notification');
-
 const PushSubscription = require('../models/PushSubscription');
-
 
 const getUserNotifications = async (req, res) => {
   try {
@@ -69,21 +67,30 @@ const markAllAsRead = async (req, res) => {
   }
 };
 
-
+// CHANGED: Logic to handle both expo and web subscriptions
 const subscribePush = async (req, res) => {
   try {
-    const subscription = req.body;
+    const { type, token, endpoint, keys, expirationTime } = req.body;
     
-    await PushSubscription.findOneAndUpdate(
-      { endpoint: subscription.endpoint },
-      { 
-        user: req.user._id,
-        endpoint: subscription.endpoint,
-        keys: subscription.keys,
-        expirationTime: subscription.expirationTime
-      },
-      { upsert: true, new: true }
-    );
+    if (type === 'expo') {
+      await PushSubscription.findOneAndUpdate(
+        { expoToken: token, user: req.user._id },
+        { type: 'expo', expoToken: token, user: req.user._id },
+        { upsert: true, new: true }
+      );
+    } else {
+      await PushSubscription.findOneAndUpdate(
+        { endpoint: endpoint },
+        { 
+          type: 'web',
+          user: req.user._id,
+          endpoint: endpoint,
+          keys: keys,
+          expirationTime: expirationTime
+        },
+        { upsert: true, new: true }
+      );
+    }
 
     res.status(201).json({ success: true, message: 'Subscribed to push notifications' });
   } catch (error) {
@@ -92,11 +99,16 @@ const subscribePush = async (req, res) => {
   }
 };
 
+// CHANGED: Logic to handle unsubscribe for both expo and web
 const unsubscribePush = async (req, res) => {
   try {
-    const { endpoint } = req.body;
+    const { type, token, endpoint } = req.body;
     
-    await PushSubscription.findOneAndDelete({ endpoint, user: req.user._id });
+    if (type === 'expo') {
+      await PushSubscription.findOneAndDelete({ expoToken: token, user: req.user._id });
+    } else {
+      await PushSubscription.findOneAndDelete({ endpoint, user: req.user._id });
+    }
     
     res.status(200).json({ success: true, message: 'Unsubscribed from push notifications' });
   } catch (error) {
@@ -105,13 +117,10 @@ const unsubscribePush = async (req, res) => {
   }
 };
 
-
 module.exports = {
   getUserNotifications,
   markAsRead,
   markAllAsRead,
-
   subscribePush,
   unsubscribePush
-  
 };
