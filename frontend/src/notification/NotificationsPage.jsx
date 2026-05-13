@@ -13,8 +13,7 @@ import {
   ShoppingBag,
   Info,
   Loader2,
-  AlertCircle,
-  CheckCheck // NAYA ICON ADD KIYA
+  AlertCircle
 } from 'lucide-react';
 import axios from 'axios';
 import { formatDistanceToNow } from 'date-fns';
@@ -177,8 +176,16 @@ const NotificationsPage = () => {
 
   const notifications = data?.pages.flatMap(page => page.data) || [];
 
-  // NAYA: Unread notifications ka count check karne ke liye taaki button dikhe
   const hasUnread = notifications.some(n => !n.isRead);
+
+  useEffect(() => {
+    if (hasUnread) {
+      const timer = setTimeout(() => {
+        markAllAsReadMutation.mutate();
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [hasUnread]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -201,7 +208,6 @@ const NotificationsPage = () => {
     };
   }, [observerTarget, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // NAYA: Individual notification read mutation
   const markAsReadMutation = useMutation({
     mutationFn: async (id) => {
       return await axios.put(`${API_URL}/notifications/${id}/read`, {}, { withCredentials: true });
@@ -228,7 +234,6 @@ const NotificationsPage = () => {
     },
   });
 
-  // NAYA: Mark All As Read mutation
   const markAllAsReadMutation = useMutation({
     mutationFn: async () => {
       return await axios.put(`${API_URL}/notifications/read-all`, {}, { withCredentials: true });
@@ -255,11 +260,11 @@ const NotificationsPage = () => {
     },
     onSettled: () => {
       queryClient.invalidateQueries(['notifications']);
+      window.dispatchEvent(new Event('notificationsRead'));
     },
   });
 
   const handleNotificationClick = (notif) => {
-    // NAYA: Sirf click karne par read mark hoga
     if (!notif.isRead) {
       markAsReadMutation.mutate(notif._id);
     }
@@ -339,17 +344,6 @@ const NotificationsPage = () => {
           </div>
           
           <div className="flex items-center gap-2">
-            {/* NAYA: Mark all as read button, sirf tab dikhega jab unread hongi */}
-            {hasUnread && (
-              <button
-                onClick={() => markAllAsReadMutation.mutate()}
-                className="p-2 hover:bg-white/10 rounded-full transition-colors flex items-center justify-center relative"
-                title="Mark all as read"
-              >
-                <CheckCheck className="w-5 h-5 text-white/90" />
-              </button>
-            )}
-
             <button
               onClick={handlePushToggle}
               className="p-2 hover:bg-white/10 rounded-full transition-colors flex items-center justify-center relative"

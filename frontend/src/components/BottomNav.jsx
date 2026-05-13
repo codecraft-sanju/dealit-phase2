@@ -25,6 +25,16 @@ const BottomNav = ({ user }) => {
     };
 
     fetchUnreadCount();
+
+    const handleNotificationsRead = () => {
+      setUnreadCount(0);
+    };
+
+    window.addEventListener('notificationsRead', handleNotificationsRead);
+
+    return () => {
+      window.removeEventListener('notificationsRead', handleNotificationsRead);
+    };
   }, [location.pathname, user]);
 
   return (

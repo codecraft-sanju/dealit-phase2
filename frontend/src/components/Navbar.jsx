@@ -45,12 +45,10 @@ const Navbar = ({ user }) => {
   const [credits, setCredits] = useState(user?.account_credits || 0);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // Credits aur Notifications ek sath fetch kar rahe hain
   useEffect(() => {
     const fetchUserData = async () => {
       if (!user) return;
       try {
-        // Fetch Credits
         const profileResponse = await axios.get(`${API_URL}/users/profile`, { withCredentials: true });
         if (profileResponse.data.success) {
           const freshCredits = profileResponse.data.data.account_credits;
@@ -63,7 +61,6 @@ const Navbar = ({ user }) => {
           }
         }
 
-        // Fetch Unread Notification Count (Ab ye backend se optimized aayega)
         const notifResponse = await axios.get(`${API_URL}/notifications?limit=1`, { withCredentials: true });
         if (notifResponse.data.success) {
           setUnreadCount(notifResponse.data.unreadCount || 0);
@@ -74,6 +71,16 @@ const Navbar = ({ user }) => {
     };
 
     fetchUserData();
+
+    const handleNotificationsRead = () => {
+      setUnreadCount(0);
+    };
+
+    window.addEventListener('notificationsRead', handleNotificationsRead);
+
+    return () => {
+      window.removeEventListener('notificationsRead', handleNotificationsRead);
+    };
   }, [user, location.pathname]);
 
   return (
