@@ -194,7 +194,7 @@ const updateItemStatus = async (req, res) => {
       });
     }
 
-    // SMART CREDIT ASSIGNMENT AND DETAILED NOTIFICATIONS
+    // SMART CREDIT ASSIGNMENT LOGIC (With Lifetime Limit Tracker)
     if (status === 'active' && !wasAlreadyActive) {
       let setting = await CreditSetting.findOne();
       if (!setting) {
@@ -212,12 +212,15 @@ const updateItemStatus = async (req, res) => {
             creditsToGive = Number(awarded_credits);
             detailedMessage = `Admin has manually awarded you ${creditsToGive} credits for your approved item "${item.title}".`;
           } else {
-            // 2. Automated System Logic
-            const activeItemsCount = await Item.countDocuments({ owner: item.owner, status: 'active' });
+            // 2. Automated System Logic - LOOPHOLE FIXED HERE
+            const rewardedCount = user.rewardedListingsCount || 0;
 
-            if (activeItemsCount <= setting.maxListingsRewarded) {
+            if (rewardedCount < setting.maxListingsRewarded) {
               creditsToGive = setting.creditsPerListing;
               detailedMessage = `You received the standard reward of ${creditsToGive} credits for successfully listing your item "${item.title}".`;
+              
+              // Increment lifetime reward counter to prevent future farming
+              user.rewardedListingsCount = rewardedCount + 1;
             } else {
               creditsToGive = 0;
               detailedMessage = `Your item "${item.title}" was approved, but you did not receive credits because you have already reached the maximum reward limit of ${setting.maxListingsRewarded} rewarded listings.`;
@@ -237,6 +240,8 @@ const updateItemStatus = async (req, res) => {
               metadata: { referenceId: item._id, amount: creditsToGive }
             });
           } else {
+             // Save changes if any (even if credits were 0 but count updated)
+             await user.save();
              // Notify user why they got 0 credits
              await Notification.create({
               user: item.owner,

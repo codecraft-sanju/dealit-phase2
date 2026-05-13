@@ -351,9 +351,11 @@ const AddItemPage = ({ user, setUser }) => {
   const [processingAIIndex, setProcessingAIIndex] = useState(null);
   const [analyzeProgress, setAnalyzeProgress] = useState(0);
 
-  const listedCount = user?.listedProductsCount || 0;
-  const isLimitReached = listedCount >= systemSettings.maxAllowedListings;
+  // YAHAN LOGIC SEPARATE KIYA HAI (Loophole fix for frontend)
+  const activeListedCount = user?.listedProductsCount || 0;
+  const rewardedCount = user?.rewardedListingsCount || 0;
   
+  const isLimitReached = activeListedCount >= systemSettings.maxAllowedListings;
   const minImages = systemSettings.minImagesRequired || 3;
 
   const handleInputChange = (e) => {
@@ -883,24 +885,24 @@ const AddItemPage = ({ user, setUser }) => {
               </div>
               <div className="w-full">
                 {systemSettings.isCreditSystemEnabled ? (
-                  listedCount < systemSettings.maxListingsRewarded ? (
+                  rewardedCount < systemSettings.maxListingsRewarded ? (
                     <>
                       <div className="flex justify-between items-center">
                         <h4 className="text-[11px] sm:text-xs font-bold text-purple-800">Earn {systemSettings.creditsPerListing} Credits! 🪙</h4>
-                        <span className="text-[9px] sm:text-[10px] font-bold bg-purple-200 text-purple-800 px-1.5 py-0.5 rounded-md">{listedCount}/{systemSettings.maxAllowedListings} Listed</span>
+                        <span className="text-[9px] sm:text-[10px] font-bold bg-purple-200 text-purple-800 px-1.5 py-0.5 rounded-md">{activeListedCount}/{systemSettings.maxAllowedListings} Listed</span>
                       </div>
                       <p className="text-[10px] sm:text-[11px] text-purple-600 mt-0.5 leading-tight">
-                        Reward valid for your next <strong>{systemSettings.maxListingsRewarded - listedCount} approval(s)</strong>. Max <strong>{systemSettings.maxAllowedListings} items</strong> allowed.
+                        Reward valid for your next <strong>{systemSettings.maxListingsRewarded - rewardedCount} approval(s)</strong>. Max <strong>{systemSettings.maxAllowedListings} items</strong> allowed.
                       </p>
                     </>
                   ) : (
                     <>
                       <div className="flex justify-between items-center">
                         <h4 className="text-[11px] sm:text-xs font-bold text-purple-800">Free Listing Available 📦</h4>
-                        <span className="text-[9px] sm:text-[10px] font-bold bg-purple-200 text-purple-800 px-1.5 py-0.5 rounded-md">{listedCount}/{systemSettings.maxAllowedListings} Listed</span>
+                        <span className="text-[9px] sm:text-[10px] font-bold bg-purple-200 text-purple-800 px-1.5 py-0.5 rounded-md">{activeListedCount}/{systemSettings.maxAllowedListings} Listed</span>
                       </div>
                       <p className="text-[10px] sm:text-[11px] text-purple-600 mt-0.5 leading-tight">
-                        You've claimed all rewards! You can still list <strong>{systemSettings.maxAllowedListings - listedCount} more item(s)</strong> for free.
+                        You've claimed all rewards! You can still list <strong>{systemSettings.maxAllowedListings - activeListedCount} more item(s)</strong> for free.
                       </p>
                     </>
                   )
@@ -908,10 +910,10 @@ const AddItemPage = ({ user, setUser }) => {
                   <>
                     <div className="flex justify-between items-center">
                       <h4 className="text-[11px] sm:text-xs font-bold text-purple-800">Free Listing Available 📦</h4>
-                      <span className="text-[9px] sm:text-[10px] font-bold bg-purple-200 text-purple-800 px-1.5 py-0.5 rounded-md">{listedCount}/{systemSettings.maxAllowedListings} Listed</span>
+                      <span className="text-[9px] sm:text-[10px] font-bold bg-purple-200 text-purple-800 px-1.5 py-0.5 rounded-md">{activeListedCount}/{systemSettings.maxAllowedListings} Listed</span>
                     </div>
                     <p className="text-[10px] sm:text-[11px] text-purple-600 mt-0.5 leading-tight">
-                      You can list <strong>{systemSettings.maxAllowedListings - listedCount} more item(s)</strong>. Add clear pictures and details!
+                      You can list <strong>{systemSettings.maxAllowedListings - activeListedCount} more item(s)</strong>. Add clear pictures and details!
                     </p>
                   </>
                 )}
@@ -923,7 +925,7 @@ const AddItemPage = ({ user, setUser }) => {
                 <h4 className="text-[11px] sm:text-xs font-bold text-red-800">Listing Limit Reached</h4>
                 <p className="text-[10px] sm:text-[11px] text-red-600 mt-0.5">Maximum {systemSettings.maxAllowedListings} items allowed.</p>
               </div>
-              <span className="text-[9px] sm:text-[10px] font-bold bg-red-200 text-red-800 px-1.5 py-0.5 rounded-md">{listedCount}/{systemSettings.maxAllowedListings}</span>
+              <span className="text-[9px] sm:text-[10px] font-bold bg-red-200 text-red-800 px-1.5 py-0.5 rounded-md">{activeListedCount}/{systemSettings.maxAllowedListings}</span>
             </div>
           )}
 

@@ -1,3 +1,4 @@
+// itemController.js
 const Item = require('../models/Item');
 const User = require('../models/User'); 
 const CreditSetting = require('../models/CreditSetting'); 
@@ -165,7 +166,7 @@ const updateItem = async (req, res) => {
     }
 
     let updateData = {};
-    const { awarded_credits } = req.body; // Extract in case admin sends it during update
+    const { awarded_credits } = req.body; 
 
     if (isAdmin) {
       updateData = { ...req.body };
@@ -209,7 +210,7 @@ const updateItem = async (req, res) => {
             metadata: { reason: 'item_approved', referenceId: item._id }
           });
 
-          // 2. CREDIT SYSTEM LOGIC WITH DETAILED ENGLISH NOTIFICATIONS
+          // 2. CREDIT SYSTEM LOGIC WITH LIFETIME TRACKER
           let setting = await CreditSetting.findOne();
           if (!setting) {
             setting = { isCreditSystemEnabled: true, creditsPerListing: 50, maxListingsRewarded: 3 };
@@ -223,11 +224,15 @@ const updateItem = async (req, res) => {
               creditsToGive = Number(awarded_credits);
               detailedMessage = `Admin has manually awarded you ${creditsToGive} credits for your approved item "${item.title}".`;
             } else {
-              const activeItemsCount = await Item.countDocuments({ owner: item.owner, status: 'active' });
+              // LOOPHOLE FIXED HERE
+              const rewardedCount = owner.rewardedListingsCount || 0;
 
-              if (activeItemsCount <= setting.maxListingsRewarded) {
+              if (rewardedCount < setting.maxListingsRewarded) {
                 creditsToGive = setting.creditsPerListing;
                 detailedMessage = `You received the standard reward of ${creditsToGive} credits for successfully listing your item "${item.title}".`;
+                
+                // Increase lifetime count
+                owner.rewardedListingsCount = rewardedCount + 1;
               } else {
                 creditsToGive = 0;
                 detailedMessage = `Your item "${item.title}" was approved, but you did not receive credits because you have already reached the maximum reward limit of ${setting.maxListingsRewarded} rewarded listings.`;
@@ -262,7 +267,7 @@ const updateItem = async (req, res) => {
             });
           }
 
-          // Save both Aura and Credits
+          // Save both Aura, Credits, and RewardedCount
           await owner.save();
         }
       } catch (rewardError) {

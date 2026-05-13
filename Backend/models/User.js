@@ -48,6 +48,10 @@ const userSchema = new mongoose.Schema({
   aura_points: { type: Number, default: 100 }, 
   
   listedProductsCount: { type: Number, default: 0 },
+  
+ 
+  rewardedListingsCount: { type: Number, default: 0 },
+  
   hasClaimedWelcomeBonus: { type: Boolean, default: false },
   referralCode: { type: String, unique: true, sparse: true },
   referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
@@ -58,14 +62,11 @@ const userSchema = new mongoose.Schema({
   resetPasswordOtp: { type: String },
   resetPasswordOtpExpiry: { type: Date },
   
-
   isDeleted: { type: Boolean, default: false },
-
 
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now }
 });
-
 
 userSchema.index({ full_name: 'text', email: 'text', phone: 'text', city: 'text' });
 userSchema.index({ created_at: -1 });
