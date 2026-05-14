@@ -37,6 +37,17 @@ const refundRazorpayPayment = async (paymentId, amount) => {
   }
 };
 
+/* --- NAYA CHANGE START: Razorpay se exact amount verify karne ka function --- */
+const fetchRazorpayPaymentInfo = async (paymentId) => {
+  try {
+    const payment = await razorpayInstance.payments.fetch(paymentId);
+    return { success: true, data: payment };
+  } catch (error) {
+    console.error('Error fetching Razorpay payment info:', error);
+    return { success: false, error };
+  }
+};
+/* --- NAYA CHANGE END --- */
 
 const createOrder = async (req, res) => {
   try {
@@ -119,7 +130,7 @@ const verifyPayment = async (req, res) => {
         { new: true }
       ).select('-password'); 
 
-      // CHANGED: Replaced await Notification.create with queueNotification
+     
       queueNotification({
         user: userId,
         type: 'CREDIT_ADDED',
@@ -188,7 +199,7 @@ const razorpayWebhook = async (req, res) => {
            { $inc: { account_credits: actualAmountInINR } }
          );
 
-         // CHANGED: Replaced await Notification.create with queueNotification
+        
          queueNotification({
            user: userId,
            type: 'CREDIT_ADDED',
@@ -202,7 +213,7 @@ const razorpayWebhook = async (req, res) => {
          });
       }
     } 
-    // Razorpay refund successful hone par webhook trigger handle kiya
+  
     else if (event === 'refund.processed') {
       const refundEntity = req.body.payload.refund.entity;
       const paymentId = refundEntity.payment_id;
@@ -213,7 +224,7 @@ const razorpayWebhook = async (req, res) => {
          order.paymentStatus = 'refunded';
          await order.save();
 
-         // CHANGED: Replaced await Notification.create with queueNotification
+       
          queueNotification({
            user: order.buyer,
            type: 'CREDIT_ADDED',
@@ -223,7 +234,7 @@ const razorpayWebhook = async (req, res) => {
          });
       }
     }
-    // --> MODIFICATION START: Refund failed webhook catch kiya
+   
     else if (event === 'refund.failed') {
       const refundEntity = req.body.payload.refund.entity;
       const paymentId = refundEntity.payment_id;
@@ -234,7 +245,7 @@ const razorpayWebhook = async (req, res) => {
          order.paymentStatus = 'refund_failed';
          await order.save();
 
-         // CHANGED: Replaced await Notification.create with queueNotification
+        
          queueNotification({
            user: order.buyer,
            type: 'SYSTEM_ALERT',
@@ -244,7 +255,7 @@ const razorpayWebhook = async (req, res) => {
          });
       }
     }
-    // --> MODIFICATION END
+   
 
     res.status(200).send('OK');
   } catch (error) {
@@ -253,7 +264,7 @@ const razorpayWebhook = async (req, res) => {
   }
 };
 
-// NAYA: Backend Pagination & Filtering Logic
+
 const getUserTransactions = async (req, res) => {
   try {
     const userId = req.user._id; 
@@ -298,5 +309,6 @@ module.exports = {
   razorpayWebhook,
   getUserTransactions,
   verifyRazorpayConnection,
-  refundRazorpayPayment 
+  refundRazorpayPayment,
+  fetchRazorpayPaymentInfo 
 };

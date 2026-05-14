@@ -11,7 +11,10 @@ const crypto = require('crypto');
 const Order = require('../models/Order');
 const Transaction = require('../models/Transaction');
 
-const { refundRazorpayPayment } = require('./paymentController');
+/* --- NAYA CHANGE START: Shiprocket tools aur Razorpay fetch ko import kiya --- */
+const { refundRazorpayPayment, fetchRazorpayPaymentInfo } = require('./paymentController');
+const { checkServiceability } = require('../utils/shiprocket');
+/* --- NAYA CHANGE END --- */
 
 const createBarterRequest = async (req, res) => {
   try {
@@ -272,13 +275,27 @@ const updateSwapStatus = async (req, res) => {
         return res.status(400).json({ success: false, message: 'Shipping payment details missing' });
       }
 
-      const finalShippingCost = paymentDetails.amount; 
-      
-      // --- NAYA CHANGE START: Sanity check to prevent manual tampering of shipping cost to Rs 1 ---
-      if (finalShippingCost < 30) {
-        return res.status(400).json({ success: false, message: 'Invalid shipping amount detected.' });
+      /* --- NAYA CHANGE START: Backend pe dynamically cost calculate karna --- */
+      let setting = await CreditSetting.findOne();
+      let finalShippingCost = 60; // Default fallback
+
+      if (setting) {
+        if (setting.shippingMethod === 'dynamic') {
+          // Owner is receiving 'offered_item' from 'requester'. Pickup will be from requester's place.
+          const itemOwner = await User.findById(barter.offered_item.owner);
+          const pickupPincode = itemOwner?.pickupAddress?.pincode;
+          
+          if (!pickupPincode) {
+             return res.status(400).json({ success: false, message: 'Partner pickup pincode missing. Cannot calculate dynamic shipping.' });
+          }
+          const weight = barter.offered_item.weight || 0.5;
+          const dimensions = barter.offered_item.dimensions || { length: 10, width: 10, height: 10 };
+          finalShippingCost = await checkServiceability(pickupPincode, shippingAddress.pincode, weight, dimensions);
+        } else {
+          finalShippingCost = setting.flatShippingCost !== undefined ? setting.flatShippingCost : 60;
+        }
       }
-      // --- NAYA CHANGE END ---
+      /* --- NAYA CHANGE END --- */
 
       const rzpOrderId = paymentDetails.razorpay_order_id;
       const rzpPaymentId = paymentDetails.razorpay_payment_id;
@@ -293,6 +310,17 @@ const updateSwapStatus = async (req, res) => {
       if (expectedSignature !== razorpay_signature) {
         return res.status(400).json({ success: false, message: 'Invalid payment signature. Shipping verification failed.' });
       }
+
+      /* --- NAYA CHANGE START: Amount Cross Verification with Razorpay API --- */
+      const paymentCheck = await fetchRazorpayPaymentInfo(rzpPaymentId);
+      if (!paymentCheck.success) {
+        return res.status(400).json({ success: false, message: 'Failed to verify payment details with Razorpay.' });
+      }
+      const actualPaidINR = paymentCheck.data.amount / 100;
+      if (actualPaidINR < finalShippingCost) {
+        return res.status(400).json({ success: false, message: `Payment manipulation detected. Expected ₹${finalShippingCost} but received ₹${actualPaidINR}.` });
+      }
+      /* --- NAYA CHANGE END --- */
 
       await Transaction.create({
         user: userId,
@@ -384,7 +412,6 @@ const completeSwapPayment = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Payment time has expired' });
     }
 
-    // --- NAYA CHANGE START: Check credits BEFORE processing Razorpay to prevent trap ---
     const targetValue = barter.item.estimated_value || 0;
     const offeredValue = barter.offered_item.estimated_value || 0;
     const requiredCredits = Math.max(0, targetValue - offeredValue);
@@ -396,7 +423,7 @@ const completeSwapPayment = async (req, res) => {
         message: `Insufficient credits. You need ${requiredCredits} credits to cover the difference.` 
       });
     }
-    // --- NAYA CHANGE END ---
+  
 
     if (!shippingAddress || !shippingAddress.fullName || !shippingAddress.phone || !shippingAddress.houseNo || !shippingAddress.areaStreet || !shippingAddress.city || !shippingAddress.state || !shippingAddress.pincode) {
       return res.status(400).json({ success: false, message: 'Incomplete shipping address.' });
@@ -406,13 +433,27 @@ const completeSwapPayment = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Shipping payment details missing' });
     }
 
-    const finalShippingCost = paymentDetails.amount; 
+  
+    let setting = await CreditSetting.findOne();
+    let finalShippingCost = 60; // Default fallback
 
-    // --- NAYA CHANGE START: Sanity Check ---
-    if (finalShippingCost < 30) {
-      return res.status(400).json({ success: false, message: 'Invalid shipping amount detected.' });
+    if (setting) {
+      if (setting.shippingMethod === 'dynamic') {
+      
+        const itemOwner = await User.findById(barter.item.owner);
+        const pickupPincode = itemOwner?.pickupAddress?.pincode;
+        
+        if (!pickupPincode) {
+           return res.status(400).json({ success: false, message: 'Partner pickup pincode missing. Cannot calculate dynamic shipping.' });
+        }
+        const weight = barter.item.weight || 0.5;
+        const dimensions = barter.item.dimensions || { length: 10, width: 10, height: 10 };
+        finalShippingCost = await checkServiceability(pickupPincode, shippingAddress.pincode, weight, dimensions);
+      } else {
+        finalShippingCost = setting.flatShippingCost !== undefined ? setting.flatShippingCost : 60;
+      }
     }
-    // --- NAYA CHANGE END ---
+    /* --- NAYA CHANGE END --- */
 
     const rzpOrderId = paymentDetails.razorpay_order_id;
     const rzpPaymentId = paymentDetails.razorpay_payment_id;
@@ -427,6 +468,17 @@ const completeSwapPayment = async (req, res) => {
     if (expectedSignature !== razorpay_signature) {
       return res.status(400).json({ success: false, message: 'Invalid payment signature.' });
     }
+
+   
+    const paymentCheck = await fetchRazorpayPaymentInfo(rzpPaymentId);
+    if (!paymentCheck.success) {
+      return res.status(400).json({ success: false, message: 'Failed to verify payment details with Razorpay.' });
+    }
+    const actualPaidINR = paymentCheck.data.amount / 100;
+    if (actualPaidINR < finalShippingCost) {
+      return res.status(400).json({ success: false, message: `Payment manipulation detected. Expected ₹${finalShippingCost} but received ₹${actualPaidINR}.` });
+    }
+    /* --- NAYA CHANGE END --- */
 
     await Transaction.create({
       user: userId,
@@ -467,7 +519,7 @@ const completeSwapPayment = async (req, res) => {
         });
       }
       
-      // CHANGED: Replaced await Notification.create with queueNotification
+    
       queueNotification({
         user: barter.requester._id,
         type: 'CREDIT_DEDUCTED',
@@ -477,11 +529,11 @@ const completeSwapPayment = async (req, res) => {
       });
     }
 
-    // Mark items as reserved
+  
     await Item.findByIdAndUpdate(barter.item._id, { status: 'reserved' });
     await Item.findByIdAndUpdate(barter.offered_item._id, { status: 'reserved' });
 
-    // Cancel other pending requests
+   
     await BarterRequest.updateMany(
       {
         _id: { $ne: barter._id },
@@ -530,7 +582,7 @@ const completeSwapPayment = async (req, res) => {
       razorpay_payment_id: barter.owner_razorpay_payment_id,
     });
 
-    // CHANGED: Replaced await Notification.create with queueNotification
+  
     queueNotification({
       user: barter.owner._id,
       type: 'ORDER_UPDATE',
@@ -595,7 +647,7 @@ const autoCancelOverdueBarters = async () => {
         barter.updated_at = now;
         await barter.save();
 
-        // CHANGED: Replaced await Notification.create with queueNotification
+        
         queueNotification({
           user: barter.owner._id,
           type: 'SYSTEM',
@@ -642,7 +694,7 @@ const autoCancelOverdueBarters = async () => {
           metadata: { reason: 'auto_cancel_barter', referenceId: request._id }
         });
 
-        // CHANGED: Replaced await Notification.create with queueNotification
+      
         queueNotification({
           user: request.owner,
           type: 'TRADE_ALERT',

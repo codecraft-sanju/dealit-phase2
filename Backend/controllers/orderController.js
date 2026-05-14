@@ -11,7 +11,9 @@ const { queueNotification } = require('../services/queue');
 const { checkServiceability, createShiprocketOrder, addPickupLocation, generateAWB, generateLabel, schedulePickup, getTrackingByAWB } = require('../utils/shiprocket'); 
 const AuraLog = require('../models/AuraLog'); 
 
-const { refundRazorpayPayment } = require('./paymentController');
+/* --- NAYA CHANGE START: Naya function import kiya --- */
+const { refundRazorpayPayment, fetchRazorpayPaymentInfo } = require('./paymentController');
+/* --- NAYA CHANGE END --- */
 
 const calculateShippingCost = async (req, res) => {
   try {
@@ -106,6 +108,17 @@ const createOrder = async (req, res) => {
         return res.status(400).json({ success: false, message: 'Invalid payment signature. Shipping payment verification failed.' });
       }
       
+      /* --- NAYA CHANGE START: Amount Cross Verification with Razorpay API --- */
+      const paymentCheck = await fetchRazorpayPaymentInfo(razorpay_payment_id);
+      if (!paymentCheck.success) {
+        return res.status(400).json({ success: false, message: 'Failed to verify payment details with Razorpay.' });
+      }
+      const actualPaidINR = paymentCheck.data.amount / 100;
+      if (actualPaidINR < shippingCost) {
+        return res.status(400).json({ success: false, message: `Payment manipulation detected. Expected ₹${shippingCost} but received ₹${actualPaidINR}.` });
+      }
+      /* --- NAYA CHANGE END --- */
+
       const newTransaction = new Transaction({
         user: buyerId,
         amount: shippingCost, 
