@@ -8,7 +8,6 @@ import {
 import axios from 'axios';
 import Cropper from 'react-easy-crop';
 import { toast } from 'react-toastify';
-import { removeBackground } from '@imgly/background-removal';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import imageCompression from 'browser-image-compression';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -23,9 +22,6 @@ export const getOptimizedCloudinaryUrl = (url) => {
   }
   return url.replace('/upload/', '/upload/q_auto,f_auto,w_800/');
 };
-
-// ─── Module-level blob→original map (cleaned up on unmount via useEffect) ───
-const blobToOriginalMap = new Map();
 
 // ─── Canvas helpers ───────────────────────────────────────────────────────────
 const createImage = (url) =>
@@ -225,18 +221,15 @@ const AddItemPage = ({ user, setUser }) => {
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
 
   // ── AI processing ───────────────────────────────────────────────────────────
-  const [processingAIIndex, setProcessingAIIndex] = useState(null);
   const [analyzeProgress, setAnalyzeProgress] = useState(0);
 
   // ── Refs ────────────────────────────────────────────────────────────────────
   const progressIntervalRef = useRef(null);
   const draftTimerRef = useRef(null);
 
-  // ── Cleanup blob URLs on unmount ────────────────────────────────────────────
+  // ── Cleanup on unmount ──────────────────────────────────────────────────────
   useEffect(() => {
     return () => {
-      blobToOriginalMap.forEach((_, blobUrl) => URL.revokeObjectURL(blobUrl));
-      blobToOriginalMap.clear();
       if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
       if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
     };
@@ -291,10 +284,7 @@ const AddItemPage = ({ user, setUser }) => {
     if (formData.title === '' && images.length === 0) return;
     if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
     draftTimerRef.current = setTimeout(() => {
-      const imagesToSave = images.map(img =>
-        img.startsWith('blob:') ? (blobToOriginalMap.get(img) || img) : img
-      );
-      localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({ formData, images: imagesToSave }));
+      localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({ formData, images }));
     }, 800);
   }, [formData, images]);
 
@@ -353,27 +343,16 @@ const AddItemPage = ({ user, setUser }) => {
     }));
   };
 
-  const handleImageSelect = async (e) => {
+  const handleImageSelect = (e) => {
     if (images.length >= 5) { toast.error('Maximum 5 images allowed.'); return; }
     if (!e.target.files?.length) return;
 
-    let imageFile = e.target.files[0];
-    try {
-      imageFile = await imageCompression(imageFile, { maxSizeMB: 0.8, maxWidthOrHeight: 1920, useWebWorker: true });
-    } catch {
-      toast.error('Failed to optimize image. Please try another one.');
-      e.target.value = null;
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.addEventListener('load', () => {
-      setImageToCrop(reader.result);
-      setCrop({ x: 0, y: 0 });
-      setZoom(1);
-      setCropModalOpen(true);
-    });
-    reader.readAsDataURL(imageFile);
+    const imageFile = e.target.files[0];
+    const imageUrl = URL.createObjectURL(imageFile);
+    setImageToCrop(imageUrl);
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+    setCropModalOpen(true);
     e.target.value = null;
   };
 
@@ -384,7 +363,19 @@ const AddItemPage = ({ user, setUser }) => {
   // ── Upload image mutation ────────────────────────────────────────────────────
   const uploadImageMutation = useMutation({
     mutationFn: async () => {
-      const croppedImageBlob = await getCroppedImg(imageToCrop, croppedAreaPixels);
+      let croppedImageBlob = await getCroppedImg(imageToCrop, croppedAreaPixels);
+
+      try {
+        croppedImageBlob = await imageCompression(croppedImageBlob, { 
+          maxSizeMB: 0.8, 
+          maxWidthOrHeight: 1920, 
+          useWebWorker: true,
+          fileType: 'image/jpeg' 
+        });
+      } catch (error) {
+        console.warn("Compression failed, using original cropped blob", error);
+      }
+
       const data = new FormData();
       data.append('file', croppedImageBlob);
       data.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
@@ -397,54 +388,13 @@ const AddItemPage = ({ user, setUser }) => {
     onSuccess: (originalUrl) => {
       setImages(prev => [...prev, originalUrl]);
       setCropModalOpen(false);
+      if (imageToCrop) URL.revokeObjectURL(imageToCrop);
       setImageToCrop(null);
     },
     onError: () => toast.error('Failed to upload image. Please try again.'),
   });
 
-  // ── AI background removal ────────────────────────────────────────────────────
-  const toggleAIBackground = async (index) => {
-    setProcessingAIIndex(index);
-    const currentUrl = images[index];
-
-    if (currentUrl.startsWith('blob:')) {
-      const originalUrl = blobToOriginalMap.get(currentUrl);
-      if (originalUrl) {
-        setImages(prev => { const u = [...prev]; u[index] = originalUrl; return u; });
-        URL.revokeObjectURL(currentUrl);
-        blobToOriginalMap.delete(currentUrl);
-      }
-      setProcessingAIIndex(null);
-      return;
-    }
-
-    try {
-      const imageBlob = await removeBackground(currentUrl);
-      const transparentImageUrl = URL.createObjectURL(imageBlob);
-      blobToOriginalMap.set(transparentImageUrl, currentUrl);
-      setImages(prev => {
-        const u = [...prev];
-        if (u[index].startsWith('blob:')) {
-          URL.revokeObjectURL(u[index]);
-          blobToOriginalMap.delete(u[index]);
-        }
-        u[index] = transparentImageUrl;
-        return u;
-      });
-      toast.success('Background removed successfully!');
-    } catch {
-      toast.error('Failed to remove background. Try a clearer image.');
-    } finally {
-      setProcessingAIIndex(null);
-    }
-  };
-
   const removeImage = (indexToRemove) => {
-    const urlToRemove = images[indexToRemove];
-    if (urlToRemove?.startsWith('blob:')) {
-      URL.revokeObjectURL(urlToRemove);
-      blobToOriginalMap.delete(urlToRemove);
-    }
     setImages(prev => prev.filter((_, i) => i !== indexToRemove));
   };
 
@@ -582,12 +532,10 @@ const AddItemPage = ({ user, setUser }) => {
 
   const handleAddressSubmit = (e) => {
     e.preventDefault();
-    // Validate house no has a digit
     if (addressForm.houseNo && !/\d/.test(addressForm.houseNo)) {
       toast.error('House No. must include at least one digit (e.g., Flat 4B, Plot 12).');
       return;
     }
-    // Validate pincode: exactly 6 numeric digits
     if (!/^\d{6}$/.test(addressForm.pincode)) {
       toast.error('Pincode must be exactly 6 digits.');
       return;
@@ -659,45 +607,21 @@ const AddItemPage = ({ user, setUser }) => {
       ? parseFloat(formData.exactWeight)
       : parseFloat(formData.weightCategory);
 
-    const toastId = toast.loading('Processing your images...');
+    const toastId = toast.loading('Listing your item...');
 
-    try {
-      const uploadPromises = images.map(async (imgUrl) => {
-        if (!imgUrl.startsWith('blob:')) return imgUrl;
-        const response = await fetch(imgUrl);
-        const blobData = await response.blob();
-        const file = new File([blobData], `bg-removed-${Date.now()}.png`, { type: 'image/png' });
-        const uploadData = new FormData();
-        uploadData.append('file', file);
-        uploadData.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
-        const cloudRes = await axios.post(
-          `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`,
-          uploadData
-        );
-        return cloudRes.data.secure_url;
-      });
-
-      const finalImages = await Promise.all(uploadPromises);
-      toast.update(toastId, { render: 'Listing your item...', type: 'info', isLoading: true });
-
-      createItemMutation.mutate({
-        title: formData.title,
-        description: formData.description,
-        category: formData.category,
-        condition: formData.condition,
-        preferred_item: formData.preferred_item,
-        estimated_value: formData.estimated_value,
-        images: finalImages,
-        weight: finalWeight,
-        dimensions: formData.dimensions
-      }, {
-        onSettled: () => toast.dismiss(toastId),
-      });
-
-    } catch (error) {
-      console.error('Image upload failed:', error);
-      toast.update(toastId, { render: 'Failed to process images. Please try again.', type: 'error', isLoading: false, autoClose: 3000 });
-    }
+    createItemMutation.mutate({
+      title: formData.title,
+      description: formData.description,
+      category: formData.category,
+      condition: formData.condition,
+      preferred_item: formData.preferred_item,
+      estimated_value: formData.estimated_value,
+      images: images,
+      weight: finalWeight,
+      dimensions: formData.dimensions
+    }, {
+      onSettled: () => toast.dismiss(toastId),
+    });
   };
 
   // ── Dropdown options ─────────────────────────────────────────────────────────
@@ -950,9 +874,6 @@ const AddItemPage = ({ user, setUser }) => {
 
               <div className="flex flex-wrap gap-3 sm:gap-4 items-start">
                 {images.map((url, index) => {
-                  const isAIApplied = url.startsWith('blob:');
-                  const isProcessing = processingAIIndex === index;
-
                   return (
                     <div key={index} className="flex flex-col gap-1.5 w-20 sm:w-24">
                       <div className="relative w-full aspect-square rounded-2xl overflow-hidden shadow-sm border-2 border-white bg-gray-100 group shrink-0">
@@ -960,19 +881,11 @@ const AddItemPage = ({ user, setUser }) => {
                           src={getOptimizedCloudinaryUrl(url)}
                           alt={`Upload ${index + 1}`}
                           className="w-full h-full object-cover"
-                          onLoad={() => { if (processingAIIndex === index) setProcessingAIIndex(null); }}
-                          onError={() => { if (processingAIIndex === index) setProcessingAIIndex(null); }}
                         />
-                        {isProcessing && (
-                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-[1px]">
-                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          </div>
-                        )}
                         <button
                           type="button"
                           onClick={() => removeImage(index)}
-                          disabled={isProcessing}
-                          className="absolute top-1 right-1 bg-black/60 p-1 rounded-full text-white opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity disabled:hidden"
+                          className="absolute top-1 right-1 bg-black/60 p-1 rounded-full text-white opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                         >
                           <X className="w-3 h-3 sm:w-4 sm:h-4" />
                         </button>
@@ -984,30 +897,6 @@ const AddItemPage = ({ user, setUser }) => {
                           </span>
                         )}
                       </div>
-
-                      <button
-                        type="button"
-                        onClick={() => toggleAIBackground(index)}
-                        disabled={isProcessing}
-                        className={`w-full py-1.5 px-1 rounded-lg text-[10px] sm:text-xs font-bold flex items-center justify-center gap-1 transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed ${
-                          isAIApplied
-                            ? 'bg-green-100 text-green-700 hover:bg-green-200 border border-green-200'
-                            : 'bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-200'
-                        }`}
-                        title={isAIApplied ? 'Revert to Original' : 'Remove Background'}
-                      >
-                        {isProcessing ? (
-                          <>
-                            <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
-                            <span>Wait...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                            <span>{isAIApplied ? 'Revert BG' : 'Remove BG'}</span>
-                          </>
-                        )}
-                      </button>
                     </div>
                   );
                 })}
@@ -1324,7 +1213,11 @@ const AddItemPage = ({ user, setUser }) => {
                   Adjust Image (1:1)
                 </h2>
                 <button
-                  onClick={() => setCropModalOpen(false)}
+                  onClick={() => {
+                    setCropModalOpen(false);
+                    if (imageToCrop) URL.revokeObjectURL(imageToCrop);
+                    setImageToCrop(null);
+                  }}
                   className="text-gray-400 hover:text-white transition-all p-1.5 sm:p-2 bg-gray-800 hover:bg-gray-700 rounded-full"
                 >
                   <X className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -1363,7 +1256,11 @@ const AddItemPage = ({ user, setUser }) => {
                 <div className="flex gap-2 sm:gap-3 w-full justify-end">
                   <button
                     type="button"
-                    onClick={() => setCropModalOpen(false)}
+                    onClick={() => {
+                      setCropModalOpen(false);
+                      if (imageToCrop) URL.revokeObjectURL(imageToCrop);
+                      setImageToCrop(null);
+                    }}
                     className="px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm text-gray-400 hover:text-white transition-all"
                   >
                     Cancel
