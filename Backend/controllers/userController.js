@@ -430,6 +430,44 @@ const updateUserProfile = async (req, res) => {
   }
 };
 
+const getUserStats = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+   
+    const [receivedSwaps, sentSwaps, activeOrders] = await Promise.all([
+      
+      BarterRequest.countDocuments({ 
+        owner: userId, 
+        status: { $in: ['PENDING', 'AWAITING_PAYMENT'] } 
+      }),
+     
+      BarterRequest.countDocuments({ 
+        requester: userId, 
+        status: { $in: ['PENDING', 'AWAITING_PAYMENT'] } 
+      }),
+     
+      Order.countDocuments({
+        $or: [{ buyer: userId }, { seller: userId }],
+        orderStatus: { $in: ['pending', 'processing', 'shipped', 'in_transit'] }
+      })
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        swapsActive: receivedSwaps + sentSwaps,
+        receivedSwaps,
+        sentSwaps,
+        activeOrders
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching user stats:', error);
+    res.status(500).json({ success: false, message: 'Server Error fetching stats' });
+  }
+};
+
 const updateProfilePic = async (req, res) => {
   try {
     const { profilePic } = req.body;
@@ -523,13 +561,13 @@ const claimWelcomeBonus = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Welcome bonus is currently disabled by Admin' });
     }
 
-    // Credits & Aura Update
+  
     user.account_credits += amount;
-    user.aura_points = (user.aura_points || 0) + 50; //  NAYA: Welcome bonus par +50 Aura
+    user.aura_points = (user.aura_points || 0) + 50; //  Welcome bonus par +50 Aura
     user.hasClaimedWelcomeBonus = true;
     await user.save();
 
-    // CHANGED: Replaced await Notification.create with queueNotification
+   
     queueNotification({
       user: user._id,
       type: 'CREDIT_ADDED',
@@ -561,7 +599,7 @@ const claimWelcomeBonus = async (req, res) => {
   }
 };
 
-// -> CHANGES START HERE: Added Soft Delete and Anonymization Logic
+
 const deleteUserProfile = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -598,7 +636,7 @@ const deleteUserProfile = async (req, res) => {
     user.account_credits = 0; 
     user.aura_points = 0;
     user.listedProductsCount = 0;
-    user.rewardedListingsCount = 0; // NEW CHANGE: Reset rewarded listings count to 0
+    user.rewardedListingsCount = 0; // Reset rewarded listings count to 0
     user.referralCode = `DEL_${Date.now()}`;
     user.otp = undefined;
     user.resetPasswordOtp = undefined;
@@ -633,7 +671,7 @@ const deleteUserProfile = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server Error during account deletion' });
   }
 };
-// -> CHANGES END HERE
+
 
 module.exports = {
   registerUser,
@@ -648,5 +686,6 @@ module.exports = {
   toggleWishlist,
   getWishlist,
   claimWelcomeBonus,
-  deleteUserProfile 
+  deleteUserProfile ,
+  getUserStats
 };

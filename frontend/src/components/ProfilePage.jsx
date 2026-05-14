@@ -9,8 +9,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
-const MotionLink = motion.create(Link);
-
 const ProfilePage = ({ user, setUser, onLogout }) => {
   const navigate = useNavigate();
   const [showAccountDetails, setShowAccountDetails] = useState(false);
@@ -31,15 +29,12 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
     }
   });
 
-
   const queryClient = useQueryClient();
 
   const { data: profileData, isLoading: loading } = useQuery({
     queryKey: ['profile'],
     queryFn: async () => {
-    
       const response = await axios.get(`${API_URL}/users/profile`, { withCredentials: true });
-     
       return response.data.data;
     },
     onError: (error) => {
@@ -48,7 +43,17 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
     }
   });
 
- 
+  /* NAYA CHANGE START */
+  const { data: userStats } = useQuery({
+    queryKey: ['userStats'],
+    queryFn: async () => {
+      const response = await axios.get(`${API_URL}/users/stats`, { withCredentials: true });
+      return response.data.data;
+    },
+    refetchInterval: 10000
+  });
+  /* NAYA CHANGE END */
+
   useEffect(() => {
     if (profileData && setUser) {
       setUser(profileData);
@@ -85,9 +90,7 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
         formData
       );
       
-     
       const uploadedUrl = cloudinaryRes.data.secure_url;
-     
 
       const response = await axios.put(
         `${API_URL}/users/profile-pic`,
@@ -101,7 +104,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
       queryClient.invalidateQueries(['profile']);
     },
     onError: (error) => {
-     
       alert(`Upload Failed: ${error.message}\nDetails: ${JSON.stringify(error.response?.data || 'No extra data')}`);
     }
   });
@@ -176,18 +178,41 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: { staggerChildren: 0.08, delayChildren: 0.1 }
+      transition: { staggerChildren: 0.05 }
     }
   };
 
   const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
+    hidden: { opacity: 0, y: 15 },
     visible: { 
       opacity: 1, 
       y: 0, 
-      transition: { type: 'spring', stiffness: 300, damping: 24 } 
+      transition: { duration: 0.3, ease: 'easeOut' } 
     }
   };
+
+  /* NAYA CHANGE START */
+  const swapsBadge = userStats?.swapsActive > 0 ? `${userStats.swapsActive} Active` : null;
+  let swapsSubtitle = "Your Trade Offers & Barters";
+  if (userStats?.receivedSwaps > 0 || userStats?.sentSwaps > 0) {
+    const receivedText = userStats.receivedSwaps > 0 ? `${userStats.receivedSwaps} Received` : '';
+    const sentText = userStats.sentSwaps > 0 ? `${userStats.sentSwaps} Sent` : '';
+    swapsSubtitle = [receivedText, sentText].filter(Boolean).join(' | ');
+  }
+
+  const ordersBadge = userStats?.activeOrders > 0 ? `${userStats.activeOrders} Active` : null;
+
+  const menuItems = [
+    { to: "/dashboard", icon: ClipboardList, title: "My Listings", subtitle: "", badge: "Active" },
+    { to: "/orders", icon: Archive, title: "My Orders", subtitle: "View your past transactions", badge: ordersBadge },
+    { to: "/swaps", icon: RefreshCw, title: "My Swaps", subtitle: swapsSubtitle, badge: swapsBadge },
+    { to: "#", icon: Tag, title: "My Offers", subtitle: "Items You've Bid On", iconClass: "fill-[#6B46C1]/20" },
+    { to: "/wishlist", icon: Heart, title: "Wishlist", subtitle: "Saved Items", iconClass: "fill-[#6B46C1]" },
+    { to: "/wallet", icon: Wallet, title: "My Wallet", subtitle: "Credit Balance & Purchases" },
+    { to: "/notifications", icon: Bell, title: "Notifications", subtitle: "Alert Settings", iconClass: "fill-[#6B46C1]" },     
+    { to: "/help-support", icon: HelpCircle, title: "Help & Support", subtitle: "Get Assistance", iconClass: "fill-[#6B46C1]/20" }
+  ];
+  /* NAYA CHANGE END */
 
   return (
     <div className="min-h-screen bg-[#f4f2f9] pb-10 font-sans relative overflow-x-hidden">
@@ -225,7 +250,7 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
       <motion.div 
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
         className="absolute top-0 left-0 right-0 bg-[#6B46C1] h-48 rounded-b-[2rem] z-0"
       />
 
@@ -270,9 +295,9 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
               <motion.div variants={itemVariants} className="md:col-span-1 bg-white rounded-3xl shadow-sm border border-gray-100 p-5 flex flex-col items-center text-center relative overflow-hidden">
                 <div className="relative mb-4">
                   <motion.div 
-                    initial={{ scale: 0.8, opacity: 0 }}
+                    initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    transition={{ type: "spring", stiffness: 200, delay: 0.2 }}
+                    transition={{ duration: 0.3, ease: 'easeOut', delay: 0.1 }}
                     className="w-24 h-24 bg-white rounded-[1.5rem] p-1.5 shadow-sm border border-gray-100"
                   >
                     <div className="w-full h-full bg-[#f8f6ff] rounded-[1.2rem] flex items-center justify-center overflow-hidden">
@@ -291,10 +316,8 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                     </div>
                   </motion.div>
                   
-                  <motion.label 
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    className="absolute -bottom-2 -right-2 bg-gradient-to-r from-[#805ad5] to-[#6B46C1] p-2.5 rounded-full text-white cursor-pointer shadow-md border-2 border-white z-10"
+                  <label 
+                    className="absolute -bottom-2 -right-2 bg-gradient-to-r from-[#805ad5] to-[#6B46C1] p-2.5 rounded-full text-white cursor-pointer shadow-md border-2 border-white z-10 hover:scale-110 active:scale-95 transition-transform"
                   >
                     <Camera className="w-4 h-4" />
                     <input 
@@ -304,7 +327,7 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                       onChange={handleImageUpload} 
                       disabled={uploadImageMutation.isPending}
                     />
-                  </motion.label>
+                  </label>
                 </div>
 
                 <h2 className="text-xl font-bold text-gray-900 leading-tight">{profileData?.full_name}</h2>
@@ -313,20 +336,16 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                 
                 <div className="mt-1 w-full flex flex-col items-center">
                   
-                  {/* Role Badge */}
                   <span className="bg-[#F4F0FF] text-[#6B46C1] text-[11px] font-bold px-4 py-1.5 rounded-full uppercase tracking-wider mb-5">
                     {profileData?.role || 'USER'}
                   </span>
 
-                  {/* Credits & Aura Row */}
                   <div className="flex w-full gap-3 mb-4">
-                    {/* Credits */}
                     <div className="flex-1 bg-[#FFF9E6] rounded-xl py-3 px-2 flex items-center justify-center gap-2 border border-[#FFF0C2]/50 shadow-sm">
                       <Coins className="w-5 h-5 text-[#EAB308]" />
                       <span className="font-bold text-gray-800 text-sm">{profileData?.account_credits || 0} Credits</span>
                     </div>
 
-                    {/* Aura Points */}
                     <div className="flex-1 bg-[#F5F0FF] rounded-xl py-3 px-2 flex items-center justify-center gap-2 border border-[#E9DFFF]/50 shadow-sm">
                       <Shield className="w-5 h-5 text-[#6B46C1] fill-[#6B46C1]/20" />
                       <span className="font-bold text-gray-800 text-sm">{profileData?.aura_points || 0} Aura</span>
@@ -334,7 +353,7 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                   </div>
 
                   
-                  <Link to="/aura" className="w-full bg-white border border-gray-100 rounded-2xl p-4 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow cursor-pointer block">
+                  <Link to="/aura" className="w-full bg-white border border-gray-100 rounded-2xl p-4 flex items-center justify-between shadow-sm hover:shadow-md active:scale-[0.98] transition-all cursor-pointer block">
                     <div className="flex items-center gap-3">
                       <div className="bg-[#6B46C1] p-3 rounded-xl flex-shrink-0 shadow-sm border border-[#5a3aa3]">
                         <Star className="w-6 h-6 text-white fill-white" />
@@ -355,12 +374,10 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
               <motion.div variants={itemVariants} className="md:col-span-2 flex flex-col gap-4">
                 <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
                   
-                  <motion.div 
-                    className="flex items-center justify-between border-b border-gray-100 bg-white group"
-                  >
+                  <div className="flex items-center justify-between border-b border-gray-100 bg-white group">
                     <button 
                       onClick={() => setShowAccountDetails(!showAccountDetails)} 
-                      className="flex items-center w-full justify-between p-4 hover:bg-gray-50 transition-colors"
+                      className="flex items-center w-full justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors"
                     >
                       <div className="flex items-center gap-4 text-left">
                         <User className="w-6 h-6 text-[#6B46C1]" />
@@ -369,19 +386,16 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                           <span className="text-[11px] text-gray-500 font-medium mt-0.5">Personal info & Pickup address</span>
                         </div>
                       </div>
-                      <motion.div
-                        animate={{ rotate: showAccountDetails ? 90 : 0 }}
-                        transition={{ duration: 0.3, ease: "easeInOut" }}
-                      >
-                        <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-[#6B46C1] transition-colors" />
-                      </motion.div>
+                      <div className={`transition-transform duration-300 ${showAccountDetails ? 'rotate-90' : 'rotate-0'}`}>
+                        <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-[#6B46C1]" />
+                      </div>
                     </button>
                     {showAccountDetails && (
-                      <button onClick={openEditModal} className="pr-4 pl-2 py-4 hover:text-[#6B46C1] text-gray-400 transition-colors">
+                      <button onClick={openEditModal} className="pr-4 pl-2 py-4 hover:text-[#6B46C1] active:scale-90 text-gray-400 transition-all">
                         <Edit2 className="w-5 h-5" />
                       </button>
                     )}
-                  </motion.div>
+                  </div>
 
                   <AnimatePresence initial={false}>
                     {showAccountDetails && (
@@ -406,13 +420,7 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                             },
                             { icon: Calendar, label: 'Member Since', value: profileData?.created_at ? new Date(profileData.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Recently' }
                           ].map((item, idx) => (
-                            <motion.div 
-                              key={idx}
-                              initial={{ x: -10, opacity: 0 }}
-                              animate={{ x: 0, opacity: 1 }}
-                              transition={{ delay: idx * 0.05 }}
-                              className="flex items-center gap-4 py-2 px-2"
-                            >
+                            <div key={idx} className="flex items-center gap-4 py-2 px-2">
                               <div className="bg-white p-2 rounded-xl text-[#A388E1] shadow-sm border border-gray-100">
                                 <item.icon className="w-4 h-4" />
                               </div>
@@ -422,30 +430,19 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                                   {item.value || <span className="text-gray-400 italic">Not provided</span>}
                                 </p>
                               </div>
-                            </motion.div>
+                            </div>
                           ))}
                         </div>
                       </motion.div>
                     )}
                   </AnimatePresence>
 
-                  {[
-                    { to: "/dashboard", icon: ClipboardList, title: "My Listings", subtitle: "", badge: "Active" },
-                    { to: "/orders", icon: Archive, title: "My Orders", subtitle: "View your past transactions" },
-                    { to: "/swaps", icon: RefreshCw, title: "My Swaps", subtitle: "Your Trade Offers & Barters" },
-                    { to: "#", icon: Tag, title: "My Offers", subtitle: "Items You've Bid On", iconClass: "fill-[#6B46C1]/20" },
-                
-                    { to: "/wishlist", icon: Heart, title: "Wishlist", subtitle: "Saved Items", iconClass: "fill-[#6B46C1]" },
-                    { to: "/wallet", icon: Wallet, title: "My Wallet", subtitle: "Credit Balance & Purchases" },
-                    { to: "/notifications", icon: Bell, title: "Notifications", subtitle: "Alert Settings", iconClass: "fill-[#6B46C1]" },     
-                    { to: "/help-support", icon: HelpCircle, title: "Help & Support", subtitle: "Get Assistance", iconClass: "fill-[#6B46C1]/20" }
-                  ].map((item, index) => (
-                    <MotionLink 
+                  {/* NAYA CHANGE START */}
+                  {menuItems.map((item, index) => (
+                    <Link 
                       key={index}
                       to={item.to}
-                      whileHover={{ x: 4, backgroundColor: "#f9fafb" }}
-                      whileTap={{ scale: 0.98, backgroundColor: "#f3f4f6" }}
-                      className={`flex items-center justify-between p-4 group border-b border-gray-100`}
+                      className={`flex items-center justify-between p-4 group border-b border-gray-100 hover:bg-gray-50 active:bg-gray-100 active:scale-[0.98] transition-all`}
                     >
                       <div className="flex items-center gap-4">
                         <item.icon className={`w-6 h-6 ${item.iconClass || 'text-[#6B46C1]'} ${item.icon === Archive ? 'text-[#4B5563]' : ''}`} />
@@ -459,20 +456,20 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                             )}
                           </div>
                           {item.subtitle && (
-                            <span className="text-[11px] text-gray-500 font-medium mt-0.5">{item.subtitle}</span>
+                            <span className={`text-[11px] font-medium mt-0.5 ${item.badge && (item.title === 'My Swaps' || item.title === 'My Orders') ? 'text-[#A388E1]' : 'text-gray-500'}`}>
+                              {item.subtitle}
+                            </span>
                           )}
                         </div>
                       </div>
                       <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-[#6B46C1] transition-colors" />
-                    </MotionLink>
+                    </Link>
                   ))}
+                  {/* NAYA CHANGE END */}
 
-                  {/* ⚡ NAYA CHANGE START: Danger Zone (Delete Account Button) ⚡ */}
-                  <MotionLink
+                  <Link
                     to="/delete-account"
-                    whileHover={{ x: 4, backgroundColor: "#fff5f5" }}
-                    whileTap={{ scale: 0.98, backgroundColor: "#fee2e2" }}
-                    className="flex items-center justify-between p-4 group hover:bg-red-50 transition-colors"
+                    className="flex items-center justify-between p-4 group hover:bg-red-50 active:bg-red-100 active:scale-[0.98] transition-all"
                   >
                     <div className="flex items-center gap-4">
                       <Trash2 className="w-6 h-6 text-red-500" />
@@ -482,8 +479,7 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                       </div>
                     </div>
                     <ChevronRight className="w-5 h-5 text-red-300 group-hover:text-red-500 transition-colors" />
-                  </MotionLink>
-                  {/* ⚡ NAYA CHANGE END ⚡ */}
+                  </Link>
 
                 </div>
               </motion.div>
@@ -497,16 +493,17 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
         {isEditModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm">
             <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              transition={{ duration: 0.2 }}
               className="bg-white w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
             >
               <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-[#f8f6ff]">
                 <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                   <Edit2 className="w-5 h-5 text-[#6B46C1]" /> Edit Profile
                 </h2>
-                <button onClick={() => setIsEditModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-2 bg-white rounded-full shadow-sm">
+                <button onClick={() => setIsEditModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-2 bg-white rounded-full shadow-sm active:scale-95 transition-all">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -514,7 +511,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
               <div className="p-6 overflow-y-auto flex-1 admin-scroll">
                 <form id="editProfileForm" onSubmit={handleEditSubmit} className="space-y-6">
                   
-                  {/* Basic Info */}
                   <div className="space-y-4">
                     <h3 className="font-bold text-gray-800 text-sm border-b pb-2">Basic Information</h3>
                     <div className="relative">
@@ -529,7 +525,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                     </div>
                   </div>
 
-                  {/* Pickup Address */}
                   <div className="space-y-4">
                     <div className="flex items-center justify-between border-b pb-2">
                       <h3 className="font-bold text-gray-800 text-sm">Pickup Address</h3>
@@ -578,8 +573,8 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
               </div>
 
               <div className="p-5 border-t border-gray-100 bg-[#f8f6ff] flex justify-end gap-3 shrink-0">
-                <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-5 py-2.5 rounded-xl font-bold text-gray-500 hover:bg-gray-200 transition-all text-sm">Cancel</button>
-                <button type="submit" form="editProfileForm" disabled={editProfileMutation.isPending} className={`px-6 py-2.5 rounded-xl font-bold transition-all text-sm flex items-center gap-2 ${editProfileMutation.isPending ? 'bg-[#6B46C1]/50 text-white cursor-not-allowed' : 'bg-[#6B46C1] hover:bg-[#5a3aa3] text-white shadow-md shadow-[#6B46C1]/20'}`}>
+                <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-5 py-2.5 rounded-xl font-bold text-gray-500 hover:bg-gray-200 active:bg-gray-300 transition-all text-sm">Cancel</button>
+                <button type="submit" form="editProfileForm" disabled={editProfileMutation.isPending} className={`px-6 py-2.5 rounded-xl font-bold transition-all text-sm flex items-center gap-2 ${editProfileMutation.isPending ? 'bg-[#6B46C1]/50 text-white cursor-not-allowed' : 'bg-[#6B46C1] hover:bg-[#5a3aa3] active:scale-95 text-white shadow-md shadow-[#6B46C1]/20'}`}>
                   {editProfileMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Details'}
                 </button>
               </div>
