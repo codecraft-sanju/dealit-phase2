@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-/* --- CHANGES MADE: Added useLocation to imports --- */
+
 import { Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { 
   RefreshCw, Check, X, MessageSquare, Package, Eye, AlertCircle, 
@@ -25,7 +25,7 @@ const loadRazorpayScript = () => {
   });
 };
 
-/* --- CHANGES START HERE: Added standard rejection reasons --- */
+
 const REJECT_REASONS = [
   "Item value is too low",
   "Not interested in this item",
@@ -33,7 +33,7 @@ const REJECT_REASONS = [
   "I already have a similar item",
   "Other"
 ];
-/* --- CHANGES END HERE --- */
+
 
 const SwapsPage = ({ user }) => {
   const navigate = useNavigate();
@@ -81,12 +81,12 @@ const SwapsPage = ({ user }) => {
   const [autoCancelHours, setAutoCancelHours] = useState(24);
   const [auraPenalty, setAuraPenalty] = useState(50);
 
-  /* --- CHANGES START HERE: Added states for Rejection Flow --- */
+
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectSwapId, setRejectSwapId] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
   const [customRejectReason, setCustomRejectReason] = useState('');
-  /* --- CHANGES END HERE --- */
+
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -184,10 +184,10 @@ const SwapsPage = ({ user }) => {
       );
       if (response.data.success) {
         const updatedStatus = response.data.data.status || newStatus;
-        /* --- CHANGES START HERE: Merging updated fields including rejectionReason into state --- */
+     
         setReceivedSwaps(receivedSwaps.map(s => s._id === swapId ? { ...s, status: updatedStatus, expiresAt: response.data.data.expiresAt, rejectionReason: response.data.data.rejectionReason } : s));
         setSentSwaps(sentSwaps.map(s => s._id === swapId ? { ...s, status: updatedStatus, expiresAt: response.data.data.expiresAt, rejectionReason: response.data.data.rejectionReason } : s));
-        /* --- CHANGES END HERE --- */
+      
         
         if (updatedStatus === 'ACCEPTED') {
           navigate(`/deal/${swapId}`);
@@ -233,7 +233,7 @@ const SwapsPage = ({ user }) => {
     setActionError({ id: null, message: '' });
   };
 
-  /* --- CHANGES START HERE: Added Rejection Functions --- */
+ 
   const openRejectModal = (swapId) => {
     setRejectSwapId(swapId);
     setRejectReason('');
@@ -256,7 +256,7 @@ const SwapsPage = ({ user }) => {
     handleStatusUpdate(rejectSwapId, 'REJECTED', { rejectionReason: finalReason });
     setRejectModalOpen(false);
   };
-  /* --- CHANGES END HERE --- */
+
 
   const handleCourierPayment = async (e) => {
     e.preventDefault();
@@ -454,42 +454,47 @@ const SwapsPage = ({ user }) => {
                     <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
                       {activeTab === 'received' && swap.status === 'PENDING' && (
                         <>
+                       
                           <button
                             onClick={() => openAcceptFlow(swap, 'owner_accept')}
                             disabled={processingId === swap._id}
-                            className="flex-1 md:flex-none bg-[#E6F4EA] hover:bg-[#CEEAD6] text-[#137333] px-5 py-2.5 rounded-xl text-sm font-bold transition flex items-center justify-center gap-1.5 disabled:opacity-50"
+                            className="flex-1 md:flex-none bg-[#E6F4EA] hover:bg-[#CEEAD6] text-[#137333] px-5 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:active:scale-100"
                           >
                             {processingId === swap._id ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Accept
                           </button>
-                          {/* --- CHANGES START HERE: Update Reject Button to open modal --- */}
+                          
                           <button
                             onClick={() => openRejectModal(swap._id)}
                             disabled={processingId === swap._id}
-                            className="flex-1 md:flex-none bg-[#FCE8E6] hover:bg-[#FAD2CF] text-[#C5221F] px-5 py-2.5 rounded-xl text-sm font-bold transition flex items-center justify-center gap-1.5 disabled:opacity-50"
+                            className="flex-1 md:flex-none bg-[#FCE8E6] hover:bg-[#FAD2CF] text-[#C5221F] px-5 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:active:scale-100"
                           >
                             <X className="w-4 h-4" /> Reject
                           </button>
-                          {/* --- CHANGES END HERE --- */}
+                  
                         </>
                       )}
 
                       {activeTab === 'sent' && swap.status === 'AWAITING_PAYMENT' && (
+             
                         <button
                           onClick={() => openAcceptFlow(swap, 'requester_pay')}
                           disabled={processingId === swap._id}
-                          className="flex-1 md:flex-none bg-[#6B46C1] hover:bg-[#5a3aa3] text-white px-5 py-2.5 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 disabled:opacity-50 shadow-md"
+                          className="flex-1 md:flex-none bg-[#6B46C1] hover:bg-[#5a3aa3] text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50 disabled:active:scale-100 shadow-md"
                         >
                           {processingId === swap._id ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Complete Payment
                         </button>
+                   
                       )}
                       
                       {swap.status === 'ACCEPTED' && (
+                     
                         <Link
                           to={`/deal/${swap._id}`}
-                          className="flex-1 md:flex-none bg-[#F8F9FA] hover:bg-[#EBE5F7] text-[#6B46C1] px-5 py-2.5 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 border border-[#d6bcfa]"
+                          className="flex-1 md:flex-none bg-[#F8F9FA] hover:bg-[#EBE5F7] text-[#6B46C1] px-5 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-2 border border-[#d6bcfa]"
                         >
                           <ExternalLink className="w-4 h-4" /> View Deal Details
                         </Link>
+                    
                       )}
                     </div>
                   </div>
@@ -815,13 +820,15 @@ const SwapsPage = ({ user }) => {
                   </span>
                 </div>
                 <div className="flex gap-3">
+             
                   <button 
                     type="submit" form="courier-form"
                     disabled={processingId === activeSwap?._id || isCalculatingShipping || !hasEnoughCredits}
-                    className="flex-1 bg-[#6B46C1] text-white rounded-xl font-bold shadow-md hover:bg-[#5a3aa3] transition disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+                    className="flex-1 bg-gradient-to-r from-[#6B46C1] to-[#805ad5] text-white rounded-xl font-bold py-3.5 text-[15px] shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none disabled:hover:shadow-none flex justify-center items-center gap-2"
                   >
                     {processingId === activeSwap?._id ? <Loader2 className="w-5 h-5 animate-spin" /> : (!hasEnoughCredits ? 'Insufficient Credits' : 'Pay & Confirm')}
                   </button>
+               
                 </div>
               </div>
             </motion.div>
@@ -899,19 +906,21 @@ const SwapsPage = ({ user }) => {
               </div>
 
               <div className="p-5 border-t border-slate-100 bg-white flex gap-3">
+            
                 <button 
                   onClick={() => setRejectModalOpen(false)}
-                  className="flex-1 bg-gray-100 text-gray-700 rounded-xl font-bold py-3 hover:bg-gray-200 transition"
+                  className="flex-1 bg-gray-100 text-gray-700 rounded-xl font-bold py-3.5 hover:bg-gray-200 transition-all active:scale-[0.98]"
                 >
                   Cancel
                 </button>
                 <button 
                   onClick={handleRejectSubmit}
                   disabled={processingId === rejectSwapId}
-                  className="flex-1 bg-red-500 text-white rounded-xl font-bold py-3 shadow-md hover:bg-red-600 transition disabled:opacity-70 flex justify-center items-center gap-2"
+                  className="flex-1 bg-red-500 text-white rounded-xl font-bold py-3.5 shadow-md hover:bg-red-600 transition-all disabled:opacity-70 flex justify-center items-center gap-2 active:scale-[0.98]"
                 >
                   {processingId === rejectSwapId ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Confirm Reject'}
                 </button>
+               
               </div>
             </motion.div>
           </motion.div>
