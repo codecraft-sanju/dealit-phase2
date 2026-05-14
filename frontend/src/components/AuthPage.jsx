@@ -150,6 +150,28 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
     navigate(mode === 'signup' ? '/signup' : '/login', { replace: true });
   };
 
+  // CHANGE ADDED HERE
+  const handleGeneratePassword = () => {
+    const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const lower = 'abcdefghijklmnopqrstuvwxyz';
+    const nums = '0123456789';
+    const specials = '@#$*';
+    
+    let pass = '';
+    pass += upper[Math.floor(Math.random() * upper.length)];
+    pass += lower[Math.floor(Math.random() * lower.length)];
+    pass += nums[Math.floor(Math.random() * nums.length)];
+    pass += '@';
+    
+    const all = upper + lower + nums + specials;
+    for (let i = 0; i < 6; i++) {
+      pass += all[Math.floor(Math.random() * all.length)];
+    }
+    
+    pass = pass.split('').sort(() => 0.5 - Math.random()).join('');
+    setFormData((prev) => ({ ...prev, password: pass }));
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError(''); setLoading(true);
@@ -277,14 +299,21 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                       
                       <div className="pwd-wrap">
                         <FloatInput icon={Lock} label="Password" name="password" type="password" value={formData.password} onChange={handleChange} required />
-                        <div className="pwd-strength-bar">
-                          <div 
-                            className="pwd-strength-fill" 
-                            style={{ 
-                              width: `${calculateStrength(formData.password)}%`,
-                              backgroundColor: `hsl(${calculateStrength(formData.password) * 1.2}, 100%, 45%)` 
-                            }} 
-                          />
+                        
+                        {/* CHANGE ADDED HERE */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.4rem' }}>
+                          <div className="pwd-strength-bar" style={{ flex: 1, marginRight: '1rem', marginTop: 0 }}>
+                            <div 
+                              className="pwd-strength-fill" 
+                              style={{ 
+                                width: `${calculateStrength(formData.password)}%`,
+                                backgroundColor: `hsl(${calculateStrength(formData.password) * 1.2}, 100%, 45%)` 
+                              }} 
+                            />
+                          </div>
+                          <button type="button" onClick={handleGeneratePassword} style={{ background: 'none', border: 'none', color: '#6B46C1', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}>
+                            Auto Generate
+                          </button>
                         </div>
                       </div>
 
@@ -403,14 +432,21 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                       
                       <div className="pwd-wrap">
                         <FloatInput icon={Lock} label="Password" name="password" type="password" value={formData.password} onChange={handleChange} required />
-                        <div className="pwd-strength-bar">
-                          <div 
-                            className="pwd-strength-fill" 
-                            style={{ 
-                              width: `${calculateStrength(formData.password)}%`,
-                              backgroundColor: `hsl(${calculateStrength(formData.password) * 1.2}, 100%, 45%)` 
-                            }} 
-                          />
+                        
+                        {/* CHANGE ADDED HERE */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.4rem' }}>
+                          <div className="pwd-strength-bar" style={{ flex: 1, marginRight: '1rem', marginTop: 0 }}>
+                            <div 
+                              className="pwd-strength-fill" 
+                              style={{ 
+                                width: `${calculateStrength(formData.password)}%`,
+                                backgroundColor: `hsl(${calculateStrength(formData.password) * 1.2}, 100%, 45%)` 
+                              }} 
+                            />
+                          </div>
+                          <button type="button" onClick={handleGeneratePassword} style={{ background: 'none', border: 'none', color: '#7c3aed', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}>
+                            Auto Generate
+                          </button>
                         </div>
                       </div>
 
