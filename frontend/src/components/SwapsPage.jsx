@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-
 import { Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { 
   RefreshCw, Check, X, MessageSquare, Package, Eye, AlertCircle, 
@@ -25,7 +24,6 @@ const loadRazorpayScript = () => {
   });
 };
 
-
 const REJECT_REASONS = [
   "Item value is too low",
   "Not interested in this item",
@@ -33,7 +31,6 @@ const REJECT_REASONS = [
   "I already have a similar item",
   "Other"
 ];
-
 
 const SwapsPage = ({ user }) => {
   const navigate = useNavigate();
@@ -81,12 +78,10 @@ const SwapsPage = ({ user }) => {
   const [autoCancelHours, setAutoCancelHours] = useState(24);
   const [auraPenalty, setAuraPenalty] = useState(50);
 
-
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectSwapId, setRejectSwapId] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
   const [customRejectReason, setCustomRejectReason] = useState('');
-
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -188,7 +183,6 @@ const SwapsPage = ({ user }) => {
         setReceivedSwaps(receivedSwaps.map(s => s._id === swapId ? { ...s, status: updatedStatus, expiresAt: response.data.data.expiresAt, rejectionReason: response.data.data.rejectionReason } : s));
         setSentSwaps(sentSwaps.map(s => s._id === swapId ? { ...s, status: updatedStatus, expiresAt: response.data.data.expiresAt, rejectionReason: response.data.data.rejectionReason } : s));
       
-        
         if (updatedStatus === 'ACCEPTED') {
           navigate(`/deal/${swapId}`);
         }
@@ -233,7 +227,6 @@ const SwapsPage = ({ user }) => {
     setActionError({ id: null, message: '' });
   };
 
- 
   const openRejectModal = (swapId) => {
     setRejectSwapId(swapId);
     setRejectReason('');
@@ -256,7 +249,6 @@ const SwapsPage = ({ user }) => {
     handleStatusUpdate(rejectSwapId, 'REJECTED', { rejectionReason: finalReason });
     setRejectModalOpen(false);
   };
-
 
   const handleCourierPayment = async (e) => {
     e.preventDefault();
@@ -486,16 +478,13 @@ const SwapsPage = ({ user }) => {
                    
                       )}
                       
-                      {swap.status === 'ACCEPTED' && (
-                     
-                        <Link
-                          to={`/deal/${swap._id}`}
-                          className="flex-1 md:flex-none bg-[#F8F9FA] hover:bg-[#EBE5F7] text-[#6B46C1] px-5 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-2 border border-[#d6bcfa]"
-                        >
-                          <ExternalLink className="w-4 h-4" /> View Deal Details
-                        </Link>
-                    
-                      )}
+                      <Link
+                        to={`/deal/${swap._id}`}
+                        className="flex-1 md:flex-none bg-[#F8F9FA] hover:bg-[#EBE5F7] text-[#6B46C1] px-5 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-2 border border-[#d6bcfa]"
+                      >
+                        <ExternalLink className="w-4 h-4" /> View Deal Details
+                      </Link>
+
                     </div>
                   </div>
 

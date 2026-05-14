@@ -264,7 +264,7 @@ const NotificationsPage = () => {
     },
   });
 
-  const handleNotificationClick = (notif) => {
+ const handleNotificationClick = (notif) => {
     if (!notif.isRead) {
       markAsReadMutation.mutate(notif._id);
     }
@@ -279,10 +279,12 @@ const NotificationsPage = () => {
         break;
       
       case 'TRADE_ALERT':
-        // CHANGED: Ab hum title ya message ko check nahi kar rahe hain. 
-        // Backend se aane wale exact 'reason' ko check kar rahe hain. Future proof!
+       
         if (reason === 'new_offer') {
           navigate('/swaps?tab=received');
+        } else if (reason === 'payment_pending') {
+      
+          navigate('/swaps?tab=sent');
         } else if (refId) {
           navigate(`/deal/${refId}`);
         } else {

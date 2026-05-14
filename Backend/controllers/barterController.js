@@ -284,7 +284,7 @@ const updateSwapStatus = async (req, res) => {
 
       if (setting) {
         if (setting.shippingMethod === 'dynamic') {
-         
+          
           const itemOwner = await User.findById(barter.offered_item.owner);
           const pickupPincode = itemOwner?.pickupAddress?.pincode;
           
@@ -449,7 +449,7 @@ const completeSwapPayment = async (req, res) => {
 
     if (setting) {
       if (setting.shippingMethod === 'dynamic') {
-      
+       
         const itemOwner = await User.findById(barter.item.owner);
         const pickupPincode = itemOwner?.pickupAddress?.pincode;
         
@@ -557,8 +557,7 @@ const completeSwapPayment = async (req, res) => {
       { status: 'CANCELLED', updated_at: Date.now() }
     );
 
-    
-    await Order.create({
+    const ownerDispatchOrder = await Order.create({
       buyer: barter.requester._id, 
       seller: barter.owner._id, 
       item: barter.item._id, 
@@ -575,7 +574,6 @@ const completeSwapPayment = async (req, res) => {
       razorpay_payment_id: rzpPaymentId,
     });
 
-    
     await Order.create({
       buyer: barter.owner._id, 
       seller: barter.requester._id, 
@@ -600,7 +598,7 @@ const completeSwapPayment = async (req, res) => {
       type: 'ORDER_UPDATE',
       title: 'Deal Locked! 📦',
       message: `${barter.requester.full_name} has paid their shipping. Both orders are placed! Pack your item for dispatch.`,
-      metadata: { referenceId: barter._id, imageUrl: barter.item?.images?.[0] }
+      metadata: { referenceId: ownerDispatchOrder._id, imageUrl: barter.item?.images?.[0] }
     });
 
     barter.requesterShippingAddress = shippingAddress;
