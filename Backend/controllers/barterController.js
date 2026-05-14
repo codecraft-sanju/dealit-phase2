@@ -11,7 +11,6 @@ const crypto = require('crypto');
 const Order = require('../models/Order');
 const Transaction = require('../models/Transaction');
 
-
 const { refundRazorpayPayment, fetchRazorpayPaymentInfo } = require('./paymentController');
 const { checkServiceability } = require('../utils/shiprocket');
 
@@ -106,7 +105,10 @@ const formatRequestsForFrontend = (requests) => {
     receiver: req.owner,
     sender: req.requester,
     created_at: req.created_at,
-    expiresAt: req.expiresAt
+    expiresAt: req.expiresAt,
+   
+    rejectionReason: req.rejectionReason
+  
   }));
 };
 
@@ -242,7 +244,9 @@ const deleteBarterRequest = async (req, res) => {
 const updateSwapStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, shippingAddress, paymentDetails } = req.body; 
+  
+    const { status, shippingAddress, paymentDetails, rejectionReason } = req.body; 
+  
     const userId = req.user._id;
 
     const barter = await BarterRequest.findById(id)
@@ -350,14 +354,21 @@ const updateSwapStatus = async (req, res) => {
       });
 
   } else if (status === 'REJECTED') {
-     
+   
+      if (rejectionReason) {
+        barter.rejectionReason = rejectionReason;
+      }
+
       queueNotification({
         user: barter.requester._id,
         type: 'TRADE_ALERT',
         title: 'Offer Declined ',
-        message: `Your offer for "${barter.item.title}" has been declined.`,
+        message: rejectionReason 
+          ? `Your offer for "${barter.item.title}" has been declined. Reason: ${rejectionReason}`
+          : `Your offer for "${barter.item.title}" has been declined.`,
         metadata: { reason: 'trade_rejected', referenceId: barter._id, imageUrl: barter.item?.images?.[0] }
       });
+     
       barter.status = status;
     }
 
@@ -649,7 +660,6 @@ const autoCancelOverdueBarters = async () => {
         barter.updated_at = now;
         await barter.save();
 
-        // CHANGED: Added imageUrl
         queueNotification({
           user: barter.owner._id,
           type: 'SYSTEM',

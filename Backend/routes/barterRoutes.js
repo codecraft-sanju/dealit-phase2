@@ -8,7 +8,6 @@ const {
   updateBarterRequest, 
   deleteBarterRequest,
   updateSwapStatus,
-
   completeSwapPayment
 
 } = require('../controllers/barterController');

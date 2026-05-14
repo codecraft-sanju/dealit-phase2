@@ -10,13 +10,10 @@ import {
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// CHANGED: Imported the newly created CountdownTimer component
 import CountdownTimer from './CountdownTimer';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
-
-// CHANGED: Removed the CountdownTimer component from this file since it is now imported from CountdownTimer.jsx
 
 const loadRazorpayScript = () => {
   return new Promise((resolve) => {
@@ -28,9 +25,18 @@ const loadRazorpayScript = () => {
   });
 };
 
+/* --- CHANGES START HERE: Added standard rejection reasons --- */
+const REJECT_REASONS = [
+  "Item value is too low",
+  "Not interested in this item",
+  "Item condition is not good enough",
+  "I already have a similar item",
+  "Other"
+];
+/* --- CHANGES END HERE --- */
+
 const SwapsPage = ({ user }) => {
   const navigate = useNavigate();
-  /* --- CHANGES START HERE: Added location and updated activeTab state --- */
   const location = useLocation();
   const [activeTab, setActiveTab] = useState(() => {
     const searchParams = new URLSearchParams(location.search);
@@ -43,7 +49,6 @@ const SwapsPage = ({ user }) => {
     setActionError({ id: null, message: '' });
     navigate(`/swaps?tab=${tab}`, { replace: true });
   };
-  /* --- CHANGES END HERE --- */
   
   const [receivedSwaps, setReceivedSwaps] = useState([]);
   const [sentSwaps, setSentSwaps] = useState([]);
@@ -75,6 +80,13 @@ const SwapsPage = ({ user }) => {
 
   const [autoCancelHours, setAutoCancelHours] = useState(24);
   const [auraPenalty, setAuraPenalty] = useState(50);
+
+  /* --- CHANGES START HERE: Added states for Rejection Flow --- */
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectSwapId, setRejectSwapId] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [customRejectReason, setCustomRejectReason] = useState('');
+  /* --- CHANGES END HERE --- */
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -172,8 +184,10 @@ const SwapsPage = ({ user }) => {
       );
       if (response.data.success) {
         const updatedStatus = response.data.data.status || newStatus;
-        setReceivedSwaps(receivedSwaps.map(s => s._id === swapId ? { ...s, status: updatedStatus, expiresAt: response.data.data.expiresAt } : s));
-        setSentSwaps(sentSwaps.map(s => s._id === swapId ? { ...s, status: updatedStatus, expiresAt: response.data.data.expiresAt } : s));
+        /* --- CHANGES START HERE: Merging updated fields including rejectionReason into state --- */
+        setReceivedSwaps(receivedSwaps.map(s => s._id === swapId ? { ...s, status: updatedStatus, expiresAt: response.data.data.expiresAt, rejectionReason: response.data.data.rejectionReason } : s));
+        setSentSwaps(sentSwaps.map(s => s._id === swapId ? { ...s, status: updatedStatus, expiresAt: response.data.data.expiresAt, rejectionReason: response.data.data.rejectionReason } : s));
+        /* --- CHANGES END HERE --- */
         
         if (updatedStatus === 'ACCEPTED') {
           navigate(`/deal/${swapId}`);
@@ -218,6 +232,31 @@ const SwapsPage = ({ user }) => {
     setAcceptModalOpen(true);
     setActionError({ id: null, message: '' });
   };
+
+  /* --- CHANGES START HERE: Added Rejection Functions --- */
+  const openRejectModal = (swapId) => {
+    setRejectSwapId(swapId);
+    setRejectReason('');
+    setCustomRejectReason('');
+    setActionError({ id: null, message: '' });
+    setRejectModalOpen(true);
+  };
+
+  const handleRejectSubmit = () => {
+    if (!rejectReason) {
+      setActionError({ id: 'rejectModal', message: 'Please select a reason' });
+      return;
+    }
+    const finalReason = rejectReason === 'Other' ? customRejectReason : rejectReason;
+    if (rejectReason === 'Other' && !finalReason.trim()) {
+      setActionError({ id: 'rejectModal', message: 'Please type your reason' });
+      return;
+    }
+    
+    handleStatusUpdate(rejectSwapId, 'REJECTED', { rejectionReason: finalReason });
+    setRejectModalOpen(false);
+  };
+  /* --- CHANGES END HERE --- */
 
   const handleCourierPayment = async (e) => {
     e.preventDefault();
@@ -293,13 +332,11 @@ const SwapsPage = ({ user }) => {
 
   const displaySwaps = activeTab === 'received' ? receivedSwaps : sentSwaps;
 
-  // --- CHANGES START HERE: Computed values for credit differences ---
   const targetValue = activeSwap?.requestedItem?.estimated_value || 0;
   const offeredValue = activeSwap?.offeredItem?.estimated_value || 0;
   const requiredCredits = Math.max(0, targetValue - offeredValue);
   const userCredits = user?.account_credits || 0;
   const hasEnoughCredits = flowType === 'requester_pay' ? userCredits >= requiredCredits : true;
-  // --- CHANGES END HERE ---
 
   return (
     <div className="max-w-md mx-auto bg-[#f4f2f9] min-h-screen pb-2 md:max-w-7xl relative font-sans">
@@ -322,7 +359,6 @@ const SwapsPage = ({ user }) => {
 
         <div className="px-5 md:px-8 -mt-7 relative z-20 pb-4">
           <div className="bg-white rounded-2xl p-1.5 shadow-sm border border-gray-100 flex gap-2">
-            {/* --- CHANGES START HERE: Updated onClick to use handleTabChange --- */}
             <button 
               onClick={() => handleTabChange('received')}
               className={`flex-1 md:flex-none px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${
@@ -343,7 +379,6 @@ const SwapsPage = ({ user }) => {
             >
               Sent ({sentSwaps.length})
             </button>
-            {/* --- CHANGES END HERE --- */}
           </div>
         </div>
       </div>
@@ -369,7 +404,6 @@ const SwapsPage = ({ user }) => {
             </div>
           ) : (
             displaySwaps.map((swap) => {
-              // --- CHANGES START HERE: Card Level Credit Calculations ---
               const itemTargetVal = swap.requestedItem?.estimated_value || 0;
               const itemOfferVal = swap.offeredItem?.estimated_value || 0;
               const cardCreditDiff = Math.max(0, itemTargetVal - itemOfferVal);
@@ -396,7 +430,6 @@ const SwapsPage = ({ user }) => {
                   creditSubtext = 'Requester pays the difference';
                 }
               }
-              // --- CHANGES END HERE ---
 
               return (
                 <div key={swap._id} className="bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow rounded-[2rem] p-5 md:p-7">
@@ -428,13 +461,15 @@ const SwapsPage = ({ user }) => {
                           >
                             {processingId === swap._id ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Accept
                           </button>
+                          {/* --- CHANGES START HERE: Update Reject Button to open modal --- */}
                           <button
-                            onClick={() => handleStatusUpdate(swap._id, 'REJECTED')}
+                            onClick={() => openRejectModal(swap._id)}
                             disabled={processingId === swap._id}
                             className="flex-1 md:flex-none bg-[#FCE8E6] hover:bg-[#FAD2CF] text-[#C5221F] px-5 py-2.5 rounded-xl text-sm font-bold transition flex items-center justify-center gap-1.5 disabled:opacity-50"
                           >
                             <X className="w-4 h-4" /> Reject
                           </button>
+                          {/* --- CHANGES END HERE --- */}
                         </>
                       )}
 
@@ -571,7 +606,18 @@ const SwapsPage = ({ user }) => {
 
                   </div>
 
-                  {/* --- CHANGES START HERE: Visual badge indicating credit logic on the card itself --- */}
+                
+                  {swap.status === 'REJECTED' && swap.rejectionReason && (
+                    <div className="mt-5 bg-red-50/50 border border-red-100 rounded-xl p-3.5 flex items-start gap-3 shadow-sm">
+                      <MessageSquare className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-[11px] font-bold text-red-800 uppercase tracking-wide mb-0.5">Reason for Rejection</p>
+                        <p className="text-sm font-medium text-red-900">{swap.rejectionReason}</p>
+                      </div>
+                    </div>
+                  )}
+                
+
                   {cardCreditDiff > 0 && (
                     <div className="mt-5 bg-[#fff8f1] border border-[#ffeadd] rounded-xl p-3.5 flex items-center justify-between shadow-sm">
                       <div className="flex items-center gap-3">
@@ -595,7 +641,6 @@ const SwapsPage = ({ user }) => {
                       )}
                     </div>
                   )}
-                  {/* --- CHANGES END HERE --- */}
 
                 </div>
               );
@@ -610,6 +655,7 @@ const SwapsPage = ({ user }) => {
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] flex items-end md:items-center justify-center bg-slate-900/60 backdrop-blur-sm sm:px-4"
           >
+          
             <motion.div 
               initial={{ y: '100%', opacity: 0.5, scale: 0.95 }}
               animate={{ y: 0, opacity: 1, scale: 1 }}
@@ -782,6 +828,96 @@ const SwapsPage = ({ user }) => {
           </motion.div>
         )}
       </AnimatePresence>
+
+  
+      <AnimatePresence>
+        {rejectModalOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-end md:items-center justify-center bg-slate-900/60 backdrop-blur-sm sm:px-4"
+          >
+            <motion.div 
+              initial={{ y: '100%', opacity: 0.5, scale: 0.95 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: '100%', opacity: 0, scale: 0.95 }}
+              transition={{ type: "spring", damping: 25, stiffness: 250 }}
+              className="bg-white w-full max-w-md rounded-t-[2rem] md:rounded-[2rem] shadow-2xl overflow-hidden flex flex-col"
+            >
+              <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-white relative z-10 shrink-0">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">
+                    Decline Offer
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">Let them know why you are passing on this deal</p>
+                </div>
+                <button onClick={() => setRejectModalOpen(false)} className="text-slate-400 hover:text-slate-700 transition p-2 bg-slate-50 hover:bg-slate-100 rounded-full">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-6 bg-[#f8f9fb]">
+                {actionError.id === 'rejectModal' && (
+                  <div className="mb-4 bg-red-50 border border-red-100 p-3 rounded-xl flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                    <p className="text-sm text-red-700 font-medium">{actionError.message}</p>
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  {REJECT_REASONS.map((reason, idx) => (
+                    <label key={idx} className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${rejectReason === reason ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                      <input 
+                        type="radio" 
+                        name="rejectReason" 
+                        value={reason} 
+                        checked={rejectReason === reason} 
+                        onChange={(e) => setRejectReason(e.target.value)} 
+                        className="w-4 h-4 text-red-500 focus:ring-red-500" 
+                      />
+                      <span className={`text-sm font-medium ${rejectReason === reason ? 'text-red-900' : 'text-gray-700'}`}>{reason}</span>
+                    </label>
+                  ))}
+                </div>
+
+                <AnimatePresence>
+                  {rejectReason === 'Other' && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                      animate={{ height: 'auto', opacity: 1, marginTop: 12 }}
+                      exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <textarea
+                        value={customRejectReason}
+                        onChange={(e) => setCustomRejectReason(e.target.value)}
+                        placeholder="Type your reason here..."
+                        className="w-full bg-white border-2 border-red-200 rounded-xl p-3 text-sm focus:outline-none focus:border-red-500 min-h-[80px] resize-none"
+                      ></textarea>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              <div className="p-5 border-t border-slate-100 bg-white flex gap-3">
+                <button 
+                  onClick={() => setRejectModalOpen(false)}
+                  className="flex-1 bg-gray-100 text-gray-700 rounded-xl font-bold py-3 hover:bg-gray-200 transition"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleRejectSubmit}
+                  disabled={processingId === rejectSwapId}
+                  className="flex-1 bg-red-500 text-white rounded-xl font-bold py-3 shadow-md hover:bg-red-600 transition disabled:opacity-70 flex justify-center items-center gap-2"
+                >
+                  {processingId === rejectSwapId ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Confirm Reject'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+     
 
     </div>
   );

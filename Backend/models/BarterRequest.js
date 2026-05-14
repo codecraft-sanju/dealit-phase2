@@ -14,6 +14,9 @@ const barterRequestSchema = new mongoose.Schema({
   },
   
   message: { type: String },
+
+  rejectionReason: { type: String },
+
   requester_accepted: { type: Boolean, default: false },
   owner_accepted: { type: Boolean, default: false },
   
