@@ -130,7 +130,7 @@ const verifyPayment = async (req, res) => {
         { new: true }
       ).select('-password'); 
 
-     
+      // Yaha image url nahi chahiye kyunki ye direct wallet recharge hai
       queueNotification({
         user: userId,
         type: 'CREDIT_ADDED',
@@ -218,19 +218,21 @@ const razorpayWebhook = async (req, res) => {
       const refundEntity = req.body.payload.refund.entity;
       const paymentId = refundEntity.payment_id;
 
-      const order = await Order.findOne({ razorpay_payment_id: paymentId, paymentStatus: 'refund_processing' });
+      // CHANGED: populate('item') add kiya taaki notification me photo bheji ja sake
+      const order = await Order.findOne({ razorpay_payment_id: paymentId, paymentStatus: 'refund_processing' }).populate('item');
       
       if (order) {
          order.paymentStatus = 'refunded';
          await order.save();
 
        
+         // CHANGED: imageUrl add kiya order ki item se nikal ke
          queueNotification({
            user: order.buyer,
            type: 'CREDIT_ADDED',
            title: 'Bank Refund Successful ',
            message: `₹${order.shippingCost} shipping refund has been successfully processed by your bank.`,
-           metadata: { amount: order.shippingCost, reason: 'bank_refund_success', referenceId: order._id }
+           metadata: { amount: order.shippingCost, reason: 'bank_refund_success', referenceId: order._id, imageUrl: order.item?.images?.[0] }
          });
       }
     }
@@ -239,23 +241,25 @@ const razorpayWebhook = async (req, res) => {
       const refundEntity = req.body.payload.refund.entity;
       const paymentId = refundEntity.payment_id;
 
-      const order = await Order.findOne({ razorpay_payment_id: paymentId, paymentStatus: 'refund_processing' });
+      // CHANGED: populate('item') add kiya
+      const order = await Order.findOne({ razorpay_payment_id: paymentId, paymentStatus: 'refund_processing' }).populate('item');
       
       if (order) {
          order.paymentStatus = 'refund_failed';
          await order.save();
 
         
+         // CHANGED: imageUrl add kiya
          queueNotification({
            user: order.buyer,
            type: 'SYSTEM_ALERT',
            title: 'Refund Failed ⚠️',
            message: `Your bank rejected the ₹${order.shippingCost} shipping refund. Please contact support.`,
-           metadata: { amount: order.shippingCost, reason: 'bank_refund_failed', referenceId: order._id }
+           metadata: { amount: order.shippingCost, reason: 'bank_refund_failed', referenceId: order._id, imageUrl: order.item?.images?.[0] }
          });
       }
     }
-   
+    
 
     res.status(200).send('OK');
   } catch (error) {

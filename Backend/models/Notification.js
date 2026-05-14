@@ -30,7 +30,8 @@ const notificationSchema = new mongoose.Schema({
   metadata: {
     amount: { type: Number, default: 0 },
     reason: { type: String }, 
-    referenceId: { type: mongoose.Schema.Types.ObjectId } 
+    referenceId: { type: mongoose.Schema.Types.ObjectId } ,
+    imageUrl: { type: String }
   },
   isRead: { 
     type: Boolean, 

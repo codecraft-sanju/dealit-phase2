@@ -128,7 +128,7 @@ const registerUser = async (req, res) => {
                 referrer.account_credits += setting.referralRewardCredits;
                 referrer.aura_points = (referrer.aura_points || 0) + 20; 
                 
-                // CHANGED: Replaced await Notification.create with queueNotification
+               
                 queueNotification({
                   user: referrer._id,
                   type: 'CREDIT_ADDED',

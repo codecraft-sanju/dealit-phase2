@@ -26,7 +26,7 @@ const getUserNotifications = async (req, res) => {
       total,
       totalPages: Math.ceil(total / limit),
       currentPage: page,
-      unreadCount: user ? user.unreadNotificationsCount : 0, // Using pre-calculated count
+      unreadCount: user ? user.unreadNotificationsCount : 0, 
       data: notifications
     });
   } catch (error) {
@@ -131,7 +131,7 @@ const unsubscribePush = async (req, res) => {
   }
 };
 
-// ADDED: API route controller agar manual sync karna ho future mein
+
 const syncUnreadCount = async (req, res) => {
   try {
     const userId = req.user ? req.user._id : req.body.userId;

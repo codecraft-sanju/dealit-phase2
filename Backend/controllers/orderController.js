@@ -194,22 +194,22 @@ const createOrder = async (req, res) => {
       }
     });
 
-    // CHANGED: Replaced await Notification.create with queueNotification
+    // CHANGED: Added imageUrl to metadata
     queueNotification({
       user: buyerId,
       type: 'CREDIT_DEDUCTED',
       title: 'Order Confirmed! 🛒',
       message: `You have successfully purchased "${item.title}". ${itemPrice} credits were deducted.`,
-      metadata: { amount: itemPrice, reason: 'item_purchase', referenceId: order._id }
+      metadata: { amount: itemPrice, reason: 'item_purchase', referenceId: order._id, imageUrl: item.images?.[0] }
     });
 
-    // CHANGED: Replaced await Notification.create with queueNotification
+    // CHANGED: Added imageUrl to metadata
     queueNotification({
       user: item.owner._id,
       type: 'ORDER_UPDATE',
       title: 'New Order Received! 🎉',
       message: `Someone has purchased your item "${item.title}". Please pack the item!`,
-      metadata: { referenceId: order._id }
+      metadata: { referenceId: order._id, imageUrl: item.images?.[0] }
     });
 
     res.status(201).json({
@@ -289,13 +289,13 @@ const updateOrderStatus = async (req, res) => {
       if (seller) {
         order.isSellerPaid = true;
 
-        // CHANGED: Replaced await Notification.create with queueNotification
+        // CHANGED: Added imageUrl to metadata
         queueNotification({
           user: seller._id,
           type: 'CREDIT_ADDED',
           title: 'Payment Released! 💰',
           message: `Order delivered! ${order.itemPrice} credits and +${auraRewardAmount} Aura have been added to your wallet.`,
-          metadata: { amount: order.itemPrice, reason: 'escrow_release', referenceId: order._id }
+          metadata: { amount: order.itemPrice, reason: 'escrow_release', referenceId: order._id, imageUrl: order.item?.images?.[0] }
         });
 
         await AuraLog.create({
@@ -352,13 +352,13 @@ const updateOrderStatus = async (req, res) => {
         
         order.paymentStatus = newPaymentStatus;
         
-        // CHANGED: Replaced await Notification.create with queueNotification
+        // CHANGED: Added imageUrl to metadata
         queueNotification({
           user: buyer._id,
           type: 'CREDIT_ADDED',
           title: 'Order Cancelled & Refunded 🔄',
           message: `The order has been cancelled. Reason: ${order.cancellationReason}. Your ${order.itemPrice} credits have been refunded.`,
-          metadata: { amount: order.itemPrice, reason: 'order_refund', referenceId: order._id }
+          metadata: { amount: order.itemPrice, reason: 'order_refund', referenceId: order._id, imageUrl: order.item?.images?.[0] }
         });
         
         const seller = await User.findByIdAndUpdate(order.seller, [
@@ -380,13 +380,13 @@ const updateOrderStatus = async (req, res) => {
             type: "negative"
           });
 
-          // CHANGED: Replaced await Notification.create with queueNotification
+          // CHANGED: Added imageUrl to metadata
           queueNotification({
             user: seller._id,
             type: 'AURA_UPDATE', 
             title: 'Aura Penalty ⚠️',
             message: `${auraPenaltyAmount} Aura points have been deducted due to the cancelled deal.`,
-            metadata: { reason: 'aura_penalty', referenceId: order._id }
+            metadata: { reason: 'aura_penalty', referenceId: order._id, imageUrl: order.item?.images?.[0] }
           });
         }
 
@@ -618,13 +618,13 @@ const handleShiprocketWebhook = async (req, res) => {
         if (seller) {
           order.isSellerPaid = true;
 
-          // CHANGED: Replaced await Notification.create with queueNotification
+          // CHANGED: Added imageUrl to metadata
           queueNotification({
             user: seller._id,
             type: 'CREDIT_ADDED',
             title: 'Payment Released! 💰',
             message: `Order successfully delivered! ${order.itemPrice} credits and +${auraRewardAmount} Aura have been credited to your account.`,
-            metadata: { amount: order.itemPrice, reason: 'escrow_release', referenceId: order._id }
+            metadata: { amount: order.itemPrice, reason: 'escrow_release', referenceId: order._id, imageUrl: order.item?.images?.[0] }
           });
 
           await AuraLog.create({
@@ -747,13 +747,13 @@ const autoCancelOverdueOrders = async () => {
           ]);
           /* --- CHANGE END --- */
 
-          // CHANGED: Replaced await Notification.create with queueNotification
+          // CHANGED: Added imageUrl to metadata
           queueNotification({
             user: buyerId,
             type: 'CREDIT_ADDED',
             title: 'Order Auto-Cancelled & Refunded 🔄',
             message: `The seller failed to dispatch your order on time. Your ${order.itemPrice} credits have been refunded.`,
-            metadata: { amount: order.itemPrice, reason: 'auto_cancel_refund', referenceId: order._id }
+            metadata: { amount: order.itemPrice, reason: 'auto_cancel_refund', referenceId: order._id, imageUrl: order.item?.images?.[0] }
           });
 
           await AuraLog.create({
@@ -763,13 +763,13 @@ const autoCancelOverdueOrders = async () => {
             type: "negative"
           });
 
-          // CHANGED: Replaced await Notification.create with queueNotification
+          // CHANGED: Added imageUrl to metadata
           queueNotification({
             user: sellerId,
             type: 'AURA_UPDATE',
             title: 'Aura Penalty ⚠️',
             message: `${auraPenaltyAmount} Aura points deducted. You failed to dispatch the order within ${cancelHours} hours.`,
-            metadata: { reason: 'auto_cancel_penalty', referenceId: order._id }
+            metadata: { reason: 'auto_cancel_penalty', referenceId: order._id, imageUrl: order.item?.images?.[0] }
           });
 
           if (order.item) {

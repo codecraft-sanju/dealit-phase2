@@ -188,13 +188,13 @@ const updateItemStatus = async (req, res) => {
         ? `Your item "${item.title}" has been approved and is now live.` 
         : `Your item "${item.title}" has been rejected. Reason: ${item.rejection_reason}`;
       
-      // CHANGED: Replaced await Notification.create with queueNotification
+      // CHANGED: Replaced await Notification.create with queueNotification and added imageUrl
       queueNotification({
         user: item.owner,
         type: 'SYSTEM',
         title: notifTitle,
         message: notifMessage,
-        metadata: { referenceId: item._id, newStatus: status }
+        metadata: { referenceId: item._id, newStatus: status, imageUrl: item.images?.[0] }
       });
     }
 
@@ -213,13 +213,13 @@ const updateItemStatus = async (req, res) => {
           type: "positive"
         });
 
-        // CHANGED: Replaced await Notification.create with queueNotification
+        // CHANGED: Replaced await Notification.create with queueNotification and added imageUrl
         queueNotification({
           user: user._id,
           type: 'AURA_UPDATE',
           title: 'Aura Reward! 🎉',
           message: `Your item "${item.title}" was approved. You received 10 Aura points for your contribution!`,
-          metadata: { reason: 'item_approved', referenceId: item._id }
+          metadata: { reason: 'item_approved', referenceId: item._id, imageUrl: item.images?.[0] }
         });
 
         // --- 2. CREDIT SYSTEM LOGIC WITH LIFETIME TRACKER ---
@@ -255,34 +255,33 @@ const updateItemStatus = async (req, res) => {
           // Apply credits if > 0
           if (creditsToGive > 0) {
             user.account_credits = (user.account_credits || 0) + creditsToGive;
-            // CHANGED: Replaced await Notification.create with queueNotification
+            // CHANGED: Replaced await Notification.create with queueNotification and added imageUrl
             queueNotification({
               user: item.owner,
               type: 'CREDIT_ADDED',
               title: 'Credits Received! 💰',
               message: detailedMessage,
-              metadata: { referenceId: item._id, amount: creditsToGive }
+              metadata: { referenceId: item._id, amount: creditsToGive, imageUrl: item.images?.[0] }
             });
           } else {
-             // Notify user why they got 0 credits
-             // CHANGED: Replaced await Notification.create with queueNotification
+             // CHANGED: Replaced await Notification.create with queueNotification and added imageUrl
              queueNotification({
               user: item.owner,
               type: 'SYSTEM_ALERT',
               title: 'Credit Limit Reached ℹ️',
               message: detailedMessage,
-              metadata: { referenceId: item._id, amount: 0 }
+              metadata: { referenceId: item._id, amount: 0, imageUrl: item.images?.[0] }
             });
           }
         } else {
            // Credit system is paused globally
-           // CHANGED: Replaced await Notification.create with queueNotification
+           // CHANGED: Replaced await Notification.create with queueNotification and added imageUrl
            queueNotification({
               user: item.owner,
               type: 'SYSTEM_ALERT',
               title: 'Credit System Paused ⏸️',
               message: `Your item "${item.title}" was approved, but the credit reward system is currently paused by the administration.`,
-              metadata: { referenceId: item._id, amount: 0 }
+              metadata: { referenceId: item._id, amount: 0, imageUrl: item.images?.[0] }
             });
         }
         
@@ -885,8 +884,6 @@ const resolveFailedRefund = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server Error resolving refund' });
   }
 };
-
-// NEW FUNCTION: Auto Retry Refund using Razorpay
 const retryFailedRefund = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -903,8 +900,6 @@ const retryFailedRefund = async (req, res) => {
     if (order.shippingCost <= 0 || !order.razorpay_payment_id) {
         return res.status(400).json({ success: false, message: 'No valid Razorpay payment found to refund' });
     }
-
-    // Call Razorpay API again
     const refundRes = await refundRazorpayPayment(order.razorpay_payment_id, order.shippingCost);
     
     if (!refundRes.success) {
@@ -915,11 +910,10 @@ const retryFailedRefund = async (req, res) => {
         });
     }
 
-    // Since bank takes time, move to refund_processing
+  
     order.paymentStatus = 'refund_processing';
     await order.save();
 
-    // Log the transaction
     await Transaction.create({
       user: order.buyer._id,
       amount: order.shippingCost,
@@ -929,7 +923,7 @@ const retryFailedRefund = async (req, res) => {
       transactionType: 'shipping_refund' 
     });
 
-    // CHANGED: Replaced await Notification.create with queueNotification
+    
     queueNotification({
       user: order.buyer._id,
       type: 'SYSTEM_ALERT',

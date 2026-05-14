@@ -57,13 +57,13 @@ const createItem = async (req, res) => {
     user.listedProductsCount = actualItemCount + 1;
     await user.save();
 
-    // CHANGED: Replaced await Notification.create with queueNotification
+    // CHANGED: Added imageUrl to metadata
     queueNotification({
       user: req.user._id,
       type: 'SYSTEM',
       title: 'Item Submitted! 📦',
       message: `Your item "${title}" has been successfully submitted for review. You will receive your credit reward once the admin approves it.`,
-      metadata: { reason: 'item_pending_review', referenceId: savedItem._id }
+      metadata: { reason: 'item_pending_review', referenceId: savedItem._id, imageUrl: savedItem.images?.[0] }
     });
 
     try {
@@ -205,13 +205,13 @@ const updateItem = async (req, res) => {
             type: "positive"
           });
 
-          // CHANGED: Replaced await Notification.create with queueNotification
+          // CHANGED: Added imageUrl to metadata
           queueNotification({
             user: owner._id,
             type: 'AURA_UPDATE',
             title: 'Item Approved! 🎉',
             message: `Your item "${item.title}" has been approved. You have been rewarded with 10 Aura points for your contribution!`,
-            metadata: { reason: 'item_approved', referenceId: item._id }
+            metadata: { reason: 'item_approved', referenceId: item._id, imageUrl: item.images?.[0] }
           });
 
           // 2. CREDIT SYSTEM LOGIC WITH LIFETIME TRACKER
@@ -246,32 +246,32 @@ const updateItem = async (req, res) => {
             if (creditsToGive > 0) {
               owner.account_credits = (owner.account_credits || 0) + creditsToGive;
               
-              // CHANGED: Replaced await Notification.create with queueNotification
+              // CHANGED: Added imageUrl to metadata
               queueNotification({
                 user: owner._id,
                 type: 'CREDIT_ADDED',
                 title: 'Credits Received! 💰',
                 message: detailedMessage,
-                metadata: { referenceId: item._id, amount: creditsToGive }
+                metadata: { referenceId: item._id, amount: creditsToGive, imageUrl: item.images?.[0] }
               });
             } else {
-              // CHANGED: Replaced await Notification.create with queueNotification
+              // CHANGED: Added imageUrl to metadata
               queueNotification({
                 user: owner._id,
                 type: 'SYSTEM_ALERT',
                 title: 'Credit Limit Reached ℹ️',
                 message: detailedMessage,
-                metadata: { referenceId: item._id, amount: 0 }
+                metadata: { referenceId: item._id, amount: 0, imageUrl: item.images?.[0] }
               });
             }
           } else {
-            // CHANGED: Replaced await Notification.create with queueNotification
+            // CHANGED: Added imageUrl to metadata
             queueNotification({
               user: owner._id,
               type: 'SYSTEM_ALERT',
               title: 'Credit System Paused ⏸️',
               message: `Your item "${item.title}" was approved, but the credit reward system is currently paused by the administration.`,
-              metadata: { referenceId: item._id, amount: 0 }
+              metadata: { referenceId: item._id, amount: 0, imageUrl: item.images?.[0] }
             });
           }
 

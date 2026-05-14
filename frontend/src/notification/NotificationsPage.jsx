@@ -397,8 +397,17 @@ const NotificationsPage = () => {
                     )}
                     
                     <div className="flex gap-4">
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${bg}`}>
-                        <Icon className={`w-6 h-6 ${color}`} />
+                      {/* CHANGED: Dynamic image rendering from metadata.imageUrl */}
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 overflow-hidden ${bg}`}>
+                        {notif.metadata?.imageUrl ? (
+                          <img 
+                            src={notif.metadata.imageUrl} 
+                            alt="Notification related item" 
+                            className="w-full h-full object-cover" 
+                          />
+                        ) : (
+                          <Icon className={`w-6 h-6 ${color}`} />
+                        )}
                       </div>
                       
                       <div className="flex-1 pr-4">
