@@ -43,7 +43,7 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
     }
   });
 
-  /* NAYA CHANGE START */
+
   const { data: userStats } = useQuery({
     queryKey: ['userStats'],
     queryFn: async () => {
@@ -52,7 +52,7 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
     },
     refetchInterval: 10000
   });
-  /* NAYA CHANGE END */
+ 
 
   useEffect(() => {
     if (profileData && setUser) {
@@ -191,7 +191,7 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
     }
   };
 
-  /* NAYA CHANGE START */
+ 
   const swapsBadge = userStats?.swapsActive > 0 ? `${userStats.swapsActive} Active` : null;
   let swapsSubtitle = "Your Trade Offers & Barters";
   if (userStats?.receivedSwaps > 0 || userStats?.sentSwaps > 0) {
@@ -212,7 +212,7 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
     { to: "/notifications", icon: Bell, title: "Notifications", subtitle: "Alert Settings", iconClass: "fill-[#6B46C1]" },     
     { to: "/help-support", icon: HelpCircle, title: "Help & Support", subtitle: "Get Assistance", iconClass: "fill-[#6B46C1]/20" }
   ];
-  /* NAYA CHANGE END */
+
 
   return (
     <div className="min-h-screen bg-[#f4f2f9] pb-10 font-sans relative overflow-x-hidden">
@@ -437,7 +437,7 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                     )}
                   </AnimatePresence>
 
-                  {/* NAYA CHANGE START */}
+                
                   {menuItems.map((item, index) => (
                     <Link 
                       key={index}
@@ -465,7 +465,7 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                       <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-[#6B46C1] transition-colors" />
                     </Link>
                   ))}
-                  {/* NAYA CHANGE END */}
+                
 
                   <Link
                     to="/delete-account"
