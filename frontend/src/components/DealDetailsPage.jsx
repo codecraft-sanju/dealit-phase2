@@ -33,9 +33,82 @@ const DealDetailsPage = ({ user }) => {
     }
   };
 
+  // --- CHANGES START HERE: Replaced simple loading text with shimmer skeleton ---
   if (loading) {
-    return <div className="min-h-screen bg-[#f4f2f9] flex items-center justify-center font-bold text-[#6B46C1]">Loading Deal Details...</div>;
+    return (
+      <div className="min-h-screen bg-[#f4f2f9] pb-10 font-sans relative overflow-hidden">
+        <header className="fixed top-0 left-0 right-0 z-50 bg-[#6B46C1] px-5 py-4 shadow-md flex items-center justify-between">
+          <div className="flex items-center gap-3 w-full">
+            <div className="w-9 h-9 bg-white/20 rounded-full animate-pulse"></div>
+            <div className="space-y-2 flex-1">
+              <div className="w-32 h-5 bg-white/20 rounded animate-pulse"></div>
+              <div className="w-20 h-3 bg-white/20 rounded animate-pulse"></div>
+            </div>
+          </div>
+        </header>
+
+        <div className="absolute top-0 left-0 right-0 bg-[#6B46C1] h-48 rounded-b-[2rem] z-0"></div>
+
+        <div className="max-w-xl mx-auto px-5 md:px-8 pt-24 relative z-20">
+          <div className="bg-white rounded-[2rem] p-6 md:p-8 shadow-xl border border-gray-100 text-center">
+            
+            <div className="w-20 h-20 bg-gray-200 rounded-full mx-auto mb-5 animate-pulse"></div>
+            
+            <div className="w-48 h-8 bg-gray-200 rounded-lg mx-auto mb-3 animate-pulse"></div>
+            <div className="w-32 h-4 bg-gray-200 rounded mx-auto mb-6 animate-pulse"></div>
+            
+            <div className="w-full h-3 bg-gray-200 rounded mx-auto mb-2 animate-pulse"></div>
+            <div className="w-4/5 h-3 bg-gray-200 rounded mx-auto mb-8 animate-pulse"></div>
+
+            <div className="bg-[#fcfbff] rounded-2xl p-5 mb-6 text-left border border-[#f0eaff]">
+              <div className="flex items-center gap-3 mb-4 border-b border-gray-100 pb-4">
+                <div className="w-12 h-12 bg-gray-200 rounded-full animate-pulse"></div>
+                <div className="flex-1 space-y-2">
+                  <div className="w-20 h-2 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="w-32 h-4 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="w-24 h-3 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+                <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse"></div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="bg-white border border-gray-100 p-3 rounded-xl shadow-sm flex flex-col">
+                  <div className="w-20 h-2 bg-gray-200 rounded mb-2 animate-pulse"></div>
+                  <div className="h-24 w-full bg-gray-200 rounded-lg mb-2 animate-pulse"></div>
+                  <div className="w-full h-3 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+                <div className="bg-white border border-gray-100 p-3 rounded-xl shadow-sm flex flex-col">
+                  <div className="w-20 h-2 bg-gray-200 rounded mb-2 animate-pulse"></div>
+                  <div className="h-24 w-full bg-gray-200 rounded-lg mb-2 animate-pulse"></div>
+                  <div className="w-full h-3 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+              </div>
+
+              <div className="bg-white border border-gray-100 p-4 rounded-xl shadow-sm mt-4 space-y-3">
+                <div className="w-32 h-2 bg-gray-200 rounded mb-3 animate-pulse"></div>
+                <div className="flex justify-between items-center">
+                  <div className="w-24 h-3 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="w-12 h-3 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <div className="w-24 h-3 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="w-12 h-3 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+                <div className="flex justify-between items-center border-t border-gray-100 pt-3">
+                  <div className="w-24 h-3 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="w-16 h-3 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+              </div>
+            </div>
+
+            <div className="w-full h-14 bg-gray-200 rounded-xl mb-4 animate-pulse"></div>
+            <div className="w-full h-20 bg-gray-100 rounded-xl animate-pulse"></div>
+          </div>
+        </div>
+      </div>
+    );
   }
+  // --- CHANGES END HERE ---
 
   if (error || !deal) {
     return (

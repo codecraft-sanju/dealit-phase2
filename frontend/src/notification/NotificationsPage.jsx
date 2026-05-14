@@ -270,6 +270,7 @@ const NotificationsPage = () => {
     }
 
     const refId = notif.metadata?.referenceId;
+    const reason = notif.metadata?.reason;
 
     switch (notif.type) {
       case 'CREDIT_ADDED':
@@ -278,7 +279,11 @@ const NotificationsPage = () => {
         break;
       
       case 'TRADE_ALERT':
-        if (refId) {
+        // CHANGED: Ab hum title ya message ko check nahi kar rahe hain. 
+        // Backend se aane wale exact 'reason' ko check kar rahe hain. Future proof!
+        if (reason === 'new_offer') {
+          navigate('/swaps?tab=received');
+        } else if (refId) {
           navigate(`/deal/${refId}`);
         } else {
           navigate('/swaps');
@@ -397,7 +402,6 @@ const NotificationsPage = () => {
                     )}
                     
                     <div className="flex gap-4">
-                      {/* CHANGED: Dynamic image rendering from metadata.imageUrl */}
                       <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 overflow-hidden ${bg}`}>
                         {notif.metadata?.imageUrl ? (
                           <img 

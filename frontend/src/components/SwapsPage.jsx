@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+/* --- CHANGES MADE: Added useLocation to imports --- */
+import { Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { 
   RefreshCw, Check, X, MessageSquare, Package, Eye, AlertCircle, 
   ArrowRightLeft, ChevronLeft, ExternalLink, Truck, Users, MapPin, 
@@ -29,7 +30,20 @@ const loadRazorpayScript = () => {
 
 const SwapsPage = ({ user }) => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('received');
+  /* --- CHANGES START HERE: Added location and updated activeTab state --- */
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const tabParam = searchParams.get('tab');
+    return tabParam === 'sent' ? 'sent' : 'received';
+  });
+  
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setActionError({ id: null, message: '' });
+    navigate(`/swaps?tab=${tab}`, { replace: true });
+  };
+  /* --- CHANGES END HERE --- */
   
   const [receivedSwaps, setReceivedSwaps] = useState([]);
   const [sentSwaps, setSentSwaps] = useState([]);
@@ -308,8 +322,9 @@ const SwapsPage = ({ user }) => {
 
         <div className="px-5 md:px-8 -mt-7 relative z-20 pb-4">
           <div className="bg-white rounded-2xl p-1.5 shadow-sm border border-gray-100 flex gap-2">
+            {/* --- CHANGES START HERE: Updated onClick to use handleTabChange --- */}
             <button 
-              onClick={() => { setActiveTab('received'); setActionError({ id: null, message: '' }); }}
+              onClick={() => handleTabChange('received')}
               className={`flex-1 md:flex-none px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${
                 activeTab === 'received' 
                   ? 'bg-[#EBE5F7] text-[#6B46C1] shadow-sm' 
@@ -319,7 +334,7 @@ const SwapsPage = ({ user }) => {
               Received ({receivedSwaps.length})
             </button>
             <button 
-              onClick={() => { setActiveTab('sent'); setActionError({ id: null, message: '' }); }}
+              onClick={() => handleTabChange('sent')}
               className={`flex-1 md:flex-none px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${
                 activeTab === 'sent' 
                   ? 'bg-[#EBE5F7] text-[#6B46C1] shadow-sm' 
@@ -328,6 +343,7 @@ const SwapsPage = ({ user }) => {
             >
               Sent ({sentSwaps.length})
             </button>
+            {/* --- CHANGES END HERE --- */}
           </div>
         </div>
       </div>
