@@ -1,5 +1,4 @@
 import React from 'react';
-// NEW CHANGE: Added 'Image as ImageIcon' to imports
 import { Coins, ToggleRight, ToggleLeft, Package, List, Gift, Users, Target, Truck, Zap, IndianRupee, Clock, AlertTriangle, Settings, Image as ImageIcon } from 'lucide-react';
 
 const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, handleSaveSettings, updating }) => {
@@ -63,7 +62,6 @@ const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, handleSav
                   )}
                 </div>
 
-                {/* NEW CHANGE: Changed grid layout to fit 4 columns on large screens */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">
                   <div className="space-y-2 md:space-y-2.5">
                     <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest">Credits Per Listing</label>
@@ -121,7 +119,6 @@ const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, handleSav
                     <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider">Total items a user can list.</p>
                   </div>
 
-                  {/* NEW CHANGE: Added Minimum Images Required Input */}
                   <div className="space-y-2 md:space-y-2.5">
                     <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest">Min Images Required</label>
                     <div className="relative group">
@@ -141,6 +138,23 @@ const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, handleSav
                     <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider">Images required to list (1-5).</p>
                   </div>
 
+                </div>
+              </div>
+
+              <hr className="border-white/5" />
+
+              {/* NAYA CHANGE: Smart Discount Simulation Toggle */}
+              <div className="space-y-5 md:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-[50ms]">
+                <div className="bg-white/[0.02] p-4 md:p-6 rounded-2xl border border-white/5 flex items-center justify-between cursor-pointer hover:bg-white/[0.04] transition-colors gap-3 md:gap-4" onClick={() => setCreditSettings({ ...creditSettings, isDiscountSimulationEnabled: !creditSettings.isDiscountSimulationEnabled })}>
+                  <div className="flex-1">
+                    <p className="font-bold text-white text-base md:text-lg tracking-tight">Enable Smart Discounts (Visual Only)</p>
+                    <p className="text-[10px] md:text-xs text-gray-500 mt-0.5 md:mt-1 max-w-md leading-relaxed">If turned on, the system will automatically display random simulated discounts (like 10%, 15%, 18% OFF) on products to make the platform look highly active and attractive.</p>
+                  </div>
+                  {creditSettings.isDiscountSimulationEnabled ? (
+                    <ToggleRight className="w-10 h-10 md:w-14 md:h-14 text-[#A388E1] drop-shadow-[0_0_10px_rgba(163,136,225,0.4)] shrink-0" />
+                  ) : (
+                    <ToggleLeft className="w-10 h-10 md:w-14 md:h-14 text-gray-600 shrink-0" />
+                  )}
                 </div>
               </div>
 

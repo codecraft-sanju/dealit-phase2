@@ -119,7 +119,8 @@ const AdminPanel = ({ user }) => {
     flatShippingCost: 60,
     auraReward: 50,
     auraPenalty: 50,
-    minImagesRequired: 3
+    minImagesRequired: 3,
+    isDiscountSimulationEnabled: false // NAYA CHANGE: Added default state here
   });
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);

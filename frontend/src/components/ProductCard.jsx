@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Package, Coins } from 'lucide-react';
-// <-- NAYA CHANGE: Import helper function from HomePage
+
 import { getOptimizedCloudinaryUrl } from './HomePage';
 
 const ProductCard = ({ item, isLoading, className = '', onClick, isSelected }) => {
@@ -35,9 +35,15 @@ const ProductCard = ({ item, isLoading, className = '', onClick, isSelected }) =
 
   const cardContent = (
     <>
-      <div className="w-full aspect-square flex items-center justify-center mb-3 bg-white/40 rounded-xl overflow-hidden">
+      <div className="relative w-full aspect-square flex items-center justify-center mb-3 bg-white/40 rounded-xl overflow-hidden">
+        {/* NAYA CHANGE: Moved discount badge to top corner of image */}
+        {item.discount_percentage && (
+          <span className="absolute top-2 left-2 z-10 text-[9px] font-black text-white bg-[#FF4747] px-1.5 py-0.5 rounded shadow-sm">
+            {item.discount_percentage}% OFF
+          </span>
+        )}
+        
         {item.images && item.images.length > 0 && item.images[0] ? (
-          // <-- NAYA CHANGE: Wrap item.images[0] with getOptimizedCloudinaryUrl -->
           <img src={getOptimizedCloudinaryUrl(item.images[0])} alt={item.title} className="w-full h-full object-cover mix-blend-multiply drop-shadow-sm transition-transform duration-300 hover:scale-105" />
         ) : (
           <Package className="w-8 h-8 text-[#A388E1]/40" />
@@ -47,18 +53,30 @@ const ProductCard = ({ item, isLoading, className = '', onClick, isSelected }) =
       <div>
         <h3 className="text-xs font-bold text-gray-900 leading-tight mb-1 line-clamp-2">{item.title}</h3>
         <div className="flex items-center justify-between mt-1.5">
-          <div className="flex items-center gap-1">
-            <div className="bg-yellow-100 rounded-full p-0.5">
-              <Coins className="w-2.5 h-2.5 text-yellow-600" />
+          
+          <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
+              <div className="bg-yellow-100 rounded-full p-0.5">
+                <Coins className="w-2.5 h-2.5 text-yellow-600" />
+              </div>
+              <span className="font-bold text-gray-900 text-xs">{item.estimated_value || '0'}</span>
             </div>
-            <span className="font-bold text-gray-900 text-xs">{item.estimated_value || '0'}</span>
+            {item.original_value && (
+              <span className="text-[10px] text-gray-400 line-through font-medium">
+                {item.original_value}
+              </span>
+            )}
           </div>
           
-          {item.category && (
-            <span className="text-[9px] font-medium text-[#A388E1] bg-[#EBE5F7] px-1.5 py-0.5 rounded-md truncate max-w-[65px]">
-              {item.category}
-            </span>
-          )}
+          {/* CATEGORY SECTION */}
+          <div className="flex flex-col items-end gap-1">
+            {item.category && (
+              <span className="text-[9px] font-medium text-[#A388E1] bg-[#EBE5F7] px-1.5 py-0.5 rounded-md truncate max-w-[65px]">
+                {item.category}
+              </span>
+            )}
+          </div>
+
         </div>
       </div>
     </>

@@ -465,7 +465,8 @@ const updateCreditSettings = async (req, res) => {
       autoCancelHours,
       auraReward,
       auraPenalty,
-      minImagesRequired
+      minImagesRequired,
+      isDiscountSimulationEnabled 
     } = req.body;
     
     let setting = await CreditSetting.findOne();
@@ -497,6 +498,9 @@ const updateCreditSettings = async (req, res) => {
     
     if (minImagesRequired !== undefined) setting.minImagesRequired = minImagesRequired;
 
+
+    if (isDiscountSimulationEnabled !== undefined) setting.isDiscountSimulationEnabled = isDiscountSimulationEnabled;
+
     setting.updated_at = Date.now();
 
     await setting.save();
@@ -514,8 +518,9 @@ const updateCreditSettings = async (req, res) => {
 
 const getPublicCreditSettings = async (req, res) => {
   try {
+  
     let setting = await CreditSetting.findOne().select(
-      'isReferralSystemEnabled referralRewardCredits maxAllowedListings maxReferralLimit milestoneReferralReward isWelcomeBonusEnabled welcomeBonusAmount shippingMethod flatShippingCost autoCancelHours auraReward auraPenalty minImagesRequired'
+      'isReferralSystemEnabled referralRewardCredits maxAllowedListings maxReferralLimit milestoneReferralReward isWelcomeBonusEnabled welcomeBonusAmount shippingMethod flatShippingCost autoCancelHours auraReward auraPenalty minImagesRequired isDiscountSimulationEnabled'
     );
     
     if (!setting) {
@@ -532,7 +537,8 @@ const getPublicCreditSettings = async (req, res) => {
         autoCancelHours: 24,
         auraReward: 50,
         auraPenalty: 50,
-        minImagesRequired: 3
+        minImagesRequired: 3,
+        isDiscountSimulationEnabled: false // NAYA CHANGE: Default added here
       };
     }
     res.status(200).json({ success: true, data: setting });
@@ -865,7 +871,7 @@ const resolveFailedRefund = async (req, res) => {
       transactionType: 'shipping_refund'
     });
 
-    // CHANGED: Replaced await Notification.create with queueNotification
+  
     queueNotification({
       user: order.buyer._id,
       type: 'CREDIT_ADDED',

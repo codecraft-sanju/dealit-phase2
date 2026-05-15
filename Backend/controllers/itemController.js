@@ -4,11 +4,29 @@ const User = require('../models/User');
 const CreditSetting = require('../models/CreditSetting'); 
 const mongoose = require('mongoose');
 
-
 const { queueNotification } = require('../services/queue');
-
 const sendEmail = require('../utils/sendEmail');
 const AuraLog = require('../models/AuraLog'); 
+
+const applyDiscountSimulation = (item, isEnabled) => {
+  const itemObj = item.toObject ? item.toObject() : { ...item };
+  if (!isEnabled || !itemObj.estimated_value || itemObj.estimated_value <= 0) return itemObj;
+
+  const charCode = String(itemObj._id).slice(-1).charCodeAt(0);
+  let discount = 0;
+  
+  // NAYA CHANGE: Changed to % 5 so that more items (approx 40%) show NO discount.
+  if (charCode % 5 === 0) discount = 18;
+  else if (charCode % 5 === 1) discount = 10;
+  else if (charCode % 5 === 2) discount = 15;
+  // If % 5 is 3 or 4, discount stays 0 (No discount)
+
+  if (discount > 0) {
+    itemObj.discount_percentage = discount;
+    itemObj.original_value = Math.round(itemObj.estimated_value / (1 - discount / 100));
+  }
+  return itemObj;
+};
 
 const createItem = async (req, res) => {
   try {
@@ -57,7 +75,6 @@ const createItem = async (req, res) => {
     user.listedProductsCount = actualItemCount + 1;
     await user.save();
 
-    // CHANGED: Added imageUrl to metadata
     queueNotification({
       user: req.user._id,
       type: 'SYSTEM',
@@ -114,13 +131,16 @@ const getItems = async (req, res) => {
       .skip(skip)
       .limit(limit);
     
+    const setting = await CreditSetting.findOne();
+    const modifiedItems = items.map(item => applyDiscountSimulation(item, setting?.isDiscountSimulationEnabled || false));
+
     res.status(200).json({ 
       success: true, 
-      count: items.length, 
+      count: modifiedItems.length, 
       total,
       totalPages: Math.ceil(total / limit),
       currentPage: page,
-      data: items 
+      data: modifiedItems 
     });
   } catch (error) {
     console.error(error);
@@ -131,7 +151,9 @@ const getItems = async (req, res) => {
 const getMyItems = async (req, res) => {
   try {
     const items = await Item.find({ owner: req.user._id }).sort({ created_at: -1 });
-    res.status(200).json({ success: true, count: items.length, data: items });
+    const setting = await CreditSetting.findOne();
+    const modifiedItems = items.map(item => applyDiscountSimulation(item, setting?.isDiscountSimulationEnabled || false));
+    res.status(200).json({ success: true, count: modifiedItems.length, data: modifiedItems });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: 'Server Error' });
@@ -146,7 +168,10 @@ const getItemById = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Item not found' });
     }
     
-    res.status(200).json({ success: true, data: item });
+    const setting = await CreditSetting.findOne();
+    const modifiedItem = applyDiscountSimulation(item, setting?.isDiscountSimulationEnabled || false);
+
+    res.status(200).json({ success: true, data: modifiedItem });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: 'Server Error' });
@@ -189,13 +214,13 @@ const updateItem = async (req, res) => {
 
     updateData.updated_at = Date.now();
     
-    // IF ITEM STATUS CHANGES TO ACTIVE
+
     if (updateData.status === 'active' && item.status !== 'active') { 
       try {
         const owner = await User.findById(item.owner);
         
         if (owner) {
-          // 1. AURA POINTS LOGIC
+    
           owner.aura_points = (owner.aura_points || 0) + 10;
 
           await AuraLog.create({
@@ -205,7 +230,7 @@ const updateItem = async (req, res) => {
             type: "positive"
           });
 
-          // CHANGED: Added imageUrl to metadata
+        
           queueNotification({
             user: owner._id,
             type: 'AURA_UPDATE',
@@ -214,7 +239,7 @@ const updateItem = async (req, res) => {
             metadata: { reason: 'item_approved', referenceId: item._id, imageUrl: item.images?.[0] }
           });
 
-          // 2. CREDIT SYSTEM LOGIC WITH LIFETIME TRACKER
+         
           let setting = await CreditSetting.findOne();
           if (!setting) {
             setting = { isCreditSystemEnabled: true, creditsPerListing: 50, maxListingsRewarded: 3 };
@@ -228,14 +253,14 @@ const updateItem = async (req, res) => {
               creditsToGive = Number(awarded_credits);
               detailedMessage = `Admin has manually awarded you ${creditsToGive} credits for your approved item "${item.title}".`;
             } else {
-              // LOOPHOLE FIXED HERE
+            
               const rewardedCount = owner.rewardedListingsCount || 0;
 
               if (rewardedCount < setting.maxListingsRewarded) {
                 creditsToGive = setting.creditsPerListing;
                 detailedMessage = `You received the standard reward of ${creditsToGive} credits for successfully listing your item "${item.title}".`;
                 
-                // Increase lifetime count
+            
                 owner.rewardedListingsCount = rewardedCount + 1;
               } else {
                 creditsToGive = 0;
@@ -246,7 +271,7 @@ const updateItem = async (req, res) => {
             if (creditsToGive > 0) {
               owner.account_credits = (owner.account_credits || 0) + creditsToGive;
               
-              // CHANGED: Added imageUrl to metadata
+            
               queueNotification({
                 user: owner._id,
                 type: 'CREDIT_ADDED',
@@ -255,7 +280,7 @@ const updateItem = async (req, res) => {
                 metadata: { referenceId: item._id, amount: creditsToGive, imageUrl: item.images?.[0] }
               });
             } else {
-              // CHANGED: Added imageUrl to metadata
+              
               queueNotification({
                 user: owner._id,
                 type: 'SYSTEM_ALERT',
@@ -265,7 +290,7 @@ const updateItem = async (req, res) => {
               });
             }
           } else {
-            // CHANGED: Added imageUrl to metadata
+            
             queueNotification({
               user: owner._id,
               type: 'SYSTEM_ALERT',
@@ -275,7 +300,7 @@ const updateItem = async (req, res) => {
             });
           }
 
-          // Save both Aura, Credits, and RewardedCount
+         
           await owner.save();
         }
       } catch (rewardError) {
@@ -288,7 +313,10 @@ const updateItem = async (req, res) => {
       runValidators: true
     });
 
-    res.status(200).json({ success: true, data: item });
+    const setting = await CreditSetting.findOne();
+    const modifiedItem = applyDiscountSimulation(item, setting?.isDiscountSimulationEnabled || false);
+
+    res.status(200).json({ success: true, data: modifiedItem });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: 'Server Error' });
@@ -348,10 +376,13 @@ const searchItems = async (req, res) => {
     .populate('owner', 'full_name city email profilePic')
     .sort({ created_at: -1 });
 
+    const setting = await CreditSetting.findOne();
+    const modifiedItems = items.map(item => applyDiscountSimulation(item, setting?.isDiscountSimulationEnabled || false));
+
     res.status(200).json({
       success: true,
-      count: items.length,
-      data: items
+      count: modifiedItems.length,
+      data: modifiedItems
     });
   } catch (error) {
     console.error('Error searching items:', error);
@@ -390,7 +421,10 @@ const getRelatedItems = async (req, res) => {
 
     const relatedItems = [...sameCategoryItems, ...randomItems];
 
-    res.status(200).json({ success: true, count: relatedItems.length, data: relatedItems });
+    const setting = await CreditSetting.findOne();
+    const modifiedItems = relatedItems.map(item => applyDiscountSimulation(item, setting?.isDiscountSimulationEnabled || false));
+
+    res.status(200).json({ success: true, count: modifiedItems.length, data: modifiedItems });
   } catch (error) {
     console.error('Error fetching related items:', error);
     res.status(500).json({ success: false, message: 'Server Error while fetching related items' });

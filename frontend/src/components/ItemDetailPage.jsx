@@ -326,6 +326,13 @@ const ItemDetailPage = ({ user }) => {
           
           <div className="relative w-full aspect-square bg-[#f8f9fb] lg:rounded-[2rem] overflow-hidden border-b lg:border border-slate-100 shadow-sm group">
             
+            {/* NAYA CHANGE: Added Discount Badge on Image Corner */}
+            {item.discount_percentage && (
+              <span className="absolute top-4 left-4 z-20 text-[11px] lg:text-xs font-black text-white bg-[#FF4747] px-2.5 py-1 rounded-md shadow-md tracking-wider">
+                {item.discount_percentage}% OFF
+              </span>
+            )}
+
             {item.images && item.images.length > 1 && (
               <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-3 py-1.5 rounded-full lg:hidden z-10 tracking-widest shadow-sm">
                 {activeIndex + 1} / {item.images.length}
@@ -419,14 +426,20 @@ const ItemDetailPage = ({ user }) => {
             </div>
 
             <div className="flex items-center gap-2 pb-6 border-b border-slate-100">
-              <div className="w-12 h-12 bg-[#FFF4D2] rounded-full flex items-center justify-center border border-[#FFE28A]/50">
+              <div className="w-12 h-12 bg-[#FFF4D2] rounded-full flex items-center justify-center border border-[#FFE28A]/50 shrink-0">
                 <Coins className="w-6 h-6 text-yellow-600" />
               </div>
               <div>
                 <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest leading-none mb-1">Dealit Value</p>
-                <div className="flex items-baseline gap-1">
+                <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-black text-slate-900 tracking-tighter">{targetValue}</span>
-                  <span className="text-sm font-medium text-slate-500">Credits</span>
+                  {/* NAYA CHANGE: Show original cut price next to the current value */}
+                  {item.original_value && (
+                    <span className="text-lg text-slate-400 line-through font-medium">
+                      {item.original_value}
+                    </span>
+                  )}
+                  <span className="text-sm font-medium text-slate-500 ml-0.5">Credits</span>
                 </div>
               </div>
             </div>

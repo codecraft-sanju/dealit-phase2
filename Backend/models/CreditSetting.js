@@ -8,6 +8,7 @@ const creditSettingSchema = new mongoose.Schema({
   isWelcomeBonusEnabled: { type: Boolean, default: true },
   welcomeBonusAmount: { type: Number, default: 50 },
   minImagesRequired: { type: Number, default: 3 },
+  isDiscountSimulationEnabled: { type: Boolean, default: false },
   shippingMethod: { 
     type: String, 
     enum: ['flat', 'dynamic'], 
