@@ -279,7 +279,7 @@ const NotificationsPage = () => {
         break;
       
       case 'TRADE_ALERT':
-       
+        
         if (reason === 'new_offer') {
           navigate('/swaps?tab=received');
         } else if (reason === 'payment_pending') {
@@ -387,6 +387,9 @@ const NotificationsPage = () => {
             <AnimatePresence>
               {notifications.map((notif) => {
                 const { icon: Icon, color, bg } = getIconData(notif.type);
+               
+                const isWelcomeBonus = notif.metadata?.reason === 'signup_bonus';
+
                 return (
                   <motion.div
                     key={notif._id}
@@ -404,8 +407,15 @@ const NotificationsPage = () => {
                     )}
                     
                     <div className="flex gap-4">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 overflow-hidden ${bg}`}>
-                        {notif.metadata?.imageUrl ? (
+                     
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 overflow-hidden ${isWelcomeBonus ? 'bg-teal-50' : bg}`}>
+                        {isWelcomeBonus ? (
+                          <img 
+                            src="/welcome-gift.png" 
+                            alt="Welcome Bonus" 
+                            className="w-full h-full object-cover drop-shadow-sm" 
+                          />
+                        ) : notif.metadata?.imageUrl ? (
                           <img 
                             src={notif.metadata.imageUrl} 
                             alt="Notification related item" 
