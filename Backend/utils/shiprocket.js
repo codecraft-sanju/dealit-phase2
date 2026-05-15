@@ -240,18 +240,32 @@ const getTrackingByAWB = async (awb_code) => {
 const getShiprocketOrderDetails = async (shiprocketOrderId) => {
   try {
     const token = await getShiprocketToken();
-    const response = await axios.get(`${SHIPROCKET_BASE_URL}/orders/show/${shiprocketOrderId}`, {
+    
+    // API endpoint was previously returning empty, updated to standard orders lookup
+    const response = await axios.get(`${SHIPROCKET_BASE_URL}/orders/${shiprocketOrderId}`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
     });
     
+    // Check various paths Shiprocket uses to return AWB details based on API version
     if (response.data && response.data.data) {
-      return {
-        awb_code: response.data.data.awb_code,
-        courier_name: response.data.data.courier_name
-      };
+       const orderData = response.data.data;
+       
+       // Handle cases where AWB is nested within shipments
+       if (orderData.awb_code) {
+           return {
+               awb_code: orderData.awb_code,
+               courier_name: orderData.courier_name || 'Courier Partner'
+           };
+       } else if (orderData.shipments && orderData.shipments.length > 0 && orderData.shipments[0].awb) {
+           return {
+               awb_code: orderData.shipments[0].awb,
+               courier_name: orderData.shipments[0].courier_name || 'Courier Partner'
+           };
+       }
     }
+    
     return null;
   } catch (error) {
     console.error('Error fetching Shiprocket order details:', error.response?.data || error.message);
