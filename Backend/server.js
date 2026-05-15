@@ -8,7 +8,7 @@ const connectDB = require('./database/db');
 const userRoutes = require('./routes/userRoutes');
 const itemRoutes = require('./routes/itemRoutes');
 const barterRoutes = require('./routes/barterRoutes');
-const messageRoutes = require('./routes/messageRoutes');
+
 const adminRoutes = require('./routes/adminRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const offerRoutes = require('./routes/offerRoutes');
@@ -24,7 +24,7 @@ const cron = require('node-cron');
 const { autoCancelOverdueOrders } = require('./controllers/orderController');
 const { autoCancelOverdueBarters } = require('./controllers/barterController');
 
-// Models for the new sync cron job
+
 const User = require('./models/User');
 const Notification = require('./models/Notification');
 
@@ -35,8 +35,6 @@ connectDB();
 app.use(cors({
   origin: [
     process.env.FRONTEND_URL, 
-    'https://dealit.xyz', 
-    'https://www.dealit.xyz',
     'https://dealiit.com',      
     'https://www.dealiit.com'   
   ], 
@@ -69,7 +67,7 @@ app.get('/health', (req, res) => {
 app.use('/api/users', userRoutes);
 app.use('/api/items', itemRoutes);
 app.use('/api/barter', barterRoutes);
-app.use('/api/messages', messageRoutes);
+
 app.use('/api/admin', adminRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/offers', offerRoutes);
