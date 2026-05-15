@@ -236,23 +236,19 @@ const getTrackingByAWB = async (awb_code) => {
   }
 };
 
-
 const getShiprocketOrderDetails = async (shiprocketOrderId) => {
   try {
     const token = await getShiprocketToken();
     
-    // API endpoint was previously returning empty, updated to standard orders lookup
     const response = await axios.get(`${SHIPROCKET_BASE_URL}/orders/${shiprocketOrderId}`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
     });
     
-    // Check various paths Shiprocket uses to return AWB details based on API version
     if (response.data && response.data.data) {
        const orderData = response.data.data;
        
-       // Handle cases where AWB is nested within shipments
        if (orderData.awb_code) {
            return {
                awb_code: orderData.awb_code,
@@ -272,7 +268,6 @@ const getShiprocketOrderDetails = async (shiprocketOrderId) => {
     return null;
   }
 };
-
 
 module.exports = {
   getShiprocketToken,

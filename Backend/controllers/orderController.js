@@ -535,8 +535,7 @@ const dispatchOrder = async (req, res) => {
   }
 };
 
-
-/* --- ENHANCED GET SHIPPING LABEL WITH POLLING RECOVERY --- */
+/* --- MODIFIED: REGEX RECOVERY START --- */
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 const getShippingLabel = async (req, res) => {
@@ -553,9 +552,8 @@ const getShippingLabel = async (req, res) => {
     }
 
     const shipmentId = order.trackingDetails.shiprocket_shipment_id;
-    const shiprocketOrderId = order.trackingDetails.shiprocket_order_id;
 
-    // STEP 1: Process AWB Generation or Recovery
+    // STEP 1: Process AWB Generation or Regex Recovery
     if (!order.trackingDetails.awb_code || order.trackingDetails.awb_code === '') {
        try {
            const awbData = await generateAWB(shipmentId);
@@ -564,31 +562,23 @@ const getShippingLabel = async (req, res) => {
            await schedulePickup(shipmentId);
            await order.save();
        } catch (awbError) {
-           const errMsg = (awbError.message || '').toLowerCase();
+           const errMsg = (awbError.message || '');
            
-           if (errMsg.includes('reassign') || errMsg.includes('17 hour') || errMsg.includes('already')) {
-               console.log(`AWB already assigned for order ${order._id}. Initiating Deep Recovery...`);
+           if (errMsg.toLowerCase().includes('reassign') || errMsg.toLowerCase().includes('17 hour') || errMsg.toLowerCase().includes('already')) {
+               console.log(`AWB already assigned for order ${order._id}. Extracting directly from error text...`);
                
-               // Implement short polling to fetch missing AWB from Shiprocket API
-               let existingOrderData = null;
-               let attempts = 0;
+               const awbMatch = errMsg.match(/AWB\s*(\d+)/i);
+               let recoveredAwb = awbMatch ? awbMatch[1] : null;
                
-               while (!existingOrderData && attempts < 3) {
-                  existingOrderData = await getShiprocketOrderDetails(shiprocketOrderId);
-                  if (existingOrderData && existingOrderData.awb_code) break;
-                  attempts++;
-                  if (attempts < 3) await delay(1500); // wait 1.5s between retries
-               }
-               
-               if (existingOrderData && existingOrderData.awb_code) {
-                   order.trackingDetails.awb_code = existingOrderData.awb_code;
-                   order.trackingDetails.courier_company = existingOrderData.courier_name || 'Courier Partner';
+               if (recoveredAwb) {
+                   order.trackingDetails.awb_code = recoveredAwb;
+                   order.trackingDetails.courier_company = 'Courier Partner'; // Default fallback
                    await order.save();
-                   console.log(`Deep Recovery Successful: Saved missing AWB ${existingOrderData.awb_code}`);
+                   console.log(`Regex Recovery Successful: Saved extracted AWB ${recoveredAwb}`);
                } else {
                    return res.status(400).json({ 
                        success: false, 
-                       message: 'Shiprocket is still processing this newly assigned courier. Please try again in 1 minute.' 
+                       message: 'Shiprocket is still processing this newly assigned courier. Please check Shiprocket panel.' 
                    });
                }
            } else {
@@ -602,7 +592,7 @@ const getShippingLabel = async (req, res) => {
     let labelAttempts = 0;
     let lastLabelError = null;
     
-    // Retry generating label up to 3 times if it says "processing"
+    // Retry generating label up to 3 times if Shiprocket is slow
     while (!labelUrl && labelAttempts < 3) {
       try {
          labelUrl = await generateLabel(shipmentId);
@@ -614,14 +604,14 @@ const getShippingLabel = async (req, res) => {
             await delay(2000); // wait 2 seconds before retry
             labelAttempts++;
          } else {
-            throw labelError; // If it's a completely different error, stop retrying
+            throw labelError; 
          }
       }
     }
     
     if (!labelUrl) {
-      const errMsg = lastLabelError ? lastLabelError.message : 'Label is not ready yet.';
-      return res.status(400).json({ success: false, message: `${errMsg} Try again in 2 minutes.` });
+      const apiErrMsg = lastLabelError ? lastLabelError.message : 'Label is not ready yet.';
+      return res.status(400).json({ success: false, message: `${apiErrMsg} Try again in 1 minute.` });
     }
 
     res.status(200).json({ success: true, labelUrl, awb_code: order.trackingDetails.awb_code });
@@ -631,8 +621,7 @@ const getShippingLabel = async (req, res) => {
      res.status(500).json({ success: false, message: error.message || 'Server error generating label' });
   }
 };
-/* --- ENHANCED GET SHIPPING LABEL END --- */
-
+/* --- MODIFIED: REGEX RECOVERY END --- */
 
 const handleShiprocketWebhook = async (req, res) => {
   try {
