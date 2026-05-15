@@ -56,7 +56,6 @@ const DeleteAccountPage = smartLazy(() => import('./components/DeleteAccountPage
 const NotificationsPage = smartLazy(() => import('./notification/NotificationsPage'));
 const EditItemPage = smartLazy(() => import('./components/EditItemPage'));
 
-
 const FloatingAIAssistant = smartLazy(() => import('./components/FloatingAIAssistant'));
 const AiChatPage = smartLazy(() => import('./components/AiChatPage'));
 
@@ -194,7 +193,7 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
   const [hasZeroPriceIssue, setHasZeroPriceIssue] = useState(null);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth > 1024);
 
-  // --- CHANGE START: Added Service Worker Registration ---
+
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js')
@@ -251,7 +250,7 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
   const hideNavbarRoutes = ['/login', '/signup', '/forgot-password'];
   const shouldShowBottomNav = !hideNavbarRoutes.includes(location.pathname) && !location.pathname.startsWith('/admin');
 
- 
+  
   const publicDesktopRoutes = ['/login', '/privacy', '/terms', '/refund-policy', '/cancellation-policy'];
 
   if (isDesktop && !location.pathname.startsWith('/admin') && !publicDesktopRoutes.includes(location.pathname)) {
@@ -261,24 +260,22 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
       </Suspense>
     );
   }
-  /* END NEW CHANGES */
+
 
   return (
     <div className={`min-h-screen bg-gray-900 font-sans selection:bg-emerald-500/30 ${shouldShowBottomNav ? 'pb-16 md:pb-0' : ''}`}> 
       <ZeroPriceAlert user={user} onCheckComplete={setHasZeroPriceIssue} />
       
       <Suspense fallback={null}>
-        {/* --- NEW CHANGE: Added setUser={setUser} here so PromoAlert can update the global user state --- */}
+       
         <PromoAlert user={user} setUser={setUser} hasZeroPriceIssue={hasZeroPriceIssue} />
         <IosInstallPopup />
       </Suspense>
       
       <main>
         <Suspense fallback={<PremiumLoader />}>
-          
-          {/* --- CHANGES MADE: Added Floating AI Assistant globally if user is logged in --- */}
           {user && <FloatingAIAssistant user={user} />}
-          {/* --- CHANGES END --- */}
+       
 
           <Routes>
             <Route path="/" element={
@@ -305,7 +302,7 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/refund-policy" element={<RefundPolicyPage />} />
             <Route path="/cancellation-policy" element={<CancellationPolicyPage />} />
-   
+    
 
             <Route path="/admin" element={<AdminPanel user={user} />} />
             <Route path="/checkout/:itemId" element={user ? <CheckoutPage user={user} setUser={setUser} /> : <Navigate to="/login" />} />
@@ -334,11 +331,7 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
             <Route path="/deal/:id" element={user ? <DealDetailsPage user={user} /> : <Navigate to="/login" />} />
             <Route path="/notifications" element={user ? <NotificationsPage /> : <Navigate to="/login" />} />
             <Route path="/help-support" element={user ? <HelpSupportPage /> : <Navigate to="/login" />} />
-            
-            {/* --- CHANGES MADE: Added dedicated route for AI Chat (useful for mobile full-screen view) --- */}
             <Route path="/ai-chat" element={user ? <AiChatPage user={user} /> : <Navigate to="/login" />} />
-            {/* --- CHANGES END --- */}
-
             <Route path="*" element={<div className="text-white text-center mt-20 text-xl">404 - Page Not Found</div>} />
           </Routes>
         </Suspense>
@@ -355,7 +348,7 @@ function App() {
     return savedUser ? JSON.parse(savedUser) : null;
   });
 
- 
+  
   const handleLogout = useCallback(async () => {
     try {
       await axios.post(`${API_URL}/users/logout`, {}, { withCredentials: true });

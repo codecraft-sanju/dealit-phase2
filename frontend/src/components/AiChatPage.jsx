@@ -15,23 +15,32 @@ const TypingLoader = () => (
   </div>
 );
 
-const BotMessage = ({ content }) => {
-  const [displayedText, setDisplayedText] = useState('');
+// --- CHANGES MADE: Added animated flag and onComplete callback ---
+const BotMessage = ({ content, animated, onComplete }) => {
+  const [displayedText, setDisplayedText] = useState(animated ? '' : content);
   
   useEffect(() => {
+    if (!animated) {
+      setDisplayedText(content);
+      return;
+    }
+    
     let i = 0;
     const interval = setInterval(() => {
       setDisplayedText(content.slice(0, i + 1));
       i++;
-      if (i >= content.length) clearInterval(interval);
+      if (i >= content.length) {
+        clearInterval(interval);
+        if (onComplete) onComplete();
+      }
     }, 15);
     return () => clearInterval(interval);
-  }, [content]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [content, animated]);
 
   return <div className="break-words whitespace-pre-wrap leading-relaxed">{displayedText}</div>;
 };
 
-// --- Pre-defined suggestions for full screen ---
 const SUGGESTIONS = [
   "What is my Aura Score?",
   "How do I earn more Credits?",
@@ -41,9 +50,10 @@ const SUGGESTIONS = [
 
 const AiChatPage = ({ user }) => {
   const navigate = useNavigate();
-  // --- NAYA CHANGE: user?.name ki jagah user?.full_name?.split(' ')[0] kiya ---
+  
+  // --- CHANGES MADE: Added unique id and animated flag to track state ---
   const [messages, setMessages] = useState([
-    { role: 'bot', content: `Welcome to Dealit AI, ${user?.full_name?.split(' ')[0] || 'friend'}. How can I assist you with your trades today?` }
+    { id: 'init', role: 'bot', content: `Welcome to Dealit AI, ${user?.full_name?.split(' ')[0] || 'friend'}. How can I assist you with your trades today?`, animated: true }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -57,10 +67,15 @@ const AiChatPage = ({ user }) => {
     scrollToBottom();
   }, [messages, isLoading]);
 
+  // --- CHANGES MADE: Function to mark a message as fully animated ---
+  const markAsAnimated = (id) => {
+    setMessages((prev) => prev.map((m) => m.id === id ? { ...m, animated: false } : m));
+  };
+
   const processMessage = async (userMessage) => {
     if (!userMessage.trim()) return;
     
-    setMessages((prev) => [...prev, { role: 'user', content: userMessage }]);
+    setMessages((prev) => [...prev, { id: Date.now(), role: 'user', content: userMessage }]);
     setInput('');
     setIsLoading(true);
 
@@ -73,13 +88,13 @@ const AiChatPage = ({ user }) => {
       
       setMessages((prev) => [
         ...prev,
-        { role: 'bot', content: response.data.reply || 'I processed your request, but got no text back.' }
+        { id: Date.now() + 1, role: 'bot', content: response.data.reply || 'I processed your request, but got no text back.', animated: true }
       ]);
     } catch (error) {
       console.error('AI Chat Error:', error);
       setMessages((prev) => [
         ...prev,
-        { role: 'bot', content: 'Server connection failed. Please try again later.' }
+        { id: Date.now() + 1, role: 'bot', content: 'Server connection failed. Please try again later.', animated: true }
       ]);
     } finally {
       setIsLoading(false);
@@ -92,7 +107,7 @@ const AiChatPage = ({ user }) => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-900 md:pb-0 pb-16">
+    <div className="flex flex-col h-[100dvh] bg-gray-900 md:pb-0 pb-16">
       <div className="bg-gray-800/80 backdrop-blur-md border-b border-purple-500/20 p-4 flex items-center gap-4 sticky top-0 z-10 shadow-sm shadow-purple-900/10">
         <button 
           onClick={() => navigate(-1)}
@@ -115,12 +130,13 @@ const AiChatPage = ({ user }) => {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-6 container mx-auto max-w-3xl scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent">
-        {messages.map((msg, idx) => (
+        {messages.map((msg) => (
           <motion.div 
-            initial={{ opacity: 0, y: 10, scale: 0.98 }} 
+            /* --- CHANGES MADE: Avoid jump animation for old messages --- */
+            initial={msg.animated ? { opacity: 0, y: 10, scale: 0.98 } : { opacity: 1, y: 0, scale: 1 }} 
             animate={{ opacity: 1, y: 0, scale: 1 }} 
             transition={{ duration: 0.3 }}
-            key={idx} 
+            key={msg.id} 
             className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
@@ -130,7 +146,15 @@ const AiChatPage = ({ user }) => {
                   : 'bg-gray-800 text-gray-200 border border-gray-700 rounded-tl-sm shadow-md'
               }`}
             >
-              {msg.role === 'bot' ? <BotMessage content={msg.content} /> : msg.content}
+              {msg.role === 'bot' ? (
+                <BotMessage 
+                  content={msg.content} 
+                  animated={msg.animated} 
+                  onComplete={() => markAsAnimated(msg.id)} 
+                />
+              ) : (
+                msg.content
+              )}
             </div>
           </motion.div>
         ))}

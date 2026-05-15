@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, X, Send, Bot, Sparkles } from 'lucide-react';
+import { MessageSquare, X, Send, Bot, Sparkles, Maximize2, Minimize2 } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
@@ -14,23 +14,32 @@ const TypingLoader = () => (
   </div>
 );
 
-const BotMessage = ({ content }) => {
-  const [displayedText, setDisplayedText] = useState('');
+// --- CHANGES MADE: Added animated flag and onComplete callback ---
+const BotMessage = ({ content, animated, onComplete }) => {
+  const [displayedText, setDisplayedText] = useState(animated ? '' : content);
   
   useEffect(() => {
+    if (!animated) {
+      setDisplayedText(content);
+      return;
+    }
+    
     let i = 0;
     const interval = setInterval(() => {
       setDisplayedText(content.slice(0, i + 1));
       i++;
-      if (i >= content.length) clearInterval(interval);
+      if (i >= content.length) {
+        clearInterval(interval);
+        if (onComplete) onComplete();
+      }
     }, 15);
     return () => clearInterval(interval);
-  }, [content]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [content, animated]);
 
   return <div className="break-words whitespace-pre-wrap leading-relaxed">{displayedText}</div>;
 };
 
-// --- Pre-defined suggestions ---
 const SUGGESTIONS = [
   "What is Aura Score?",
   "How do I earn Credits?",
@@ -40,9 +49,11 @@ const SUGGESTIONS = [
 
 const FloatingAIAssistant = ({ user }) => {
   const [isOpen, setIsOpen] = useState(false);
-  // --- NAYA CHANGE: user?.name ki jagah user?.full_name?.split(' ')[0] kiya ---
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  
+  // --- CHANGES MADE: Added unique id and animated flag to track state ---
   const [messages, setMessages] = useState([
-    { role: 'bot', content: `Hi ${user?.full_name?.split(' ')[0] || 'there'}! I am Dealit's AI Assistant. How can I help you today?` }
+    { id: 'init', role: 'bot', content: `Hi ${user?.full_name?.split(' ')[0] || 'there'}! I am Dealit's AI Assistant. How can I help you today?`, animated: true }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -54,12 +65,17 @@ const FloatingAIAssistant = ({ user }) => {
 
   useEffect(() => {
     if (isOpen) scrollToBottom();
-  }, [messages, isOpen, isLoading]);
+  }, [messages, isOpen, isLoading, isFullScreen]);
+
+  // --- CHANGES MADE: Function to mark a message as fully animated ---
+  const markAsAnimated = (id) => {
+    setMessages((prev) => prev.map((m) => m.id === id ? { ...m, animated: false } : m));
+  };
 
   const processMessage = async (userMessage) => {
     if (!userMessage.trim()) return;
     
-    setMessages((prev) => [...prev, { role: 'user', content: userMessage }]);
+    setMessages((prev) => [...prev, { id: Date.now(), role: 'user', content: userMessage }]);
     setInput('');
     setIsLoading(true);
 
@@ -72,13 +88,13 @@ const FloatingAIAssistant = ({ user }) => {
       
       setMessages((prev) => [
         ...prev,
-        { role: 'bot', content: response.data.reply || 'I processed your request, but got no text back.' }
+        { id: Date.now() + 1, role: 'bot', content: response.data.reply || 'I processed your request, but got no text back.', animated: true }
       ]);
     } catch (error) {
       console.error('AI Chat Error:', error);
       setMessages((prev) => [
         ...prev,
-        { role: 'bot', content: 'Sorry, I am having trouble connecting to the server right now.' }
+        { id: Date.now() + 1, role: 'bot', content: 'Sorry, I am having trouble connecting to the server right now.', animated: true }
       ]);
     } finally {
       setIsLoading(false);
@@ -87,7 +103,13 @@ const FloatingAIAssistant = ({ user }) => {
 
   const handleSendMessage = (e) => {
     e.preventDefault();
+    setIsFullScreen(true);
     processMessage(input);
+  };
+
+  const handleClose = () => {
+    setIsOpen(false);
+    setTimeout(() => setIsFullScreen(false), 300); 
   };
 
   return (
@@ -95,13 +117,18 @@ const FloatingAIAssistant = ({ user }) => {
       <AnimatePresence>
         {isOpen && (
           <motion.div
+            layout
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="absolute bottom-16 right-0 w-[350px] sm:w-[400px] h-[500px] bg-gray-900 border border-purple-500/30 rounded-2xl shadow-[0_15px_50px_rgba(163,136,225,0.2)] flex flex-col overflow-hidden"
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className={`fixed flex flex-col bg-gray-900 shadow-[0_15px_50px_rgba(163,136,225,0.2)] overflow-hidden z-[100] ${
+              isFullScreen 
+                ? 'inset-0 w-full h-[100dvh] rounded-none' 
+                : 'bottom-24 right-4 md:right-6 w-[calc(100vw-32px)] sm:w-[400px] h-[500px] border border-purple-500/30 rounded-2xl'
+            }`}
           >
-            <div className="bg-gray-800/90 backdrop-blur-md border-b border-purple-500/20 p-4 flex justify-between items-center shadow-sm">
+            <div className="bg-gray-800/90 backdrop-blur-md border-b border-purple-500/20 p-4 flex justify-between items-center shadow-sm shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500/20 to-emerald-500/10 flex items-center justify-center border border-purple-500/30">
                   <Bot className="w-4 h-4 text-purple-400" />
@@ -114,21 +141,30 @@ const FloatingAIAssistant = ({ user }) => {
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="text-gray-400 hover:text-white transition-colors bg-gray-700/30 hover:bg-gray-700 p-1.5 rounded-full"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsFullScreen(!isFullScreen)}
+                  className="text-gray-400 hover:text-white transition-colors bg-gray-700/30 hover:bg-gray-700 p-1.5 rounded-full"
+                >
+                  {isFullScreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                </button>
+                <button
+                  onClick={handleClose}
+                  className="text-gray-400 hover:text-white transition-colors bg-gray-700/30 hover:bg-gray-700 p-1.5 rounded-full"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-5 scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent">
-              {messages.map((msg, idx) => (
+              {messages.map((msg) => (
                 <motion.div 
-                  initial={{ opacity: 0, y: 10, scale: 0.98 }} 
+                  /* --- CHANGES MADE: Avoid jump animation for old messages --- */
+                  initial={msg.animated ? { opacity: 0, y: 10, scale: 0.98 } : { opacity: 1, y: 0, scale: 1 }} 
                   animate={{ opacity: 1, y: 0, scale: 1 }} 
                   transition={{ duration: 0.3 }}
-                  key={idx} 
+                  key={msg.id} 
                   className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
@@ -138,7 +174,15 @@ const FloatingAIAssistant = ({ user }) => {
                         : 'bg-gray-800 text-gray-200 border border-gray-700 rounded-tl-sm shadow-sm'
                     }`}
                   >
-                    {msg.role === 'bot' ? <BotMessage content={msg.content} /> : msg.content}
+                    {msg.role === 'bot' ? (
+                      <BotMessage 
+                        content={msg.content} 
+                        animated={msg.animated} 
+                        onComplete={() => markAsAnimated(msg.id)} 
+                      />
+                    ) : (
+                      msg.content
+                    )}
                   </div>
                 </motion.div>
               ))}
@@ -158,7 +202,10 @@ const FloatingAIAssistant = ({ user }) => {
                 {SUGGESTIONS.map((text, i) => (
                   <button
                     key={i}
-                    onClick={() => processMessage(text)}
+                    onClick={() => {
+                      setIsFullScreen(true);
+                      processMessage(text);
+                    }}
                     className="whitespace-nowrap flex items-center gap-1.5 bg-gray-800 border border-purple-500/30 text-gray-300 text-[11px] font-medium px-3 py-1.5 rounded-full hover:bg-purple-500/20 hover:text-white hover:border-purple-500/50 transition-all flex-shrink-0"
                   >
                     <Sparkles className="w-3 h-3 text-purple-400" />
@@ -168,12 +215,17 @@ const FloatingAIAssistant = ({ user }) => {
               </div>
             )}
 
-            <form onSubmit={handleSendMessage} className="p-3 bg-gray-800/80 backdrop-blur-sm border-t border-purple-500/20">
+            <form onSubmit={handleSendMessage} className="p-3 bg-gray-800/80 backdrop-blur-sm border-t border-purple-500/20 shrink-0">
               <div className="relative flex items-center">
                 <input
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
+                  onFocus={() => {
+                    if (window.innerWidth < 768) {
+                      setIsFullScreen(true);
+                    }
+                  }}
                   placeholder="Ask about items, Aura, rules..."
                   className="w-full bg-gray-900 border border-gray-700 rounded-full py-3 pl-4 pr-12 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-inner"
                 />
