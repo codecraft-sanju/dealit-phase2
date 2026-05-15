@@ -8,7 +8,10 @@ const crypto = require('crypto');
 // CHANGED: queueNotification ko import kiya aur purane Notification model ko hata diya (queue will handle it)
 const { queueNotification } = require('../services/queue');
 
-const { checkServiceability, createShiprocketOrder, addPickupLocation, generateAWB, generateLabel, schedulePickup, getTrackingByAWB } = require('../utils/shiprocket'); 
+/* --- ULTRA SMART RECOVERY START: Import added --- */
+const { checkServiceability, createShiprocketOrder, addPickupLocation, generateAWB, generateLabel, schedulePickup, getTrackingByAWB, getShiprocketOrderDetails } = require('../utils/shiprocket'); 
+/* --- ULTRA SMART RECOVERY END --- */
+
 const AuraLog = require('../models/AuraLog'); 
 
 /* --- NAYA CHANGE START: Naya function import kiya --- */
@@ -428,6 +431,12 @@ const dispatchOrder = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Only pending orders can be dispatched' });
     }
 
+    /* --- NAYA CHANGE START: Double Click / Duplicate Dispatch Prevention --- */
+    if (order.trackingDetails && order.trackingDetails.shiprocket_shipment_id) {
+      return res.status(400).json({ success: false, message: 'Order is already processing in Shiprocket. Please refresh the page.' });
+    }
+    /* --- NAYA CHANGE END --- */
+
     const item = order.item;
     const buyer = order.buyer;
     const shippingAddress = order.shippingAddress;
@@ -541,13 +550,40 @@ const getShippingLabel = async (req, res) => {
     }
 
     const shipmentId = order.trackingDetails.shiprocket_shipment_id;
+    const shiprocketOrderId = order.trackingDetails.shiprocket_order_id;
 
     if (!order.trackingDetails.awb_code || order.trackingDetails.awb_code === '') {
-       const awbData = await generateAWB(shipmentId);
-       order.trackingDetails.awb_code = awbData.awb_code;
-       order.trackingDetails.courier_company = awbData.courier_name;
-       await schedulePickup(shipmentId);
-       await order.save();
+       try {
+           const awbData = await generateAWB(shipmentId);
+           order.trackingDetails.awb_code = awbData.awb_code;
+           order.trackingDetails.courier_company = awbData.courier_name;
+           await schedulePickup(shipmentId);
+           await order.save();
+       } catch (awbError) {
+           /* --- ULTRA SMART RECOVERY START --- */
+           const errMsg = (awbError.message || '').toLowerCase();
+           
+           if (errMsg.includes('reassign') || errMsg.includes('17 hour') || errMsg.includes('already')) {
+               console.log(`AWB already assigned for order ${order._id}. Fetching directly from Shiprocket...`);
+               
+               const existingOrderData = await getShiprocketOrderDetails(shiprocketOrderId);
+               
+               if (existingOrderData && existingOrderData.awb_code) {
+                   order.trackingDetails.awb_code = existingOrderData.awb_code;
+                   order.trackingDetails.courier_company = existingOrderData.courier_name || 'Courier Partner';
+                   await order.save();
+                   console.log(`Smart Recovery Successful: Saved missing AWB ${existingOrderData.awb_code}`);
+               } else {
+                   return res.status(400).json({ 
+                       success: false, 
+                       message: 'Shiprocket is processing this shipment. Please try again in 5 minutes.' 
+                   });
+               }
+           } else {
+               throw awbError;
+           }
+           /* --- ULTRA SMART RECOVERY END --- */
+       }
     }
 
     const labelUrl = await generateLabel(shipmentId);
@@ -574,8 +610,8 @@ const handleShiprocketWebhook = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Unauthorized access' });
     }
 
-    // --> CHANGE START: Extract 'etd' (Estimated Time of Delivery) from webhook
-    const { awb, current_status, etd } = req.body;
+    // --> CHANGE START: Extract 'etd' and 'shipment_id' from webhook
+    const { awb, current_status, etd, shipment_id } = req.body;
     // --> CHANGE END
     
     // Test ping from Shiprocket
@@ -583,8 +619,19 @@ const handleShiprocketWebhook = async (req, res) => {
       return res.status(200).json({ success: true, message: 'Webhook endpoint is active.' });
     }
 
-    const order = await Order.findOne({ 'trackingDetails.awb_code': awb }).populate('item');
+    let order = await Order.findOne({ 'trackingDetails.awb_code': awb }).populate('item');
     
+    /* --- NAYA CHANGE START: Smart Auto-Recovery --- */
+    if (!order && shipment_id) {
+      order = await Order.findOne({ 'trackingDetails.shiprocket_shipment_id': shipment_id }).populate('item');
+      if (order) {
+        order.trackingDetails.awb_code = awb;
+        await order.save();
+        console.log(`Auto-recovered missing AWB ${awb} for order ${order._id}`);
+      }
+    }
+    /* --- NAYA CHANGE END --- */
+
     if (!order) {
       console.log(`Shiprocket test ping or invalid AWB received: ${awb}`);
       return res.status(200).json({ success: true, message: 'Webhook received but order not found.' });

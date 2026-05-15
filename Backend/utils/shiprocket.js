@@ -209,7 +209,6 @@ const schedulePickup = async (shipment_id) => {
   }
 };
 
-
 const getTrackingByAWB = async (awb_code) => {
   if (IS_TEST_MODE) {
     return {
@@ -238,6 +237,29 @@ const getTrackingByAWB = async (awb_code) => {
 };
 
 
+const getShiprocketOrderDetails = async (shiprocketOrderId) => {
+  try {
+    const token = await getShiprocketToken();
+    const response = await axios.get(`${SHIPROCKET_BASE_URL}/orders/show/${shiprocketOrderId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (response.data && response.data.data) {
+      return {
+        awb_code: response.data.data.awb_code,
+        courier_name: response.data.data.courier_name
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching Shiprocket order details:', error.response?.data || error.message);
+    return null;
+  }
+};
+
+
 module.exports = {
   getShiprocketToken,
   checkServiceability,
@@ -247,5 +269,6 @@ module.exports = {
   generateAWB,
   generateLabel,
   schedulePickup,
-  getTrackingByAWB
+  getTrackingByAWB,
+  getShiprocketOrderDetails
 };
