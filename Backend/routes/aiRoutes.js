@@ -1,13 +1,12 @@
 const express = require('express');
-// NAYA CHANGE: Added analyzeImages to the import
-const { generateItemDescription, analyzeImages } = require('../controllers/aiController');
+const { generateItemDescription, analyzeImages, processChat } = require('../controllers/aiController');
+const { protect } = require('../middleware/authMiddleware'); // Assuming you have auth middleware
 
 const router = express.Router();
 
-// Route: POST /api/ai/generate-description
-router.post('/generate-description', generateItemDescription);
 
-// NAYA CHANGE: Route for vision auto-fill
+router.post('/generate-description', generateItemDescription);
 router.post('/analyze-images', analyzeImages);
+router.post('/chat', protect, processChat);
 
 module.exports = router;

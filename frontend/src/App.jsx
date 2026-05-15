@@ -56,6 +56,11 @@ const DeleteAccountPage = smartLazy(() => import('./components/DeleteAccountPage
 const NotificationsPage = smartLazy(() => import('./notification/NotificationsPage'));
 const EditItemPage = smartLazy(() => import('./components/EditItemPage'));
 
+
+const FloatingAIAssistant = smartLazy(() => import('./components/FloatingAIAssistant'));
+const AiChatPage = smartLazy(() => import('./components/AiChatPage'));
+
+
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
@@ -270,6 +275,11 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
       
       <main>
         <Suspense fallback={<PremiumLoader />}>
+          
+          {/* --- CHANGES MADE: Added Floating AI Assistant globally if user is logged in --- */}
+          {user && <FloatingAIAssistant user={user} />}
+          {/* --- CHANGES END --- */}
+
           <Routes>
             <Route path="/" element={
               <>
@@ -324,6 +334,11 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
             <Route path="/deal/:id" element={user ? <DealDetailsPage user={user} /> : <Navigate to="/login" />} />
             <Route path="/notifications" element={user ? <NotificationsPage /> : <Navigate to="/login" />} />
             <Route path="/help-support" element={user ? <HelpSupportPage /> : <Navigate to="/login" />} />
+            
+            {/* --- CHANGES MADE: Added dedicated route for AI Chat (useful for mobile full-screen view) --- */}
+            <Route path="/ai-chat" element={user ? <AiChatPage user={user} /> : <Navigate to="/login" />} />
+            {/* --- CHANGES END --- */}
+
             <Route path="*" element={<div className="text-white text-center mt-20 text-xl">404 - Page Not Found</div>} />
           </Routes>
         </Suspense>
