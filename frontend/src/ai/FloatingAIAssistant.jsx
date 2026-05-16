@@ -1,8 +1,13 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Bot, Sparkles, Maximize2, Minimize2 } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+// --- CHANGED: Imported react-markdown, remark-gfm, and canvas-confetti ---
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import confetti from 'canvas-confetti';
+// --- END CHANGED ---
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -15,30 +20,107 @@ const TypingLoader = () => (
   </div>
 );
 
+// --- CHANGED: Updated BotMessage to handle Animations and clean tags ---
 const BotMessage = ({ content, animated, onComplete }) => {
-  const [displayedText, setDisplayedText] = useState(animated ? '' : content);
+  // Strip animation tags from text so user doesn't see them
+  const cleanContent = useMemo(() => content.replace(/\[ANIMATION_[123]\]/g, ''), [content]);
+  const [displayedText, setDisplayedText] = useState(animated ? '' : cleanContent);
   
+  const triggered1 = useRef(false);
+  const triggered2 = useRef(false);
+  const triggered3 = useRef(false);
+
+  useEffect(() => {
+    if (content.includes('[ANIMATION_1]') && !triggered1.current) {
+      triggered1.current = true;
+      confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 }, colors: ['#A388E1', '#10B981', '#FBBF24', '#EF4444'], zIndex: 99999 });
+    }
+    if (content.includes('[ANIMATION_2]') && !triggered2.current) {
+      triggered2.current = true;
+      const duration = 3 * 1000;
+      const animationEnd = Date.now() + duration;
+      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 99999 };
+      const interval = setInterval(function() {
+        const timeLeft = animationEnd - Date.now();
+        if (timeLeft <= 0) return clearInterval(interval);
+        const particleCount = 50 * (timeLeft / duration);
+        confetti({ ...defaults, particleCount, origin: { x: Math.random() * (0.3 - 0.1) + 0.1, y: Math.random() - 0.2 } });
+        confetti({ ...defaults, particleCount, origin: { x: Math.random() * (0.9 - 0.7) + 0.7, y: Math.random() - 0.2 } });
+      }, 250);
+    }
+    if (content.includes('[ANIMATION_3]') && !triggered3.current) {
+      triggered3.current = true;
+      const end = Date.now() + 3 * 1000;
+      const colors = ['#A388E1', '#ffffff'];
+      (function frame() {
+        confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: colors, zIndex: 99999 });
+        confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: colors, zIndex: 99999 });
+        if (Date.now() < end) requestAnimationFrame(frame);
+      }());
+    }
+  }, [content]);
+
   useEffect(() => {
     if (!animated) {
-      setDisplayedText(content);
+      setDisplayedText(cleanContent);
       return;
     }
     
     let i = 0;
     const interval = setInterval(() => {
-      setDisplayedText(content.slice(0, i + 1));
+      setDisplayedText(cleanContent.slice(0, i + 1));
       i++;
-      if (i >= content.length) {
+      if (i >= cleanContent.length) {
         clearInterval(interval);
         if (onComplete) onComplete();
       }
     }, 15);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [content, animated]);
+  }, [cleanContent, animated]);
 
-  return <div className="break-words whitespace-pre-wrap leading-relaxed">{displayedText}</div>;
+  return (
+    <div className="break-words leading-relaxed text-sm">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
+          ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-2 space-y-1" {...props} />,
+          ol: ({node, ...props}) => <ol className="list-decimal pl-5 mb-2 space-y-1" {...props} />,
+          li: ({node, ...props}) => <li className="" {...props} />,
+          h1: ({node, ...props}) => <h1 className="text-xl font-bold mb-2 mt-4 text-white" {...props} />,
+          h2: ({node, ...props}) => <h2 className="text-lg font-bold mb-2 mt-4 text-white" {...props} />,
+          h3: ({node, ...props}) => <h3 className="text-base font-bold mb-2 mt-3 text-white" {...props} />,
+          a: ({node, ...props}) => <a className="text-purple-400 hover:text-purple-300 underline transition-colors" target="_blank" rel="noopener noreferrer" {...props} />,
+          strong: ({node, ...props}) => <strong className="font-semibold text-white" {...props} />,
+          code: ({node, inline, ...props}) => 
+            inline ? (
+              <code className="bg-gray-900 text-purple-300 px-1.5 py-0.5 rounded-md text-xs font-mono border border-gray-700" {...props} />
+            ) : (
+              <div className="overflow-hidden rounded-xl border border-gray-700 my-3 bg-gray-950 shadow-inner">
+                <pre className="p-4 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-800">
+                  <code className="text-gray-300 text-xs font-mono" {...props} />
+                </pre>
+              </div>
+            ),
+          table: ({node, ...props}) => (
+            <div className="overflow-x-auto my-4 border border-gray-700 rounded-xl shadow-sm">
+              <table className="min-w-full divide-y divide-gray-700 text-sm" {...props} />
+            </div>
+          ),
+          thead: ({node, ...props}) => <thead className="bg-gray-900" {...props} />,
+          th: ({node, ...props}) => <th className="px-4 py-3 text-left font-semibold text-gray-300 uppercase tracking-wider text-xs" {...props} />,
+          tbody: ({node, ...props}) => <tbody className="divide-y divide-gray-700 bg-gray-800/50" {...props} />,
+          td: ({node, ...props}) => <td className="px-4 py-3 text-gray-300" {...props} />,
+          blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-purple-500 pl-4 py-1 my-3 bg-gray-900/50 rounded-r-lg italic text-gray-400" {...props} />
+        }}
+      >
+        {displayedText}
+      </ReactMarkdown>
+    </div>
+  );
 };
+// --- END CHANGED ---
 
 const SUGGESTIONS = [
   "What is Aura Score?",

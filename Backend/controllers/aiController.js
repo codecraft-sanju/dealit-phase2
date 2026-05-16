@@ -235,8 +235,7 @@ const processChat = async (req, res) => {
     let user, chatDoc;
     let myItems = [], recentOrders = [], activeSwaps = [], recentTransactions = [], incomingOffers = [], pendingDispatches = [];
 
-    // CONDITIONALLY RUN HEAVY DB QUERIES
-    if (isSmartContextEnabled !== false) { // Default to true if missing
+    if (isSmartContextEnabled !== false) { 
       [user, myItems, recentOrders, activeSwaps, recentTransactions, incomingOffers, pendingDispatches, chatDoc] = await Promise.all([
         User.findById(userId).select('full_name email city role account_credits aura_points listedProductsCount rewardedListingsCount totalReferrals referralCode isVerified hasClaimedWelcomeBonus created_at wishlist profilePic').populate('wishlist', 'title'),
         Item.find({ owner: userId, status: 'active' }).select('title estimated_value category condition').limit(5),
@@ -248,7 +247,6 @@ const processChat = async (req, res) => {
         sessionId ? AIChat.findOne({ _id: sessionId, user: userId }) : Promise.resolve(null)
       ]);
     } else {
-      // IF SMART CONTEXT OFF, JUST FETCH USER NAME & CHAT DOC
       [user, chatDoc] = await Promise.all([
         User.findById(userId).select('full_name account_credits aura_points'),
         sessionId ? AIChat.findOne({ _id: sessionId, user: userId }) : Promise.resolve(null)
@@ -267,11 +265,25 @@ const processChat = async (req, res) => {
     3. Aura Score: Increases on successful deliveries/referrals. Decreases on cancellations/failed dispatch.
 
     Dealit Team & Insider Lore:
-    Founder: Samay Bhatt.
-    Software Engineer / Creator: Sanjay Choudhary (@sanjuuu_x18). He built Dealit!
-    Shivam (Nickname: Jetha bhai): Ask "Babita bhabhi kaisi hai?" if mentioned.
-    Abhishek: Known for being rich.
-    Aditya: Talks only as needed.
+    * Location Context: Everyone on the team except Sanjay is from Mumbai.
+    * Founder: Samay Bhatt. He is from Kalyan, Mumbai. His family has plenty of money so he is well off. He sleeps very late at night and wakes up late. You must remind him to record videos today with his sister and upload them to @dealit.app on Instagram.
+    * Software Engineer / Creator: Sanjay Choudhary (@sanjuuu_x18). He built Dealit. He is currently looking for a job.
+    * Shivam (Nickname: Jetha bhai): He works an office job. Ask "Babita bhabhi kaisi hai?" if mentioned.
+    * Abhishek: He works an office job.
+    * Aditya: He always says "Sanjay bhai for a reason". You need to motivate him to share more ideas for Dealit.
+    * Neha: Samay's sister. She indirectly helps a lot with content creation for Dealit.
+    * Your Team Role: You must motivate the team. Tell Aditya to drop ideas for Dealit. Push Samay to make content with Neha. Encourage everyone to work on the platform.
+
+    Dealit AI Superpower Instructions:
+    If the user asks about your powers, what makes you special, or says things like "kuch khash kaise ho" or "kuch krke batao":
+    Respond exactly with: "Waise toh main Dealit AI hu, ek normal AI, but haa meri ek superb power hai jo ChatGPT ya Gemini ka baap bhi nahi kar sakta! Main animations chala sakta hu. Bas type karo 'animation' aur dekho magic!"
+    
+    If the user explicitly sends "animation" or asks to trigger the animation:
+    You must output a specific trigger tag in your response so the system can play the effect. 
+    1st request for animation: include the exact text [ANIMATION_1] in your reply.
+    2nd request for animation: include the exact text [ANIMATION_2] in your reply.
+    3rd request for animation: include the exact text [ANIMATION_3] in your reply.
+    Important: Only trigger one animation per request. Do not send all tags at once. After the 3rd animation, if they ask again, just tell them that was the best you had and you are out of animations.
     
     Current User Profile:
     Name: ${user.full_name}
@@ -318,7 +330,6 @@ const processChat = async (req, res) => {
     Instructions: Check the User's Live Data and Proactive AI Suggestions. If there are pending actions or suggestions, naturally weave them into the conversation. Talk naturally and do not overuse formatting.`;
 
     } else {
-      // IF SMART CONTEXT OFF
       systemPrompt += `
     Instructions: The user has disabled 'Smart Context', so you cannot see their live inventory, orders, or pending actions. Answer their general questions about the platform, rules, or assist them generically. Talk naturally and do not overuse formatting.`;
     }
@@ -388,7 +399,7 @@ const processChat = async (req, res) => {
       targetChatDoc.messages.push({ role: 'assistant', content: fullBotReply });
       await targetChatDoc.save();
     }
-   
+    
     res.write('data: [DONE]\n\n');
     res.end();
 
