@@ -92,11 +92,16 @@ const FloatingAIAssistant = ({ user }) => {
     setIsLoading(true);
 
     try {
+      // --- NEW CHANGE START: Send history to backend for conversational memory ---
       const response = await axios.post(
         `${API_URL}/ai/chat`,
-        { message: userMessage },
+        { 
+          message: userMessage,
+          history: messages.filter(m => m.id !== 'init').map(m => ({ role: m.role, content: m.content })) 
+        },
         { withCredentials: true }
       );
+      // --- NEW CHANGE END ---
       
       setMessages((prev) => [
         ...prev,
