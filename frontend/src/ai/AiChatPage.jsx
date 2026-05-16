@@ -107,8 +107,9 @@ const AiChatPage = ({ user }) => {
   };
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-gray-900 md:pb-0 pb-16">
-      <div className="bg-gray-800/80 backdrop-blur-md border-b border-purple-500/20 p-4 flex items-center gap-4 sticky top-0 z-10 shadow-sm shadow-purple-900/10">
+    // --- CHANGES MADE: Replaced h-[100dvh] with fixed inset-0 and overscroll-none to lock the viewport and ensure header never scrolls away ---
+    <div className="fixed inset-0 flex flex-col bg-gray-900 z-50 overscroll-none">
+      <div className="bg-gray-800/80 backdrop-blur-md border-b border-purple-500/20 p-4 flex items-center gap-4 shrink-0 shadow-sm shadow-purple-900/10 z-10">
         <button 
           onClick={() => navigate(-1)}
           className="p-2 bg-gray-900 hover:bg-gray-700 rounded-full text-gray-300 transition-colors"
@@ -168,38 +169,41 @@ const AiChatPage = ({ user }) => {
         <div ref={messagesEndRef} />
       </div>
 
-      {messages.length === 1 && !isLoading && (
-        <div className="container mx-auto max-w-3xl px-4 pb-3 flex flex-wrap gap-2 justify-center">
-          {SUGGESTIONS.map((text, i) => (
-            <button
-              key={i}
-              onClick={() => processMessage(text)}
-              className="flex items-center gap-1.5 bg-gray-800/80 border border-purple-500/30 text-gray-300 text-xs font-medium px-4 py-2 rounded-full hover:bg-purple-500/20 hover:text-white hover:border-purple-500/50 transition-all shadow-sm"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-              {text}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* --- CHANGES MADE: Wrapped input and suggestions in a strictly non-shrinking footer container --- */}
+      <div className="shrink-0 bg-gray-900 pb-safe">
+        {messages.length === 1 && !isLoading && (
+          <div className="container mx-auto max-w-3xl px-4 pb-3 flex flex-wrap gap-2 justify-center">
+            {SUGGESTIONS.map((text, i) => (
+              <button
+                key={i}
+                onClick={() => processMessage(text)}
+                className="flex items-center gap-1.5 bg-gray-800/80 border border-purple-500/30 text-gray-300 text-xs font-medium px-4 py-2 rounded-full hover:bg-purple-500/20 hover:text-white hover:border-purple-500/50 transition-all shadow-sm"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                {text}
+              </button>
+            ))}
+          </div>
+        )}
 
-      <div className="bg-gray-800/50 backdrop-blur-sm border-t border-purple-500/20 p-4 container mx-auto max-w-3xl">
-        <form onSubmit={handleSendMessage} className="relative flex items-center">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask Dealit AI..."
-            className="w-full bg-gray-900 border border-gray-700 rounded-full py-4 pl-6 pr-14 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-inner"
-          />
-          <button
-            type="submit"
-            disabled={isLoading || !input.trim()}
-            className="absolute right-2 w-10 h-10 flex items-center justify-center bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-400 hover:to-purple-500 text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-purple-500/30"
-          >
-            <Send className="w-5 h-5 ml-1" />
-          </button>
-        </form>
+        <div className="bg-gray-800/50 backdrop-blur-sm border-t border-purple-500/20 p-4 container mx-auto max-w-3xl">
+          <form onSubmit={handleSendMessage} className="relative flex items-center">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask Dealit AI..."
+              className="w-full bg-gray-900 border border-gray-700 rounded-full py-4 pl-6 pr-14 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-inner"
+            />
+            <button
+              type="submit"
+              disabled={isLoading || !input.trim()}
+              className="absolute right-2 w-10 h-10 flex items-center justify-center bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-400 hover:to-purple-500 text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-purple-500/30"
+            >
+              <Send className="w-5 h-5 ml-1" />
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );

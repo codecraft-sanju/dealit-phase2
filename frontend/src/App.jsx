@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, lazy, useCallback } from 'react'; /* --- CHANGES MADE: Added useCallback --- */
+import React, { useState, useEffect, Suspense, lazy, useCallback } from 'react'; 
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate, Navigate, useLocation, useParams } from 'react-router-dom';
 import { Package, X, AlertCircle, ArrowLeft, Edit2, Trash2 } from 'lucide-react';
 import axios from 'axios';
@@ -56,8 +56,8 @@ const DeleteAccountPage = smartLazy(() => import('./components/DeleteAccountPage
 const NotificationsPage = smartLazy(() => import('./notification/NotificationsPage'));
 const EditItemPage = smartLazy(() => import('./components/EditItemPage'));
 
-const FloatingAIAssistant = smartLazy(() => import('./components/FloatingAIAssistant'));
-const AiChatPage = smartLazy(() => import('./components/AiChatPage'));
+const FloatingAIAssistant = smartLazy(() => import('./ai/FloatingAIAssistant'));
+const AiChatPage = smartLazy(() => import('./ai/AiChatPage'));
 
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
@@ -205,7 +205,7 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
         });
     }
   }, []);
-  // --- CHANGE END ---
+  
 
   useEffect(() => {
     const reqInterceptor = axios.interceptors.request.use(

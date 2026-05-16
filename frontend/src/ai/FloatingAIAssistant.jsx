@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, X, Send, Bot, Sparkles, Maximize2, Minimize2 } from 'lucide-react';
+import { MessageSquare, X, Send, Bot, Sparkles, Maximize2, Minimize2, HelpCircle } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
@@ -59,6 +59,9 @@ const FloatingAIAssistant = ({ user }) => {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
+  // --- CHANGES MADE: Added state for dynamic button icon switching ---
+  const [buttonState, setButtonState] = useState('bot');
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -66,6 +69,15 @@ const FloatingAIAssistant = ({ user }) => {
   useEffect(() => {
     if (isOpen) scrollToBottom();
   }, [messages, isOpen, isLoading, isFullScreen]);
+
+  // --- CHANGES MADE: Added effect to switch button content dynamically every 2.5 seconds ---
+  useEffect(() => {
+    if (isOpen) return;
+    const interval = setInterval(() => {
+      setButtonState((prev) => (prev === 'bot' ? 'text' : 'bot'));
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [isOpen]);
 
   // --- CHANGES MADE: Function to mark a message as fully animated ---
   const markAsAnimated = (id) => {
@@ -122,13 +134,14 @@ const FloatingAIAssistant = ({ user }) => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
-            className={`fixed flex flex-col bg-gray-900 shadow-[0_15px_50px_rgba(163,136,225,0.2)] overflow-hidden z-[100] ${
+            // --- CHANGES MADE: Fixed layout classes to strictly prevent header from scrolling up, replaced h-[100dvh] with inset-0 for safer mobile viewport bounds ---
+            className={`fixed flex flex-col bg-gray-900 shadow-[0_15px_50px_rgba(163,136,225,0.2)] overflow-hidden z-[100] overscroll-none ${
               isFullScreen 
-                ? 'inset-0 w-full h-[100dvh] rounded-none' 
+                ? 'inset-0 w-full rounded-none' 
                 : 'bottom-24 right-4 md:right-6 w-[calc(100vw-32px)] sm:w-[400px] h-[500px] border border-purple-500/30 rounded-2xl'
             }`}
           >
-            <div className="bg-gray-800/90 backdrop-blur-md border-b border-purple-500/20 p-4 flex justify-between items-center shadow-sm shrink-0">
+            <div className="bg-gray-800/90 backdrop-blur-md border-b border-purple-500/20 p-4 flex justify-between items-center shadow-sm shrink-0 z-10">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500/20 to-emerald-500/10 flex items-center justify-center border border-purple-500/30">
                   <Bot className="w-4 h-4 text-purple-400" />
@@ -198,7 +211,7 @@ const FloatingAIAssistant = ({ user }) => {
             </div>
 
             {messages.length === 1 && !isLoading && (
-              <div className="px-3 pb-2 flex gap-2 overflow-x-auto scrollbar-hide">
+              <div className="px-3 pb-2 flex gap-2 overflow-x-auto scrollbar-hide shrink-0">
                 {SUGGESTIONS.map((text, i) => (
                   <button
                     key={i}
@@ -215,7 +228,7 @@ const FloatingAIAssistant = ({ user }) => {
               </div>
             )}
 
-            <form onSubmit={handleSendMessage} className="p-3 bg-gray-800/80 backdrop-blur-sm border-t border-purple-500/20 shrink-0">
+            <form onSubmit={handleSendMessage} className="p-3 bg-gray-800/80 backdrop-blur-sm border-t border-purple-500/20 shrink-0 z-10">
               <div className="relative flex items-center">
                 <input
                   type="text"
@@ -243,12 +256,31 @@ const FloatingAIAssistant = ({ user }) => {
       </AnimatePresence>
 
       <motion.button
+        // --- CHANGES MADE: Added continuous bounce animation, dynamic content toggle using AnimatePresence ---
+        animate={isOpen ? { y: 0 } : { y: [0, -6, 0] }}
+        transition={{ 
+          y: { repeat: Infinity, duration: 2.5, ease: "easeInOut" } 
+        }}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setIsOpen(!isOpen)}
-        className="w-14 h-14 bg-gradient-to-br from-purple-600 to-purple-500 rounded-full shadow-[0_0_25px_rgba(163,136,225,0.5)] flex items-center justify-center text-white relative z-10 border border-purple-400/30"
+        className="w-14 h-14 bg-gradient-to-br from-purple-600 to-purple-500 rounded-full shadow-[0_0_25px_rgba(163,136,225,0.5)] flex items-center justify-center text-white relative z-10 border border-purple-400/30 overflow-hidden"
       >
-        {isOpen ? <X className="w-6 h-6" /> : <Bot className="w-6 h-6" />}
+        <AnimatePresence mode="wait">
+          {isOpen ? (
+            <motion.div key="close" initial={{ opacity: 0, rotate: -90 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: 90 }} transition={{ duration: 0.2 }}>
+              <X className="w-6 h-6" />
+            </motion.div>
+          ) : buttonState === 'bot' ? (
+            <motion.div key="bot" initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.5 }} transition={{ duration: 0.2 }}>
+              <Bot className="w-6 h-6" />
+            </motion.div>
+          ) : (
+            <motion.div key="ask" initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.5 }} transition={{ duration: 0.2 }} className="flex flex-col items-center justify-center">
+              <span className="text-xs font-black tracking-wider leading-none mt-0.5">Ask?</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.button>
     </div>
   );
