@@ -291,7 +291,7 @@ const processChat = async (req, res) => {
     Aura Score: ${user.aura_points}
     `;
 
-    // ADD LIVE DATA ONLY IF SMART CONTEXT IS ENABLED
+   
     if (isSmartContextEnabled !== false) {
       const activeInventoryStr = myItems.length > 0 ? myItems.map(i => `- ${i.title} (${i.estimated_value} credits)`).join('\n') : 'No active items listed.';
       const orderHistoryStr = recentOrders.length > 0 ? recentOrders.map(o => `- Bought ${o.item?.title || 'item'} for ${o.totalAmount} credits. Status: ${o.orderStatus}`).join('\n') : 'No recent purchases.';
@@ -305,7 +305,7 @@ const processChat = async (req, res) => {
         actionableSuggestions.push("User has zero items listed. Warmly suggest they look around their house for unused items to list, explaining how they can trade them or earn credits.");
       }
       if (user.profilePic === undefined || !user.profilePic) {
-        // Safe check in case profilePic wasn't fetched
+       
       }
       if (user.isVerified !== undefined && !user.isVerified) {
         actionableSuggestions.push("User account is not verified. Suggest they complete the verification process to get a trusted badge.");
@@ -395,8 +395,10 @@ const processChat = async (req, res) => {
     }
 
     if (fullBotReply.trim() !== "") {
+      
+      const cleanReply = fullBotReply.replace(/\[ANIMATION_[123]\]/g, '');
       targetChatDoc.messages.push({ role: 'user', content: message });
-      targetChatDoc.messages.push({ role: 'assistant', content: fullBotReply });
+      targetChatDoc.messages.push({ role: 'assistant', content: cleanReply });
       await targetChatDoc.save();
     }
     

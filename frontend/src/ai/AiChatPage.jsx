@@ -354,6 +354,12 @@ const AiChatPage = ({ user }) => {
           if (line.startsWith('data: ')) {
             const dataStr = line.replace('data: ', '');
             if (dataStr === '[DONE]') {
+              // Strip animation tags from state so they don't replay if user minimizes/reopens locally
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === botMessageId ? { ...msg, content: botReply.replace(/\[ANIMATION_[123]\]/g, '') } : msg
+                )
+              );
               break;
             }
             try {
@@ -397,6 +403,8 @@ const AiChatPage = ({ user }) => {
   };
 
   const handleMinimize = () => {
+    // Set a flag so FloatingAIAssistant knows to open immediately
+    localStorage.setItem('dealit_open_floating_ai', 'true');
     if (window.history.state && window.history.state.idx > 0) {
       navigate(-1); 
     } else {

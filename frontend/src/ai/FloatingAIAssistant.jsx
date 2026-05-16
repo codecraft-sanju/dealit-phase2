@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Bot, Sparkles, Maximize2, Minimize2 } from 'lucide-react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 // --- CHANGED: Imported react-markdown, remark-gfm, and canvas-confetti ---
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -133,6 +133,7 @@ const FloatingAIAssistant = ({ user }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [hasFetchedHistory, setHasFetchedHistory] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   
   const [messages, setMessages] = useState([
     { id: 'init', role: 'bot', content: `Hi ${user?.full_name?.split(' ')[0] || 'there'}! I am Dealit's AI Assistant. How can I help you today?`, animated: true }
@@ -143,6 +144,18 @@ const FloatingAIAssistant = ({ user }) => {
   
   const messagesEndRef = useRef(null);
   const [buttonState, setButtonState] = useState('bot');
+
+  // Listen for the minimize action coming from the full AiChatPage
+  useEffect(() => {
+    const checkOpen = () => {
+      if (localStorage.getItem('dealit_open_floating_ai') === 'true') {
+        setIsOpen(true);
+        setHasFetchedHistory(false); // Force reload history to seamlessly match what they were just doing
+        localStorage.removeItem('dealit_open_floating_ai');
+      }
+    };
+    checkOpen();
+  }, [location.pathname]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -251,7 +264,15 @@ const FloatingAIAssistant = ({ user }) => {
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             const dataStr = line.replace('data: ', '');
-            if (dataStr === '[DONE]') break;
+            if (dataStr === '[DONE]') {
+              // Strip animation tags from state so they don't replay if user toggles widget open/closed
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === botMessageId ? { ...msg, content: botReply.replace(/\[ANIMATION_[123]\]/g, '') } : msg
+                )
+              );
+              break;
+            }
             try {
               const parsed = JSON.parse(dataStr);
               
