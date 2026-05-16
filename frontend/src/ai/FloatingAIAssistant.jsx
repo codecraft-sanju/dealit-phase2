@@ -14,7 +14,6 @@ const TypingLoader = () => (
   </div>
 );
 
-// --- CHANGES MADE: Added animated flag and onComplete callback ---
 const BotMessage = ({ content, animated, onComplete }) => {
   const [displayedText, setDisplayedText] = useState(animated ? '' : content);
   
@@ -50,8 +49,8 @@ const SUGGESTIONS = [
 const FloatingAIAssistant = ({ user }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [hasFetchedHistory, setHasFetchedHistory] = useState(false);
   
-  // --- CHANGES MADE: Added unique id and animated flag to track state ---
   const [messages, setMessages] = useState([
     { id: 'init', role: 'bot', content: `Hi ${user?.full_name?.split(' ')[0] || 'there'}! I am Dealit's AI Assistant. How can I help you today?`, animated: true }
   ]);
@@ -59,7 +58,6 @@ const FloatingAIAssistant = ({ user }) => {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
-  // --- CHANGES MADE: Added state for dynamic button icon switching ---
   const [buttonState, setButtonState] = useState('bot');
 
   const scrollToBottom = () => {
@@ -70,7 +68,38 @@ const FloatingAIAssistant = ({ user }) => {
     if (isOpen) scrollToBottom();
   }, [messages, isOpen, isLoading, isFullScreen]);
 
-  // --- CHANGES MADE: Added effect to switch button content dynamically every 2.5 seconds ---
+  // --- NEW: Fetch Chat History only when widget is opened for the first time ---
+  useEffect(() => {
+    if (isOpen && !hasFetchedHistory) {
+      const loadHistory = async () => {
+        setIsLoading(true);
+        try {
+          const token = localStorage.getItem('dealit_token');
+          const res = await axios.get(`${API_URL}/ai/chat/history`, {
+            headers: { Authorization: `Bearer ${token}` },
+            withCredentials: true
+          });
+          
+          if (res.data.success && res.data.history && res.data.history.length > 0) {
+            const formattedHistory = res.data.history.map((msg, index) => ({
+              id: msg._id || `hist_${index}`,
+              role: msg.role === 'assistant' ? 'bot' : 'user',
+              content: msg.content,
+              animated: false
+            }));
+            setMessages(formattedHistory);
+          }
+        } catch (error) {
+          console.error('Failed to load chat history:', error);
+        } finally {
+          setIsLoading(false);
+          setHasFetchedHistory(true);
+        }
+      };
+      loadHistory();
+    }
+  }, [isOpen, hasFetchedHistory]);
+
   useEffect(() => {
     if (isOpen) return;
     const interval = setInterval(() => {
@@ -79,7 +108,6 @@ const FloatingAIAssistant = ({ user }) => {
     return () => clearInterval(interval);
   }, [isOpen]);
 
-  // --- CHANGES MADE: Function to mark a message as fully animated ---
   const markAsAnimated = (id) => {
     setMessages((prev) => prev.map((m) => m.id === id ? { ...m, animated: false } : m));
   };
@@ -87,34 +115,80 @@ const FloatingAIAssistant = ({ user }) => {
   const processMessage = async (userMessage) => {
     if (!userMessage.trim()) return;
     
-    setMessages((prev) => [...prev, { id: Date.now(), role: 'user', content: userMessage }]);
+    const newMessages = [...messages, { id: Date.now(), role: 'user', content: userMessage }];
+    setMessages(newMessages);
     setInput('');
     setIsLoading(true);
 
+    const botMessageId = Date.now() + 1;
+    setMessages((prev) => [
+      ...prev,
+      { id: botMessageId, role: 'bot', content: '', animated: false }
+    ]);
+
     try {
-      // --- NEW CHANGE START: Send history to backend for conversational memory ---
-      const response = await axios.post(
-        `${API_URL}/ai/chat`,
-        { 
-          message: userMessage,
-          history: messages.filter(m => m.id !== 'init').map(m => ({ role: m.role, content: m.content })) 
-        },
-        { withCredentials: true }
-      );
-      // --- NEW CHANGE END ---
+      const token = localStorage.getItem('dealit_token');
       
-      setMessages((prev) => [
-        ...prev,
-        { id: Date.now() + 1, role: 'bot', content: response.data.reply || 'I processed your request, but got no text back.', animated: true }
-      ]);
+      const response = await fetch(`${API_URL}/ai/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        credentials: 'include',
+        // --- NEW: Ab history array nahi bhej rahe ---
+        body: JSON.stringify({ 
+          message: userMessage
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let botReply = "";
+
+      setIsLoading(false); 
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const dataStr = line.replace('data: ', '');
+            if (dataStr === '[DONE]') {
+              break;
+            }
+            try {
+              const parsed = JSON.parse(dataStr);
+              botReply += parsed.content;
+              
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === botMessageId ? { ...msg, content: botReply } : msg
+                )
+              );
+            } catch (e) {
+              // Ignore partial JSON parse errors
+            }
+          }
+        }
+      }
+
     } catch (error) {
       console.error('AI Chat Error:', error);
-      setMessages((prev) => [
-        ...prev,
-        { id: Date.now() + 1, role: 'bot', content: 'Sorry, I am having trouble connecting to the server right now.', animated: true }
-      ]);
-    } finally {
       setIsLoading(false);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === botMessageId ? { ...msg, content: 'Sorry, I am having trouble connecting to the server right now.' } : msg
+        )
+      );
     }
   };
 
@@ -139,10 +213,10 @@ const FloatingAIAssistant = ({ user }) => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
-            // --- CHANGES MADE: Fixed layout classes to strictly prevent header from scrolling up, replaced h-[100dvh] with inset-0 for safer mobile viewport bounds ---
+            // --- MODIFIED: Used h-[100dvh] instead of inset-0 for full screen mode ---
             className={`fixed flex flex-col bg-gray-900 shadow-[0_15px_50px_rgba(163,136,225,0.2)] overflow-hidden z-[100] overscroll-none ${
               isFullScreen 
-                ? 'inset-0 w-full rounded-none' 
+                ? 'top-0 left-0 w-full h-[100dvh] rounded-none' 
                 : 'bottom-24 right-4 md:right-6 w-[calc(100vw-32px)] sm:w-[400px] h-[500px] border border-purple-500/30 rounded-2xl'
             }`}
           >
@@ -178,7 +252,6 @@ const FloatingAIAssistant = ({ user }) => {
             <div className="flex-1 overflow-y-auto p-4 space-y-5 scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent">
               {messages.map((msg) => (
                 <motion.div 
-                  /* --- CHANGES MADE: Avoid jump animation for old messages --- */
                   initial={msg.animated ? { opacity: 0, y: 10, scale: 0.98 } : { opacity: 1, y: 0, scale: 1 }} 
                   animate={{ opacity: 1, y: 0, scale: 1 }} 
                   transition={{ duration: 0.3 }}
@@ -192,12 +265,17 @@ const FloatingAIAssistant = ({ user }) => {
                         : 'bg-gray-800 text-gray-200 border border-gray-700 rounded-tl-sm shadow-sm'
                     }`}
                   >
+                    {/* --- MODIFIED: Show loader inside the bot bubble if content is empty --- */}
                     {msg.role === 'bot' ? (
-                      <BotMessage 
-                        content={msg.content} 
-                        animated={msg.animated} 
-                        onComplete={() => markAsAnimated(msg.id)} 
-                      />
+                      msg.content ? (
+                        <BotMessage 
+                          content={msg.content} 
+                          animated={msg.animated} 
+                          onComplete={() => markAsAnimated(msg.id)} 
+                        />
+                      ) : (
+                        <TypingLoader />
+                      )
                     ) : (
                       msg.content
                     )}
@@ -205,17 +283,11 @@ const FloatingAIAssistant = ({ user }) => {
                 </motion.div>
               ))}
               
-              {isLoading && (
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex justify-start">
-                  <div className="bg-gray-800 border border-gray-700 rounded-2xl rounded-tl-sm px-4 py-2.5 shadow-sm">
-                    <TypingLoader />
-                  </div>
-                </motion.div>
-              )}
+              {/* --- MODIFIED: Removed the standalone isLoading block from here completely --- */}
               <div ref={messagesEndRef} />
             </div>
 
-            {messages.length === 1 && !isLoading && (
+            {messages.length <= 1 && !isLoading && (
               <div className="px-3 pb-2 flex gap-2 overflow-x-auto scrollbar-hide shrink-0">
                 {SUGGESTIONS.map((text, i) => (
                   <button
@@ -261,7 +333,6 @@ const FloatingAIAssistant = ({ user }) => {
       </AnimatePresence>
 
       <motion.button
-        // --- CHANGES MADE: Added continuous bounce animation, dynamic content toggle using AnimatePresence ---
         animate={isOpen ? { y: 0 } : { y: [0, -6, 0] }}
         transition={{ 
           y: { repeat: Infinity, duration: 2.5, ease: "easeInOut" } 

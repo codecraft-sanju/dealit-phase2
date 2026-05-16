@@ -15,7 +15,6 @@ const TypingLoader = () => (
   </div>
 );
 
-// --- CHANGES MADE: Added animated flag and onComplete callback ---
 const BotMessage = ({ content, animated, onComplete }) => {
   const [displayedText, setDisplayedText] = useState(animated ? '' : content);
   
@@ -51,12 +50,10 @@ const SUGGESTIONS = [
 const AiChatPage = ({ user }) => {
   const navigate = useNavigate();
   
-  // --- CHANGES MADE: Added unique id and animated flag to track state ---
-  const [messages, setMessages] = useState([
-    { id: 'init', role: 'bot', content: `Welcome to Dealit AI, ${user?.full_name?.split(' ')[0] || 'friend'}. How can I assist you with your trades today?`, animated: true }
-  ]);
+  // Starting with empty messages while we fetch history
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Loading history initially
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -67,7 +64,43 @@ const AiChatPage = ({ user }) => {
     scrollToBottom();
   }, [messages, isLoading]);
 
-  // --- CHANGES MADE: Function to mark a message as fully animated ---
+  // --- NEW: Fetch Chat History from Backend ---
+  useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        const token = localStorage.getItem('dealit_token');
+        const res = await axios.get(`${API_URL}/ai/chat/history`, {
+          headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true
+        });
+        
+        if (res.data.success && res.data.history && res.data.history.length > 0) {
+          const formattedHistory = res.data.history.map((msg, index) => ({
+            id: msg._id || `hist_${index}`,
+            role: msg.role === 'assistant' ? 'bot' : 'user',
+            content: msg.content,
+            animated: false // Purane messages ko animate nahi karna
+          }));
+          setMessages(formattedHistory);
+        } else {
+          // Agar history nahi hai toh default greeting show karo
+          setMessages([
+            { id: 'init', role: 'bot', content: `Welcome to Dealit AI, ${user?.full_name?.split(' ')[0] || 'friend'}. How can I assist you with your trades today?`, animated: true }
+          ]);
+        }
+      } catch (error) {
+        console.error('Failed to load chat history:', error);
+        setMessages([
+          { id: 'init', role: 'bot', content: `Welcome to Dealit AI, ${user?.full_name?.split(' ')[0] || 'friend'}. How can I assist you with your trades today?`, animated: true }
+        ]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadHistory();
+  }, [user]);
+
   const markAsAnimated = (id) => {
     setMessages((prev) => prev.map((m) => m.id === id ? { ...m, animated: false } : m));
   };
@@ -75,34 +108,80 @@ const AiChatPage = ({ user }) => {
   const processMessage = async (userMessage) => {
     if (!userMessage.trim()) return;
     
-    setMessages((prev) => [...prev, { id: Date.now(), role: 'user', content: userMessage }]);
+    const newMessages = [...messages, { id: Date.now(), role: 'user', content: userMessage }];
+    setMessages(newMessages);
     setInput('');
     setIsLoading(true);
 
+    const botMessageId = Date.now() + 1;
+    setMessages((prev) => [
+      ...prev,
+      { id: botMessageId, role: 'bot', content: '', animated: false } 
+    ]);
+
     try {
-      // --- NEW CHANGE START: Send history to backend for conversational memory ---
-      const response = await axios.post(
-        `${API_URL}/ai/chat`,
-        { 
-          message: userMessage,
-          history: messages.filter(m => m.id !== 'init').map(m => ({ role: m.role, content: m.content })) 
-        },
-        { withCredentials: true }
-      );
-      // --- NEW CHANGE END ---
+      const token = localStorage.getItem('dealit_token');
       
-      setMessages((prev) => [
-        ...prev,
-        { id: Date.now() + 1, role: 'bot', content: response.data.reply || 'I processed your request, but got no text back.', animated: true }
-      ]);
+      const response = await fetch(`${API_URL}/ai/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        credentials: 'include',
+        // --- NEW: Ab history array nahi bhej rahe, backend khud manage kar raha hai ---
+        body: JSON.stringify({ 
+          message: userMessage
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let botReply = "";
+
+      setIsLoading(false); 
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const dataStr = line.replace('data: ', '');
+            if (dataStr === '[DONE]') {
+              break;
+            }
+            try {
+              const parsed = JSON.parse(dataStr);
+              botReply += parsed.content;
+              
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === botMessageId ? { ...msg, content: botReply } : msg
+                )
+              );
+            } catch (e) {
+              // Ignore partial JSON parse errors
+            }
+          }
+        }
+      }
+
     } catch (error) {
       console.error('AI Chat Error:', error);
-      setMessages((prev) => [
-        ...prev,
-        { id: Date.now() + 1, role: 'bot', content: 'Server connection failed. Please try again later.', animated: true }
-      ]);
-    } finally {
       setIsLoading(false);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === botMessageId ? { ...msg, content: 'Server connection failed. Please try again later.' } : msg
+        )
+      );
     }
   };
 
@@ -112,8 +191,8 @@ const AiChatPage = ({ user }) => {
   };
 
   return (
-    // --- CHANGES MADE: Replaced h-[100dvh] with fixed inset-0 and overscroll-none to lock the viewport and ensure header never scrolls away ---
-    <div className="fixed inset-0 flex flex-col bg-gray-900 z-50 overscroll-none">
+ 
+    <div className="fixed top-0 left-0 w-full h-[100dvh] flex flex-col bg-gray-900 z-50 overscroll-none">
       <div className="bg-gray-800/80 backdrop-blur-md border-b border-purple-500/20 p-4 flex items-center gap-4 shrink-0 shadow-sm shadow-purple-900/10 z-10">
         <button 
           onClick={() => navigate(-1)}
@@ -138,7 +217,6 @@ const AiChatPage = ({ user }) => {
       <div className="flex-1 overflow-y-auto p-4 space-y-6 container mx-auto max-w-3xl scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent">
         {messages.map((msg) => (
           <motion.div 
-            /* --- CHANGES MADE: Avoid jump animation for old messages --- */
             initial={msg.animated ? { opacity: 0, y: 10, scale: 0.98 } : { opacity: 1, y: 0, scale: 1 }} 
             animate={{ opacity: 1, y: 0, scale: 1 }} 
             transition={{ duration: 0.3 }}
@@ -152,19 +230,25 @@ const AiChatPage = ({ user }) => {
                   : 'bg-gray-800 text-gray-200 border border-gray-700 rounded-tl-sm shadow-md'
               }`}
             >
+            
               {msg.role === 'bot' ? (
-                <BotMessage 
-                  content={msg.content} 
-                  animated={msg.animated} 
-                  onComplete={() => markAsAnimated(msg.id)} 
-                />
+                msg.content ? (
+                  <BotMessage 
+                    content={msg.content} 
+                    animated={msg.animated} 
+                    onComplete={() => markAsAnimated(msg.id)} 
+                  />
+                ) : (
+                  <TypingLoader />
+                )
               ) : (
                 msg.content
               )}
             </div>
           </motion.div>
         ))}
-        {isLoading && (
+    
+        {isLoading && messages.length === 0 && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex justify-start">
             <div className="bg-gray-800 border border-gray-700 rounded-2xl rounded-tl-sm px-5 py-3 shadow-md">
               <TypingLoader />
@@ -174,7 +258,6 @@ const AiChatPage = ({ user }) => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* --- CHANGES MADE: Wrapped input and suggestions in a strictly non-shrinking footer container --- */}
       <div className="shrink-0 bg-gray-900 pb-safe">
         {messages.length === 1 && !isLoading && (
           <div className="container mx-auto max-w-3xl px-4 pb-3 flex flex-wrap gap-2 justify-center">
