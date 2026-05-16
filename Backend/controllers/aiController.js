@@ -185,7 +185,7 @@ const processChat = async (req, res) => {
 
     // Parallel DB Calls (Dashboard data + Chat History)
     const [user, myItems, recentOrders, activeSwaps, recentTransactions, incomingOffers, pendingDispatches, chatDoc] = await Promise.all([
-      User.findById(userId).select('full_name email city role account_credits aura_points listedProductsCount rewardedListingsCount totalReferrals referralCode isVerified hasClaimedWelcomeBonus created_at wishlist profilePic avatar').populate('wishlist', 'title'),
+     User.findById(userId).select('full_name email city role account_credits aura_points listedProductsCount rewardedListingsCount totalReferrals referralCode isVerified hasClaimedWelcomeBonus created_at wishlist profilePic').populate('wishlist', 'title'),
       Item.find({ owner: userId, status: 'active' }).select('title estimated_value category condition').limit(5),
       Order.find({ buyer: userId }).select('itemPrice orderStatus totalAmount trackingDetails').populate('item', 'title').sort({ created_at: -1 }).limit(3),
       BarterRequest.find({ requester: userId, status: { $in: ['PENDING', 'AWAITING_PAYMENT'] } }).populate('item', 'title').populate('offered_item', 'title').sort({ created_at: -1 }).limit(3),
@@ -211,7 +211,7 @@ const processChat = async (req, res) => {
       actionableSuggestions.push("User has zero items listed. Warmly suggest they look around their house for unused items to list, explaining how they can trade them or earn credits.");
     }
 
-    if (!user.profilePic && !user.avatar) {
+    if (!user.profilePic) {
       actionableSuggestions.push("User has not uploaded a profile picture. Gently recommend adding one to build trust with other users on the platform.");
     }
 
