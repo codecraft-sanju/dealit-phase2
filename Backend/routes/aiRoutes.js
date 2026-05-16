@@ -16,7 +16,6 @@ router.post('/generate-description', generateItemDescription);
 router.post('/analyze-images', analyzeImages);
 
 router.get('/chat/sessions', protect, getChatSessions);
-
 router.delete('/chat/sessions', protect, deleteAllChatSessions);
 router.get('/chat/history/:sessionId', protect, getChatHistory);
 router.delete('/chat/session/:sessionId', protect, deleteChatSession);

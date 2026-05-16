@@ -214,7 +214,6 @@ const deleteChatSession = async (req, res) => {
   }
 };
 
-// ADDED: New function to delete all chat sessions for the logged-in user
 const deleteAllChatSessions = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -229,52 +228,38 @@ const deleteAllChatSessions = async (req, res) => {
 
 const processChat = async (req, res) => {
   try {
-    const { message, sessionId } = req.body;
+    // DYNAMIC CONTEXT ENABLED FLAG READ FROM REQ BODY
+    const { message, sessionId, isSmartContextEnabled } = req.body;
     const userId = req.user._id;
 
-    // Parallel DB Calls (Dashboard data + Specific Chat History)
-    const [user, myItems, recentOrders, activeSwaps, recentTransactions, incomingOffers, pendingDispatches, chatDoc] = await Promise.all([
-      User.findById(userId).select('full_name email city role account_credits aura_points listedProductsCount rewardedListingsCount totalReferrals referralCode isVerified hasClaimedWelcomeBonus created_at wishlist profilePic').populate('wishlist', 'title'),
-      Item.find({ owner: userId, status: 'active' }).select('title estimated_value category condition').limit(5),
-      Order.find({ buyer: userId }).select('itemPrice orderStatus totalAmount trackingDetails').populate('item', 'title').sort({ created_at: -1 }).limit(3),
-      BarterRequest.find({ requester: userId, status: { $in: ['PENDING', 'AWAITING_PAYMENT'] } }).populate('item', 'title').populate('offered_item', 'title').sort({ created_at: -1 }).limit(3),
-      Transaction.find({ user: userId }).select('amount status transactionType createdAt').sort({ createdAt: -1 }).limit(3),
-      BarterRequest.find({ owner: userId, status: 'PENDING' }).populate('item', 'title').populate('offered_item', 'title').sort({ created_at: -1 }).limit(3),
-      Order.find({ seller: userId, orderStatus: 'pending' }).select('totalAmount orderStatus').populate('item', 'title').sort({ created_at: -1 }).limit(3),
-      sessionId ? AIChat.findOne({ _id: sessionId, user: userId }) : Promise.resolve(null)
-    ]);
+    let user, chatDoc;
+    let myItems = [], recentOrders = [], activeSwaps = [], recentTransactions = [], incomingOffers = [], pendingDispatches = [];
+
+    // CONDITIONALLY RUN HEAVY DB QUERIES
+    if (isSmartContextEnabled !== false) { // Default to true if missing
+      [user, myItems, recentOrders, activeSwaps, recentTransactions, incomingOffers, pendingDispatches, chatDoc] = await Promise.all([
+        User.findById(userId).select('full_name email city role account_credits aura_points listedProductsCount rewardedListingsCount totalReferrals referralCode isVerified hasClaimedWelcomeBonus created_at wishlist profilePic').populate('wishlist', 'title'),
+        Item.find({ owner: userId, status: 'active' }).select('title estimated_value category condition').limit(5),
+        Order.find({ buyer: userId }).select('itemPrice orderStatus totalAmount trackingDetails').populate('item', 'title').sort({ created_at: -1 }).limit(3),
+        BarterRequest.find({ requester: userId, status: { $in: ['PENDING', 'AWAITING_PAYMENT'] } }).populate('item', 'title').populate('offered_item', 'title').sort({ created_at: -1 }).limit(3),
+        Transaction.find({ user: userId }).select('amount status transactionType createdAt').sort({ createdAt: -1 }).limit(3),
+        BarterRequest.find({ owner: userId, status: 'PENDING' }).populate('item', 'title').populate('offered_item', 'title').sort({ created_at: -1 }).limit(3),
+        Order.find({ seller: userId, orderStatus: 'pending' }).select('totalAmount orderStatus').populate('item', 'title').sort({ created_at: -1 }).limit(3),
+        sessionId ? AIChat.findOne({ _id: sessionId, user: userId }) : Promise.resolve(null)
+      ]);
+    } else {
+      // IF SMART CONTEXT OFF, JUST FETCH USER NAME & CHAT DOC
+      [user, chatDoc] = await Promise.all([
+        User.findById(userId).select('full_name account_credits aura_points'),
+        sessionId ? AIChat.findOne({ _id: sessionId, user: userId }) : Promise.resolve(null)
+      ]);
+    }
 
     if (!user) {
         return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    const activeInventoryStr = myItems.length > 0 ? myItems.map(i => `- ${i.title} (${i.estimated_value} credits)`).join('\n') : 'No active items listed.';
-    const orderHistoryStr = recentOrders.length > 0 ? recentOrders.map(o => `- Bought ${o.item?.title || 'item'} for ${o.totalAmount} credits. Status: ${o.orderStatus}`).join('\n') : 'No recent purchases.';
-    const swapHistoryStr = activeSwaps.length > 0 ? activeSwaps.map(s => `- Offered ${s.offered_item?.title || 'item'} for ${s.item?.title || 'item'}. Status: ${s.status}`).join('\n') : 'No active outgoing swap requests.';
-    const incomingOffersStr = incomingOffers.length > 0 ? incomingOffers.map(s => `- Someone offered ${s.offered_item?.title || 'item'} for your ${s.item?.title || 'item'}. Status: Needs your approval.`).join('\n') : 'No pending incoming offers.';
-    const pendingDispatchesStr = pendingDispatches.length > 0 ? pendingDispatches.map(o => `- You need to dispatch: ${o.item?.title || 'item'}. Order Status: ${o.orderStatus}`).join('\n') : 'No items pending dispatch.';
-
-    let actionableSuggestions = [];
-
-    if (myItems.length === 0) {
-      actionableSuggestions.push("User has zero items listed. Warmly suggest they look around their house for unused items to list, explaining how they can trade them or earn credits.");
-    }
-
-    if (!user.profilePic) {
-      actionableSuggestions.push("User has not uploaded a profile picture. Gently recommend adding one to build trust with other users on the platform.");
-    }
-
-    if (!user.isVerified) {
-      actionableSuggestions.push("User account is not verified. Suggest they complete the verification process to get a trusted badge.");
-    }
-
-    if (!user.hasClaimedWelcomeBonus) {
-      actionableSuggestions.push("User has an unclaimed welcome bonus. Remind them to claim their free credits.");
-    }
-
-    const suggestionsStr = actionableSuggestions.length > 0 ? actionableSuggestions.map(s => `- ${s}`).join('\n') : 'No extra suggestions needed right now.';
-
-    const systemPrompt = `You are Dealit AI, a highly intelligent, friendly, and professional assistant for the Dealit platform.
+    let systemPrompt = `You are Dealit AI, a highly intelligent, friendly, and professional assistant for the Dealit platform.
     
     Dealit Workflow Guide:
     1. Direct Buy: Buyer pays Credit price + Shipping fee. Item is 'reserved'. Seller dispatches via Shiprocket. Seller gets credits and Aura points on delivery.
@@ -292,7 +277,34 @@ const processChat = async (req, res) => {
     Name: ${user.full_name}
     Credits: ${user.account_credits}
     Aura Score: ${user.aura_points}
-    
+    `;
+
+    // ADD LIVE DATA ONLY IF SMART CONTEXT IS ENABLED
+    if (isSmartContextEnabled !== false) {
+      const activeInventoryStr = myItems.length > 0 ? myItems.map(i => `- ${i.title} (${i.estimated_value} credits)`).join('\n') : 'No active items listed.';
+      const orderHistoryStr = recentOrders.length > 0 ? recentOrders.map(o => `- Bought ${o.item?.title || 'item'} for ${o.totalAmount} credits. Status: ${o.orderStatus}`).join('\n') : 'No recent purchases.';
+      const swapHistoryStr = activeSwaps.length > 0 ? activeSwaps.map(s => `- Offered ${s.offered_item?.title || 'item'} for ${s.item?.title || 'item'}. Status: ${s.status}`).join('\n') : 'No active outgoing swap requests.';
+      const incomingOffersStr = incomingOffers.length > 0 ? incomingOffers.map(s => `- Someone offered ${s.offered_item?.title || 'item'} for your ${s.item?.title || 'item'}. Status: Needs your approval.`).join('\n') : 'No pending incoming offers.';
+      const pendingDispatchesStr = pendingDispatches.length > 0 ? pendingDispatches.map(o => `- You need to dispatch: ${o.item?.title || 'item'}. Order Status: ${o.orderStatus}`).join('\n') : 'No items pending dispatch.';
+
+      let actionableSuggestions = [];
+
+      if (myItems.length === 0) {
+        actionableSuggestions.push("User has zero items listed. Warmly suggest they look around their house for unused items to list, explaining how they can trade them or earn credits.");
+      }
+      if (user.profilePic === undefined || !user.profilePic) {
+        // Safe check in case profilePic wasn't fetched
+      }
+      if (user.isVerified !== undefined && !user.isVerified) {
+        actionableSuggestions.push("User account is not verified. Suggest they complete the verification process to get a trusted badge.");
+      }
+      if (user.hasClaimedWelcomeBonus !== undefined && !user.hasClaimedWelcomeBonus) {
+        actionableSuggestions.push("User has an unclaimed welcome bonus. Remind them to claim their free credits.");
+      }
+
+      const suggestionsStr = actionableSuggestions.length > 0 ? actionableSuggestions.map(s => `- ${s}`).join('\n') : 'No extra suggestions needed right now.';
+
+      systemPrompt += `
     User's Live Data Dashboard:
     Action Required (Pending Dispatches): ${pendingDispatchesStr}
     Action Required (Incoming Offers): ${incomingOffersStr}
@@ -304,6 +316,12 @@ const processChat = async (req, res) => {
     ${suggestionsStr}
     
     Instructions: Check the User's Live Data and Proactive AI Suggestions. If there are pending actions or suggestions, naturally weave them into the conversation. Talk naturally and do not overuse formatting.`;
+
+    } else {
+      // IF SMART CONTEXT OFF
+      systemPrompt += `
+    Instructions: The user has disabled 'Smart Context', so you cannot see their live inventory, orders, or pending actions. Answer their general questions about the platform, rules, or assist them generically. Talk naturally and do not overuse formatting.`;
+    }
 
     let pastMessages = [];
     if (chatDoc && chatDoc.messages && chatDoc.messages.length > 0) {
@@ -344,10 +362,8 @@ const processChat = async (req, res) => {
     let currentSessionId = sessionId;
     let fullBotReply = ""; 
 
-
     let targetChatDoc = chatDoc;
     if (!targetChatDoc) {
-      
       const generatedTitle = message.length > 25 ? message.substring(0, 25) + '...' : message;
       targetChatDoc = await AIChat.create({
         user: userId,
@@ -357,7 +373,6 @@ const processChat = async (req, res) => {
       currentSessionId = targetChatDoc._id;
     }
 
-  
     res.write(`data: ${JSON.stringify({ type: 'session_id', sessionId: currentSessionId })}\n\n`);
 
     for await (const chunk of chatCompletion) {
@@ -368,13 +383,11 @@ const processChat = async (req, res) => {
       }
     }
 
-  
     if (fullBotReply.trim() !== "") {
       targetChatDoc.messages.push({ role: 'user', content: message });
       targetChatDoc.messages.push({ role: 'assistant', content: fullBotReply });
       await targetChatDoc.save();
     }
-
    
     res.write('data: [DONE]\n\n');
     res.end();

@@ -66,20 +66,16 @@ const FloatingAIAssistant = ({ user }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // --- CHANGED: Removed isFullScreen dependency ---
   useEffect(() => {
     if (isOpen) scrollToBottom();
   }, [messages, isOpen, isLoading]);
-  // --- END CHANGED ---
 
-  // Fetch Chat History (Latest Session) only when widget is opened for the first time
   useEffect(() => {
     if (isOpen && !hasFetchedHistory) {
       const loadHistory = async () => {
         setIsLoading(true);
         try {
           const token = localStorage.getItem('dealit_token');
-          // Use 'latest' to get the most recent session or create an internal reference
           const res = await axios.get(`${API_URL}/ai/chat/history/latest`, {
             headers: { Authorization: `Bearer ${token}` },
             withCredentials: true
@@ -135,6 +131,10 @@ const FloatingAIAssistant = ({ user }) => {
     try {
       const token = localStorage.getItem('dealit_token');
       
+      // NEW: Retrieve global context state dynamically
+      const smartContextStr = localStorage.getItem('dealit_ai_context');
+      const isSmartContextEnabled = smartContextStr !== null ? JSON.parse(smartContextStr) : true;
+      
       const response = await fetch(`${API_URL}/ai/chat`, {
         method: 'POST',
         headers: {
@@ -144,7 +144,8 @@ const FloatingAIAssistant = ({ user }) => {
         credentials: 'include',
         body: JSON.stringify({ 
           message: userMessage,
-          sessionId: currentSessionId
+          sessionId: currentSessionId,
+          isSmartContextEnabled // Sent to backend
         }),
       });
 
@@ -200,18 +201,15 @@ const FloatingAIAssistant = ({ user }) => {
     }
   };
 
-  // --- CHANGED: Removed setIsFullScreen(true) so it doesn't jarringly expand on type ---
   const handleSendMessage = (e) => {
     e.preventDefault();
     processMessage(input);
   };
-  // --- END CHANGED ---
 
   const handleClose = () => {
     setIsOpen(false);
   };
   
-  // Expand to full page router view instead of just widget fullscreen
   const handleMaximize = () => {
     handleClose();
     if(currentSessionId) {
@@ -231,7 +229,6 @@ const FloatingAIAssistant = ({ user }) => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
-            // --- CHANGED: Hardcoded the smaller size styling since it's only a floating widget now ---
             className={`fixed flex flex-col bg-gray-900 shadow-[0_15px_50px_rgba(163,136,225,0.2)] overflow-hidden z-[100] overscroll-none bottom-24 right-4 md:right-6 w-[calc(100vw-32px)] sm:w-[400px] h-[500px] border border-purple-500/30 rounded-2xl`}
           >
             <div className="bg-gray-800/90 backdrop-blur-md border-b border-purple-500/20 p-4 flex justify-between items-center shadow-sm shrink-0 z-10">
@@ -322,7 +319,6 @@ const FloatingAIAssistant = ({ user }) => {
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  // --- CHANGED: Removed aggressive onFocus full screen behavior ---
                   placeholder="Ask about items, Aura, rules..."
                   className="w-full bg-gray-900 border border-gray-700 rounded-full py-3 pl-4 pr-12 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-inner"
                 />

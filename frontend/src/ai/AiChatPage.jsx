@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ArrowLeft, Send, Bot, Sparkles, Menu, Plus, Settings, HelpCircle, MessageSquare, X, Trash2, Minimize2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-// CHANGE: Added AnimatePresence
 import { motion, AnimatePresence } from 'framer-motion'; 
 import axios from 'axios';
 
@@ -60,8 +59,19 @@ const AiChatPage = ({ user }) => {
   const [sessions, setSessions] = useState([]);
   const [currentSessionId, setCurrentSessionId] = useState(null);
   
-  // CHANGE: Added state for settings modal
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // NEW: Dynamic Smart Context State (Saved in localStorage)
+  const [isSmartContextEnabled, setIsSmartContextEnabled] = useState(() => {
+    const saved = localStorage.getItem('dealit_ai_context');
+    return saved !== null ? JSON.parse(saved) : true;
+  });
+
+  const handleToggleContext = () => {
+    const newVal = !isSmartContextEnabled;
+    setIsSmartContextEnabled(newVal);
+    localStorage.setItem('dealit_ai_context', JSON.stringify(newVal));
+  };
   
   const messagesEndRef = useRef(null);
 
@@ -189,7 +199,7 @@ const AiChatPage = ({ user }) => {
     }
   };
 
-  // CHANGE: Added function to delete ALL sessions
+  // NEW: Delete All Sessions Function
   const deleteAllSessions = async () => {
     try {
       const token = localStorage.getItem('dealit_token');
@@ -198,9 +208,9 @@ const AiChatPage = ({ user }) => {
         withCredentials: true
       });
       
-      setSessions([]); // Clear sidebar
-      setIsSettingsOpen(false); // Close modal
-      handleNewChat(); // Reset to fresh chat
+      setSessions([]); 
+      setIsSettingsOpen(false); 
+      handleNewChat(); 
     } catch (error) {
       console.error('Error deleting all sessions:', error);
     }
@@ -236,7 +246,8 @@ const AiChatPage = ({ user }) => {
         credentials: 'include',
         body: JSON.stringify({ 
           message: userMessage,
-          sessionId: currentSessionId 
+          sessionId: currentSessionId,
+          isSmartContextEnabled // NEW: Sent to backend
         }),
       });
 
@@ -303,7 +314,6 @@ const AiChatPage = ({ user }) => {
     processMessage(input);
   };
 
-  // Action for Minimize Button (Goes back to previous page to show floating widget)
   const handleMinimize = () => {
     if (window.history.state && window.history.state.idx > 0) {
       navigate(-1); 
@@ -312,7 +322,6 @@ const AiChatPage = ({ user }) => {
     }
   };
 
-  // Action for Close Button (Goes straight to Home, abandoning chat view entirely)
   const handleClose = () => {
     navigate('/');
   };
@@ -320,7 +329,6 @@ const AiChatPage = ({ user }) => {
   return (
     <div className="fixed top-0 left-0 w-full h-[100dvh] flex bg-gray-900 z-50 overscroll-none">
       
-      {/* Mobile Overlay for Sidebar */}
       {isSidebarOpen && (
         <div 
           className="fixed inset-0 bg-black/50 z-40 md:hidden" 
@@ -328,10 +336,8 @@ const AiChatPage = ({ user }) => {
         />
       )}
 
-      {/* Sidebar Component */}
       <div className={`fixed md:relative z-50 flex flex-col h-full bg-gray-950 border-r border-gray-800 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-72 translate-x-0' : 'w-72 -translate-x-full md:w-0 md:hidden absolute'}`}>
         
-        {/* Top: New Chat Button */}
         <div className="p-3 flex items-center gap-2">
           <button 
             onClick={handleNewChat}
@@ -343,7 +349,6 @@ const AiChatPage = ({ user }) => {
             <span className="font-semibold text-sm">New Chat</span>
           </button>
 
-          {/* Mobile Only: Close Sidebar Button */}
           <button 
             onClick={() => setIsSidebarOpen(false)}
             className="md:hidden p-3 bg-gray-800 hover:bg-gray-700 rounded-xl text-gray-400 hover:text-white transition-colors border border-gray-700/50"
@@ -352,7 +357,6 @@ const AiChatPage = ({ user }) => {
           </button>
         </div>
 
-        {/* Middle: Chat History */}
         <div className="flex-1 overflow-y-auto px-3 py-2 scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent">
           <div className="text-xs font-bold tracking-wider text-gray-500 mb-3 px-2 uppercase">Recent Chats</div>
           
@@ -385,9 +389,7 @@ const AiChatPage = ({ user }) => {
           </div>
         </div>
 
-        {/* Bottom: Settings & Help */}
         <div className="p-3 border-t border-gray-800/80 space-y-1 bg-gray-950">
-          {/* CHANGE: Added onClick to open modal */}
           <button 
             onClick={() => setIsSettingsOpen(true)}
             className="flex items-center gap-3 w-full p-2.5 rounded-lg hover:bg-gray-800/50 text-gray-400 hover:text-gray-200 transition-colors"
@@ -402,13 +404,10 @@ const AiChatPage = ({ user }) => {
         </div>
       </div>
 
-      {/* Main Chat Area Container */}
       <div className="flex-1 flex flex-col min-w-0 h-full relative bg-gray-900">
         
-        {/* Header */}
         <div className="bg-gray-800/80 backdrop-blur-md border-b border-purple-500/20 p-4 flex items-center justify-between shadow-sm shadow-purple-900/10 z-10 shrink-0">
           <div className="flex items-center gap-3">
-            {/* Sidebar Toggle (Left side) */}
             <button 
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               className="p-2 bg-gray-900 hover:bg-gray-700 rounded-lg text-gray-300 transition-colors mr-1"
@@ -430,7 +429,6 @@ const AiChatPage = ({ user }) => {
             </div>
           </div>
           
-          {/* Action Buttons (Right side) */}
           <div className="flex items-center gap-2">
             <button 
               onClick={handleMinimize}
@@ -450,7 +448,6 @@ const AiChatPage = ({ user }) => {
           </div>
         </div>
 
-        {/* Messages List */}
         <div className="flex-1 overflow-y-auto p-4 space-y-6 container mx-auto max-w-3xl scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent">
           {messages.map((msg) => (
             <motion.div 
@@ -494,7 +491,6 @@ const AiChatPage = ({ user }) => {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Area */}
         <div className="shrink-0 bg-gray-900 pb-safe">
           {messages.length <= 1 && !isLoading && (
             <div className="container mx-auto max-w-3xl px-4 pb-3 flex flex-wrap gap-2 justify-center">
@@ -533,11 +529,9 @@ const AiChatPage = ({ user }) => {
 
       </div>
 
-      {/* CHANGE: Added Settings Modal UI for Mobile Responsiveness */}
       <AnimatePresence>
         {isSettingsOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 md:px-0">
-            {/* Backdrop */}
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -546,7 +540,6 @@ const AiChatPage = ({ user }) => {
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             />
             
-            {/* Modal Content - Mobile Optimized */}
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -567,19 +560,22 @@ const AiChatPage = ({ user }) => {
               </div>
               
               <div className="p-5 space-y-6">
-                {/* Setting Option: Smart Context Toggle */}
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-white">Smart Context</p>
                     <p className="text-xs text-gray-400 mt-0.5">Allow AI to read your inventory</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" defaultChecked />
+                    <input 
+                      type="checkbox" 
+                      className="sr-only peer" 
+                      checked={isSmartContextEnabled}
+                      onChange={handleToggleContext}
+                    />
                     <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
                   </label>
                 </div>
 
-                {/* Setting Option: Clear History */}
                 <div className="pt-4 border-t border-gray-800/80">
                   <button 
                     onClick={() => {
