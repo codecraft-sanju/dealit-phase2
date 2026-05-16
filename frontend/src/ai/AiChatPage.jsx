@@ -396,7 +396,9 @@ const AiChatPage = ({ user }) => {
     processMessage(input);
   };
 
+  // --- CHANGED: Logic strictly handles minimizing directly to floating chat window ---
   const handleMinimize = () => {
+    localStorage.setItem('dealit_ai_open', 'true');
     if (window.history.state && window.history.state.idx > 0) {
       navigate(-1); 
     } else {
@@ -404,12 +406,15 @@ const AiChatPage = ({ user }) => {
     }
   };
 
+  // --- CHANGED: Logic strictly handles fully closing the app ---
   const handleClose = () => {
+    localStorage.setItem('dealit_ai_open', 'false');
     navigate('/');
   };
 
   return (
-    <div className="fixed top-0 left-0 w-full h-[100dvh] flex bg-gray-900 z-50 overscroll-none">
+    
+    <div className="fixed inset-0 flex bg-gray-900 z-50 overscroll-none overflow-hidden">
       
       {isSidebarOpen && (
         <div 
@@ -486,7 +491,7 @@ const AiChatPage = ({ user }) => {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col min-w-0 h-full relative bg-gray-900">
+      <div className="flex-1 flex flex-col min-w-0 h-full relative bg-gray-900 overflow-hidden">
         
         <div className="bg-gray-800/80 backdrop-blur-md border-b border-purple-500/20 p-4 flex items-center justify-between shadow-sm shadow-purple-900/10 z-10 shrink-0">
           <div className="flex items-center gap-3">

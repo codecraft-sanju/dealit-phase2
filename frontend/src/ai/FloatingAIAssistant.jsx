@@ -130,7 +130,8 @@ const SUGGESTIONS = [
 ];
 
 const FloatingAIAssistant = ({ user }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  // --- CHANGED: Initialize state from localStorage to handle minimize logic ---
+  const [isOpen, setIsOpen] = useState(() => localStorage.getItem('dealit_ai_open') === 'true');
   const [hasFetchedHistory, setHasFetchedHistory] = useState(false);
   const navigate = useNavigate();
   
@@ -288,18 +289,28 @@ const FloatingAIAssistant = ({ user }) => {
     processMessage(input);
   };
 
+  // --- CHANGED: Link toggle, close, and maximize logic with localStorage ---
+  const handleToggleOpen = () => {
+    const nextState = !isOpen;
+    setIsOpen(nextState);
+    localStorage.setItem('dealit_ai_open', nextState.toString());
+  };
+
   const handleClose = () => {
     setIsOpen(false);
+    localStorage.setItem('dealit_ai_open', 'false');
   };
   
   const handleMaximize = () => {
-    handleClose();
+    localStorage.setItem('dealit_ai_open', 'true');
+    setIsOpen(false);
     if(currentSessionId) {
       navigate(`/ai-chat/${currentSessionId}`);
     } else {
       navigate('/ai-chat');
     }
   };
+  // --- END CHANGED ---
 
   return (
     <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[60]">
@@ -424,7 +435,7 @@ const FloatingAIAssistant = ({ user }) => {
         }}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggleOpen} // --- CHANGED: Use updated function
         className="w-14 h-14 bg-gradient-to-br from-purple-600 to-purple-500 rounded-full shadow-[0_0_25px_rgba(163,136,225,0.5)] flex items-center justify-center text-white relative z-10 border border-purple-400/30 overflow-hidden"
       >
         <AnimatePresence mode="wait">
