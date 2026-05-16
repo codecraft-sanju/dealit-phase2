@@ -4,13 +4,16 @@ const aiChatSchema = new mongoose.Schema({
   user: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'User', 
-    required: true,
-    unique: true 
+    required: true
+  },
+  title: {
+    type: String,
+    default: 'New Chat'
   },
   messages: [{
     role: { 
       type: String, 
-      enum: ['user', 'assistant'], 
+      enum: ['user', 'assistant', 'system'], 
       required: true 
     },
     content: { 
@@ -21,12 +24,18 @@ const aiChatSchema = new mongoose.Schema({
       type: Date, 
       default: Date.now 
     }
-  }],
-  created_at: { type: Date, default: Date.now },
-  updated_at: { type: Date, default: Date.now }
+  }]
+}, {
+  
+  timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
 });
 
+const AIChat = mongoose.model('AIChat', aiChatSchema);
 
+AIChat.syncIndexes().then(() => {
+    console.log("AIChat indexes synced! (Old unique index removed automatically)");
+}).catch(err => {
+    console.log("Error syncing AIChat indexes:", err.message);
+});
 
-
-module.exports = mongoose.model('AIChat', aiChatSchema);
+module.exports = AIChat;

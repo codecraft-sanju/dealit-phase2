@@ -247,10 +247,12 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // --- CHANGED: Added logic to hide BottomNav on AI Chat routes ---
+  const isAiChatRoute = location.pathname.startsWith('/ai-chat');
   const hideNavbarRoutes = ['/login', '/signup', '/forgot-password'];
-  const shouldShowBottomNav = !hideNavbarRoutes.includes(location.pathname) && !location.pathname.startsWith('/admin');
+  const shouldShowBottomNav = !hideNavbarRoutes.includes(location.pathname) && !location.pathname.startsWith('/admin') && !isAiChatRoute;
+  // --- END CHANGED ---
 
-  
   const publicDesktopRoutes = ['/login', '/privacy', '/terms', '/refund-policy', '/cancellation-policy'];
 
   if (isDesktop && !location.pathname.startsWith('/admin') && !publicDesktopRoutes.includes(location.pathname)) {
@@ -267,16 +269,17 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
       <ZeroPriceAlert user={user} onCheckComplete={setHasZeroPriceIssue} />
       
       <Suspense fallback={null}>
-       
+        
         <PromoAlert user={user} setUser={setUser} hasZeroPriceIssue={hasZeroPriceIssue} />
         <IosInstallPopup />
       </Suspense>
       
       <main>
         <Suspense fallback={<PremiumLoader />}>
-          {user && <FloatingAIAssistant user={user} />}
-       
-
+          {/* --- CHANGED: Hide Floating widget when on the full AI Chat page --- */}
+          {user && !isAiChatRoute && <FloatingAIAssistant user={user} />}
+          {/* --- END CHANGED --- */}
+          
           <Routes>
             <Route path="/" element={
               <>
@@ -332,6 +335,8 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
             <Route path="/notifications" element={user ? <NotificationsPage /> : <Navigate to="/login" />} />
             <Route path="/help-support" element={user ? <HelpSupportPage /> : <Navigate to="/login" />} />
             <Route path="/ai-chat" element={user ? <AiChatPage user={user} /> : <Navigate to="/login" />} />
+            <Route path="/ai-chat/:sessionId" element={user ? <AiChatPage user={user} /> : <Navigate to="/login" />} />
+            
             <Route path="*" element={<div className="text-white text-center mt-20 text-xl">404 - Page Not Found</div>} />
           </Routes>
         </Suspense>

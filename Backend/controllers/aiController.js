@@ -162,14 +162,36 @@ const analyzeImages = async (req, res) => {
   }
 };
 
-// Frontend ko chat history bhejne ka function
+const getChatSessions = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const sessions = await AIChat.find({ user: userId })
+      .select('_id title updated_at')
+      .sort({ updated_at: -1 });
+
+    res.status(200).json({ success: true, sessions });
+  } catch (error) {
+    console.error('Fetch Chat Sessions Error:', error);
+    res.status(500).json({ success: false, message: 'Could not fetch sessions' });
+  }
+};
+
 const getChatHistory = async (req, res) => {
   try {
     const userId = req.user._id;
-    const chatDoc = await AIChat.findOne({ user: userId });
+    const { sessionId } = req.params;
+    
+    let chatDoc;
+    if (sessionId && sessionId !== 'latest') {
+      chatDoc = await AIChat.findOne({ _id: sessionId, user: userId });
+    } else {
+      chatDoc = await AIChat.findOne({ user: userId }).sort({ updated_at: -1 });
+    }
     
     res.status(200).json({
       success: true,
+      sessionId: chatDoc ? chatDoc._id : null,
+      title: chatDoc ? chatDoc.title : 'New Chat',
       history: chatDoc ? chatDoc.messages : []
     });
   } catch (error) {
@@ -178,21 +200,48 @@ const getChatHistory = async (req, res) => {
   }
 };
 
+const deleteChatSession = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { sessionId } = req.params;
+
+    await AIChat.findOneAndDelete({ _id: sessionId, user: userId });
+
+    res.status(200).json({ success: true, message: 'Chat deleted successfully' });
+  } catch (error) {
+    console.error('Delete Chat Error:', error);
+    res.status(500).json({ success: false, message: 'Could not delete chat' });
+  }
+};
+
+// ADDED: New function to delete all chat sessions for the logged-in user
+const deleteAllChatSessions = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    await AIChat.deleteMany({ user: userId });
+
+    res.status(200).json({ success: true, message: 'All chat sessions deleted successfully' });
+  } catch (error) {
+    console.error('Delete All Chats Error:', error);
+    res.status(500).json({ success: false, message: 'Could not delete all chats' });
+  }
+};
+
 const processChat = async (req, res) => {
   try {
-    const { message } = req.body;
+    const { message, sessionId } = req.body;
     const userId = req.user._id;
 
-    // Parallel DB Calls (Dashboard data + Chat History)
+    // Parallel DB Calls (Dashboard data + Specific Chat History)
     const [user, myItems, recentOrders, activeSwaps, recentTransactions, incomingOffers, pendingDispatches, chatDoc] = await Promise.all([
-     User.findById(userId).select('full_name email city role account_credits aura_points listedProductsCount rewardedListingsCount totalReferrals referralCode isVerified hasClaimedWelcomeBonus created_at wishlist profilePic').populate('wishlist', 'title'),
+      User.findById(userId).select('full_name email city role account_credits aura_points listedProductsCount rewardedListingsCount totalReferrals referralCode isVerified hasClaimedWelcomeBonus created_at wishlist profilePic').populate('wishlist', 'title'),
       Item.find({ owner: userId, status: 'active' }).select('title estimated_value category condition').limit(5),
       Order.find({ buyer: userId }).select('itemPrice orderStatus totalAmount trackingDetails').populate('item', 'title').sort({ created_at: -1 }).limit(3),
       BarterRequest.find({ requester: userId, status: { $in: ['PENDING', 'AWAITING_PAYMENT'] } }).populate('item', 'title').populate('offered_item', 'title').sort({ created_at: -1 }).limit(3),
       Transaction.find({ user: userId }).select('amount status transactionType createdAt').sort({ createdAt: -1 }).limit(3),
       BarterRequest.find({ owner: userId, status: 'PENDING' }).populate('item', 'title').populate('offered_item', 'title').sort({ created_at: -1 }).limit(3),
       Order.find({ seller: userId, orderStatus: 'pending' }).select('totalAmount orderStatus').populate('item', 'title').sort({ created_at: -1 }).limit(3),
-      AIChat.findOne({ user: userId }) 
+      sessionId ? AIChat.findOne({ _id: sessionId, user: userId }) : Promise.resolve(null)
     ]);
 
     if (!user) {
@@ -256,7 +305,6 @@ const processChat = async (req, res) => {
     
     Instructions: Check the User's Live Data and Proactive AI Suggestions. If there are pending actions or suggestions, naturally weave them into the conversation. Talk naturally and do not overuse formatting.`;
 
-    // Database se history nikalna (sirf aakhiri 10 messages taaki limit cross na ho)
     let pastMessages = [];
     if (chatDoc && chatDoc.messages && chatDoc.messages.length > 0) {
       const recentHistory = chatDoc.messages.slice(-10);
@@ -274,7 +322,6 @@ const processChat = async (req, res) => {
 
     let chatCompletion;
 
-    // Fallback Logic: Pehle 70B try karenge, agar fail hua toh 8B
     try {
       chatCompletion = await groq.chat.completions.create({
         messages: messagesArray,
@@ -294,7 +341,24 @@ const processChat = async (req, res) => {
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
 
+    let currentSessionId = sessionId;
     let fullBotReply = ""; 
+
+
+    let targetChatDoc = chatDoc;
+    if (!targetChatDoc) {
+      
+      const generatedTitle = message.length > 25 ? message.substring(0, 25) + '...' : message;
+      targetChatDoc = await AIChat.create({
+        user: userId,
+        title: generatedTitle,
+        messages: [] 
+      });
+      currentSessionId = targetChatDoc._id;
+    }
+
+  
+    res.write(`data: ${JSON.stringify({ type: 'session_id', sessionId: currentSessionId })}\n\n`);
 
     for await (const chunk of chatCompletion) {
       const content = chunk.choices[0]?.delta?.content || '';
@@ -303,32 +367,24 @@ const processChat = async (req, res) => {
         res.write(`data: ${JSON.stringify({ content })}\n\n`);
       }
     }
-    
+
+  
+    if (fullBotReply.trim() !== "") {
+      targetChatDoc.messages.push({ role: 'user', content: message });
+      targetChatDoc.messages.push({ role: 'assistant', content: fullBotReply });
+      await targetChatDoc.save();
+    }
+
+   
     res.write('data: [DONE]\n\n');
     res.end();
 
-    if (fullBotReply.trim() !== "") {
-      if (chatDoc) {
-        chatDoc.messages.push({ role: 'user', content: message });
-        chatDoc.messages.push({ role: 'assistant', content: fullBotReply });
-        chatDoc.updated_at = Date.now();
-        await chatDoc.save();
-      } else {
-        await AIChat.create({
-          user: userId,
-          messages: [
-            { role: 'user', content: message },
-            { role: 'assistant', content: fullBotReply }
-          ]
-        });
-      }
-    }
-
   } catch (error) {
     console.error('Production AI Chat Error:', error);
+    
     if (!res.headersSent) {
       res.status(500).json({ success: false, reply: 'Server connection failed.' });
-    } else {
+    } else if (!res.writableEnded) { 
       res.write(`data: ${JSON.stringify({ content: '\n\n**System Error**: Connection lost.' })}\n\n`);
       res.write('data: [DONE]\n\n');
       res.end();
@@ -339,6 +395,9 @@ const processChat = async (req, res) => {
 module.exports = {
   generateItemDescription,
   analyzeImages,
-  processChat,
-  getChatHistory 
+  getChatSessions,
+  getChatHistory,
+  deleteChatSession,
+  deleteAllChatSessions, 
+  processChat 
 };

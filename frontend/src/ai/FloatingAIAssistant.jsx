@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, X, Send, Bot, Sparkles, Maximize2, Minimize2, HelpCircle } from 'lucide-react';
+import { X, Send, Bot, Sparkles, Maximize2, Minimize2 } from 'lucide-react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -48,34 +49,38 @@ const SUGGESTIONS = [
 
 const FloatingAIAssistant = ({ user }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [isFullScreen, setIsFullScreen] = useState(false);
   const [hasFetchedHistory, setHasFetchedHistory] = useState(false);
+  const navigate = useNavigate();
   
   const [messages, setMessages] = useState([
     { id: 'init', role: 'bot', content: `Hi ${user?.full_name?.split(' ')[0] || 'there'}! I am Dealit's AI Assistant. How can I help you today?`, animated: true }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [currentSessionId, setCurrentSessionId] = useState(null);
+  
   const messagesEndRef = useRef(null);
-
   const [buttonState, setButtonState] = useState('bot');
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // --- CHANGED: Removed isFullScreen dependency ---
   useEffect(() => {
     if (isOpen) scrollToBottom();
-  }, [messages, isOpen, isLoading, isFullScreen]);
+  }, [messages, isOpen, isLoading]);
+  // --- END CHANGED ---
 
-  // --- NEW: Fetch Chat History only when widget is opened for the first time ---
+  // Fetch Chat History (Latest Session) only when widget is opened for the first time
   useEffect(() => {
     if (isOpen && !hasFetchedHistory) {
       const loadHistory = async () => {
         setIsLoading(true);
         try {
           const token = localStorage.getItem('dealit_token');
-          const res = await axios.get(`${API_URL}/ai/chat/history`, {
+          // Use 'latest' to get the most recent session or create an internal reference
+          const res = await axios.get(`${API_URL}/ai/chat/history/latest`, {
             headers: { Authorization: `Bearer ${token}` },
             withCredentials: true
           });
@@ -88,6 +93,7 @@ const FloatingAIAssistant = ({ user }) => {
               animated: false
             }));
             setMessages(formattedHistory);
+            setCurrentSessionId(res.data.sessionId);
           }
         } catch (error) {
           console.error('Failed to load chat history:', error);
@@ -136,9 +142,9 @@ const FloatingAIAssistant = ({ user }) => {
           'Authorization': `Bearer ${token}`
         },
         credentials: 'include',
-        // --- NEW: Ab history array nahi bhej rahe ---
         body: JSON.stringify({ 
-          message: userMessage
+          message: userMessage,
+          sessionId: currentSessionId
         }),
       });
 
@@ -162,11 +168,15 @@ const FloatingAIAssistant = ({ user }) => {
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             const dataStr = line.replace('data: ', '');
-            if (dataStr === '[DONE]') {
-              break;
-            }
+            if (dataStr === '[DONE]') break;
             try {
               const parsed = JSON.parse(dataStr);
+              
+              if (parsed.type === 'session_id') {
+                setCurrentSessionId(parsed.sessionId);
+                continue;
+              }
+
               botReply += parsed.content;
               
               setMessages((prev) =>
@@ -174,9 +184,7 @@ const FloatingAIAssistant = ({ user }) => {
                   msg.id === botMessageId ? { ...msg, content: botReply } : msg
                 )
               );
-            } catch (e) {
-              // Ignore partial JSON parse errors
-            }
+            } catch (e) {}
           }
         }
       }
@@ -192,15 +200,25 @@ const FloatingAIAssistant = ({ user }) => {
     }
   };
 
+  // --- CHANGED: Removed setIsFullScreen(true) so it doesn't jarringly expand on type ---
   const handleSendMessage = (e) => {
     e.preventDefault();
-    setIsFullScreen(true);
     processMessage(input);
   };
+  // --- END CHANGED ---
 
   const handleClose = () => {
     setIsOpen(false);
-    setTimeout(() => setIsFullScreen(false), 300); 
+  };
+  
+  // Expand to full page router view instead of just widget fullscreen
+  const handleMaximize = () => {
+    handleClose();
+    if(currentSessionId) {
+      navigate(`/ai-chat/${currentSessionId}`);
+    } else {
+      navigate('/ai-chat');
+    }
   };
 
   return (
@@ -213,12 +231,8 @@ const FloatingAIAssistant = ({ user }) => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
-            // --- MODIFIED: Used h-[100dvh] instead of inset-0 for full screen mode ---
-            className={`fixed flex flex-col bg-gray-900 shadow-[0_15px_50px_rgba(163,136,225,0.2)] overflow-hidden z-[100] overscroll-none ${
-              isFullScreen 
-                ? 'top-0 left-0 w-full h-[100dvh] rounded-none' 
-                : 'bottom-24 right-4 md:right-6 w-[calc(100vw-32px)] sm:w-[400px] h-[500px] border border-purple-500/30 rounded-2xl'
-            }`}
+            // --- CHANGED: Hardcoded the smaller size styling since it's only a floating widget now ---
+            className={`fixed flex flex-col bg-gray-900 shadow-[0_15px_50px_rgba(163,136,225,0.2)] overflow-hidden z-[100] overscroll-none bottom-24 right-4 md:right-6 w-[calc(100vw-32px)] sm:w-[400px] h-[500px] border border-purple-500/30 rounded-2xl`}
           >
             <div className="bg-gray-800/90 backdrop-blur-md border-b border-purple-500/20 p-4 flex justify-between items-center shadow-sm shrink-0 z-10">
               <div className="flex items-center gap-3">
@@ -235,10 +249,11 @@ const FloatingAIAssistant = ({ user }) => {
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setIsFullScreen(!isFullScreen)}
+                  onClick={handleMaximize}
                   className="text-gray-400 hover:text-white transition-colors bg-gray-700/30 hover:bg-gray-700 p-1.5 rounded-full"
+                  title="Open Full App"
                 >
-                  {isFullScreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                  <Maximize2 className="w-4 h-4" />
                 </button>
                 <button
                   onClick={handleClose}
@@ -265,7 +280,6 @@ const FloatingAIAssistant = ({ user }) => {
                         : 'bg-gray-800 text-gray-200 border border-gray-700 rounded-tl-sm shadow-sm'
                     }`}
                   >
-                    {/* --- MODIFIED: Show loader inside the bot bubble if content is empty --- */}
                     {msg.role === 'bot' ? (
                       msg.content ? (
                         <BotMessage 
@@ -282,8 +296,6 @@ const FloatingAIAssistant = ({ user }) => {
                   </div>
                 </motion.div>
               ))}
-              
-              {/* --- MODIFIED: Removed the standalone isLoading block from here completely --- */}
               <div ref={messagesEndRef} />
             </div>
 
@@ -293,7 +305,6 @@ const FloatingAIAssistant = ({ user }) => {
                   <button
                     key={i}
                     onClick={() => {
-                      setIsFullScreen(true);
                       processMessage(text);
                     }}
                     className="whitespace-nowrap flex items-center gap-1.5 bg-gray-800 border border-purple-500/30 text-gray-300 text-[11px] font-medium px-3 py-1.5 rounded-full hover:bg-purple-500/20 hover:text-white hover:border-purple-500/50 transition-all flex-shrink-0"
@@ -311,11 +322,7 @@ const FloatingAIAssistant = ({ user }) => {
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  onFocus={() => {
-                    if (window.innerWidth < 768) {
-                      setIsFullScreen(true);
-                    }
-                  }}
+                  // --- CHANGED: Removed aggressive onFocus full screen behavior ---
                   placeholder="Ask about items, Aura, rules..."
                   className="w-full bg-gray-900 border border-gray-700 rounded-full py-3 pl-4 pr-12 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-inner"
                 />
