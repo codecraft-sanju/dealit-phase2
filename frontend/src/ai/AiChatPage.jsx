@@ -1,6 +1,5 @@
-// --- CHANGED: Added ChevronDown to lucide-react imports ---
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { ArrowLeft, Send, Bot, Sparkles, Menu, Plus, Settings, HelpCircle, MessageSquare, X, Trash2, Minimize2, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Send, Bot, Sparkles, Menu, Plus, Settings, HelpCircle, MessageSquare, X, Trash2, Minimize2, ChevronDown, Mic, User } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion'; 
 import axios from 'axios';
@@ -20,7 +19,19 @@ const TypingLoader = () => (
   </div>
 );
 
-// --- CHANGED: Updated BotMessage to handle Animations and clean tags ---
+const SoundWave = () => (
+  <div className="flex items-center justify-center gap-1.5 h-12">
+    {[...Array(5)].map((_, i) => (
+      <motion.div
+        key={i}
+        className="w-2.5 bg-purple-400 rounded-full"
+        animate={{ height: ['20%', '100%', '20%'] }}
+        transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.1, ease: 'easeInOut' }}
+      />
+    ))}
+  </div>
+);
+
 const BotMessage = ({ content, animated, onComplete }) => {
   const cleanContent = useMemo(() => content.replace(/(\*\*)?\[ANIMATION_[123]\](\*\*)?/g, ''), [content]);
   const [displayedText, setDisplayedText] = useState(animated ? '' : cleanContent);
@@ -119,7 +130,6 @@ const BotMessage = ({ content, animated, onComplete }) => {
     </div>
   );
 };
-// --- END CHANGED ---
 
 const SUGGESTIONS = [
   "What is my Aura Score?",
@@ -147,14 +157,20 @@ const AiChatPage = ({ user }) => {
     return saved !== null ? JSON.parse(saved) : true;
   });
 
+  // --- Voice Mode States ---
+  const [voiceState, setVoiceState] = useState('idle'); // 'idle' | 'listening' | 'thinking' | 'speaking'
+  const [voicePref, setVoicePref] = useState(() => localStorage.getItem('dealit_ai_voice_pref') || 'female');
+
   const abortControllerRef = useRef(null);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
+    window.speechSynthesis.onvoiceschanged = () => {};
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
+      window.speechSynthesis.cancel();
     };
   }, []);
 
@@ -163,14 +179,20 @@ const AiChatPage = ({ user }) => {
     setIsSmartContextEnabled(newVal);
     localStorage.setItem('dealit_ai_context', JSON.stringify(newVal));
   };
+
+  const handleToggleVoicePref = () => {
+    const newPref = voicePref === 'female' ? 'male' : 'female';
+    setVoicePref(newPref);
+    localStorage.setItem('dealit_ai_voice_pref', newPref);
+  };
   
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, isLoading]);
+    if (voiceState === 'idle') scrollToBottom();
+  }, [messages, isLoading, voiceState]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -308,6 +330,151 @@ const AiChatPage = ({ user }) => {
     setMessages((prev) => prev.map((m) => m.id === id ? { ...m, animated: false } : m));
   };
 
+  // --- Voice Logic Methods ---
+  const speakText = (text) => {
+    const synth = window.speechSynthesis;
+    if (!synth) {
+      setVoiceState('idle');
+      return;
+    }
+    synth.cancel();
+
+    const textToSpeak = text.replace(/[*_#`]/g, '');
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    const voices = synth.getVoices();
+
+    const inVoices = voices.filter(v => v.lang.includes('IN') || v.lang.includes('hi'));
+
+    let selectedVoice;
+    if (voicePref === 'male') {
+        selectedVoice = inVoices.find(v => v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('rishabh'))
+                     || voices.find(v => v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('david'))
+                     || voices[0];
+    } else {
+        selectedVoice = inVoices.find(v => v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('lekha') || v.name.toLowerCase().includes('aditi'))
+                     || voices.find(v => v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira'))
+                     || voices[0];
+    }
+
+    if (selectedVoice) utterance.voice = selectedVoice;
+    
+    utterance.onstart = () => setVoiceState('speaking');
+    utterance.onend = () => setVoiceState('idle');
+    utterance.onerror = () => setVoiceState('idle');
+
+    synth.speak(utterance);
+  };
+
+  const processVoiceMessage = async (userMessage) => {
+    if (!userMessage.trim()) {
+      setVoiceState('idle');
+      return;
+    }
+    
+    if (abortControllerRef.current) abortControllerRef.current.abort();
+    abortControllerRef.current = new AbortController();
+
+    setVoiceState('thinking');
+
+    try {
+      const token = localStorage.getItem('dealit_token');
+      const response = await fetch(`${API_URL}/ai/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          message: userMessage,
+          sessionId: currentSessionId,
+          isSmartContextEnabled 
+        }),
+        signal: abortControllerRef.current.signal
+      });
+
+      if (!response.ok) throw new Error('Network response was not ok');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let botReply = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const dataStr = line.replace('data: ', '');
+            if (dataStr === '[DONE]') {
+              setTimeout(() => {
+                const cleanReplyText = botReply.replace(/(\*\*)?\[ANIMATION_[123]\](\*\*)?/g, '');
+                if (cleanReplyText.trim()) {
+                  speakText(cleanReplyText);
+                } else {
+                  setVoiceState('idle');
+                }
+              }, 300);
+              break;
+            }
+            try {
+              const parsed = JSON.parse(dataStr);
+              if (parsed.type === 'session_id') {
+                setCurrentSessionId(parsed.sessionId);
+                continue;
+              }
+              botReply += parsed.content;
+            } catch (e) {}
+          }
+        }
+      }
+    } catch (error) {
+      if (error.name === 'AbortError') return;
+      console.error('AI Voice Error:', error);
+      setVoiceState('idle');
+    }
+  };
+
+  const handleMicClick = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Your browser does not support voice input.");
+      return;
+    }
+    
+    window.speechSynthesis.cancel();
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-IN';
+    
+    recognition.onstart = () => setVoiceState('listening');
+    
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      processVoiceMessage(transcript);
+    };
+    
+    recognition.onerror = (e) => {
+      console.error('Speech recognition error:', e);
+      setVoiceState('idle');
+    };
+    
+    recognition.onend = () => {
+      setVoiceState(prev => prev === 'listening' ? 'idle' : prev);
+    };
+    
+    recognition.start();
+  };
+
+  const cancelVoiceMode = () => {
+    window.speechSynthesis.cancel();
+    if (abortControllerRef.current) abortControllerRef.current.abort();
+    setVoiceState('idle');
+  };
+  // --- END Voice Logic Methods ---
+
   const processMessage = async (userMessage) => {
     if (!userMessage.trim()) return;
     
@@ -367,9 +534,10 @@ const AiChatPage = ({ user }) => {
             const dataStr = line.replace('data: ', '');
             if (dataStr === '[DONE]') {
               setTimeout(() => {
+                const cleanReplyText = botReply.replace(/(\*\*)?\[ANIMATION_[123]\](\*\*)?/g, '');
                 setMessages((prev) =>
                   prev.map((msg) =>
-                    msg.id === botMessageId ? { ...msg, content: botReply.replace(/(\*\*)?\[ANIMATION_[123]\](\*\*)?/g, '') } : msg
+                    msg.id === botMessageId ? { ...msg, content: cleanReplyText } : msg
                   )
                 );
               }, 1000);
@@ -418,6 +586,7 @@ const AiChatPage = ({ user }) => {
   const handleMinimize = () => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
     localStorage.setItem('dealit_open_floating_ai', 'true');
+    window.speechSynthesis.cancel();
     if (window.history.state && window.history.state.idx > 0) {
       navigate(-1); 
     } else {
@@ -427,11 +596,12 @@ const AiChatPage = ({ user }) => {
 
   const handleClose = () => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
+    window.speechSynthesis.cancel();
     navigate('/');
   };
 
   return (
-    <div className="fixed top-0 left-0 w-full h-[100dvh] flex bg-gray-900 z-50 overscroll-none">
+    <div className="fixed inset-0 flex bg-gray-900 z-50 overflow-hidden overscroll-none">
       
       {isSidebarOpen && (
         <div 
@@ -493,7 +663,6 @@ const AiChatPage = ({ user }) => {
           </div>
         </div>
 
-        {/* --- CHANGED: Updated Settings to Inline Accordion --- */}
         <div className="p-3 border-t border-gray-800/80 space-y-1 bg-gray-950 flex-shrink-0">
           <button 
             onClick={() => setIsSettingsOpen(!isSettingsOpen)}
@@ -533,6 +702,19 @@ const AiChatPage = ({ user }) => {
                     </label>
                   </div>
 
+                  <div className="flex items-center justify-between pt-3 border-t border-gray-800/80">
+                    <div>
+                      <p className="text-sm font-medium text-white">AI Voice</p>
+                      <p className="text-xs text-gray-400 mt-0.5 capitalize">{voicePref} Voice</p>
+                    </div>
+                    <button
+                      onClick={handleToggleVoicePref}
+                      className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-600 transition-colors"
+                    >
+                      <User className="w-4 h-4 text-purple-400" />
+                    </button>
+                  </div>
+
                   <div className="pt-3 border-t border-gray-800/80">
                     <button 
                       onClick={() => {
@@ -556,11 +738,54 @@ const AiChatPage = ({ user }) => {
             <span className="text-sm font-medium">Help & FAQ</span>
           </button>
         </div>
-        {/* --- END CHANGED --- */}
       </div>
 
       <div className="flex-1 flex flex-col min-w-0 h-full relative bg-gray-900">
         
+        {/* --- IMMERSIVE VOICE MODE OVERLAY --- */}
+        <AnimatePresence>
+          {voiceState !== 'idle' && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="absolute inset-0 z-50 bg-gray-900/95 backdrop-blur-md flex flex-col items-center justify-center"
+            >
+              <div className="relative flex items-center justify-center w-32 h-32 mb-8">
+                 {voiceState === 'listening' && (
+                    <div className="absolute inset-0 rounded-full bg-red-500/30 animate-ping" />
+                 )}
+                 {voiceState === 'speaking' && (
+                    <div className="absolute inset-0 rounded-full bg-purple-500/20 animate-pulse shadow-[0_0_50px_rgba(163,136,225,0.3)]" />
+                 )}
+                 <div className="z-10 w-24 h-24 bg-gradient-to-br from-purple-500 to-purple-700 rounded-full flex items-center justify-center shadow-lg border border-purple-400/50">
+                    {voiceState === 'listening' ? <Mic className="w-12 h-12 text-white animate-pulse" /> : <Bot className="w-12 h-12 text-white" />}
+                 </div>
+              </div>
+
+              <h3 className="text-3xl font-black text-white mb-3 text-center px-4">
+                 {voiceState === 'listening' && 'Speak please... 🎙️'}
+                 {voiceState === 'thinking' && 'Thinking...'}
+                 {voiceState === 'speaking' && 'AI is speaking...'}
+              </h3>
+              
+              <div className="h-10 flex items-center justify-center">
+                {voiceState === 'listening' && <p className="text-gray-400 text-sm animate-pulse">I'm listening to your voice.</p>}
+                {voiceState === 'thinking' && <TypingLoader />}
+                {voiceState === 'speaking' && <SoundWave />}
+              </div>
+              
+              <button 
+                 onClick={cancelVoiceMode}
+                 className="mt-16 px-8 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-full transition-colors border border-red-500/20 text-sm font-semibold"
+              >
+                 Cancel Voice Mode
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        {/* --- END VOICE OVERLAY --- */}
+
         <div className="bg-gray-800/80 backdrop-blur-md border-b border-purple-500/20 p-4 flex items-center justify-between shadow-sm shadow-purple-900/10 z-10 shrink-0">
           <div className="flex items-center gap-3">
             <button 
@@ -669,8 +894,17 @@ const AiChatPage = ({ user }) => {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Ask Dealit AI..."
-                className="w-full bg-gray-900 border border-gray-700 rounded-full py-4 pl-6 pr-14 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-inner"
+                className="w-full bg-gray-900 border border-gray-700 rounded-full py-4 pl-6 pr-24 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-inner"
               />
+              
+              <button
+                type="button"
+                onClick={handleMicClick}
+                className="absolute right-14 w-10 h-10 flex items-center justify-center rounded-full text-gray-400 hover:text-purple-400 transition-all"
+              >
+                <Mic className="w-5 h-5" />
+              </button>
+
               <button
                 type="submit"
                 disabled={isLoading || !input.trim()}
@@ -683,8 +917,6 @@ const AiChatPage = ({ user }) => {
         </div>
 
       </div>
-
-      {/* --- CHANGED: Removed the entire fullscreen AnimatePresence modal for settings --- */}
 
     </div>
   );

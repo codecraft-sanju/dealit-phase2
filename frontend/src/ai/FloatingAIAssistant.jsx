@@ -1,13 +1,11 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Bot, Sparkles, Maximize2, Minimize2 } from 'lucide-react';
+import { X, Send, Bot, Sparkles, Maximize2, Minimize2, Mic, User } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
-// --- CHANGED: Imported react-markdown, remark-gfm, and canvas-confetti ---
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import confetti from 'canvas-confetti';
-// --- END CHANGED ---
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -20,9 +18,21 @@ const TypingLoader = () => (
   </div>
 );
 
-// --- CHANGED: Updated BotMessage to handle Animations and clean tags ---
+// Custom Soundwave animation for AI speaking
+const SoundWave = () => (
+  <div className="flex items-center justify-center gap-1.5 h-12">
+    {[...Array(5)].map((_, i) => (
+      <motion.div
+        key={i}
+        className="w-2.5 bg-purple-400 rounded-full"
+        animate={{ height: ['20%', '100%', '20%'] }}
+        transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.1, ease: 'easeInOut' }}
+      />
+    ))}
+  </div>
+);
+
 const BotMessage = ({ content, animated, onComplete }) => {
-  // Strip animation tags from text so user doesn't see them
   const cleanContent = useMemo(() => content.replace(/(\*\*)?\[ANIMATION_[123]\](\*\*)?/g, ''), [content]);
   const [displayedText, setDisplayedText] = useState(animated ? '' : cleanContent);
   
@@ -120,7 +130,6 @@ const BotMessage = ({ content, animated, onComplete }) => {
     </div>
   );
 };
-// --- END CHANGED ---
 
 const SUGGESTIONS = [
   "What is Aura Score?",
@@ -141,25 +150,29 @@ const FloatingAIAssistant = ({ user }) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState(null);
+
+  // --- Voice Mode States ---
+  const [voiceState, setVoiceState] = useState('idle'); // 'idle' | 'listening' | 'thinking' | 'speaking'
   
   const messagesEndRef = useRef(null);
   const abortControllerRef = useRef(null);
   const [buttonState, setButtonState] = useState('bot');
 
   useEffect(() => {
+    window.speechSynthesis.onvoiceschanged = () => {};
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
+      window.speechSynthesis.cancel();
     };
   }, []);
 
-  // Listen for the minimize action coming from the full AiChatPage
   useEffect(() => {
     const checkOpen = () => {
       if (localStorage.getItem('dealit_open_floating_ai') === 'true') {
         setIsOpen(true);
-        setHasFetchedHistory(false); // Force reload history to seamlessly match what they were just doing
+        setHasFetchedHistory(false); 
         localStorage.removeItem('dealit_open_floating_ai');
       }
     };
@@ -171,8 +184,8 @@ const FloatingAIAssistant = ({ user }) => {
   };
 
   useEffect(() => {
-    if (isOpen) scrollToBottom();
-  }, [messages, isOpen, isLoading]);
+    if (isOpen && voiceState === 'idle') scrollToBottom();
+  }, [messages, isOpen, isLoading, voiceState]);
 
   useEffect(() => {
     if (isOpen && !hasFetchedHistory) {
@@ -218,6 +231,155 @@ const FloatingAIAssistant = ({ user }) => {
     setMessages((prev) => prev.map((m) => m.id === id ? { ...m, animated: false } : m));
   };
 
+  // --- Voice Logic Methods ---
+  const speakText = (text) => {
+    const synth = window.speechSynthesis;
+    if (!synth) {
+      setVoiceState('idle');
+      return;
+    }
+    synth.cancel();
+
+    const voicePref = localStorage.getItem('dealit_ai_voice_pref') || 'female';
+    const textToSpeak = text.replace(/[*_#`]/g, '');
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    const voices = synth.getVoices();
+
+    const inVoices = voices.filter(v => v.lang.includes('IN') || v.lang.includes('hi'));
+
+    let selectedVoice;
+    if (voicePref === 'male') {
+        selectedVoice = inVoices.find(v => v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('rishabh'))
+                     || voices.find(v => v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('david'))
+                     || voices[0];
+    } else {
+        selectedVoice = inVoices.find(v => v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('lekha') || v.name.toLowerCase().includes('aditi'))
+                     || voices.find(v => v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira'))
+                     || voices[0];
+    }
+
+    if (selectedVoice) utterance.voice = selectedVoice;
+    
+    utterance.onstart = () => setVoiceState('speaking');
+    utterance.onend = () => setVoiceState('idle');
+    utterance.onerror = () => setVoiceState('idle');
+
+    synth.speak(utterance);
+  };
+
+  const processVoiceMessage = async (userMessage) => {
+    if (!userMessage.trim()) {
+      setVoiceState('idle');
+      return;
+    }
+    
+    if (abortControllerRef.current) abortControllerRef.current.abort();
+    abortControllerRef.current = new AbortController();
+
+    setVoiceState('thinking');
+
+    try {
+      const token = localStorage.getItem('dealit_token');
+      const smartContextStr = localStorage.getItem('dealit_ai_context');
+      const isSmartContextEnabled = smartContextStr !== null ? JSON.parse(smartContextStr) : true;
+      
+      const response = await fetch(`${API_URL}/ai/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          message: userMessage,
+          sessionId: currentSessionId,
+          isSmartContextEnabled 
+        }),
+        signal: abortControllerRef.current.signal
+      });
+
+      if (!response.ok) throw new Error('Network response was not ok');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let botReply = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const dataStr = line.replace('data: ', '');
+            if (dataStr === '[DONE]') {
+              setTimeout(() => {
+                const cleanReplyText = botReply.replace(/(\*\*)?\[ANIMATION_[123]\](\*\*)?/g, '');
+                if (cleanReplyText.trim()) {
+                  speakText(cleanReplyText);
+                } else {
+                  setVoiceState('idle');
+                }
+              }, 300);
+              break;
+            }
+            try {
+              const parsed = JSON.parse(dataStr);
+              if (parsed.type === 'session_id') {
+                setCurrentSessionId(parsed.sessionId);
+                continue;
+              }
+              botReply += parsed.content;
+            } catch (e) {}
+          }
+        }
+      }
+    } catch (error) {
+      if (error.name === 'AbortError') return;
+      console.error('AI Voice Error:', error);
+      setVoiceState('idle');
+    }
+  };
+
+  const handleMicClick = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Your browser does not support voice input.");
+      return;
+    }
+    
+    window.speechSynthesis.cancel();
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-IN';
+    
+    recognition.onstart = () => setVoiceState('listening');
+    
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      processVoiceMessage(transcript);
+    };
+    
+    recognition.onerror = (e) => {
+      console.error('Speech recognition error:', e);
+      setVoiceState('idle');
+    };
+    
+    recognition.onend = () => {
+      setVoiceState(prev => prev === 'listening' ? 'idle' : prev);
+    };
+    
+    recognition.start();
+  };
+
+  const cancelVoiceMode = () => {
+    window.speechSynthesis.cancel();
+    if (abortControllerRef.current) abortControllerRef.current.abort();
+    setVoiceState('idle');
+  };
+  // --- END Voice Logic Methods ---
+
   const processMessage = async (userMessage) => {
     if (!userMessage.trim()) return;
     
@@ -239,8 +401,6 @@ const FloatingAIAssistant = ({ user }) => {
 
     try {
       const token = localStorage.getItem('dealit_token');
-      
-      // NEW: Retrieve global context state dynamically
       const smartContextStr = localStorage.getItem('dealit_ai_context');
       const isSmartContextEnabled = smartContextStr !== null ? JSON.parse(smartContextStr) : true;
       
@@ -254,7 +414,7 @@ const FloatingAIAssistant = ({ user }) => {
         body: JSON.stringify({ 
           message: userMessage,
           sessionId: currentSessionId,
-          isSmartContextEnabled // Sent to backend
+          isSmartContextEnabled 
         }),
         signal: abortControllerRef.current.signal
       });
@@ -280,11 +440,11 @@ const FloatingAIAssistant = ({ user }) => {
           if (line.startsWith('data: ')) {
             const dataStr = line.replace('data: ', '');
             if (dataStr === '[DONE]') {
-              // Strip animation tags from state so they don't replay if user toggles widget open/closed
               setTimeout(() => {
+                const cleanReplyText = botReply.replace(/(\*\*)?\[ANIMATION_[123]\](\*\*)?/g, '');
                 setMessages((prev) =>
                   prev.map((msg) =>
-                    msg.id === botMessageId ? { ...msg, content: botReply.replace(/(\*\*)?\[ANIMATION_[123]\](\*\*)?/g, '') } : msg
+                    msg.id === botMessageId ? { ...msg, content: cleanReplyText } : msg
                   )
                 );
               }, 1000);
@@ -292,12 +452,10 @@ const FloatingAIAssistant = ({ user }) => {
             }
             try {
               const parsed = JSON.parse(dataStr);
-              
               if (parsed.type === 'session_id') {
                 setCurrentSessionId(parsed.sessionId);
                 continue;
               }
-
               botReply += parsed.content;
               
               setMessages((prev) =>
@@ -329,6 +487,7 @@ const FloatingAIAssistant = ({ user }) => {
 
   const handleClose = () => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
+    window.speechSynthesis.cancel();
     setIsOpen(false);
   };
   
@@ -352,8 +511,52 @@ const FloatingAIAssistant = ({ user }) => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
-            className={`fixed flex flex-col bg-gray-900 shadow-[0_15px_50px_rgba(163,136,225,0.2)] overflow-hidden z-[100] overscroll-none bottom-24 right-4 md:right-6 w-[calc(100vw-32px)] sm:w-[400px] h-[500px] border border-purple-500/30 rounded-2xl`}
+            className={`fixed flex flex-col bg-gray-900 shadow-[0_15px_50px_rgba(163,136,225,0.2)] overflow-hidden z-[100] overscroll-none bottom-24 right-4 md:right-6 w-[calc(100vw-32px)] sm:w-[400px] h-[500px] border border-purple-500/30 rounded-2xl relative`}
           >
+            {/* --- IMMERSIVE VOICE MODE OVERLAY --- */}
+            <AnimatePresence>
+              {voiceState !== 'idle' && (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="absolute inset-0 z-50 bg-gray-900/95 backdrop-blur-md flex flex-col items-center justify-center rounded-2xl"
+                >
+                  <div className="relative flex items-center justify-center w-32 h-32 mb-8">
+                     {voiceState === 'listening' && (
+                        <div className="absolute inset-0 rounded-full bg-red-500/30 animate-ping" />
+                     )}
+                     {voiceState === 'speaking' && (
+                        <div className="absolute inset-0 rounded-full bg-purple-500/20 animate-pulse shadow-[0_0_50px_rgba(163,136,225,0.3)]" />
+                     )}
+                     <div className="z-10 w-20 h-20 bg-gradient-to-br from-purple-500 to-purple-700 rounded-full flex items-center justify-center shadow-lg border border-purple-400/50">
+                        {voiceState === 'listening' ? <Mic className="w-10 h-10 text-white animate-pulse" /> : <Bot className="w-10 h-10 text-white" />}
+                     </div>
+                  </div>
+
+                  <h3 className="text-2xl font-black text-white mb-3 text-center px-4">
+                     {voiceState === 'listening' && 'Speak please... 🎙️'}
+                     {voiceState === 'thinking' && 'Thinking...'}
+                     {voiceState === 'speaking' && 'AI is speaking...'}
+                  </h3>
+                  
+                  <div className="h-10 flex items-center justify-center">
+                    {voiceState === 'listening' && <p className="text-gray-400 text-sm animate-pulse">I'm listening to your voice.</p>}
+                    {voiceState === 'thinking' && <TypingLoader />}
+                    {voiceState === 'speaking' && <SoundWave />}
+                  </div>
+                  
+                  <button 
+                     onClick={cancelVoiceMode}
+                     className="mt-12 px-6 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-full transition-colors border border-red-500/20 text-sm font-semibold"
+                  >
+                     Cancel Voice Mode
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+            {/* --- END VOICE OVERLAY --- */}
+
             <div className="bg-gray-800/90 backdrop-blur-md border-b border-purple-500/20 p-4 flex justify-between items-center shadow-sm shrink-0 z-10">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500/20 to-emerald-500/10 flex items-center justify-center border border-purple-500/30">
@@ -424,9 +627,7 @@ const FloatingAIAssistant = ({ user }) => {
                 {SUGGESTIONS.map((text, i) => (
                   <button
                     key={i}
-                    onClick={() => {
-                      processMessage(text);
-                    }}
+                    onClick={() => processMessage(text)}
                     className="whitespace-nowrap flex items-center gap-1.5 bg-gray-800 border border-purple-500/30 text-gray-300 text-[11px] font-medium px-3 py-1.5 rounded-full hover:bg-purple-500/20 hover:text-white hover:border-purple-500/50 transition-all flex-shrink-0"
                   >
                     <Sparkles className="w-3 h-3 text-purple-400" />
@@ -443,8 +644,17 @@ const FloatingAIAssistant = ({ user }) => {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Ask about items, Aura, rules..."
-                  className="w-full bg-gray-900 border border-gray-700 rounded-full py-3 pl-4 pr-12 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-inner"
+                  className="w-full bg-gray-900 border border-gray-700 rounded-full py-3 pl-4 pr-20 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-inner"
                 />
+                
+                <button
+                  type="button"
+                  onClick={handleMicClick}
+                  className="absolute right-12 w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-purple-400 transition-all"
+                >
+                  <Mic className="w-4 h-4" />
+                </button>
+
                 <button
                   type="submit"
                   disabled={isLoading || !input.trim()}
