@@ -1090,7 +1090,7 @@ const AdminPanel = ({ user }) => {
         updating={updating}
       />
 
-      {/* NAYA SEPARATE KIYA HUA CROP MODAL COMPONENT */}
+    
       <ImageCropModal 
         cropModalOpen={cropModalOpen}
         setCropModalOpen={setCropModalOpen}

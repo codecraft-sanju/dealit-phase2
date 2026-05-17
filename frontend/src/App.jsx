@@ -247,11 +247,11 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // --- CHANGED: Added logic to hide BottomNav on AI Chat routes ---
+
   const isAiChatRoute = location.pathname.startsWith('/ai-chat');
   const hideNavbarRoutes = ['/login', '/signup', '/forgot-password'];
   const shouldShowBottomNav = !hideNavbarRoutes.includes(location.pathname) && !location.pathname.startsWith('/admin') && !isAiChatRoute;
-  // --- END CHANGED ---
+  
 
   const publicDesktopRoutes = ['/login', '/privacy', '/terms', '/refund-policy', '/cancellation-policy'];
 
@@ -307,7 +307,14 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
             <Route path="/cancellation-policy" element={<CancellationPolicyPage />} />
     
 
-            <Route path="/admin" element={<AdminPanel user={user} />} />
+          <Route 
+  path="/admin" 
+  element={
+    <Suspense fallback={<PremiumLoader />}>
+      <AdminPanel user={user} />
+    </Suspense>
+  } 
+/>
             <Route path="/checkout/:itemId" element={user ? <CheckoutPage user={user} setUser={setUser} /> : <Navigate to="/login" />} />
             
           

@@ -147,13 +147,6 @@ const Navbar = ({ user }) => {
                     <span className="text-sm font-medium">Alerts</span>
                   </Link>
                   
-                  <Link to="/profile" className="text-gray-500 hover:text-[#A388E1] transition flex items-center gap-1.5">
-                    <div className="w-8 h-8 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center border border-gray-200">
-                      <User className="w-4 h-4" />
-                    </div>
-                    <span className="text-sm font-bold text-gray-700">{user.full_name?.split(' ')[0]}</span>
-                  </Link>
-
                   <Link to="/add-item" className="bg-[#A388E1] hover:bg-[#8b70ca] text-white px-5 py-2.5 rounded-full text-sm font-semibold flex items-center gap-2 transition shadow-md shadow-[#A388E1]/30">
                     <PlusCircle className="w-4 h-4" /> List Item
                   </Link>
@@ -178,7 +171,7 @@ const Navbar = ({ user }) => {
                       <Shield className="w-3.5 h-3.5" />
                     </Link>
                   )}
-                 
+                  
                   <Link to="/notifications" className="text-gray-600 hover:text-[#A388E1] p-1 relative">
                     <Bell className="w-6 h-6" />
                     {unreadCount > 0 && (
@@ -186,9 +179,6 @@ const Navbar = ({ user }) => {
                         {unreadCount > 9 ? '9+' : unreadCount}
                       </span>
                     )}
-                  </Link>
-                  <Link to="/profile" className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 border border-gray-200">
-                    <User className="w-5 h-5" />
                   </Link>
                 </>
               )}
