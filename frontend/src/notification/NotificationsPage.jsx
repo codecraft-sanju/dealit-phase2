@@ -60,9 +60,11 @@ const NotificationsPage = () => {
 
   useEffect(() => {
     const mobileToken = localStorage.getItem('dealit_mobile_token');
-    if (mobileToken) {
+    const isMobileApp = localStorage.getItem('is_dealit_app') === 'true';
+
+    if (isMobileApp || mobileToken) {
       const isMobilePushEnabled = localStorage.getItem('dealit_push_enabled') === 'true';
-      setIsPushEnabled(isMobilePushEnabled);
+      setIsPushEnabled(isMobilePushEnabled && !!mobileToken);
     } else if ('serviceWorker' in navigator && 'PushManager' in window) {
       navigator.serviceWorker.ready.then((registration) => {
         registration.pushManager.getSubscription().then((subscription) => {
@@ -89,11 +91,18 @@ const NotificationsPage = () => {
 
   const handlePushToggle = async () => {
     const mobileToken = localStorage.getItem('dealit_mobile_token');
+    const isMobileApp = localStorage.getItem('is_dealit_app') === 'true';
     const previousState = isPushEnabled;
     setIsPushEnabled(!previousState); 
 
     try {
-      if (mobileToken) {
+      if (isMobileApp || mobileToken) {
+        if (!mobileToken) {
+          showToast('Please enable permissions in phone settings', 'error');
+          setIsPushEnabled(previousState);
+          return;
+        }
+
         if (previousState) {
           await axios.post(`${API_URL}/notifications/unsubscribe`, { type: 'expo', token: mobileToken }, { withCredentials: true });
           localStorage.setItem('dealit_push_enabled', 'false');
@@ -387,7 +396,7 @@ const NotificationsPage = () => {
             <AnimatePresence>
               {notifications.map((notif) => {
                 const { icon: Icon, color, bg } = getIconData(notif.type);
-               
+                
                 const isWelcomeBonus = notif.metadata?.reason === 'signup_bonus';
 
                 return (
@@ -407,7 +416,7 @@ const NotificationsPage = () => {
                     )}
                     
                     <div className="flex gap-4">
-                     
+                      
                       <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 overflow-hidden ${isWelcomeBonus ? 'bg-teal-50' : bg}`}>
                         {isWelcomeBonus ? (
                           <img 
