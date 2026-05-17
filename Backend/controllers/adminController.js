@@ -394,6 +394,7 @@ const updateUserRole = async (req, res) => {
     }
 
     const user = await User.findByIdAndUpdate(
+      
       req.params.id,
       { role: role, updated_at: Date.now() },
       { new: true, runValidators: true }
