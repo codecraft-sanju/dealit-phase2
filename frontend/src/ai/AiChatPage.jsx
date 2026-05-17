@@ -157,7 +157,6 @@ const AiChatPage = ({ user }) => {
     return saved !== null ? JSON.parse(saved) : true;
   });
 
-  // --- Voice Mode States ---
   const [voiceState, setVoiceState] = useState('idle'); // 'idle' | 'listening' | 'thinking' | 'speaking'
   const [voicePref, setVoicePref] = useState(() => localStorage.getItem('dealit_ai_voice_pref') || 'female');
 
@@ -330,7 +329,6 @@ const AiChatPage = ({ user }) => {
     setMessages((prev) => prev.map((m) => m.id === id ? { ...m, animated: false } : m));
   };
 
-  // --- Voice Logic Methods ---
   const speakText = (text) => {
     const synth = window.speechSynthesis;
     if (!synth) {
@@ -378,6 +376,9 @@ const AiChatPage = ({ user }) => {
 
     try {
       const token = localStorage.getItem('dealit_token');
+      const smartContextStr = localStorage.getItem('dealit_ai_context');
+      const isSmartContextEnabled = smartContextStr !== null ? JSON.parse(smartContextStr) : true;
+      
       const response = await fetch(`${API_URL}/ai/chat`, {
         method: 'POST',
         headers: {
@@ -473,7 +474,6 @@ const AiChatPage = ({ user }) => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
     setVoiceState('idle');
   };
-  // --- END Voice Logic Methods ---
 
   const processMessage = async (userMessage) => {
     if (!userMessage.trim()) return;
@@ -496,6 +496,8 @@ const AiChatPage = ({ user }) => {
 
     try {
       const token = localStorage.getItem('dealit_token');
+      const smartContextStr = localStorage.getItem('dealit_ai_context');
+      const isSmartContextEnabled = smartContextStr !== null ? JSON.parse(smartContextStr) : true;
       
       const response = await fetch(`${API_URL}/ai/chat`, {
         method: 'POST',
@@ -580,6 +582,7 @@ const AiChatPage = ({ user }) => {
 
   const handleSendMessage = (e) => {
     e.preventDefault();
+    if (voiceState !== 'idle') cancelVoiceMode();
     processMessage(input);
   };
 
@@ -742,50 +745,6 @@ const AiChatPage = ({ user }) => {
 
       <div className="flex-1 flex flex-col min-w-0 h-full relative bg-gray-900">
         
-        {/* --- IMMERSIVE VOICE MODE OVERLAY --- */}
-        <AnimatePresence>
-          {voiceState !== 'idle' && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="absolute inset-0 z-50 bg-gray-900/95 backdrop-blur-md flex flex-col items-center justify-center"
-            >
-              <div className="relative flex items-center justify-center w-32 h-32 mb-8">
-                 {voiceState === 'listening' && (
-                    <div className="absolute inset-0 rounded-full bg-red-500/30 animate-ping" />
-                 )}
-                 {voiceState === 'speaking' && (
-                    <div className="absolute inset-0 rounded-full bg-purple-500/20 animate-pulse shadow-[0_0_50px_rgba(163,136,225,0.3)]" />
-                 )}
-                 <div className="z-10 w-24 h-24 bg-gradient-to-br from-purple-500 to-purple-700 rounded-full flex items-center justify-center shadow-lg border border-purple-400/50">
-                    {voiceState === 'listening' ? <Mic className="w-12 h-12 text-white animate-pulse" /> : <Bot className="w-12 h-12 text-white" />}
-                 </div>
-              </div>
-
-              <h3 className="text-3xl font-black text-white mb-3 text-center px-4">
-                 {voiceState === 'listening' && 'Speak please... 🎙️'}
-                 {voiceState === 'thinking' && 'Thinking...'}
-                 {voiceState === 'speaking' && 'AI is speaking...'}
-              </h3>
-              
-              <div className="h-10 flex items-center justify-center">
-                {voiceState === 'listening' && <p className="text-gray-400 text-sm animate-pulse">I'm listening to your voice.</p>}
-                {voiceState === 'thinking' && <TypingLoader />}
-                {voiceState === 'speaking' && <SoundWave />}
-              </div>
-              
-              <button 
-                 onClick={cancelVoiceMode}
-                 className="mt-16 px-8 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-full transition-colors border border-red-500/20 text-sm font-semibold"
-              >
-                 Cancel Voice Mode
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        {/* --- END VOICE OVERLAY --- */}
-
         <div className="bg-gray-800/80 backdrop-blur-md border-b border-purple-500/20 p-4 flex items-center justify-between shadow-sm shadow-purple-900/10 z-10 shrink-0">
           <div className="flex items-center gap-3">
             <button 
@@ -860,19 +819,64 @@ const AiChatPage = ({ user }) => {
               </div>
             </motion.div>
           ))}
-      
-          {isLoading && messages.length === 0 && (
+
+          {isLoading && voiceState === 'idle' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex justify-start">
-              <div className="bg-gray-800 border border-gray-700 rounded-2xl rounded-tl-sm px-5 py-3 shadow-md">
+              <div className="bg-gray-800 border border-gray-700 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
                 <TypingLoader />
               </div>
             </motion.div>
           )}
+
+          {/* --- INLINE VOICE UI --- */}
+          <AnimatePresence>
+            {voiceState !== 'idle' && (
+              <motion.div 
+                initial={{ opacity: 0, y: 20, scale: 0.95 }} 
+                animate={{ opacity: 1, y: 0, scale: 1 }} 
+                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                className="flex justify-center w-full my-4"
+              >
+                <div className="bg-gradient-to-b from-gray-800 to-gray-900 border border-purple-500/30 rounded-[2rem] p-6 shadow-lg flex flex-col items-center w-[90%] max-w-sm text-center relative overflow-hidden">
+                  <div className="relative flex items-center justify-center w-16 h-16 mb-4">
+                    {voiceState === 'listening' && <div className="absolute inset-0 rounded-full bg-red-500/20 animate-ping" />}
+                    {voiceState === 'speaking' && <div className="absolute inset-0 rounded-full bg-purple-500/20 animate-pulse" />}
+                    <div className="z-10 w-12 h-12 bg-gray-950 rounded-full flex items-center justify-center shadow-inner border border-gray-700">
+                      {voiceState === 'listening' ? <Mic className="w-5 h-5 text-red-400 animate-pulse" /> : <Bot className="w-5 h-5 text-purple-400" />}
+                    </div>
+                  </div>
+
+                  <h4 className="text-sm font-bold text-white mb-2">
+                    {voiceState === 'listening' && 'Listening to you...'}
+                    {voiceState === 'thinking' && 'Analyzing...'}
+                    {voiceState === 'speaking' && 'Speaking...'}
+                  </h4>
+                  
+                  <div className="h-8 flex items-center justify-center w-full">
+                    {voiceState === 'listening' && (
+                      <div className="flex gap-1.5">
+                        <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-bounce"></span>
+                        <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
+                        <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
+                      </div>
+                    )}
+                    {voiceState === 'thinking' && <TypingLoader />}
+                    {voiceState === 'speaking' && <SoundWave />}
+                  </div>
+                  
+                  <button onClick={cancelVoiceMode} className="mt-4 px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-full transition-colors border border-gray-600 text-xs font-semibold flex items-center gap-2">
+                    <X className="w-3.5 h-3.5" /> Stop
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <div ref={messagesEndRef} />
         </div>
 
         <div className="shrink-0 bg-gray-900 pb-safe">
-          {messages.length <= 1 && !isLoading && (
+          {messages.length <= 1 && !isLoading && voiceState === 'idle' && (
             <div className="container mx-auto max-w-3xl px-4 pb-3 flex flex-wrap gap-2 justify-center">
               {SUGGESTIONS.map((text, i) => (
                 <button
@@ -900,7 +904,7 @@ const AiChatPage = ({ user }) => {
               <button
                 type="button"
                 onClick={handleMicClick}
-                className="absolute right-14 w-10 h-10 flex items-center justify-center rounded-full text-gray-400 hover:text-purple-400 transition-all"
+                className={`absolute right-14 w-10 h-10 flex items-center justify-center rounded-full transition-all ${voiceState === 'listening' ? 'bg-red-500/20 text-red-500 animate-pulse' : 'text-gray-400 hover:text-purple-400'}`}
               >
                 <Mic className="w-5 h-5" />
               </button>

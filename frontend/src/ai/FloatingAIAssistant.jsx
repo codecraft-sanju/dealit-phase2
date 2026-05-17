@@ -18,7 +18,6 @@ const TypingLoader = () => (
   </div>
 );
 
-// Custom Soundwave animation for AI speaking
 const SoundWave = () => (
   <div className="flex items-center justify-center gap-1.5 h-12">
     {[...Array(5)].map((_, i) => (
@@ -151,7 +150,6 @@ const FloatingAIAssistant = ({ user }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState(null);
 
-  // --- Voice Mode States ---
   const [voiceState, setVoiceState] = useState('idle'); // 'idle' | 'listening' | 'thinking' | 'speaking'
   
   const messagesEndRef = useRef(null);
@@ -184,7 +182,7 @@ const FloatingAIAssistant = ({ user }) => {
   };
 
   useEffect(() => {
-    if (isOpen && voiceState === 'idle') scrollToBottom();
+    if (isOpen) scrollToBottom();
   }, [messages, isOpen, isLoading, voiceState]);
 
   useEffect(() => {
@@ -231,7 +229,6 @@ const FloatingAIAssistant = ({ user }) => {
     setMessages((prev) => prev.map((m) => m.id === id ? { ...m, animated: false } : m));
   };
 
-  // --- Voice Logic Methods ---
   const speakText = (text) => {
     const synth = window.speechSynthesis;
     if (!synth) {
@@ -378,7 +375,6 @@ const FloatingAIAssistant = ({ user }) => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
     setVoiceState('idle');
   };
-  // --- END Voice Logic Methods ---
 
   const processMessage = async (userMessage) => {
     if (!userMessage.trim()) return;
@@ -482,6 +478,7 @@ const FloatingAIAssistant = ({ user }) => {
 
   const handleSendMessage = (e) => {
     e.preventDefault();
+    if (voiceState !== 'idle') cancelVoiceMode();
     processMessage(input);
   };
 
@@ -511,52 +508,8 @@ const FloatingAIAssistant = ({ user }) => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
-            className={`fixed flex flex-col bg-gray-900 shadow-[0_15px_50px_rgba(163,136,225,0.2)] overflow-hidden z-[100] overscroll-none bottom-24 right-4 md:right-6 w-[calc(100vw-32px)] sm:w-[400px] h-[500px] border border-purple-500/30 rounded-2xl relative`}
+            className={`fixed flex flex-col bg-gray-900 shadow-[0_15px_50px_rgba(163,136,225,0.2)] overflow-hidden z-[100] overscroll-none bottom-24 right-4 md:right-6 w-[calc(100vw-32px)] sm:w-[400px] h-[500px] border border-purple-500/30 rounded-2xl`}
           >
-            {/* --- IMMERSIVE VOICE MODE OVERLAY --- */}
-            <AnimatePresence>
-              {voiceState !== 'idle' && (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  className="absolute inset-0 z-50 bg-gray-900/95 backdrop-blur-md flex flex-col items-center justify-center rounded-2xl"
-                >
-                  <div className="relative flex items-center justify-center w-32 h-32 mb-8">
-                     {voiceState === 'listening' && (
-                        <div className="absolute inset-0 rounded-full bg-red-500/30 animate-ping" />
-                     )}
-                     {voiceState === 'speaking' && (
-                        <div className="absolute inset-0 rounded-full bg-purple-500/20 animate-pulse shadow-[0_0_50px_rgba(163,136,225,0.3)]" />
-                     )}
-                     <div className="z-10 w-20 h-20 bg-gradient-to-br from-purple-500 to-purple-700 rounded-full flex items-center justify-center shadow-lg border border-purple-400/50">
-                        {voiceState === 'listening' ? <Mic className="w-10 h-10 text-white animate-pulse" /> : <Bot className="w-10 h-10 text-white" />}
-                     </div>
-                  </div>
-
-                  <h3 className="text-2xl font-black text-white mb-3 text-center px-4">
-                     {voiceState === 'listening' && 'Speak please... 🎙️'}
-                     {voiceState === 'thinking' && 'Thinking...'}
-                     {voiceState === 'speaking' && 'AI is speaking...'}
-                  </h3>
-                  
-                  <div className="h-10 flex items-center justify-center">
-                    {voiceState === 'listening' && <p className="text-gray-400 text-sm animate-pulse">I'm listening to your voice.</p>}
-                    {voiceState === 'thinking' && <TypingLoader />}
-                    {voiceState === 'speaking' && <SoundWave />}
-                  </div>
-                  
-                  <button 
-                     onClick={cancelVoiceMode}
-                     className="mt-12 px-6 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-full transition-colors border border-red-500/20 text-sm font-semibold"
-                  >
-                     Cancel Voice Mode
-                  </button>
-                </motion.div>
-              )}
-            </AnimatePresence>
-            {/* --- END VOICE OVERLAY --- */}
-
             <div className="bg-gray-800/90 backdrop-blur-md border-b border-purple-500/20 p-4 flex justify-between items-center shadow-sm shrink-0 z-10">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500/20 to-emerald-500/10 flex items-center justify-center border border-purple-500/30">
@@ -619,15 +572,70 @@ const FloatingAIAssistant = ({ user }) => {
                   </div>
                 </motion.div>
               ))}
+
+              {isLoading && voiceState === 'idle' && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex justify-start">
+                  <div className="bg-gray-800 border border-gray-700 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
+                    <TypingLoader />
+                  </div>
+                </motion.div>
+              )}
+
+              {/* --- INLINE VOICE UI --- */}
+              <AnimatePresence>
+                {voiceState !== 'idle' && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20, scale: 0.95 }} 
+                    animate={{ opacity: 1, y: 0, scale: 1 }} 
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="flex justify-center w-full my-4"
+                  >
+                    <div className="bg-gradient-to-b from-gray-800 to-gray-900 border border-purple-500/30 rounded-[2rem] p-6 shadow-lg flex flex-col items-center w-[90%] text-center relative overflow-hidden">
+                      <div className="relative flex items-center justify-center w-16 h-16 mb-4">
+                        {voiceState === 'listening' && <div className="absolute inset-0 rounded-full bg-red-500/20 animate-ping" />}
+                        {voiceState === 'speaking' && <div className="absolute inset-0 rounded-full bg-purple-500/20 animate-pulse" />}
+                        <div className="z-10 w-12 h-12 bg-gray-950 rounded-full flex items-center justify-center shadow-inner border border-gray-700">
+                          {voiceState === 'listening' ? <Mic className="w-5 h-5 text-red-400 animate-pulse" /> : <Bot className="w-5 h-5 text-purple-400" />}
+                        </div>
+                      </div>
+
+                      <h4 className="text-sm font-bold text-white mb-2">
+                        {voiceState === 'listening' && 'Listening to you...'}
+                        {voiceState === 'thinking' && 'Analyzing...'}
+                        {voiceState === 'speaking' && 'Speaking...'}
+                      </h4>
+                      
+                      <div className="h-8 flex items-center justify-center w-full">
+                        {voiceState === 'listening' && (
+                          <div className="flex gap-1.5">
+                            <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-bounce"></span>
+                            <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
+                            <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
+                          </div>
+                        )}
+                        {voiceState === 'thinking' && <TypingLoader />}
+                        {voiceState === 'speaking' && <SoundWave />}
+                      </div>
+                      
+                      <button onClick={cancelVoiceMode} className="mt-4 px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-full transition-colors border border-gray-600 text-xs font-semibold flex items-center gap-2">
+                        <X className="w-3.5 h-3.5" /> Stop
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               <div ref={messagesEndRef} />
             </div>
 
-            {messages.length <= 1 && !isLoading && (
+            {messages.length <= 1 && !isLoading && voiceState === 'idle' && (
               <div className="px-3 pb-2 flex gap-2 overflow-x-auto scrollbar-hide shrink-0">
                 {SUGGESTIONS.map((text, i) => (
                   <button
                     key={i}
-                    onClick={() => processMessage(text)}
+                    onClick={() => {
+                      processMessage(text);
+                    }}
                     className="whitespace-nowrap flex items-center gap-1.5 bg-gray-800 border border-purple-500/30 text-gray-300 text-[11px] font-medium px-3 py-1.5 rounded-full hover:bg-purple-500/20 hover:text-white hover:border-purple-500/50 transition-all flex-shrink-0"
                   >
                     <Sparkles className="w-3 h-3 text-purple-400" />
@@ -650,7 +658,7 @@ const FloatingAIAssistant = ({ user }) => {
                 <button
                   type="button"
                   onClick={handleMicClick}
-                  className="absolute right-12 w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-purple-400 transition-all"
+                  className={`absolute right-12 w-8 h-8 flex items-center justify-center rounded-full transition-all ${voiceState === 'listening' ? 'bg-red-500/20 text-red-500 animate-pulse' : 'text-gray-400 hover:text-purple-400'}`}
                 >
                   <Mic className="w-4 h-4" />
                 </button>
