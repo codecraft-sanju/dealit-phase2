@@ -3,11 +3,11 @@ import { ArrowLeft, Send, Bot, Sparkles, Menu, Plus, Settings, HelpCircle, Messa
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion'; 
 import axios from 'axios';
-// --- CHANGED: Imported react-markdown, remark-gfm, and canvas-confetti ---
+
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import confetti from 'canvas-confetti';
-// --- END CHANGED ---
+
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -23,7 +23,7 @@ const TypingLoader = () => (
 // --- CHANGED: Updated BotMessage to handle Animations and clean tags ---
 const BotMessage = ({ content, animated, onComplete }) => {
   // Strip animation tags from text so user doesn't see them
-  const cleanContent = useMemo(() => content.replace(/\[ANIMATION_[123]\]/g, ''), [content]);
+  const cleanContent = useMemo(() => content.replace(/(\*\*)?\[ANIMATION_[123]\](\*\*)?/g, ''), [content]);
   const [displayedText, setDisplayedText] = useState(animated ? '' : cleanContent);
   
   const triggered1 = useRef(false);
@@ -355,11 +355,13 @@ const AiChatPage = ({ user }) => {
             const dataStr = line.replace('data: ', '');
             if (dataStr === '[DONE]') {
               // Strip animation tags from state so they don't replay if user minimizes/reopens locally
-              setMessages((prev) =>
-                prev.map((msg) =>
-                  msg.id === botMessageId ? { ...msg, content: botReply.replace(/\[ANIMATION_[123]\]/g, '') } : msg
-                )
-              );
+              setTimeout(() => {
+                setMessages((prev) =>
+                  prev.map((msg) =>
+                    msg.id === botMessageId ? { ...msg, content: botReply.replace(/(\*\*)?\[ANIMATION_[123]\](\*\*)?/g, '') } : msg
+                  )
+                );
+              }, 1000);
               break;
             }
             try {

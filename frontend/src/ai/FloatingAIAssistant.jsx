@@ -23,7 +23,7 @@ const TypingLoader = () => (
 // --- CHANGED: Updated BotMessage to handle Animations and clean tags ---
 const BotMessage = ({ content, animated, onComplete }) => {
   // Strip animation tags from text so user doesn't see them
-  const cleanContent = useMemo(() => content.replace(/\[ANIMATION_[123]\]/g, ''), [content]);
+  const cleanContent = useMemo(() => content.replace(/(\*\*)?\[ANIMATION_[123]\](\*\*)?/g, ''), [content]);
   const [displayedText, setDisplayedText] = useState(animated ? '' : cleanContent);
   
   const triggered1 = useRef(false);
@@ -266,11 +266,13 @@ const FloatingAIAssistant = ({ user }) => {
             const dataStr = line.replace('data: ', '');
             if (dataStr === '[DONE]') {
               // Strip animation tags from state so they don't replay if user toggles widget open/closed
-              setMessages((prev) =>
-                prev.map((msg) =>
-                  msg.id === botMessageId ? { ...msg, content: botReply.replace(/\[ANIMATION_[123]\]/g, '') } : msg
-                )
-              );
+              setTimeout(() => {
+                setMessages((prev) =>
+                  prev.map((msg) =>
+                    msg.id === botMessageId ? { ...msg, content: botReply.replace(/(\*\*)?\[ANIMATION_[123]\](\*\*)?/g, '') } : msg
+                  )
+                );
+              }, 1000);
               break;
             }
             try {

@@ -305,7 +305,7 @@ const processChat = async (req, res) => {
         actionableSuggestions.push("User has zero items listed. Warmly suggest they look around their house for unused items to list, explaining how they can trade them or earn credits.");
       }
       if (user.profilePic === undefined || !user.profilePic) {
-       
+        
       }
       if (user.isVerified !== undefined && !user.isVerified) {
         actionableSuggestions.push("User account is not verified. Suggest they complete the verification process to get a trusted badge.");
@@ -369,6 +369,7 @@ const processChat = async (req, res) => {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
 
     let currentSessionId = sessionId;
     let fullBotReply = ""; 
@@ -396,7 +397,7 @@ const processChat = async (req, res) => {
 
     if (fullBotReply.trim() !== "") {
       
-      const cleanReply = fullBotReply.replace(/\[ANIMATION_[123]\]/g, '');
+      const cleanReply = fullBotReply.replace(/(\*\*)?\[ANIMATION_[123]\](\*\*)?/g, '');
       targetChatDoc.messages.push({ role: 'user', content: message });
       targetChatDoc.messages.push({ role: 'assistant', content: cleanReply });
       await targetChatDoc.save();
