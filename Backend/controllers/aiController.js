@@ -1,6 +1,7 @@
 const Groq = require('groq-sdk');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const axios = require('axios');
+const rateLimit = require('express-rate-limit');
 
 const User = require('../models/User'); 
 const Item = require('../models/Item');
@@ -11,6 +12,17 @@ const AIChat = require('../models/AIChat');
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+
+
+const aiChatLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 15, // Har user 1 minute me max 15 message bhej sakta ha
+  message: { success: false, reply: 'You are sending too many messages! Dealit AI needs a breather. Please wait a minute.' },
+  keyGenerator: (req) => {
+    return req.user ? req.user._id.toString() : req.ip; 
+  }
+});
 
 const generateItemDescription = async (req, res) => {
   try {
@@ -227,8 +239,13 @@ const deleteAllChatSessions = async (req, res) => {
 };
 
 const processChat = async (req, res) => {
+
+  let isClientDisconnected = false;
+  req.on('close', () => {
+    isClientDisconnected = true;
+  });
+
   try {
-    // DYNAMIC CONTEXT ENABLED FLAG READ FROM REQ BODY
     const { message, sessionId, isSmartContextEnabled } = req.body;
     const userId = req.user._id;
 
@@ -366,6 +383,12 @@ const processChat = async (req, res) => {
       });
     }
     
+   
+    if (isClientDisconnected) {
+      console.log("[AI] Client disconnected before stream started. Aborting.");
+      return; 
+    }
+
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
@@ -388,6 +411,12 @@ const processChat = async (req, res) => {
     res.write(`data: ${JSON.stringify({ type: 'session_id', sessionId: currentSessionId })}\n\n`);
 
     for await (const chunk of chatCompletion) {
+    
+      if (isClientDisconnected) {
+        console.log("[AI] Client disconnected during stream. Breaking loop to save resources.");
+        break;
+      }
+      
       const content = chunk.choices[0]?.delta?.content || '';
       if (content) {
         fullBotReply += content;
@@ -396,22 +425,23 @@ const processChat = async (req, res) => {
     }
 
     if (fullBotReply.trim() !== "") {
-      
       const cleanReply = fullBotReply.replace(/(\*\*)?\[ANIMATION_[123]\](\*\*)?/g, '');
       targetChatDoc.messages.push({ role: 'user', content: message });
       targetChatDoc.messages.push({ role: 'assistant', content: cleanReply });
       await targetChatDoc.save();
     }
     
-    res.write('data: [DONE]\n\n');
-    res.end();
+    if (!isClientDisconnected) {
+      res.write('data: [DONE]\n\n');
+      res.end();
+    }
 
   } catch (error) {
     console.error('Production AI Chat Error:', error);
     
-    if (!res.headersSent) {
+    if (!res.headersSent && !isClientDisconnected) {
       res.status(500).json({ success: false, reply: 'Server connection failed.' });
-    } else if (!res.writableEnded) { 
+    } else if (!res.writableEnded && !isClientDisconnected) { 
       res.write(`data: ${JSON.stringify({ content: '\n\n**System Error**: Connection lost.' })}\n\n`);
       res.write('data: [DONE]\n\n');
       res.end();
@@ -426,5 +456,6 @@ module.exports = {
   getChatHistory,
   deleteChatSession,
   deleteAllChatSessions, 
-  processChat 
+  processChat,
+  aiChatLimiter 
 };
