@@ -20,7 +20,7 @@ const aiChatLimiter = rateLimit({
   max: 15, // Har user 1 minute me max 15 message bhej sakta ha
   message: { success: false, reply: 'You are sending too many messages! Dealit AI needs a breather. Please wait a minute.' },
   keyGenerator: (req) => {
-    return req.user ? req.user._id.toString() : req.ip; 
+   return req.user ? req.user._id.toString() : 'anonymous';
   }
 });
 

@@ -143,7 +143,16 @@ const FloatingAIAssistant = ({ user }) => {
   const [currentSessionId, setCurrentSessionId] = useState(null);
   
   const messagesEndRef = useRef(null);
+  const abortControllerRef = useRef(null);
   const [buttonState, setButtonState] = useState('bot');
+
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   // Listen for the minimize action coming from the full AiChatPage
   useEffect(() => {
@@ -212,6 +221,11 @@ const FloatingAIAssistant = ({ user }) => {
   const processMessage = async (userMessage) => {
     if (!userMessage.trim()) return;
     
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
     const newMessages = [...messages, { id: Date.now(), role: 'user', content: userMessage }];
     setMessages(newMessages);
     setInput('');
@@ -242,6 +256,7 @@ const FloatingAIAssistant = ({ user }) => {
           sessionId: currentSessionId,
           isSmartContextEnabled // Sent to backend
         }),
+        signal: abortControllerRef.current.signal
       });
 
       if (!response.ok) {
@@ -296,6 +311,7 @@ const FloatingAIAssistant = ({ user }) => {
       }
 
     } catch (error) {
+      if (error.name === 'AbortError') return;
       console.error('AI Chat Error:', error);
       setIsLoading(false);
       setMessages((prev) =>
@@ -312,10 +328,12 @@ const FloatingAIAssistant = ({ user }) => {
   };
 
   const handleClose = () => {
+    if (abortControllerRef.current) abortControllerRef.current.abort();
     setIsOpen(false);
   };
   
   const handleMaximize = () => {
+    if (abortControllerRef.current) abortControllerRef.current.abort();
     handleClose();
     if(currentSessionId) {
       navigate(`/ai-chat/${currentSessionId}`);

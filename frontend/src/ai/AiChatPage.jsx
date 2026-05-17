@@ -1,5 +1,6 @@
+// --- CHANGED: Added ChevronDown to lucide-react imports ---
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { ArrowLeft, Send, Bot, Sparkles, Menu, Plus, Settings, HelpCircle, MessageSquare, X, Trash2, Minimize2 } from 'lucide-react';
+import { ArrowLeft, Send, Bot, Sparkles, Menu, Plus, Settings, HelpCircle, MessageSquare, X, Trash2, Minimize2, ChevronDown } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion'; 
 import axios from 'axios';
@@ -7,7 +8,6 @@ import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import confetti from 'canvas-confetti';
-
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -22,7 +22,6 @@ const TypingLoader = () => (
 
 // --- CHANGED: Updated BotMessage to handle Animations and clean tags ---
 const BotMessage = ({ content, animated, onComplete }) => {
-  // Strip animation tags from text so user doesn't see them
   const cleanContent = useMemo(() => content.replace(/(\*\*)?\[ANIMATION_[123]\](\*\*)?/g, ''), [content]);
   const [displayedText, setDisplayedText] = useState(animated ? '' : cleanContent);
   
@@ -143,11 +142,21 @@ const AiChatPage = ({ user }) => {
   
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // NEW: Dynamic Smart Context State (Saved in localStorage)
   const [isSmartContextEnabled, setIsSmartContextEnabled] = useState(() => {
     const saved = localStorage.getItem('dealit_ai_context');
     return saved !== null ? JSON.parse(saved) : true;
   });
+
+  const abortControllerRef = useRef(null);
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   const handleToggleContext = () => {
     const newVal = !isSmartContextEnabled;
@@ -155,8 +164,6 @@ const AiChatPage = ({ user }) => {
     localStorage.setItem('dealit_ai_context', JSON.stringify(newVal));
   };
   
-  const messagesEndRef = useRef(null);
-
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -281,7 +288,6 @@ const AiChatPage = ({ user }) => {
     }
   };
 
-  // NEW: Delete All Sessions Function
   const deleteAllSessions = async () => {
     try {
       const token = localStorage.getItem('dealit_token');
@@ -305,6 +311,11 @@ const AiChatPage = ({ user }) => {
   const processMessage = async (userMessage) => {
     if (!userMessage.trim()) return;
     
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
     const newMessages = [...messages, { id: Date.now(), role: 'user', content: userMessage }];
     setMessages(newMessages);
     setInput('');
@@ -329,8 +340,9 @@ const AiChatPage = ({ user }) => {
         body: JSON.stringify({ 
           message: userMessage,
           sessionId: currentSessionId,
-          isSmartContextEnabled // NEW: Sent to backend
+          isSmartContextEnabled 
         }),
+        signal: abortControllerRef.current.signal
       });
 
       if (!response.ok) {
@@ -354,7 +366,6 @@ const AiChatPage = ({ user }) => {
           if (line.startsWith('data: ')) {
             const dataStr = line.replace('data: ', '');
             if (dataStr === '[DONE]') {
-              // Strip animation tags from state so they don't replay if user minimizes/reopens locally
               setTimeout(() => {
                 setMessages((prev) =>
                   prev.map((msg) =>
@@ -382,13 +393,13 @@ const AiChatPage = ({ user }) => {
                 )
               );
             } catch (e) {
-              // Ignore partial JSON parse errors
             }
           }
         }
       }
 
     } catch (error) {
+      if (error.name === 'AbortError') return;
       console.error('AI Chat Error:', error);
       setIsLoading(false);
       setMessages((prev) =>
@@ -405,7 +416,7 @@ const AiChatPage = ({ user }) => {
   };
 
   const handleMinimize = () => {
-    // Set a flag so FloatingAIAssistant knows to open immediately
+    if (abortControllerRef.current) abortControllerRef.current.abort();
     localStorage.setItem('dealit_open_floating_ai', 'true');
     if (window.history.state && window.history.state.idx > 0) {
       navigate(-1); 
@@ -415,6 +426,7 @@ const AiChatPage = ({ user }) => {
   };
 
   const handleClose = () => {
+    if (abortControllerRef.current) abortControllerRef.current.abort();
     navigate('/');
   };
 
@@ -467,12 +479,12 @@ const AiChatPage = ({ user }) => {
                   <MessageSquare className="w-4 h-4 flex-shrink-0" />
                   <span className="truncate text-sm font-medium text-left">{session.title || 'Chat Session'}</span>
                 </div>
-                <button 
-                  onClick={(e) => deleteSession(e, session._id)}
-                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 hover:text-red-400 rounded transition-all"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+              <button 
+  onClick={(e) => deleteSession(e, session._id)}
+  className="p-1 text-gray-500 hover:bg-red-500/20 hover:text-red-400 rounded transition-all"
+>
+  <Trash2 className="w-3.5 h-3.5" />
+</button>
               </div>
             ))}
             {sessions.length === 0 && (
@@ -481,19 +493,70 @@ const AiChatPage = ({ user }) => {
           </div>
         </div>
 
-        <div className="p-3 border-t border-gray-800/80 space-y-1 bg-gray-950">
+        {/* --- CHANGED: Updated Settings to Inline Accordion --- */}
+        <div className="p-3 border-t border-gray-800/80 space-y-1 bg-gray-950 flex-shrink-0">
           <button 
-            onClick={() => setIsSettingsOpen(true)}
-            className="flex items-center gap-3 w-full p-2.5 rounded-lg hover:bg-gray-800/50 text-gray-400 hover:text-gray-200 transition-colors"
+            onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+            className={`flex items-center justify-between w-full p-2.5 rounded-lg transition-colors ${isSettingsOpen ? 'bg-gray-800/80 text-white' : 'hover:bg-gray-800/50 text-gray-400 hover:text-gray-200'}`}
           >
-            <Settings className="w-5 h-5" />
-            <span className="text-sm font-medium">Settings</span>
+            <div className="flex items-center gap-3">
+              <Settings className="w-5 h-5" />
+              <span className="text-sm font-medium">Settings</span>
+            </div>
+            <motion.div animate={{ rotate: isSettingsOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
+              <ChevronDown className="w-4 h-4" />
+            </motion.div>
           </button>
+
+          <AnimatePresence>
+            {isSettingsOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="p-3 mx-1 mb-1 mt-1 bg-gray-900 border border-gray-700/50 rounded-xl space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-white">Smart Context</p>
+                      <p className="text-xs text-gray-400 mt-0.5">Read inventory</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        className="sr-only peer" 
+                        checked={isSmartContextEnabled}
+                        onChange={handleToggleContext}
+                      />
+                      <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
+                    </label>
+                  </div>
+
+                  <div className="pt-3 border-t border-gray-800/80">
+                    <button 
+                      onClick={() => {
+                        if(window.confirm("Are you sure you want to clear all your chat history? This action cannot be undone.")) {
+                          deleteAllSessions();
+                        }
+                      }}
+                      className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors border border-red-500/20 text-xs font-semibold shadow-inner"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Clear All Chats
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <button onClick={() => navigate('/help-support')} className="flex items-center gap-3 w-full p-2.5 rounded-lg hover:bg-gray-800/50 text-gray-400 hover:text-gray-200 transition-colors">
             <HelpCircle className="w-5 h-5" />
             <span className="text-sm font-medium">Help & FAQ</span>
           </button>
         </div>
+        {/* --- END CHANGED --- */}
       </div>
 
       <div className="flex-1 flex flex-col min-w-0 h-full relative bg-gray-900">
@@ -621,71 +684,7 @@ const AiChatPage = ({ user }) => {
 
       </div>
 
-      <AnimatePresence>
-        {isSettingsOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 md:px-0">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsSettingsOpen(false)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            />
-            
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-sm bg-gray-900 border border-gray-700/50 rounded-2xl shadow-[0_20px_60px_rgba(163,136,225,0.15)] overflow-hidden"
-            >
-              <div className="bg-gray-800/80 border-b border-gray-700/50 p-4 flex justify-between items-center">
-                <h3 className="text-white font-bold flex items-center gap-2">
-                  <Settings className="w-4 h-4 text-purple-400" />
-                  Chat Settings
-                </h3>
-                <button 
-                  onClick={() => setIsSettingsOpen(false)}
-                  className="text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 p-1.5 rounded-lg transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              
-              <div className="p-5 space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-white">Smart Context</p>
-                    <p className="text-xs text-gray-400 mt-0.5">Allow AI to read your inventory</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      className="sr-only peer" 
-                      checked={isSmartContextEnabled}
-                      onChange={handleToggleContext}
-                    />
-                    <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
-                  </label>
-                </div>
-
-                <div className="pt-4 border-t border-gray-800/80">
-                  <button 
-                    onClick={() => {
-                      if(window.confirm("Are you sure you want to clear all your chat history? This action cannot be undone.")) {
-                        deleteAllSessions();
-                      }
-                    }}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors border border-red-500/20 text-sm font-semibold shadow-inner"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    Clear All Conversations
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      {/* --- CHANGED: Removed the entire fullscreen AnimatePresence modal for settings --- */}
 
     </div>
   );
