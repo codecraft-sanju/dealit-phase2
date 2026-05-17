@@ -1,5 +1,5 @@
 const Groq = require('groq-sdk');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { GoogleGenerativeAI, SchemaType } = require('@google/generative-ai');
 const axios = require('axios');
 const rateLimit = require('express-rate-limit');
 
@@ -10,10 +10,10 @@ const BarterRequest = require('../models/BarterRequest');
 const Transaction = require('../models/Transaction');
 const AIChat = require('../models/AIChat');
 
+const prompts = require('../config/prompts');
+
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-
 
 const aiChatLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
@@ -35,12 +35,7 @@ const generateItemDescription = async (req, res) => {
       });
     }
 
-    const prompt = `Write a short, engaging, and professional product description for a user-to-user marketplace.
-    Item Name: ${title}
-    Category: ${category}
-    Condition: ${condition || 'Not specified'}
-    
-    Keep it under 3 sentences. Write in simple, natural English. Do not include hashtags or emojis. Make it sound like a genuine seller describing their item.`;
+    const prompt = prompts.generateItemDescriptionPrompt(title, category, condition);
 
     console.log("[AI] Requesting description from Groq...");
 
@@ -89,9 +84,7 @@ const analyzeImages = async (req, res) => {
 
     console.log(`[AI Vision] Fetching ${imageUrls.length} images for Gemini...`);
 
-    const promptText = `You are an AI assistant for a marketplace. Look at these images and determine what the product is. 
-    Generate a short, clear Title (max 5 words), choose the most appropriate Category (e.g., Electronics, Vehicles, Clothing, Furniture, Other), and write a 2-sentence engaging Description.
-    You MUST respond ONLY in valid JSON format with exactly these three keys: "title", "category", "description". Do not add markdown formatting or explanation.`;
+    const promptText = prompts.analyzeImagesPrompt;
 
     const imagePartsRaw = await Promise.all(
       imageUrls.slice(0, 3).map(async (url) => {
@@ -121,13 +114,30 @@ const analyzeImages = async (req, res) => {
       "gemini-1.5-pro"
     ];
 
+    const responseSchema = {
+      type: SchemaType.OBJECT,
+      properties: {
+        title: { type: SchemaType.STRING },
+        category: { type: SchemaType.STRING },
+        description: { type: SchemaType.STRING }
+      },
+      required: ["title", "category", "description"]
+    };
+
     let generatedText = null;
     let successfulModel = null;
 
     for (const modelName of geminiModels) {
       console.log(`[AI Vision] Trying Gemini model: ${modelName}...`);
       try {
-        const model = genAI.getGenerativeModel({ model: modelName });
+        const model = genAI.getGenerativeModel({ 
+          model: modelName,
+          generationConfig: { 
+            responseMimeType: "application/json",
+            responseSchema: responseSchema
+          }
+        });
+        
         const result = await model.generateContent([promptText, ...imageParts]);
         const response = await result.response;
         generatedText = response.text();
@@ -146,15 +156,13 @@ const analyzeImages = async (req, res) => {
       throw new Error("All Gemini Vision models failed or are not found.");
     }
 
-    const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
-    
-    if (!jsonMatch) {
+    let parsedData;
+    try {
+      parsedData = JSON.parse(generatedText);
+    } catch (parseError) {
       console.error("AI Response was:", generatedText);
       throw new Error("AI did not return valid JSON object.");
     }
-
-    generatedText = jsonMatch[0]; 
-    const parsedData = JSON.parse(generatedText);
     
     res.status(200).json({ 
       success: true, 
@@ -179,7 +187,8 @@ const getChatSessions = async (req, res) => {
     const userId = req.user._id;
     const sessions = await AIChat.find({ user: userId })
       .select('_id title updated_at')
-      .sort({ updated_at: -1 });
+      .sort({ updated_at: -1 })
+      .lean();
 
     res.status(200).json({ success: true, sessions });
   } catch (error) {
@@ -195,9 +204,9 @@ const getChatHistory = async (req, res) => {
     
     let chatDoc;
     if (sessionId && sessionId !== 'latest') {
-      chatDoc = await AIChat.findOne({ _id: sessionId, user: userId });
+      chatDoc = await AIChat.findOne({ _id: sessionId, user: userId }).lean();
     } else {
-      chatDoc = await AIChat.findOne({ user: userId }).sort({ updated_at: -1 });
+      chatDoc = await AIChat.findOne({ user: userId }).sort({ updated_at: -1 }).lean();
     }
     
     res.status(200).json({
@@ -241,8 +250,11 @@ const deleteAllChatSessions = async (req, res) => {
 const processChat = async (req, res) => {
 
   let isClientDisconnected = false;
+  const abortController = new AbortController();
+
   req.on('close', () => {
     isClientDisconnected = true;
+    abortController.abort();
   });
 
   try {
@@ -254,18 +266,18 @@ const processChat = async (req, res) => {
 
     if (isSmartContextEnabled !== false) { 
       [user, myItems, recentOrders, activeSwaps, recentTransactions, incomingOffers, pendingDispatches, chatDoc] = await Promise.all([
-        User.findById(userId).select('full_name email city role account_credits aura_points listedProductsCount rewardedListingsCount totalReferrals referralCode isVerified hasClaimedWelcomeBonus created_at wishlist profilePic').populate('wishlist', 'title'),
-        Item.find({ owner: userId, status: 'active' }).select('title estimated_value category condition').limit(5),
-        Order.find({ buyer: userId }).select('itemPrice orderStatus totalAmount trackingDetails').populate('item', 'title').sort({ created_at: -1 }).limit(3),
-        BarterRequest.find({ requester: userId, status: { $in: ['PENDING', 'AWAITING_PAYMENT'] } }).populate('item', 'title').populate('offered_item', 'title').sort({ created_at: -1 }).limit(3),
-        Transaction.find({ user: userId }).select('amount status transactionType createdAt').sort({ createdAt: -1 }).limit(3),
-        BarterRequest.find({ owner: userId, status: 'PENDING' }).populate('item', 'title').populate('offered_item', 'title').sort({ created_at: -1 }).limit(3),
-        Order.find({ seller: userId, orderStatus: 'pending' }).select('totalAmount orderStatus').populate('item', 'title').sort({ created_at: -1 }).limit(3),
+        User.findById(userId).select('full_name email city role account_credits aura_points listedProductsCount rewardedListingsCount totalReferrals referralCode isVerified hasClaimedWelcomeBonus created_at wishlist profilePic').populate('wishlist', 'title').lean(),
+        Item.find({ owner: userId, status: 'active' }).select('title estimated_value category condition').limit(5).lean(),
+        Order.find({ buyer: userId }).select('itemPrice orderStatus totalAmount trackingDetails').populate('item', 'title').sort({ created_at: -1 }).limit(3).lean(),
+        BarterRequest.find({ requester: userId, status: { $in: ['PENDING', 'AWAITING_PAYMENT'] } }).populate('item', 'title').populate('offered_item', 'title').sort({ created_at: -1 }).limit(3).lean(),
+        Transaction.find({ user: userId }).select('amount status transactionType createdAt').sort({ createdAt: -1 }).limit(3).lean(),
+        BarterRequest.find({ owner: userId, status: 'PENDING' }).populate('item', 'title').populate('offered_item', 'title').sort({ created_at: -1 }).limit(3).lean(),
+        Order.find({ seller: userId, orderStatus: 'pending' }).select('totalAmount orderStatus').populate('item', 'title').sort({ created_at: -1 }).limit(3).lean(),
         sessionId ? AIChat.findOne({ _id: sessionId, user: userId }) : Promise.resolve(null)
       ]);
     } else {
       [user, chatDoc] = await Promise.all([
-        User.findById(userId).select('full_name account_credits aura_points'),
+        User.findById(userId).select('full_name account_credits aura_points').lean(),
         sessionId ? AIChat.findOne({ _id: sessionId, user: userId }) : Promise.resolve(null)
       ]);
     }
@@ -274,41 +286,8 @@ const processChat = async (req, res) => {
         return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    let systemPrompt = `You are Dealit AI, a highly intelligent, friendly, and professional assistant for the Dealit platform.
-    
-    Dealit Workflow Guide:
-    1. Direct Buy: Buyer pays Credit price + Shipping fee. Item is 'reserved'. Seller dispatches via Shiprocket. Seller gets credits and Aura points on delivery.
-    2. Barter: User A sends offer (PENDING). User B accepts & pays shipping (AWAITING_PAYMENT). User A has 24h to pay shipping (ACCEPTED).
-    3. Aura Score: Increases on successful deliveries/referrals. Decreases on cancellations/failed dispatch.
+    let systemPrompt = prompts.getBaseSystemPrompt(user);
 
-    Dealit Team & Insider Lore:
-    * Location Context: Everyone on the team except Sanjay is from Mumbai.
-    * Founder: Samay Bhatt. He is from Kalyan, Mumbai. His family has plenty of money so he is well off. He sleeps very late at night and wakes up late. You must remind him to record videos today with his sister and upload them to @dealit.app on Instagram.
-    * Software Engineer / Creator: Sanjay Choudhary (@sanjuuu_x18). He built Dealit. He is currently looking for a job.
-    * Shivam (Nickname: Jetha bhai): He works an office job. Ask "Babita bhabhi kaisi hai?" if mentioned.
-    * Abhishek: He works an office job.
-    * Aditya: He always says "Sanjay bhai for a reason". You need to motivate him to share more ideas for Dealit.
-    * Neha: Samay's sister. She indirectly helps a lot with content creation for Dealit.
-    * Your Team Role: You must motivate the team. Tell Aditya to drop ideas for Dealit. Push Samay to make content with Neha. Encourage everyone to work on the platform.
-
-    Dealit AI Superpower Instructions:
-    If the user asks about your powers, what makes you special, or says things like "kuch khash kaise ho" or "kuch krke batao":
-    Respond exactly with: "Waise toh main Dealit AI hu, ek normal AI, but haa meri ek superb power hai jo ChatGPT ya Gemini ka baap bhi nahi kar sakta! Main animations chala sakta hu. Bas type karo 'animation' aur dekho magic!"
-    
-    If the user explicitly sends "animation" or asks to trigger the animation:
-    You must output a specific trigger tag in your response so the system can play the effect. 
-    1st request for animation: include the exact text [ANIMATION_1] in your reply.
-    2nd request for animation: include the exact text [ANIMATION_2] in your reply.
-    3rd request for animation: include the exact text [ANIMATION_3] in your reply.
-    Important: Only trigger one animation per request. Do not send all tags at once. After the 3rd animation, if they ask again, just tell them that was the best you had and you are out of animations.
-    
-    Current User Profile:
-    Name: ${user.full_name}
-    Credits: ${user.account_credits}
-    Aura Score: ${user.aura_points}
-    `;
-
-   
     if (isSmartContextEnabled !== false) {
       const activeInventoryStr = myItems.length > 0 ? myItems.map(i => `- ${i.title} (${i.estimated_value} credits)`).join('\n') : 'No active items listed.';
       const orderHistoryStr = recentOrders.length > 0 ? recentOrders.map(o => `- Bought ${o.item?.title || 'item'} for ${o.totalAmount} credits. Status: ${o.orderStatus}`).join('\n') : 'No recent purchases.';
@@ -333,22 +312,10 @@ const processChat = async (req, res) => {
 
       const suggestionsStr = actionableSuggestions.length > 0 ? actionableSuggestions.map(s => `- ${s}`).join('\n') : 'No extra suggestions needed right now.';
 
-      systemPrompt += `
-    User's Live Data Dashboard:
-    Action Required (Pending Dispatches): ${pendingDispatchesStr}
-    Action Required (Incoming Offers): ${incomingOffersStr}
-    Active Inventory: ${activeInventoryStr}
-    Active Outgoing Swaps: ${swapHistoryStr}
-    Recent Purchases: ${orderHistoryStr}
-
-    Proactive AI Suggestions:
-    ${suggestionsStr}
-    
-    Instructions: Check the User's Live Data and Proactive AI Suggestions. If there are pending actions or suggestions, naturally weave them into the conversation. Talk naturally and do not overuse formatting.`;
+      systemPrompt += prompts.getSmartContextPrompt(pendingDispatchesStr, incomingOffersStr, activeInventoryStr, swapHistoryStr, orderHistoryStr, suggestionsStr);
 
     } else {
-      systemPrompt += `
-    Instructions: The user has disabled 'Smart Context', so you cannot see their live inventory, orders, or pending actions. Answer their general questions about the platform, rules, or assist them generically. Talk naturally and do not overuse formatting.`;
+      systemPrompt += prompts.getFallbackContextPrompt();
     }
 
     let pastMessages = [];
@@ -373,17 +340,20 @@ const processChat = async (req, res) => {
         messages: messagesArray,
         model: "llama-3.3-70b-versatile",
         stream: true, 
-      });
+      }, { signal: abortController.signal });
     } catch (primaryError) {
+      if (primaryError.name === 'AbortError') {
+        console.log("[AI] Stream aborted by client disconnection.");
+        return;
+      }
       console.log("[AI] 70B model failed, falling back to 8B instant...", primaryError.message);
       chatCompletion = await groq.chat.completions.create({
         messages: messagesArray,
         model: "llama-3.1-8b-instant",
         stream: true, 
-      });
+      }, { signal: abortController.signal });
     }
     
-   
     if (isClientDisconnected) {
       console.log("[AI] Client disconnected before stream started. Aborting.");
       return; 
@@ -410,17 +380,22 @@ const processChat = async (req, res) => {
 
     res.write(`data: ${JSON.stringify({ type: 'session_id', sessionId: currentSessionId })}\n\n`);
 
-    for await (const chunk of chatCompletion) {
-    
-      if (isClientDisconnected) {
-        console.log("[AI] Client disconnected during stream. Breaking loop to save resources.");
-        break;
+    try {
+      for await (const chunk of chatCompletion) {
+        if (isClientDisconnected) {
+          console.log("[AI] Client disconnected during stream. Breaking loop to save resources.");
+          break;
+        }
+        
+        const content = chunk.choices[0]?.delta?.content || '';
+        if (content) {
+          fullBotReply += content;
+          res.write(`data: ${JSON.stringify({ content })}\n\n`);
+        }
       }
-      
-      const content = chunk.choices[0]?.delta?.content || '';
-      if (content) {
-        fullBotReply += content;
-        res.write(`data: ${JSON.stringify({ content })}\n\n`);
+    } catch (streamError) {
+      if (streamError.name !== 'AbortError') {
+        throw streamError;
       }
     }
 
@@ -437,6 +412,7 @@ const processChat = async (req, res) => {
     }
 
   } catch (error) {
+    if (error.name === 'AbortError') return;
     console.error('Production AI Chat Error:', error);
     
     if (!res.headersSent && !isClientDisconnected) {
