@@ -217,16 +217,15 @@ const NotificationsPage = () => {
     };
   }, [observerTarget, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // --> MODIFIED: Fixed React Query v5 object syntax wrapper for query Keys
   const markAsReadMutation = useMutation({
     mutationFn: async (id) => {
       return await axios.put(`${API_URL}/notifications/${id}/read`, {}, { withCredentials: true });
     },
     onMutate: async (id) => {
-      await queryClient.cancelQueries({ queryKey: ['notifications'] });
-      const previousData = queryClient.getQueryData({ queryKey: ['notifications'] });
+      await queryClient.cancelQueries(['notifications']);
+      const previousData = queryClient.getQueryData(['notifications']);
       
-      queryClient.setQueryData({ queryKey: ['notifications'] }, oldData => {
+      queryClient.setQueryData(['notifications'], oldData => {
         if (!oldData) return oldData;
         return {
           ...oldData,
@@ -240,20 +239,19 @@ const NotificationsPage = () => {
     },
     onError: (err, id, context) => {
       console.error("Failed to mark as read:", err);
-      queryClient.setQueryData({ queryKey: ['notifications'] }, context.previousData);
+      queryClient.setQueryData(['notifications'], context.previousData);
     },
   });
 
-  // --> MODIFIED: Fixed React Query v5 object syntax wrapper for query Keys
   const markAllAsReadMutation = useMutation({
     mutationFn: async () => {
       return await axios.put(`${API_URL}/notifications/read-all`, {}, { withCredentials: true });
     },
     onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: ['notifications'] });
-      const previousData = queryClient.getQueryData({ queryKey: ['notifications'] });
+      await queryClient.cancelQueries(['notifications']);
+      const previousData = queryClient.getQueryData(['notifications']);
       
-      queryClient.setQueryData({ queryKey: ['notifications'] }, oldData => {
+      queryClient.setQueryData(['notifications'], oldData => {
         if (!oldData) return oldData;
         return {
           ...oldData,
@@ -267,15 +265,15 @@ const NotificationsPage = () => {
     },
     onError: (err, newTodo, context) => {
       console.error("Failed to mark all as read:", err);
-      queryClient.setQueryData({ queryKey: ['notifications'] }, context.previousData);
+      queryClient.setQueryData(['notifications'], context.previousData);
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries(['notifications']);
       window.dispatchEvent(new Event('notificationsRead'));
     },
   });
 
-  const handleNotificationClick = (notif) => {
+ const handleNotificationClick = (notif) => {
     if (!notif.isRead) {
       markAsReadMutation.mutate(notif._id);
     }
@@ -447,17 +445,7 @@ const NotificationsPage = () => {
                         
                         <div className="flex items-center justify-between mt-2">
                           <span className="text-[10px] font-medium text-gray-400">
-                            {/* --> MODIFIED: Wrapped date parsing in a try-catch engine to prevent critical WebView RangeErrors */}
-                            {(() => {
-                              try {
-                                const parsedDate = new Date(notif.created_at);
-                                return isNaN(parsedDate.getTime()) 
-                                  ? 'just now' 
-                                  : formatDistanceToNow(parsedDate, { addSuffix: true });
-                              } catch (e) {
-                                return 'just now';
-                              }
-                            })()}
+                             {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true })}
                           </span>
                           
                           {notif.metadata?.amount > 0 && (
