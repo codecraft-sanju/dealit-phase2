@@ -6,40 +6,6 @@ import axios from 'axios';
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
-const DealitText = () => (
-  <>
-    <span className="dealit-logo-text">Dealit</span>
-    <style>{`
-      .dealit-logo-text {
-        font-size: 1.35rem;
-        font-weight: 900;
-        letter-spacing: -0.5px;
-        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-        background: linear-gradient(
-          90deg,
-          #A388E1 0%,
-          #c4b0f0 25%,
-          #ffffff 45%,
-          #FFE28A 55%,
-          #c4b0f0 75%,
-          #A388E1 100%
-        );
-        background-size: 250% auto;
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        animation: dealit-shimmer 3s linear infinite;
-        display: inline-block;
-      }
-
-      @keyframes dealit-shimmer {
-        0%   { background-position: 0% center; }
-        100% { background-position: 250% center; }
-      }
-    `}</style>
-  </>
-);
-
 const Navbar = ({ user }) => {
   const location = useLocation();
   const [credits, setCredits] = useState(user?.account_credits || 0);
@@ -92,7 +58,7 @@ const Navbar = ({ user }) => {
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2 z-10">
               <img src="/logo.png" alt="Dealit Logo" className="w-8 h-8 object-contain" />
-              <DealitText />
+              <img src="/img.jpeg" alt="Dealit" className="h-6 object-contain" />
             </Link>
             
             {/* Desktop Search Bar */}
