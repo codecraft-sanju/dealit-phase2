@@ -59,13 +59,13 @@ const NotificationsPage = () => {
   };
 
   useEffect(() => {
-    const mobileToken = localStorage.getItem('dealit_mobile_token');
     const isMobileApp = localStorage.getItem('is_dealit_app') === 'true';
 
-    if (isMobileApp || mobileToken) {
-      const isMobilePushEnabled = localStorage.getItem('dealit_push_enabled') === 'true';
-      setIsPushEnabled(isMobilePushEnabled && !!mobileToken);
+    if (isMobileApp) {
+      // App ke andar hamesha disable dikhao initially
+      setIsPushEnabled(false);
     } else if ('serviceWorker' in navigator && 'PushManager' in window) {
+      // Sirf web browser me service worker check karo
       navigator.serviceWorker.ready.then((registration) => {
         registration.pushManager.getSubscription().then((subscription) => {
           setIsPushEnabled(!!subscription);
@@ -90,31 +90,18 @@ const NotificationsPage = () => {
   };
 
   const handlePushToggle = async () => {
-    const mobileToken = localStorage.getItem('dealit_mobile_token');
     const isMobileApp = localStorage.getItem('is_dealit_app') === 'true';
+
+    // Agar app ke andar se click kiya toh sidha error de do
+    if (isMobileApp) {
+      showToast('This is not working in app right now. Try after some time.', 'error');
+      return;
+    }
+
     const previousState = isPushEnabled;
     setIsPushEnabled(!previousState); 
 
     try {
-      if (isMobileApp || mobileToken) {
-        if (!mobileToken) {
-          showToast('Please enable permissions in phone settings', 'error');
-          setIsPushEnabled(previousState);
-          return;
-        }
-
-        if (previousState) {
-          await axios.post(`${API_URL}/notifications/unsubscribe`, { type: 'expo', token: mobileToken }, { withCredentials: true });
-          localStorage.setItem('dealit_push_enabled', 'false');
-          showToast('Push Alerts Disabled', 'off');
-        } else {
-          await axios.post(`${API_URL}/notifications/subscribe`, { type: 'expo', token: mobileToken }, { withCredentials: true });
-          localStorage.setItem('dealit_push_enabled', 'true');
-          showToast('Push Alerts Enabled', 'on');
-        }
-        return; 
-      }
-
       if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
         showToast('Not supported on this browser', 'error');
         setIsPushEnabled(previousState);
