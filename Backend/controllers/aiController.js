@@ -16,8 +16,8 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const aiChatLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 15, // Har user 1 minute me max 15 message bhej sakta ha
+  windowMs: 60 * 1000,
+  max: 15,
   message: { success: false, reply: 'You are sending too many messages! Dealit AI needs a breather. Please wait a minute.' },
   keyGenerator: (req) => {
    return req.user ? req.user._id.toString() : 'anonymous';
@@ -425,6 +425,50 @@ const processChat = async (req, res) => {
   }
 };
 
+const synthesizeVoice = async (req, res) => {
+  try {
+    const { text, voicePref } = req.body;
+    if (!text) {
+      return res.status(400).json({ success: false, message: 'Text is required' });
+    }
+
+    const MALE_VOICE_ID = 'pNInz6obpgDQGcFmaJgB';
+    const FEMALE_VOICE_ID = 'EXAVITQu4vr4xnSDxMaL';
+
+    const voiceId = voicePref === 'male' ? MALE_VOICE_ID : FEMALE_VOICE_ID;
+    const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
+
+    if (!ELEVENLABS_API_KEY) {
+      return res.status(500).json({ success: false, message: 'API Key missing' });
+    }
+
+    const response = await axios({
+      method: 'POST',
+      url: `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
+      headers: {
+        'Accept': 'audio/mpeg',
+        'xi-api-key': ELEVENLABS_API_KEY,
+        'Content-Type': 'application/json',
+      },
+      data: {
+        text: text,
+        model_id: 'eleven_multilingual_v2',
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.75,
+        }
+      },
+      responseType: 'stream'
+    });
+
+    res.setHeader('Content-Type', 'audio/mpeg');
+    response.data.pipe(res);
+  } catch (error) {
+    console.error('ElevenLabs API error:', error?.response?.data || error.message);
+    res.status(500).json({ success: false, message: 'Audio generation failed' });
+  }
+};
+
 module.exports = {
   generateItemDescription,
   analyzeImages,
@@ -433,5 +477,6 @@ module.exports = {
   deleteChatSession,
   deleteAllChatSessions, 
   processChat,
-  aiChatLimiter 
+  aiChatLimiter,
+  synthesizeVoice
 };

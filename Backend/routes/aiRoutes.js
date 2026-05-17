@@ -6,7 +6,8 @@ const {
   getChatHistory, 
   getChatSessions, 
   deleteChatSession,
-  deleteAllChatSessions 
+  deleteAllChatSessions,
+  synthesizeVoice 
 } = require('../controllers/aiController');
 const { protect } = require('../middleware/authMiddleware'); 
 
@@ -20,5 +21,6 @@ router.delete('/chat/sessions', protect, deleteAllChatSessions);
 router.get('/chat/history/:sessionId', protect, getChatHistory);
 router.delete('/chat/session/:sessionId', protect, deleteChatSession);
 router.post('/chat', protect, processChat);
+router.post('/synthesize-voice', protect, synthesizeVoice);
 
 module.exports = router;

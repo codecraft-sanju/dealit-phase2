@@ -162,6 +162,7 @@ const AiChatPage = ({ user }) => {
 
   const abortControllerRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const audioRef = useRef(null); // Added for ElevenLabs
 
   useEffect(() => {
     window.speechSynthesis.onvoiceschanged = () => {};
@@ -170,6 +171,10 @@ const AiChatPage = ({ user }) => {
         abortControllerRef.current.abort();
       }
       window.speechSynthesis.cancel();
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
     };
   }, []);
 
@@ -329,38 +334,55 @@ const AiChatPage = ({ user }) => {
     setMessages((prev) => prev.map((m) => m.id === id ? { ...m, animated: false } : m));
   };
 
-  const speakText = (text) => {
-    const synth = window.speechSynthesis;
-    if (!synth) {
-      setVoiceState('idle');
-      return;
+  const speakText = async (text) => {
+    if (!text) return;
+
+    if (audioRef.current) {
+      audioRef.current.pause();
     }
-    synth.cancel();
 
     const textToSpeak = text.replace(/[*_#`]/g, '');
-    const utterance = new SpeechSynthesisUtterance(textToSpeak);
-    const voices = synth.getVoices();
+    setVoiceState('speaking');
 
-    const inVoices = voices.filter(v => v.lang.includes('IN') || v.lang.includes('hi'));
+    try {
+      const token = localStorage.getItem('dealit_token');
+      
+      const response = await fetch(`${API_URL}/ai/synthesize-voice`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          text: textToSpeak,
+          voicePref: voicePref 
+        })
+      });
 
-    let selectedVoice;
-    if (voicePref === 'male') {
-        selectedVoice = inVoices.find(v => v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('rishabh'))
-                     || voices.find(v => v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('david'))
-                     || voices[0];
-    } else {
-        selectedVoice = inVoices.find(v => v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('lekha') || v.name.toLowerCase().includes('aditi'))
-                     || voices.find(v => v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira'))
-                     || voices[0];
+      if (!response.ok) throw new Error('Audio generation failed');
+
+      const blob = await response.blob();
+      const audioUrl = URL.createObjectURL(blob);
+      const audio = new Audio(audioUrl);
+      
+      audioRef.current = audio;
+
+      audio.onended = () => {
+        setVoiceState('idle');
+        URL.revokeObjectURL(audioUrl);
+      };
+
+      audio.onerror = () => {
+        setVoiceState('idle');
+        URL.revokeObjectURL(audioUrl);
+      };
+
+      await audio.play();
+
+    } catch (error) {
+      console.error('ElevenLabs TTS Error:', error);
+      setVoiceState('idle');
     }
-
-    if (selectedVoice) utterance.voice = selectedVoice;
-    
-    utterance.onstart = () => setVoiceState('speaking');
-    utterance.onend = () => setVoiceState('idle');
-    utterance.onerror = () => setVoiceState('idle');
-
-    synth.speak(utterance);
   };
 
   const processVoiceMessage = async (userMessage) => {
@@ -446,7 +468,9 @@ const AiChatPage = ({ user }) => {
       return;
     }
     
-    window.speechSynthesis.cancel();
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
     const recognition = new SpeechRecognition();
     recognition.lang = 'en-IN';
     
@@ -470,7 +494,10 @@ const AiChatPage = ({ user }) => {
   };
 
   const cancelVoiceMode = () => {
-    window.speechSynthesis.cancel();
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
     if (abortControllerRef.current) abortControllerRef.current.abort();
     setVoiceState('idle');
   };
@@ -589,7 +616,9 @@ const AiChatPage = ({ user }) => {
   const handleMinimize = () => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
     localStorage.setItem('dealit_open_floating_ai', 'true');
-    window.speechSynthesis.cancel();
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
     if (window.history.state && window.history.state.idx > 0) {
       navigate(-1); 
     } else {
@@ -599,7 +628,9 @@ const AiChatPage = ({ user }) => {
 
   const handleClose = () => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
-    window.speechSynthesis.cancel();
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
     navigate('/');
   };
 
