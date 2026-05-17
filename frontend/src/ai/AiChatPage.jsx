@@ -3,14 +3,11 @@ import { ArrowLeft, Send, Bot, Sparkles, Menu, Plus, Settings, HelpCircle, Messa
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion'; 
 import axios from 'axios';
-
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import confetti from 'canvas-confetti';
-
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
-
 const TypingLoader = () => (
   <div className="flex space-x-1.5 items-center h-6 px-1">
     <motion.div className="w-2 h-2 bg-purple-400 rounded-full" animate={{ y: [0, -6, 0], opacity: [0.5, 1, 0.5] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} />
@@ -18,7 +15,6 @@ const TypingLoader = () => (
     <motion.div className="w-2 h-2 bg-purple-400 rounded-full" animate={{ y: [0, -6, 0], opacity: [0.5, 1, 0.5] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }} />
   </div>
 );
-
 const SoundWave = () => (
   <div className="flex items-center justify-center gap-1.5 h-12">
     {[...Array(5)].map((_, i) => (
@@ -31,7 +27,6 @@ const SoundWave = () => (
     ))}
   </div>
 );
-
 const BotMessage = ({ content, animated, onComplete }) => {
   const cleanContent = useMemo(() => content.replace(/(\*\*)?\[ANIMATION_[123]\](\*\*)?/g, ''), [content]);
   const [displayedText, setDisplayedText] = useState(animated ? '' : cleanContent);
@@ -39,7 +34,6 @@ const BotMessage = ({ content, animated, onComplete }) => {
   const triggered1 = useRef(false);
   const triggered2 = useRef(false);
   const triggered3 = useRef(false);
-
   useEffect(() => {
     if (content.includes('[ANIMATION_1]') && !triggered1.current) {
       triggered1.current = true;
@@ -69,7 +63,6 @@ const BotMessage = ({ content, animated, onComplete }) => {
       }());
     }
   }, [content]);
-
   useEffect(() => {
     if (!animated) {
       setDisplayedText(cleanContent);
@@ -88,7 +81,6 @@ const BotMessage = ({ content, animated, onComplete }) => {
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cleanContent, animated]);
-
   return (
     <div className="break-words leading-relaxed text-sm">
       <ReactMarkdown
@@ -130,14 +122,12 @@ const BotMessage = ({ content, animated, onComplete }) => {
     </div>
   );
 };
-
 const SUGGESTIONS = [
   "What is my Aura Score?",
   "How do I earn more Credits?",
   "Explain OTP delivery verification",
   "Tell me my account details"
 ];
-
 const AiChatPage = ({ user }) => {
   const navigate = useNavigate();
   const { sessionId: routeSessionId } = useParams();
@@ -151,19 +141,17 @@ const AiChatPage = ({ user }) => {
   const [currentSessionId, setCurrentSessionId] = useState(null);
   
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-
   const [isSmartContextEnabled, setIsSmartContextEnabled] = useState(() => {
     const saved = localStorage.getItem('dealit_ai_context');
     return saved !== null ? JSON.parse(saved) : true;
   });
 
-  const [voiceState, setVoiceState] = useState('idle'); // 'idle' | 'listening' | 'thinking' | 'speaking'
+  // 'idle' | 'listening' | 'thinking' | 'generating_audio' | 'speaking'
+  const [voiceState, setVoiceState] = useState('idle');
   const [voicePref, setVoicePref] = useState(() => localStorage.getItem('dealit_ai_voice_pref') || 'female');
-
   const abortControllerRef = useRef(null);
   const messagesEndRef = useRef(null);
-  const audioRef = useRef(null); // Added for ElevenLabs
-
+  const audioRef = useRef(null);
   useEffect(() => {
     window.speechSynthesis.onvoiceschanged = () => {};
     return () => {
@@ -177,13 +165,11 @@ const AiChatPage = ({ user }) => {
       }
     };
   }, []);
-
   const handleToggleContext = () => {
     const newVal = !isSmartContextEnabled;
     setIsSmartContextEnabled(newVal);
     localStorage.setItem('dealit_ai_context', JSON.stringify(newVal));
   };
-
   const handleToggleVoicePref = () => {
     const newPref = voicePref === 'female' ? 'male' : 'female';
     setVoicePref(newPref);
@@ -193,11 +179,9 @@ const AiChatPage = ({ user }) => {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
-
   useEffect(() => {
     if (voiceState === 'idle') scrollToBottom();
   }, [messages, isLoading, voiceState]);
-
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth > 768) setIsSidebarOpen(true);
@@ -206,7 +190,6 @@ const AiChatPage = ({ user }) => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-
   const fetchSessions = useCallback(async () => {
     try {
       const token = localStorage.getItem('dealit_token');
@@ -221,11 +204,9 @@ const AiChatPage = ({ user }) => {
       console.error('Failed to load chat sessions:', error);
     }
   }, []);
-
   useEffect(() => {
     fetchSessions();
   }, [fetchSessions]);
-
   useEffect(() => {
     const loadHistory = async () => {
       if (!routeSessionId) {
@@ -236,7 +217,6 @@ const AiChatPage = ({ user }) => {
         setIsLoading(false);
         return;
       }
-
       setIsLoading(true);
       try {
         const token = localStorage.getItem('dealit_token');
@@ -264,10 +244,8 @@ const AiChatPage = ({ user }) => {
         setIsLoading(false);
       }
     };
-
     loadHistory();
   }, [routeSessionId, user, navigate]);
-
   const handleNewChat = () => {
     setCurrentSessionId(null);
     setIsLoading(false);
@@ -279,13 +257,10 @@ const AiChatPage = ({ user }) => {
         animated: true 
       }
     ]);
-
     navigate('/ai-chat', { replace: true });
     window.history.pushState(null, '', '/ai-chat');
-
     if (window.innerWidth <= 768) setIsSidebarOpen(false); 
   };
-
   const selectSession = (id) => {
     if (currentSessionId === id || routeSessionId === id) {
       if (window.innerWidth <= 768) setIsSidebarOpen(false);
@@ -294,7 +269,6 @@ const AiChatPage = ({ user }) => {
     navigate(`/ai-chat/${id}`);
     if (window.innerWidth <= 768) setIsSidebarOpen(false);
   };
-
   const deleteSession = async (e, id) => {
     e.stopPropagation();
     try {
@@ -313,7 +287,6 @@ const AiChatPage = ({ user }) => {
       console.error('Error deleting session:', error);
     }
   };
-
   const deleteAllSessions = async () => {
     try {
       const token = localStorage.getItem('dealit_token');
@@ -329,21 +302,18 @@ const AiChatPage = ({ user }) => {
       console.error('Error deleting all sessions:', error);
     }
   };
-
   const markAsAnimated = (id) => {
     setMessages((prev) => prev.map((m) => m.id === id ? { ...m, animated: false } : m));
   };
-
   const speakText = async (text) => {
     if (!text) return;
-
     if (audioRef.current) {
       audioRef.current.pause();
     }
-
     const textToSpeak = text.replace(/[*_#`]/g, '');
-    setVoiceState('speaking');
-
+    
+    // Show "Preparing voice..." while we wait for ElevenLabs to return audio
+    setVoiceState('generating_audio');
     try {
       const token = localStorage.getItem('dealit_token');
       
@@ -358,33 +328,28 @@ const AiChatPage = ({ user }) => {
           voicePref: voicePref 
         })
       });
-
       if (!response.ok) throw new Error('Audio generation failed');
-
       const blob = await response.blob();
       const audioUrl = URL.createObjectURL(blob);
       const audio = new Audio(audioUrl);
       
       audioRef.current = audio;
-
       audio.onended = () => {
         setVoiceState('idle');
         URL.revokeObjectURL(audioUrl);
       };
-
       audio.onerror = () => {
         setVoiceState('idle');
         URL.revokeObjectURL(audioUrl);
       };
-
+      // Audio is ready — switch to "Speaking..." right before play
+      setVoiceState('speaking');
       await audio.play();
-
     } catch (error) {
       console.error('ElevenLabs TTS Error:', error);
       setVoiceState('idle');
     }
   };
-
   const processVoiceMessage = async (userMessage) => {
     if (!userMessage.trim()) {
       setVoiceState('idle');
@@ -393,9 +358,7 @@ const AiChatPage = ({ user }) => {
     
     if (abortControllerRef.current) abortControllerRef.current.abort();
     abortControllerRef.current = new AbortController();
-
     setVoiceState('thinking');
-
     try {
       const token = localStorage.getItem('dealit_token');
       const smartContextStr = localStorage.getItem('dealit_ai_context');
@@ -415,20 +378,15 @@ const AiChatPage = ({ user }) => {
         }),
         signal: abortControllerRef.current.signal
       });
-
       if (!response.ok) throw new Error('Network response was not ok');
-
       const reader = response.body.getReader();
       const decoder = new TextDecoder("utf-8");
       let botReply = "";
-
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
         const chunk = decoder.decode(value, { stream: true });
         const lines = chunk.split('\n');
-
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             const dataStr = line.replace('data: ', '');
@@ -460,7 +418,6 @@ const AiChatPage = ({ user }) => {
       setVoiceState('idle');
     }
   };
-
   const handleMicClick = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -492,7 +449,6 @@ const AiChatPage = ({ user }) => {
     
     recognition.start();
   };
-
   const cancelVoiceMode = () => {
     if (audioRef.current) {
       audioRef.current.pause();
@@ -501,7 +457,6 @@ const AiChatPage = ({ user }) => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
     setVoiceState('idle');
   };
-
   const processMessage = async (userMessage) => {
     if (!userMessage.trim()) return;
     
@@ -509,18 +464,15 @@ const AiChatPage = ({ user }) => {
       abortControllerRef.current.abort();
     }
     abortControllerRef.current = new AbortController();
-
     const newMessages = [...messages, { id: Date.now(), role: 'user', content: userMessage }];
     setMessages(newMessages);
     setInput('');
     setIsLoading(true);
-
     const botMessageId = Date.now() + 1;
     setMessages((prev) => [
       ...prev,
       { id: botMessageId, role: 'bot', content: '', animated: false } 
     ]);
-
     try {
       const token = localStorage.getItem('dealit_token');
       const smartContextStr = localStorage.getItem('dealit_ai_context');
@@ -540,24 +492,18 @@ const AiChatPage = ({ user }) => {
         }),
         signal: abortControllerRef.current.signal
       });
-
       if (!response.ok) {
         throw new Error('Network response was not ok');
       }
-
       const reader = response.body.getReader();
       const decoder = new TextDecoder("utf-8");
       let botReply = "";
-
       setIsLoading(false); 
-
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
         const chunk = decoder.decode(value, { stream: true });
         const lines = chunk.split('\n');
-
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             const dataStr = line.replace('data: ', '');
@@ -581,7 +527,6 @@ const AiChatPage = ({ user }) => {
                 fetchSessions(); 
                 continue;
               }
-
               botReply += parsed.content;
               
               setMessages((prev) =>
@@ -594,7 +539,6 @@ const AiChatPage = ({ user }) => {
           }
         }
       }
-
     } catch (error) {
       if (error.name === 'AbortError') return;
       console.error('AI Chat Error:', error);
@@ -606,13 +550,11 @@ const AiChatPage = ({ user }) => {
       );
     }
   };
-
   const handleSendMessage = (e) => {
     e.preventDefault();
     if (voiceState !== 'idle') cancelVoiceMode();
     processMessage(input);
   };
-
   const handleMinimize = () => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
     localStorage.setItem('dealit_open_floating_ai', 'true');
@@ -625,7 +567,6 @@ const AiChatPage = ({ user }) => {
       navigate('/'); 
     }
   };
-
   const handleClose = () => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
     if (audioRef.current) {
@@ -633,7 +574,6 @@ const AiChatPage = ({ user }) => {
     }
     navigate('/');
   };
-
   return (
     <div className="fixed inset-0 flex bg-gray-900 z-50 overflow-hidden overscroll-none">
       
@@ -643,7 +583,6 @@ const AiChatPage = ({ user }) => {
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
-
       <div className={`fixed md:relative z-50 flex flex-col h-full bg-gray-950 border-r border-gray-800 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-72 translate-x-0' : 'w-72 -translate-x-full md:w-0 md:hidden absolute'}`}>
         
         <div className="p-3 flex items-center gap-2">
@@ -656,7 +595,6 @@ const AiChatPage = ({ user }) => {
             </div>
             <span className="font-semibold text-sm">New Chat</span>
           </button>
-
           <button 
             onClick={() => setIsSidebarOpen(false)}
             className="md:hidden p-3 bg-gray-800 hover:bg-gray-700 rounded-xl text-gray-400 hover:text-white transition-colors border border-gray-700/50"
@@ -664,7 +602,6 @@ const AiChatPage = ({ user }) => {
             <X className="w-5 h-5" />
           </button>
         </div>
-
         <div className="flex-1 overflow-y-auto px-3 py-2 scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent">
           <div className="text-xs font-bold tracking-wider text-gray-500 mb-3 px-2 uppercase">Recent Chats</div>
           
@@ -683,12 +620,12 @@ const AiChatPage = ({ user }) => {
                   <MessageSquare className="w-4 h-4 flex-shrink-0" />
                   <span className="truncate text-sm font-medium text-left">{session.title || 'Chat Session'}</span>
                 </div>
-              <button 
-  onClick={(e) => deleteSession(e, session._id)}
-  className="p-1 text-gray-500 hover:bg-red-500/20 hover:text-red-400 rounded transition-all"
->
-  <Trash2 className="w-3.5 h-3.5" />
-</button>
+                <button 
+                  onClick={(e) => deleteSession(e, session._id)}
+                  className="p-1 text-gray-500 hover:bg-red-500/20 hover:text-red-400 rounded transition-all"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
               </div>
             ))}
             {sessions.length === 0 && (
@@ -696,7 +633,6 @@ const AiChatPage = ({ user }) => {
             )}
           </div>
         </div>
-
         <div className="p-3 border-t border-gray-800/80 space-y-1 bg-gray-950 flex-shrink-0">
           <button 
             onClick={() => setIsSettingsOpen(!isSettingsOpen)}
@@ -710,7 +646,6 @@ const AiChatPage = ({ user }) => {
               <ChevronDown className="w-4 h-4" />
             </motion.div>
           </button>
-
           <AnimatePresence>
             {isSettingsOpen && (
               <motion.div
@@ -735,7 +670,6 @@ const AiChatPage = ({ user }) => {
                       <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
                     </label>
                   </div>
-
                   <div className="flex items-center justify-between pt-3 border-t border-gray-800/80">
                     <div>
                       <p className="text-sm font-medium text-white">AI Voice</p>
@@ -748,7 +682,6 @@ const AiChatPage = ({ user }) => {
                       <User className="w-4 h-4 text-purple-400" />
                     </button>
                   </div>
-
                   <div className="pt-3 border-t border-gray-800/80">
                     <button 
                       onClick={() => {
@@ -766,14 +699,12 @@ const AiChatPage = ({ user }) => {
               </motion.div>
             )}
           </AnimatePresence>
-
           <button onClick={() => navigate('/help-support')} className="flex items-center gap-3 w-full p-2.5 rounded-lg hover:bg-gray-800/50 text-gray-400 hover:text-gray-200 transition-colors">
             <HelpCircle className="w-5 h-5" />
             <span className="text-sm font-medium">Help & FAQ</span>
           </button>
         </div>
       </div>
-
       <div className="flex-1 flex flex-col min-w-0 h-full relative bg-gray-900">
         
         <div className="bg-gray-800/80 backdrop-blur-md border-b border-purple-500/20 p-4 flex items-center justify-between shadow-sm shadow-purple-900/10 z-10 shrink-0">
@@ -807,7 +738,6 @@ const AiChatPage = ({ user }) => {
             >
               <Minimize2 className="w-5 h-5" />
             </button>
-
             <button 
               onClick={handleClose}
               className="p-2 bg-gray-900 hover:bg-red-500/20 hover:text-red-400 rounded-lg text-gray-300 transition-colors"
@@ -817,7 +747,6 @@ const AiChatPage = ({ user }) => {
             </button>
           </div>
         </div>
-
         <div className="flex-1 overflow-y-auto p-4 space-y-6 container mx-auto max-w-3xl scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent">
           {messages.map((msg) => (
             <motion.div 
@@ -850,7 +779,6 @@ const AiChatPage = ({ user }) => {
               </div>
             </motion.div>
           ))}
-
           {isLoading && voiceState === 'idle' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex justify-start">
               <div className="bg-gray-800 border border-gray-700 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
@@ -870,16 +798,27 @@ const AiChatPage = ({ user }) => {
               >
                 <div className="bg-gradient-to-b from-gray-800 to-gray-900 border border-purple-500/30 rounded-[2rem] p-6 shadow-lg flex flex-col items-center w-[90%] max-w-sm text-center relative overflow-hidden">
                   <div className="relative flex items-center justify-center w-16 h-16 mb-4">
-                    {voiceState === 'listening' && <div className="absolute inset-0 rounded-full bg-red-500/20 animate-ping" />}
-                    {voiceState === 'speaking' && <div className="absolute inset-0 rounded-full bg-purple-500/20 animate-pulse" />}
+                    {voiceState === 'listening' && (
+                      <div className="absolute inset-0 rounded-full bg-red-500/20 animate-ping" />
+                    )}
+                    {voiceState === 'speaking' && (
+                      <div className="absolute inset-0 rounded-full bg-purple-500/20 animate-pulse" />
+                    )}
+                    {voiceState === 'generating_audio' && (
+                      <div className="absolute inset-0 rounded-full bg-blue-500/20 animate-pulse" />
+                    )}
                     <div className="z-10 w-12 h-12 bg-gray-950 rounded-full flex items-center justify-center shadow-inner border border-gray-700">
-                      {voiceState === 'listening' ? <Mic className="w-5 h-5 text-red-400 animate-pulse" /> : <Bot className="w-5 h-5 text-purple-400" />}
+                      {voiceState === 'listening'
+                        ? <Mic className="w-5 h-5 text-red-400 animate-pulse" />
+                        : <Bot className="w-5 h-5 text-purple-400" />
+                      }
                     </div>
                   </div>
 
                   <h4 className="text-sm font-bold text-white mb-2">
                     {voiceState === 'listening' && 'Listening to you...'}
                     {voiceState === 'thinking' && 'Analyzing...'}
+                    {voiceState === 'generating_audio' && 'Preparing voice...'}
                     {voiceState === 'speaking' && 'Speaking...'}
                   </h4>
                   
@@ -891,7 +830,7 @@ const AiChatPage = ({ user }) => {
                         <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
                       </div>
                     )}
-                    {voiceState === 'thinking' && <TypingLoader />}
+                    {(voiceState === 'thinking' || voiceState === 'generating_audio') && <TypingLoader />}
                     {voiceState === 'speaking' && <SoundWave />}
                   </div>
                   
@@ -902,10 +841,8 @@ const AiChatPage = ({ user }) => {
               </motion.div>
             )}
           </AnimatePresence>
-
           <div ref={messagesEndRef} />
         </div>
-
         <div className="shrink-0 bg-gray-900 pb-safe">
           {messages.length <= 1 && !isLoading && voiceState === 'idle' && (
             <div className="container mx-auto max-w-3xl px-4 pb-3 flex flex-wrap gap-2 justify-center">
@@ -921,7 +858,6 @@ const AiChatPage = ({ user }) => {
               ))}
             </div>
           )}
-
           <div className="bg-gray-800/50 backdrop-blur-sm border-t border-purple-500/20 p-4 container mx-auto max-w-3xl">
             <form onSubmit={handleSendMessage} className="relative flex items-center">
               <input
@@ -939,7 +875,6 @@ const AiChatPage = ({ user }) => {
               >
                 <Mic className="w-5 h-5" />
               </button>
-
               <button
                 type="submit"
                 disabled={isLoading || !input.trim()}
@@ -950,11 +885,8 @@ const AiChatPage = ({ user }) => {
             </form>
           </div>
         </div>
-
       </div>
-
     </div>
   );
 };
-
 export default AiChatPage;

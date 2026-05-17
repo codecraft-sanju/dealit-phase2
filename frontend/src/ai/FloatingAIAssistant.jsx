@@ -6,10 +6,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import confetti from 'canvas-confetti';
-
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
-
 const TypingLoader = () => (
   <div className="flex space-x-1.5 items-center h-5 px-1">
     <motion.div className="w-1.5 h-1.5 bg-purple-400 rounded-full" animate={{ y: [0, -5, 0], opacity: [0.5, 1, 0.5] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} />
@@ -17,7 +15,6 @@ const TypingLoader = () => (
     <motion.div className="w-1.5 h-1.5 bg-purple-400 rounded-full" animate={{ y: [0, -5, 0], opacity: [0.5, 1, 0.5] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }} />
   </div>
 );
-
 const SoundWave = () => (
   <div className="flex items-center justify-center gap-1.5 h-12">
     {[...Array(5)].map((_, i) => (
@@ -30,7 +27,6 @@ const SoundWave = () => (
     ))}
   </div>
 );
-
 const BotMessage = ({ content, animated, onComplete }) => {
   const cleanContent = useMemo(() => content.replace(/(\*\*)?\[ANIMATION_[123]\](\*\*)?/g, ''), [content]);
   const [displayedText, setDisplayedText] = useState(animated ? '' : cleanContent);
@@ -38,7 +34,6 @@ const BotMessage = ({ content, animated, onComplete }) => {
   const triggered1 = useRef(false);
   const triggered2 = useRef(false);
   const triggered3 = useRef(false);
-
   useEffect(() => {
     if (content.includes('[ANIMATION_1]') && !triggered1.current) {
       triggered1.current = true;
@@ -68,7 +63,6 @@ const BotMessage = ({ content, animated, onComplete }) => {
       }());
     }
   }, [content]);
-
   useEffect(() => {
     if (!animated) {
       setDisplayedText(cleanContent);
@@ -87,7 +81,6 @@ const BotMessage = ({ content, animated, onComplete }) => {
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cleanContent, animated]);
-
   return (
     <div className="break-words leading-relaxed text-sm">
       <ReactMarkdown
@@ -129,14 +122,12 @@ const BotMessage = ({ content, animated, onComplete }) => {
     </div>
   );
 };
-
 const SUGGESTIONS = [
   "What is Aura Score?",
   "How do I earn Credits?",
   "Delivery rules",
   "My account stats"
 ];
-
 const FloatingAIAssistant = ({ user }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [hasFetchedHistory, setHasFetchedHistory] = useState(false);
@@ -150,13 +141,13 @@ const FloatingAIAssistant = ({ user }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState(null);
 
-  const [voiceState, setVoiceState] = useState('idle'); // 'idle' | 'listening' | 'thinking' | 'speaking'
+  // 'idle' | 'listening' | 'thinking' | 'generating_audio' | 'speaking'
+  const [voiceState, setVoiceState] = useState('idle');
   
   const messagesEndRef = useRef(null);
   const abortControllerRef = useRef(null);
-  const audioRef = useRef(null); // Added for ElevenLabs
+  const audioRef = useRef(null);
   const [buttonState, setButtonState] = useState('bot');
-
   useEffect(() => {
     window.speechSynthesis.onvoiceschanged = () => {};
     return () => {
@@ -170,7 +161,6 @@ const FloatingAIAssistant = ({ user }) => {
       }
     };
   }, []);
-
   useEffect(() => {
     const checkOpen = () => {
       if (localStorage.getItem('dealit_open_floating_ai') === 'true') {
@@ -181,15 +171,12 @@ const FloatingAIAssistant = ({ user }) => {
     };
     checkOpen();
   }, [location.pathname]);
-
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
-
   useEffect(() => {
     if (isOpen) scrollToBottom();
   }, [messages, isOpen, isLoading, voiceState]);
-
   useEffect(() => {
     if (isOpen && !hasFetchedHistory) {
       const loadHistory = async () => {
@@ -221,7 +208,6 @@ const FloatingAIAssistant = ({ user }) => {
       loadHistory();
     }
   }, [isOpen, hasFetchedHistory]);
-
   useEffect(() => {
     if (isOpen) return;
     const interval = setInterval(() => {
@@ -229,22 +215,19 @@ const FloatingAIAssistant = ({ user }) => {
     }, 2500);
     return () => clearInterval(interval);
   }, [isOpen]);
-
   const markAsAnimated = (id) => {
     setMessages((prev) => prev.map((m) => m.id === id ? { ...m, animated: false } : m));
   };
-
   const speakText = async (text) => {
     if (!text) return;
-
     if (audioRef.current) {
       audioRef.current.pause();
     }
-
     const voicePref = localStorage.getItem('dealit_ai_voice_pref') || 'female';
     const textToSpeak = text.replace(/[*_#`]/g, '');
-    setVoiceState('speaking');
 
+    // Show "Preparing voice..." while we wait for ElevenLabs to return audio
+    setVoiceState('generating_audio');
     try {
       const token = localStorage.getItem('dealit_token');
       
@@ -259,33 +242,28 @@ const FloatingAIAssistant = ({ user }) => {
           voicePref: voicePref 
         })
       });
-
       if (!response.ok) throw new Error('Audio generation failed');
-
       const blob = await response.blob();
       const audioUrl = URL.createObjectURL(blob);
       const audio = new Audio(audioUrl);
       
       audioRef.current = audio;
-
       audio.onended = () => {
         setVoiceState('idle');
         URL.revokeObjectURL(audioUrl);
       };
-
       audio.onerror = () => {
         setVoiceState('idle');
         URL.revokeObjectURL(audioUrl);
       };
-
+      // Audio is ready — switch to "Speaking..." right before play
+      setVoiceState('speaking');
       await audio.play();
-
     } catch (error) {
       console.error('ElevenLabs TTS Error:', error);
       setVoiceState('idle');
     }
   };
-
   const processVoiceMessage = async (userMessage) => {
     if (!userMessage.trim()) {
       setVoiceState('idle');
@@ -294,9 +272,7 @@ const FloatingAIAssistant = ({ user }) => {
     
     if (abortControllerRef.current) abortControllerRef.current.abort();
     abortControllerRef.current = new AbortController();
-
     setVoiceState('thinking');
-
     try {
       const token = localStorage.getItem('dealit_token');
       const smartContextStr = localStorage.getItem('dealit_ai_context');
@@ -316,20 +292,15 @@ const FloatingAIAssistant = ({ user }) => {
         }),
         signal: abortControllerRef.current.signal
       });
-
       if (!response.ok) throw new Error('Network response was not ok');
-
       const reader = response.body.getReader();
       const decoder = new TextDecoder("utf-8");
       let botReply = "";
-
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
         const chunk = decoder.decode(value, { stream: true });
         const lines = chunk.split('\n');
-
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             const dataStr = line.replace('data: ', '');
@@ -361,7 +332,6 @@ const FloatingAIAssistant = ({ user }) => {
       setVoiceState('idle');
     }
   };
-
   const handleMicClick = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -393,7 +363,6 @@ const FloatingAIAssistant = ({ user }) => {
     
     recognition.start();
   };
-
   const cancelVoiceMode = () => {
     if (audioRef.current) {
       audioRef.current.pause();
@@ -402,7 +371,6 @@ const FloatingAIAssistant = ({ user }) => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
     setVoiceState('idle');
   };
-
   const processMessage = async (userMessage) => {
     if (!userMessage.trim()) return;
     
@@ -410,18 +378,15 @@ const FloatingAIAssistant = ({ user }) => {
       abortControllerRef.current.abort();
     }
     abortControllerRef.current = new AbortController();
-
     const newMessages = [...messages, { id: Date.now(), role: 'user', content: userMessage }];
     setMessages(newMessages);
     setInput('');
     setIsLoading(true);
-
     const botMessageId = Date.now() + 1;
     setMessages((prev) => [
       ...prev,
       { id: botMessageId, role: 'bot', content: '', animated: false }
     ]);
-
     try {
       const token = localStorage.getItem('dealit_token');
       const smartContextStr = localStorage.getItem('dealit_ai_context');
@@ -441,24 +406,18 @@ const FloatingAIAssistant = ({ user }) => {
         }),
         signal: abortControllerRef.current.signal
       });
-
       if (!response.ok) {
         throw new Error('Network response was not ok');
       }
-
       const reader = response.body.getReader();
       const decoder = new TextDecoder("utf-8");
       let botReply = "";
-
       setIsLoading(false); 
-
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
         const chunk = decoder.decode(value, { stream: true });
         const lines = chunk.split('\n');
-
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             const dataStr = line.replace('data: ', '');
@@ -490,7 +449,6 @@ const FloatingAIAssistant = ({ user }) => {
           }
         }
       }
-
     } catch (error) {
       if (error.name === 'AbortError') return;
       console.error('AI Chat Error:', error);
@@ -502,13 +460,11 @@ const FloatingAIAssistant = ({ user }) => {
       );
     }
   };
-
   const handleSendMessage = (e) => {
     e.preventDefault();
     if (voiceState !== 'idle') cancelVoiceMode();
     processMessage(input);
   };
-
   const handleClose = () => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
     if (audioRef.current) {
@@ -526,7 +482,6 @@ const FloatingAIAssistant = ({ user }) => {
       navigate('/ai-chat');
     }
   };
-
   return (
     <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[60]">
       <AnimatePresence>
@@ -568,7 +523,6 @@ const FloatingAIAssistant = ({ user }) => {
                 </button>
               </div>
             </div>
-
             <div className="flex-1 overflow-y-auto p-4 space-y-5 scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent">
               {messages.map((msg) => (
                 <motion.div 
@@ -601,7 +555,6 @@ const FloatingAIAssistant = ({ user }) => {
                   </div>
                 </motion.div>
               ))}
-
               {isLoading && voiceState === 'idle' && (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex justify-start">
                   <div className="bg-gray-800 border border-gray-700 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
@@ -621,16 +574,27 @@ const FloatingAIAssistant = ({ user }) => {
                   >
                     <div className="bg-gradient-to-b from-gray-800 to-gray-900 border border-purple-500/30 rounded-[2rem] p-6 shadow-lg flex flex-col items-center w-[90%] text-center relative overflow-hidden">
                       <div className="relative flex items-center justify-center w-16 h-16 mb-4">
-                        {voiceState === 'listening' && <div className="absolute inset-0 rounded-full bg-red-500/20 animate-ping" />}
-                        {voiceState === 'speaking' && <div className="absolute inset-0 rounded-full bg-purple-500/20 animate-pulse" />}
+                        {voiceState === 'listening' && (
+                          <div className="absolute inset-0 rounded-full bg-red-500/20 animate-ping" />
+                        )}
+                        {voiceState === 'speaking' && (
+                          <div className="absolute inset-0 rounded-full bg-purple-500/20 animate-pulse" />
+                        )}
+                        {voiceState === 'generating_audio' && (
+                          <div className="absolute inset-0 rounded-full bg-blue-500/20 animate-pulse" />
+                        )}
                         <div className="z-10 w-12 h-12 bg-gray-950 rounded-full flex items-center justify-center shadow-inner border border-gray-700">
-                          {voiceState === 'listening' ? <Mic className="w-5 h-5 text-red-400 animate-pulse" /> : <Bot className="w-5 h-5 text-purple-400" />}
+                          {voiceState === 'listening'
+                            ? <Mic className="w-5 h-5 text-red-400 animate-pulse" />
+                            : <Bot className="w-5 h-5 text-purple-400" />
+                          }
                         </div>
                       </div>
 
                       <h4 className="text-sm font-bold text-white mb-2">
                         {voiceState === 'listening' && 'Listening to you...'}
                         {voiceState === 'thinking' && 'Analyzing...'}
+                        {voiceState === 'generating_audio' && 'Preparing voice...'}
                         {voiceState === 'speaking' && 'Speaking...'}
                       </h4>
                       
@@ -642,7 +606,7 @@ const FloatingAIAssistant = ({ user }) => {
                             <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
                           </div>
                         )}
-                        {voiceState === 'thinking' && <TypingLoader />}
+                        {(voiceState === 'thinking' || voiceState === 'generating_audio') && <TypingLoader />}
                         {voiceState === 'speaking' && <SoundWave />}
                       </div>
                       
@@ -653,10 +617,8 @@ const FloatingAIAssistant = ({ user }) => {
                   </motion.div>
                 )}
               </AnimatePresence>
-
               <div ref={messagesEndRef} />
             </div>
-
             {messages.length <= 1 && !isLoading && voiceState === 'idle' && (
               <div className="px-3 pb-2 flex gap-2 overflow-x-auto scrollbar-hide shrink-0">
                 {SUGGESTIONS.map((text, i) => (
@@ -673,7 +635,6 @@ const FloatingAIAssistant = ({ user }) => {
                 ))}
               </div>
             )}
-
             <form onSubmit={handleSendMessage} className="p-3 bg-gray-800/80 backdrop-blur-sm border-t border-purple-500/20 shrink-0 z-10">
               <div className="relative flex items-center">
                 <input
@@ -691,7 +652,6 @@ const FloatingAIAssistant = ({ user }) => {
                 >
                   <Mic className="w-4 h-4" />
                 </button>
-
                 <button
                   type="submit"
                   disabled={isLoading || !input.trim()}
@@ -704,7 +664,6 @@ const FloatingAIAssistant = ({ user }) => {
           </motion.div>
         )}
       </AnimatePresence>
-
       <motion.button
         animate={isOpen ? { y: 0 } : { y: [0, -6, 0] }}
         transition={{ 
@@ -734,5 +693,4 @@ const FloatingAIAssistant = ({ user }) => {
     </div>
   );
 };
-
 export default FloatingAIAssistant;
