@@ -81,30 +81,20 @@ const markAllAsRead = async (req, res) => {
   }
 };
 
-//  Logic to handle both expo and web subscriptions
 const subscribePush = async (req, res) => {
   try {
-    const { type, token, endpoint, keys, expirationTime } = req.body;
+    const { endpoint, keys, expirationTime } = req.body;
     
-    if (type === 'expo') {
-      await PushSubscription.findOneAndUpdate(
-        { expoToken: token, user: req.user._id },
-        { type: 'expo', expoToken: token, user: req.user._id },
-        { upsert: true, new: true }
-      );
-    } else {
-      await PushSubscription.findOneAndUpdate(
-        { endpoint: endpoint },
-        { 
-          type: 'web',
-          user: req.user._id,
-          endpoint: endpoint,
-          keys: keys,
-          expirationTime: expirationTime
-        },
-        { upsert: true, new: true }
-      );
-    }
+    await PushSubscription.findOneAndUpdate(
+      { endpoint: endpoint },
+      { 
+        user: req.user._id,
+        endpoint: endpoint,
+        keys: keys,
+        expirationTime: expirationTime
+      },
+      { upsert: true, new: true }
+    );
 
     res.status(201).json({ success: true, message: 'Subscribed to push notifications' });
   } catch (error) {
@@ -113,16 +103,11 @@ const subscribePush = async (req, res) => {
   }
 };
 
-// Logic to handle unsubscribe for both expo and web
 const unsubscribePush = async (req, res) => {
   try {
-    const { type, token, endpoint } = req.body;
+    const { endpoint } = req.body;
     
-    if (type === 'expo') {
-      await PushSubscription.findOneAndDelete({ expoToken: token, user: req.user._id });
-    } else {
-      await PushSubscription.findOneAndDelete({ endpoint, user: req.user._id });
-    }
+    await PushSubscription.findOneAndDelete({ endpoint, user: req.user._id });
     
     res.status(200).json({ success: true, message: 'Unsubscribed from push notifications' });
   } catch (error) {
@@ -130,7 +115,6 @@ const unsubscribePush = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error deleting subscription' });
   }
 };
-
 
 const syncUnreadCount = async (req, res) => {
   try {

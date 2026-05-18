@@ -121,7 +121,7 @@ const NotificationsPage = () => {
         const subscription = await registration.pushManager.getSubscription();
         if (subscription) {
           await subscription.unsubscribe();
-          await axios.post(`${API_URL}/notifications/unsubscribe`, { type: 'web', endpoint: subscription.endpoint }, { withCredentials: true });
+          await axios.post(`${API_URL}/notifications/unsubscribe`, { endpoint: subscription.endpoint }, { withCredentials: true });
         }
         showToast('Push Alerts Disabled', 'off');
       } else {
@@ -132,7 +132,7 @@ const NotificationsPage = () => {
             applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
           });
           const subData = subscription.toJSON();
-          await axios.post(`${API_URL}/notifications/subscribe`, { type: 'web', ...subData }, { withCredentials: true });
+          await axios.post(`${API_URL}/notifications/subscribe`, { ...subData }, { withCredentials: true });
           showToast('Push Alerts Enabled', 'on');
         } else {
           showToast('Permission Denied', 'error');
