@@ -9,7 +9,7 @@ const Order = require('../models/Order');
 const BarterRequest = require('../models/BarterRequest');
 const Transaction = require('../models/Transaction');
 const AIChat = require('../models/AIChat');
-
+const AITrainingLog = require('../models/AITrainingLog');
 const prompts = require('../config/prompts');
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
@@ -418,6 +418,18 @@ const processChat = async (req, res) => {
       targetChatDoc.messages.push({ role: 'user', content: message });
       targetChatDoc.messages.push({ role: 'assistant', content: cleanReply });
       await targetChatDoc.save();
+
+      try {
+        await AITrainingLog.create({
+          user: userId,
+          system_prompt: systemPrompt,
+          user_message: message,
+          ai_response: cleanReply
+        });
+        console.log("[AI Data] Q&A pair silently saved for training!");
+      } catch (logError) {
+        console.error("Silent data collection failed:", logError);
+      }
     }
     
     if (!isClientDisconnected) {
