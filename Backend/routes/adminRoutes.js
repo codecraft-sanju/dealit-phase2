@@ -17,7 +17,10 @@ const {
   getDashboardStats,
   resolveFailedRefund,
   retryFailedRefund,
-  getAILogs 
+  getAILogs,
+  getAISettings,     
+  updateAISettings,   
+  getAILogStats       
 } = require('../controllers/adminController');
 
 const {
@@ -74,6 +77,13 @@ router.route('/orders/:id')
 router.put('/orders/:orderId/resolve-refund', protect, admin, resolveFailedRefund);
 router.put('/orders/:orderId/retry-refund', protect, admin, retryFailedRefund);
 router.get('/dashboard-stats', protect, admin, getDashboardStats);
+
 router.get('/ai-logs', protect, admin, getAILogs);
+
+router.route('/ai-settings')
+  .get(protect, admin, getAISettings)
+  .put(protect, admin, updateAISettings);
+
+router.get('/ai-log-stats', protect, admin, getAILogStats);
 
 module.exports = router;

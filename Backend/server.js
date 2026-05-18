@@ -19,6 +19,7 @@ const notificationRoutes = require('./routes/notificationRoutes');
 require('./workers/notificationWorker');
 const { verifyShiprocketConnection } = require('./utils/shiprocket');
 const { verifyRazorpayConnection } = require('./controllers/paymentController');
+const { startAITrainingCron } = require('./services/aiTrainingCron');
 
 const cron = require('node-cron');
 const { autoCancelOverdueOrders } = require('./controllers/orderController');
@@ -92,7 +93,10 @@ app.listen(PORT, async () => {
   verifyRazorpayConnection();
   await verifyShiprocketConnection();
 
-  //Added cron job to run autoCancelOverdueOrders every hour
+ 
+  startAITrainingCron();
+
+ 
   cron.schedule('0 * * * *', async () => {
     console.log('Running auto-cancel overdue orders cron job...');
     await autoCancelOverdueOrders();
@@ -103,7 +107,7 @@ app.listen(PORT, async () => {
     
   });
 
-  //  Daily cron job to sync actual notification counts for all users (Runs at midnight)
+  
   cron.schedule('0 0 * * *', async () => {
     console.log('Running daily notification count sync job...');
     try {

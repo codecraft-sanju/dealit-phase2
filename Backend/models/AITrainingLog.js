@@ -18,6 +18,15 @@ const aiTrainingLogSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  status: {
+    type: String,
+    enum: ['pending', 'cleaned', 'rejected', 'trained'],
+    default: 'pending'
+  },
+  rejection_reason: {
+    type: String,
+    default: ''
+  },
   created_at: {
     type: Date,
     default: Date.now

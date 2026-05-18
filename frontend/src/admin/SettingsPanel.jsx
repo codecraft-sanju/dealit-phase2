@@ -1,9 +1,10 @@
 import React from 'react';
-import { Coins, ToggleRight, ToggleLeft, Package, List, Gift, Users, Target, Truck, Zap, IndianRupee, Clock, AlertTriangle, Settings, Image as ImageIcon } from 'lucide-react';
+import { Coins, ToggleRight, ToggleLeft, Package, List, Gift, Users, Target, Truck, Zap, IndianRupee, Clock, AlertTriangle, Settings, Image as ImageIcon, Bot, Cpu, Database } from 'lucide-react';
 
-const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, handleSaveSettings, updating }) => {
+
+const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, aiSettings, setAiSettings, handleSaveSettings, updating }) => {
   
-  // Dynamic Title setup based on active sub-tab
+
   const getTabTitle = () => {
     switch(activeTab) {
       case 'settings-credits': 
@@ -15,6 +16,9 @@ const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, handleSav
         return { title: 'Shipping Rules', sub: 'Set flat rates or dynamic APIs' };
       case 'settings-orders': 
         return { title: 'Order & Aura', sub: 'Manage automated limits and penalties' };
+     
+      case 'settings-ai': 
+        return { title: 'AI Training Controls', sub: 'Manage models and automated learning batches' };
       default: 
         return { title: 'Platform Configurations', sub: 'Manage Rules, Limits & Rewards' };
     }
@@ -24,14 +28,18 @@ const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, handleSav
 
   return (
     <div className="flex-1 p-4 md:p-6 lg:p-10 overflow-y-auto admin-scroll relative">
-      {/* Background Ambience Inside Settings */}
+
       <div className="absolute top-[-10%] right-[-5%] w-64 h-64 md:w-96 md:h-96 bg-blue-600/10 rounded-full blur-[80px] md:blur-[100px] pointer-events-none"></div>
 
       <div className="max-w-4xl mx-auto bg-white/[0.02] rounded-3xl md:rounded-[2rem] border border-white/10 p-5 md:p-8 lg:p-10 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] backdrop-blur-xl relative overflow-hidden">
         
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8 md:mb-10 border-b border-white/10 pb-5 md:pb-6">
-          <div className="p-3 md:p-3.5 bg-yellow-500/10 rounded-xl md:rounded-2xl border border-yellow-500/20 shadow-[0_0_20px_rgba(234,179,8,0.15)] inline-flex w-fit shrink-0">
-            <Settings className="w-6 h-6 md:w-8 md:h-8 text-yellow-400" />
+          <div className={`p-3 md:p-3.5 rounded-xl md:rounded-2xl border inline-flex w-fit shrink-0 ${activeTab === 'settings-ai' ? 'bg-cyan-500/10 border-cyan-500/20 shadow-[0_0_20px_rgba(34,211,238,0.15)]' : 'bg-yellow-500/10 border-yellow-500/20 shadow-[0_0_20px_rgba(234,179,8,0.15)]'}`}>
+            {activeTab === 'settings-ai' ? (
+              <Bot className="w-6 h-6 md:w-8 md:h-8 text-cyan-400" />
+            ) : (
+              <Settings className="w-6 h-6 md:w-8 md:h-8 text-yellow-400" />
+            )}
           </div>
           <div>
             <h2 className="text-xl md:text-2xl lg:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 tracking-tight leading-tight">
@@ -143,7 +151,6 @@ const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, handleSav
 
               <hr className="border-white/5" />
 
-              {/* NAYA CHANGE: Smart Discount Simulation Toggle */}
               <div className="space-y-5 md:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-[50ms]">
                 <div className="bg-white/[0.02] p-4 md:p-6 rounded-2xl border border-white/5 flex items-center justify-between cursor-pointer hover:bg-white/[0.04] transition-colors gap-3 md:gap-4" onClick={() => setCreditSettings({ ...creditSettings, isDiscountSimulationEnabled: !creditSettings.isDiscountSimulationEnabled })}>
                   <div className="flex-1">
@@ -448,7 +455,86 @@ const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, handleSav
             </div>
           )}
 
-          {/* Save Button (Always visible at the bottom) */}
+          {/* ===================== TAB 5: AI TRAINING SETTINGS ===================== */}
+          {activeTab === 'settings-ai' && (
+            <div className="space-y-5 md:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              
+              <div className="bg-white/[0.02] p-4 md:p-6 rounded-2xl border border-white/5 flex items-center justify-between cursor-pointer hover:bg-white/[0.04] transition-colors gap-3 md:gap-4" onClick={() => setAiSettings({ ...aiSettings, isAutoTrainingEnabled: !aiSettings.isAutoTrainingEnabled })}>
+                <div className="flex-1">
+                  <p className="font-bold text-white text-base md:text-lg tracking-tight">Enable Auto-Training Pipeline</p>
+                  <p className="text-[10px] md:text-xs text-gray-500 mt-0.5 md:mt-1 max-w-md leading-relaxed">If turned on, background cron jobs will clean data logs and automatically trigger model fine-tuning when the batch size target is reached.</p>
+                </div>
+                {aiSettings?.isAutoTrainingEnabled ? (
+                  <ToggleRight className="w-10 h-10 md:w-14 md:h-14 text-cyan-400 drop-shadow-[0_0_10px_rgba(34,211,238,0.4)] shrink-0" />
+                ) : (
+                  <ToggleLeft className="w-10 h-10 md:w-14 md:h-14 text-gray-600 shrink-0" />
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
+                
+                {/* Active Model Input */}
+                <div className="space-y-2 md:space-y-2.5">
+                  <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest">Active Model ID</label>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
+                      <Cpu className="w-4 h-4 text-cyan-400 group-focus-within:text-cyan-300 transition-colors" />
+                    </div>
+                    <input 
+                      type="text" 
+                      required 
+                      value={aiSettings?.activeModelId || ''} 
+                      onChange={(e) => setAiSettings({...aiSettings, activeModelId: e.target.value})} 
+                      className="w-full bg-black/20 border border-white/10 rounded-xl pl-9 md:pl-11 pr-3 md:pr-4 py-3 md:py-3.5 text-white text-xs md:text-sm font-bold focus:outline-none focus:border-cyan-500/50 focus:bg-black/40 transition-all shadow-inner placeholder:text-gray-600" 
+                      placeholder="e.g. llama-3.3-70b-versatile"
+                    />
+                  </div>
+                  <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider">Primary AI model used for user chat.</p>
+                </div>
+
+                {/* Fallback Model Input */}
+                <div className="space-y-2 md:space-y-2.5">
+                  <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest">Fallback Model ID</label>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
+                      <Bot className="w-4 h-4 text-purple-400 group-focus-within:text-purple-300 transition-colors" />
+                    </div>
+                    <input 
+                      type="text" 
+                      required 
+                      value={aiSettings?.fallbackModelId || ''} 
+                      onChange={(e) => setAiSettings({...aiSettings, fallbackModelId: e.target.value})} 
+                      className="w-full bg-black/20 border border-white/10 rounded-xl pl-9 md:pl-11 pr-3 md:pr-4 py-3 md:py-3.5 text-white text-xs md:text-sm font-bold focus:outline-none focus:border-purple-500/50 focus:bg-black/40 transition-all shadow-inner placeholder:text-gray-600" 
+                      placeholder="e.g. llama-3.1-8b-instant"
+                    />
+                  </div>
+                  <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider">Used if the primary active model fails.</p>
+                </div>
+
+                {/* Batch Size Input */}
+                <div className="space-y-2 md:space-y-2.5">
+                  <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest">Training Batch Size</label>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
+                      <Database className="w-4 h-4 text-emerald-400 group-focus-within:text-emerald-300 transition-colors" />
+                    </div>
+                    <input 
+                      type="number" 
+                      required 
+                      min="10" 
+                      value={aiSettings?.batchSize !== undefined ? aiSettings.batchSize : 500} 
+                      onChange={(e) => setAiSettings({...aiSettings, batchSize: Number(e.target.value)})} 
+                      className="w-full bg-black/20 border border-white/10 rounded-xl pl-9 md:pl-11 pr-3 md:pr-4 py-3 md:py-3.5 text-white text-xs md:text-sm font-bold focus:outline-none focus:border-emerald-500/50 focus:bg-black/40 transition-all shadow-inner" 
+                    />
+                  </div>
+                  <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider">Number of cleaned logs needed to train.</p>
+                </div>
+
+              </div>
+            </div>
+          )}
+
+        
           <div className="pt-6 md:pt-8 border-t border-white/5 flex justify-end mt-auto">
              <button type="submit" disabled={updating} className={`w-full sm:w-auto px-6 md:px-10 py-3.5 md:py-4 rounded-xl font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 text-[10px] md:text-xs ${updating ? 'bg-purple-600/30 text-white/50 cursor-not-allowed border border-purple-500/20' : 'bg-gradient-to-r from-[#A388E1] to-purple-600 hover:from-purple-500 hover:to-indigo-600 text-white shadow-[0_0_20px_rgba(163,136,225,0.4)] border border-[#A388E1]/50 hover:scale-105 active:scale-95'}`}>
                {updating ? 'Saving...' : 'Save All Settings'}

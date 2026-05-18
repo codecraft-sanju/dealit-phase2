@@ -12,6 +12,8 @@ const AIChat = require('../models/AIChat');
 const AITrainingLog = require('../models/AITrainingLog');
 const prompts = require('../config/prompts');
 
+const AISetting = require('../models/AISetting');
+
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
@@ -349,10 +351,16 @@ const processChat = async (req, res) => {
 
     let chatCompletion;
 
+    // CHANGED: Fetching dynamic AI configuration from the database instead of hardcoded strings
+    let aiConfig = await AISetting.findOne();
+    if (!aiConfig) {
+      aiConfig = await AISetting.create({});
+    }
+
     try {
       chatCompletion = await groq.chat.completions.create({
         messages: messagesArray,
-        model: "llama-3.3-70b-versatile",
+        model: aiConfig.activeModelId, // CHANGED: Now using activeModelId from DB
         stream: true, 
       }, { signal: abortController.signal });
     } catch (primaryError) {
@@ -360,10 +368,10 @@ const processChat = async (req, res) => {
         console.log("[AI] Stream aborted by client disconnection.");
         return;
       }
-      console.log("[AI] 70B model failed, falling back to 8B instant...", primaryError.message);
+      console.log(`[AI] ${aiConfig.activeModelId} model failed, falling back to ${aiConfig.fallbackModelId}...`, primaryError.message);
       chatCompletion = await groq.chat.completions.create({
         messages: messagesArray,
-        model: "llama-3.1-8b-instant",
+        model: aiConfig.fallbackModelId, // CHANGED: Now using fallbackModelId from DB
         stream: true, 
       }, { signal: abortController.signal });
     }
@@ -424,7 +432,8 @@ const processChat = async (req, res) => {
           user: userId,
           system_prompt: systemPrompt,
           user_message: message,
-          ai_response: cleanReply
+          ai_response: cleanReply,
+          status: 'pending' // Note: Ensure your AITrainingLog schema has this field now.
         });
         console.log("[AI Data] Q&A pair silently saved for training!");
       } catch (logError) {

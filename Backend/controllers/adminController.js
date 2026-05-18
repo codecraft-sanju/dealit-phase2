@@ -8,6 +8,7 @@ const BarterRequest = require('../models/BarterRequest');
 const Notification = require('../models/Notification');
 const AuraLog = require('../models/AuraLog'); 
 const AITrainingLog = require('../models/AITrainingLog');
+const AISetting = require('../models/AISetting');
 
 // CHANGED: Imported queueNotification
 const { queueNotification } = require('../services/queue');
@@ -980,6 +981,67 @@ const getAILogs = async (req, res) => {
   }
 };
 
+// NEW: Get current AI settings
+const getAISettings = async (req, res) => {
+  try {
+    let setting = await AISetting.findOne();
+    if (!setting) {
+      setting = await AISetting.create({});
+    }
+    res.status(200).json({ success: true, data: setting });
+  } catch (error) {
+    console.error('Error fetching AI settings:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+// NEW: Update AI settings
+const updateAISettings = async (req, res) => {
+  try {
+    const { activeModelId, fallbackModelId, isAutoTrainingEnabled, batchSize } = req.body;
+    
+    let setting = await AISetting.findOne();
+    if (!setting) {
+      setting = new AISetting({});
+    }
+
+    if (activeModelId !== undefined) setting.activeModelId = activeModelId;
+    if (fallbackModelId !== undefined) setting.fallbackModelId = fallbackModelId;
+    if (isAutoTrainingEnabled !== undefined) setting.isAutoTrainingEnabled = isAutoTrainingEnabled;
+    if (batchSize !== undefined) setting.batchSize = batchSize;
+
+    setting.updated_at = Date.now();
+    await setting.save();
+    
+    res.status(200).json({ 
+      success: true, 
+      message: 'AI settings updated successfully', 
+      data: setting 
+    });
+  } catch (error) {
+    console.error('Error updating AI settings:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+// NEW: Get stats for training logs
+const getAILogStats = async (req, res) => {
+    try {
+        const stats = await AITrainingLog.aggregate([
+            {
+                $group: {
+                    _id: '$status',
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+        res.status(200).json({ success: true, data: stats });
+    } catch (error) {
+        console.error('Error fetching AI log stats:', error);
+        res.status(500).json({ success: false, message: 'Server Error' });
+    }
+}
+
 module.exports = {
   getPendingItems,
   updateItemStatus,
@@ -996,5 +1058,8 @@ module.exports = {
   getDashboardStats,
   resolveFailedRefund,
   retryFailedRefund,
-  getAILogs
+  getAILogs,
+  getAISettings, 
+  updateAISettings, 
+  getAILogStats 
 };

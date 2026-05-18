@@ -6,7 +6,7 @@ import {
   Check, ToggleLeft, ToggleRight, Layers, Settings, Menu, 
   Car, Monitor, Book, Shirt, Gamepad2, Watch, Home as HomeIcon, Sofa, Music, Utensils, Heart, Briefcase, Camera, Dumbbell, Smartphone, Target,
   IndianRupee, Activity, Truck, ChevronRight, LayoutDashboard, Coins,
-  Search, ChevronLeft, RefreshCcw, Bot ,MessageSquare
+  Search, ChevronLeft, RefreshCcw, Bot, MessageSquare, CheckCircle, Database
 } from 'lucide-react'; 
 import axios from 'axios';
 
@@ -25,7 +25,6 @@ import CategoryModal from '../admin/CategoryModal';
 import EditItemModal from '../admin/EditItemModal';
 import EditOrderModal from '../admin/EditOrderModal';
 import RejectItemModal from '../admin/RejectItemModal';
-
 import ImageCropModal from '../admin/ImageCropModal';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
@@ -97,6 +96,17 @@ const AdminPanel = ({ user }) => {
   const [totalIncome, setTotalIncome] = useState(0);
   const [financials, setFinancials] = useState({ walletIncome: 0, shippingIncome: 0, totalRevenue: 0, totalRefunds: 0, netIncome: 0 });
 
+  // ADDED: AI Log Stats State
+  const [aiLogStats, setAiLogStats] = useState({ pending: 0, cleaned: 0, rejected: 0, trained: 0 });
+
+  // ADDED: AI Settings State
+  const [aiSettings, setAiSettings] = useState({
+    activeModelId: '',
+    fallbackModelId: '',
+    isAutoTrainingEnabled: true,
+    batchSize: 500
+  });
+
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const limit = 10;
@@ -120,7 +130,7 @@ const AdminPanel = ({ user }) => {
     auraReward: 50,
     auraPenalty: 50,
     minImagesRequired: 3,
-    isDiscountSimulationEnabled: false // NAYA CHANGE: Added default state here
+    isDiscountSimulationEnabled: false
   });
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -154,7 +164,6 @@ const AdminPanel = ({ user }) => {
   const [isViewUserModalOpen, setIsViewUserModalOpen] = useState(false);
   const [viewingUser, setViewingUser] = useState(null);
 
-  // ADDED: State for viewing full AI Logs
   const [isViewAILogModalOpen, setIsViewAILogModalOpen] = useState(false);
   const [viewingAILog, setViewingAILog] = useState(null);
 
@@ -219,10 +228,18 @@ const AdminPanel = ({ user }) => {
       setLoading(true);
       try {
         if (activeTab.startsWith('settings')) {
+          // Fetch Credit Settings
           const response = await axios.get(`${API_URL}/admin/credit-settings`, { withCredentials: true });
           if (response.data.success && response.data.data) {
             setCreditSettings({ ...creditSettings, ...response.data.data });
           }
+
+          // CHANGED: Fetch AI Settings
+          const aiResponse = await axios.get(`${API_URL}/admin/ai-settings`, { withCredentials: true });
+          if (aiResponse.data.success && aiResponse.data.data) {
+            setAiSettings(aiResponse.data.data);
+          }
+
         } else {
           let endpoint = '';
           if (activeTab === 'pending') endpoint = `${API_URL}/admin/pending-items`;
@@ -233,9 +250,19 @@ const AdminPanel = ({ user }) => {
           else if (activeTab === 'categories') endpoint = `${API_URL}/categories`;
           else if (activeTab === 'transactions') endpoint = `${API_URL}/admin/transactions`; 
           else if (activeTab === 'orders') endpoint = `${API_URL}/admin/orders`; 
-          else if (activeTab === 'ai-logs') endpoint = `${API_URL}/admin/ai-logs`; // ADDED: Endpoint mapping for AI Logs
+          else if (activeTab === 'ai-logs') {
+            endpoint = `${API_URL}/admin/ai-logs`;
+            // CHANGED: Fetch AI Stats concurrently
+            const statsRes = await axios.get(`${API_URL}/admin/ai-log-stats`, { withCredentials: true });
+            if (statsRes.data.success && statsRes.data.data) {
+              const statsObj = { pending: 0, cleaned: 0, rejected: 0, trained: 0 };
+              statsRes.data.data.forEach(stat => {
+                if (stat._id) statsObj[stat._id] = stat.count;
+              });
+              setAiLogStats(statsObj);
+            }
+          }
 
-          // ADDED: Appended ai-logs to the pagination array handler
           if (['pending', 'users', 'items', 'transactions', 'orders', 'ai-logs'].includes(activeTab)) {
             endpoint += `?page=${currentPage}&limit=${limit}&search=${encodeURIComponent(debouncedSearch)}`;
           }
@@ -418,7 +445,6 @@ const AdminPanel = ({ user }) => {
     setIsViewModalOpen(true);
   };
 
-  // ADDED: Handler specifically for viewing AI Log details safely inside AdminPanel
   const handleViewAILogClick = (log) => {
     setViewingAILog(log);
     setIsViewAILogModalOpen(true);
@@ -614,11 +640,20 @@ const AdminPanel = ({ user }) => {
     e.preventDefault();
     setUpdating(true);
     try {
-      const response = await axios.put(`${API_URL}/admin/credit-settings`, creditSettings, { withCredentials: true });
-      if (response.data.success) {
-        toast.success('Credit settings successfully updated! 🎉'); 
-        queryClient.invalidateQueries({ queryKey: ['creditSettings'] });
-        queryClient.invalidateQueries({ queryKey: ['publicSettings'] });
+      // If saving AI Settings
+      if (activeTab === 'settings-ai') {
+        const aiResponse = await axios.put(`${API_URL}/admin/ai-settings`, aiSettings, { withCredentials: true });
+        if (aiResponse.data.success) {
+          toast.success('AI Settings successfully updated! 🤖'); 
+        }
+      } else {
+        // Saving Credit Settings
+        const response = await axios.put(`${API_URL}/admin/credit-settings`, creditSettings, { withCredentials: true });
+        if (response.data.success) {
+          toast.success('Credit settings successfully updated! 🎉'); 
+          queryClient.invalidateQueries({ queryKey: ['creditSettings'] });
+          queryClient.invalidateQueries({ queryKey: ['publicSettings'] });
+        }
       }
     } catch (error) {
       console.error('Error saving settings:', error);
@@ -723,14 +758,58 @@ const AdminPanel = ({ user }) => {
               <DashboardOverview data={data} />
             )}
 
+            {/* CHANGED: Passed aiSettings to SettingsPanel */}
             {activeTab.startsWith('settings') && !loading && (
               <SettingsPanel 
                 activeTab={activeTab} 
                 creditSettings={creditSettings}
                 setCreditSettings={setCreditSettings}
+                aiSettings={aiSettings}
+                setAiSettings={setAiSettings}
                 handleSaveSettings={handleSaveSettings}
                 updating={updating}
               />
+            )}
+
+            {/* ADDED: Top Stats Display for AI Logs */}
+            {activeTab === 'ai-logs' && !loading && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 shrink-0 bg-white/[0.01] border-b border-white/5">
+                <div className="bg-blue-500/10 border border-blue-500/20 p-3 md:p-4 rounded-xl shadow-sm">
+                  <div className="flex items-center gap-2 mb-1 text-blue-400">
+                    <Database className="w-4 h-4 md:w-5 md:h-5" />
+                    <p className="text-[10px] md:text-xs font-bold uppercase tracking-widest">Pending</p>
+                  </div>
+                  <h3 className="text-xl md:text-2xl font-black text-white">{aiLogStats.pending || 0}</h3>
+                  <p className="text-[9px] md:text-[10px] text-gray-500 mt-1">Awaiting cleanup job</p>
+                </div>
+
+                <div className="bg-emerald-500/10 border border-emerald-500/20 p-3 md:p-4 rounded-xl shadow-sm">
+                  <div className="flex items-center gap-2 mb-1 text-emerald-400">
+                    <CheckCircle className="w-4 h-4 md:w-5 md:h-5" />
+                    <p className="text-[10px] md:text-xs font-bold uppercase tracking-widest">Cleaned</p>
+                  </div>
+                  <h3 className="text-xl md:text-2xl font-black text-white">{aiLogStats.cleaned || 0}</h3>
+                  <p className="text-[9px] md:text-[10px] text-gray-500 mt-1">Ready for next batch</p>
+                </div>
+
+                <div className="bg-red-500/10 border border-red-500/20 p-3 md:p-4 rounded-xl shadow-sm">
+                  <div className="flex items-center gap-2 mb-1 text-red-400">
+                    <AlertTriangle className="w-4 h-4 md:w-5 md:h-5" />
+                    <p className="text-[10px] md:text-xs font-bold uppercase tracking-widest">Rejected</p>
+                  </div>
+                  <h3 className="text-xl md:text-2xl font-black text-white">{aiLogStats.rejected || 0}</h3>
+                  <p className="text-[9px] md:text-[10px] text-gray-500 mt-1">Spam or short msgs</p>
+                </div>
+
+                <div className="bg-purple-500/10 border border-purple-500/20 p-3 md:p-4 rounded-xl shadow-sm">
+                  <div className="flex items-center gap-2 mb-1 text-purple-400">
+                    <Bot className="w-4 h-4 md:w-5 md:h-5" />
+                    <p className="text-[10px] md:text-xs font-bold uppercase tracking-widest">Trained</p>
+                  </div>
+                  <h3 className="text-xl md:text-2xl font-black text-white">{aiLogStats.trained || 0}</h3>
+                  <p className="text-[9px] md:text-[10px] text-gray-500 mt-1">Learned by model</p>
+                </div>
+              </div>
             )}
 
             {activeTab === 'transactions' && !loading && (
@@ -917,7 +996,7 @@ const AdminPanel = ({ user }) => {
                   data={Array.isArray(data) ? data : []}
                   AVAILABLE_ICONS={AVAILABLE_ICONS}
                   handleViewClick={handleViewClick}
-                  handleViewAILogClick={handleViewAILogClick} // ADDED: Passed specific log handler to child
+                  handleViewAILogClick={handleViewAILogClick} 
                   handleApprove={handleApprove}
                   handleRejectClick={handleRejectClick}
                   handleEditOfferClick={handleEditOfferClick}
@@ -943,7 +1022,7 @@ const AdminPanel = ({ user }) => {
         </div>
       </main>
 
-      {/* --- ALL MODALS (Upgraded to Frosted Glass UI & fully responsive) --- */}
+      {/* --- ALL MODALS --- */}
       
       {/* Resolve Failed Refund Modal */}
       {isResolveModalOpen && resolvingOrder && (
@@ -1033,7 +1112,7 @@ const AdminPanel = ({ user }) => {
         </div>
       )}
 
-      {/* ADDED: View AI Training Log Detail Modal */}
+      {/* View AI Training Log Detail Modal */}
       {isViewAILogModalOpen && viewingAILog && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 py-8 bg-black/60 backdrop-blur-sm transition-opacity">
           <div className="bg-[#0B0F19]/95 backdrop-blur-3xl w-full max-w-2xl max-h-[90vh] rounded-2xl md:rounded-3xl border border-cyan-500/20 shadow-[0_0_50px_rgba(34,211,238,0.1)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
@@ -1102,7 +1181,6 @@ const AdminPanel = ({ user }) => {
         </div>
       )}
 
-      {/* Edit Order Modal */}
       <EditOrderModal 
         isEditOrderModalOpen={isEditOrderModalOpen}
         setIsEditOrderModalOpen={setIsEditOrderModalOpen}
@@ -1121,7 +1199,6 @@ const AdminPanel = ({ user }) => {
         setRejectionReason={setRejectionReason}
       />
 
-      {/* Edit Item Modal */}
       <EditItemModal 
         isEditModalOpen={isEditModalOpen}
         setIsEditModalOpen={setIsEditModalOpen}
@@ -1132,7 +1209,6 @@ const AdminPanel = ({ user }) => {
         updating={updating}
       />
 
-      {/* Category Modal */}
       {isCategoryModalOpen && (
         <CategoryModal
           setIsCategoryModalOpen={setIsCategoryModalOpen}
@@ -1174,7 +1250,6 @@ const AdminPanel = ({ user }) => {
         updating={updating}
       />
 
-    
       <ImageCropModal 
         cropModalOpen={cropModalOpen}
         setCropModalOpen={setCropModalOpen}

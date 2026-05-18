@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   Shield, Users, Package, X, List, Image as ImageIcon, 
   Layers, Settings, IndianRupee, Truck, ChevronRight, LayoutDashboard, ChevronDown, ChevronUp,
-  Bot // ADDED: Imported Bot icon for AI Logs
+  Bot 
 } from 'lucide-react';
 
 const AdminSidebar = ({
@@ -19,7 +19,6 @@ const AdminSidebar = ({
   setSearchQuery,
   setDebouncedSearch
 }) => {
-  // Settings dropdown ko open/close karne ke liye state
   const [isSettingsOpen, setIsSettingsOpen] = useState(activeTab.startsWith('settings'));
 
   const navItems = [
@@ -31,7 +30,7 @@ const AdminSidebar = ({
     { id: 'offers', name: 'Offers / Banners', icon: ImageIcon },
     { id: 'categories', name: 'Categories', icon: Layers },
     { id: 'transactions', name: 'Transactions', icon: IndianRupee },
-    { id: 'ai-logs', name: 'AI Training Logs', icon: Bot }, // ADDED: New tab for AI Logs
+    { id: 'ai-logs', name: 'AI Training Logs', icon: Bot }, 
     { 
       id: 'settings', 
       name: 'System Settings', 
@@ -41,6 +40,7 @@ const AdminSidebar = ({
         { id: 'settings-referrals', name: 'Refer & Earn' },
         { id: 'settings-shipping', name: 'Shipping Rules' },
         { id: 'settings-orders', name: 'Orders & Aura' },
+        { id: 'settings-ai', name: 'AI Training Controls' }, // ADDED: New Settings Tab
       ]
     },
   ];
@@ -48,7 +48,6 @@ const AdminSidebar = ({
   const handleTabClick = (item) => {
     if (item.subItems) {
       setIsSettingsOpen(!isSettingsOpen);
-      // Agar setting khol rahe hain aur koi sub-tab active nahi hai, toh pehle wale pe bhej do
       if (!activeTab.startsWith('settings')) {
         setActiveTab(item.subItems[0].id);
       }
@@ -122,7 +121,6 @@ const AdminSidebar = ({
                     </span>
                   )}
 
-                  {/* Handle arrows for nested menu */}
                   {item.subItems ? (
                     isSettingsOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />
                   ) : (
@@ -130,7 +128,6 @@ const AdminSidebar = ({
                   )}
                 </button>
 
-                {/* Render Sub Items */}
                 {item.subItems && isSettingsOpen && (
                   <div className="mt-1.5 ml-4 pl-4 border-l border-white/10 space-y-1">
                     {item.subItems.map((sub) => {
