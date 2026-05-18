@@ -7,6 +7,7 @@ const Order = require('../models/Order');
 const BarterRequest = require('../models/BarterRequest');
 const Notification = require('../models/Notification');
 const AuraLog = require('../models/AuraLog'); 
+const AITrainingLog = require('../models/AITrainingLog');
 
 // CHANGED: Imported queueNotification
 const { queueNotification } = require('../services/queue');
@@ -891,6 +892,7 @@ const resolveFailedRefund = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server Error resolving refund' });
   }
 };
+
 const retryFailedRefund = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -951,6 +953,33 @@ const retryFailedRefund = async (req, res) => {
   }
 };
 
+const getAILogs = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+
+    const total = await AITrainingLog.countDocuments();
+    const logs = await AITrainingLog.find()
+      .populate('user', 'full_name email')
+      .sort({ created_at: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    res.status(200).json({
+      success: true,
+      count: logs.length,
+      totalRecords: total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      data: logs
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server Error fetching AI logs' });
+  }
+};
+
 module.exports = {
   getPendingItems,
   updateItemStatus,
@@ -966,5 +995,6 @@ module.exports = {
   updateAdminOrderStatus,
   getDashboardStats,
   resolveFailedRefund,
-  retryFailedRefund 
+  retryFailedRefund,
+  getAILogs
 };
