@@ -8,6 +8,7 @@ import remarkGfm from 'remark-gfm';
 import confetti from 'canvas-confetti';
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
+
 const TypingLoader = () => (
   <div className="flex space-x-1.5 items-center h-6 px-1">
     <motion.div className="w-2 h-2 bg-purple-400 rounded-full" animate={{ y: [0, -6, 0], opacity: [0.5, 1, 0.5] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} />
@@ -15,6 +16,7 @@ const TypingLoader = () => (
     <motion.div className="w-2 h-2 bg-purple-400 rounded-full" animate={{ y: [0, -6, 0], opacity: [0.5, 1, 0.5] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }} />
   </div>
 );
+
 const SoundWave = () => (
   <div className="flex items-center justify-center gap-1.5 h-12">
     {[...Array(5)].map((_, i) => (
@@ -27,6 +29,7 @@ const SoundWave = () => (
     ))}
   </div>
 );
+
 const BotMessage = ({ content, animated, onComplete }) => {
   const cleanContent = useMemo(() => content.replace(/(\*\*)?\[ANIMATION_[123]\](\*\*)?/g, ''), [content]);
   const [displayedText, setDisplayedText] = useState(animated ? '' : cleanContent);
@@ -122,12 +125,14 @@ const BotMessage = ({ content, animated, onComplete }) => {
     </div>
   );
 };
+
 const SUGGESTIONS = [
   "What is my Aura Score?",
   "How do I earn more Credits?",
   "Explain OTP delivery verification",
   "Tell me my account details"
 ];
+
 const AiChatPage = ({ user }) => {
   const navigate = useNavigate();
   const { sessionId: routeSessionId } = useParams();
@@ -312,12 +317,37 @@ const AiChatPage = ({ user }) => {
   const markAsAnimated = (id) => {
     setMessages((prev) => prev.map((m) => m.id === id ? { ...m, animated: false } : m));
   };
+
+  const fallbackToNativeSpeech = (text, pref) => {
+    if (!window.speechSynthesis) {
+      setVoiceState('idle');
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      const preferredVoice = voices.find(v => 
+        pref === 'female' ? v.name.toLowerCase().includes('female') : v.name.toLowerCase().includes('male')
+      );
+      if (preferredVoice) utterance.voice = preferredVoice;
+    }
+    utterance.onstart = () => setVoiceState('speaking');
+    utterance.onend = () => setVoiceState('idle');
+    utterance.onerror = (e) => {
+      console.error('Native TTS Error:', e);
+      setVoiceState('idle');
+    };
+    window.speechSynthesis.speak(utterance);
+  };
+
   const speakText = async (text) => {
     if (!text) return;
     if (audioRef.current) {
       audioRef.current.pause();
     }
     const textToSpeak = text.replace(/[*_#`]/g, '');
+    const currentVoicePref = typeof voicePref !== 'undefined' ? voicePref : (localStorage.getItem('dealit_ai_voice_pref') || 'female');
     
     // Show "Preparing voice..." while we wait for ElevenLabs to return audio
     setVoiceState('generating_audio');
@@ -332,10 +362,15 @@ const AiChatPage = ({ user }) => {
         },
         body: JSON.stringify({ 
           text: textToSpeak,
-          voicePref: voicePref 
+          voicePref: currentVoicePref 
         })
       });
-      if (!response.ok) throw new Error('Audio generation failed');
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.errorCode || 'API_FAILED');
+      }
+
       const blob = await response.blob();
       const audioUrl = URL.createObjectURL(blob);
       const audio = new Audio(audioUrl);
@@ -353,10 +388,11 @@ const AiChatPage = ({ user }) => {
       setVoiceState('speaking');
       await audio.play();
     } catch (error) {
-      console.error('ElevenLabs TTS Error:', error);
-      setVoiceState('idle');
+      console.warn('Premium voice failed, falling back to native browser voice:', error.message);
+      fallbackToNativeSpeech(textToSpeak, currentVoicePref);
     }
   };
+
   const processVoiceMessage = async (userMessage) => {
     if (!userMessage.trim()) {
       setVoiceState('idle');
@@ -460,6 +496,9 @@ const AiChatPage = ({ user }) => {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
+    }
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
     }
     if (abortControllerRef.current) abortControllerRef.current.abort();
     setVoiceState('idle');
@@ -568,6 +607,9 @@ const AiChatPage = ({ user }) => {
     if (audioRef.current) {
       audioRef.current.pause();
     }
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
     if (window.history.state && window.history.state.idx > 0) {
       navigate(-1); 
     } else {
@@ -578,6 +620,9 @@ const AiChatPage = ({ user }) => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
     if (audioRef.current) {
       audioRef.current.pause();
+    }
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
     }
     navigate('/');
   };

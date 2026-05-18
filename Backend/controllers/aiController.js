@@ -464,20 +464,37 @@ const synthesizeVoice = async (req, res) => {
     res.setHeader('Content-Type', 'audio/mpeg');
     response.data.pipe(res);
   } catch (error) {
-    if (error.response && error.response.data && typeof error.response.data.on === 'function') {
-      let errorMsg = '';
-      error.response.data.on('data', chunk => {
-        errorMsg += chunk.toString();
-      });
-      error.response.data.on('end', () => {
-        console.error('🚨 ElevenLabs Exact Error:', errorMsg);
-      });
+   
+    let errorCode = 'SERVER_ERROR';
+    let statusCode = 500;
+
+    if (error.response) {
+      statusCode = error.response.status;
+      
+      if (statusCode === 401 || statusCode === 429) {
+        errorCode = 'QUOTA_EXCEEDED';
+      }
+
+      if (error.response.data && typeof error.response.data.on === 'function') {
+        let errorMsg = '';
+        error.response.data.on('data', chunk => {
+          errorMsg += chunk.toString();
+        });
+        error.response.data.on('end', () => {
+          console.error(' ElevenLabs Exact Error:', errorMsg);
+        });
+      }
     } else {
       console.error('ElevenLabs API error:', error.message);
     }
     
     if (!res.headersSent) {
-      res.status(500).json({ success: false, message: 'Audio generation failed' });
+      
+      res.status(statusCode).json({ 
+        success: false, 
+        errorCode: errorCode,
+        message: 'Audio generation failed' 
+      });
     }
   }
 };
