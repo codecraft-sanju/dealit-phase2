@@ -152,19 +152,26 @@ const AiChatPage = ({ user }) => {
   const abortControllerRef = useRef(null);
   const messagesEndRef = useRef(null);
   const audioRef = useRef(null);
+  
+  // CHANGED: Added safe checks for window.speechSynthesis to prevent WebView crash
   useEffect(() => {
-    window.speechSynthesis.onvoiceschanged = () => {};
+    if (window.speechSynthesis) {
+      window.speechSynthesis.onvoiceschanged = () => {};
+    }
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
-      window.speechSynthesis.cancel();
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
       }
     };
   }, []);
+
   const handleToggleContext = () => {
     const newVal = !isSmartContextEnabled;
     setIsSmartContextEnabled(newVal);

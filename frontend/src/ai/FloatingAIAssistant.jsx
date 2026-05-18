@@ -148,19 +148,26 @@ const FloatingAIAssistant = ({ user }) => {
   const abortControllerRef = useRef(null);
   const audioRef = useRef(null);
   const [buttonState, setButtonState] = useState('bot');
+  
+  // CHANGED: Added safe checks for window.speechSynthesis to prevent WebView crash
   useEffect(() => {
-    window.speechSynthesis.onvoiceschanged = () => {};
+    if (window.speechSynthesis) {
+      window.speechSynthesis.onvoiceschanged = () => {};
+    }
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
-      window.speechSynthesis.cancel();
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
       }
     };
   }, []);
+
   useEffect(() => {
     const checkOpen = () => {
       if (localStorage.getItem('dealit_open_floating_ai') === 'true') {
