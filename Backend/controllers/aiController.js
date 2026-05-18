@@ -24,6 +24,20 @@ const aiChatLimiter = rateLimit({
   }
 });
 
+// Added: Voice limiter for 24 hours
+const voiceLimiter = rateLimit({
+  windowMs: 24 * 60 * 60 * 1000,
+  max: 10,
+  message: { 
+    success: false, 
+    errorCode: 'DAILY_VOICE_LIMIT_REACHED', 
+    message: 'Daily premium voice limit reached. Using standard voice.' 
+  },
+  keyGenerator: (req) => {
+   return req.user ? req.user._id.toString() : 'anonymous';
+  }
+});
+
 const generateItemDescription = async (req, res) => {
   try {
     const { title, category, condition } = req.body;
@@ -464,7 +478,7 @@ const synthesizeVoice = async (req, res) => {
     res.setHeader('Content-Type', 'audio/mpeg');
     response.data.pipe(res);
   } catch (error) {
-   
+    
     let errorCode = 'SERVER_ERROR';
     let statusCode = 500;
 
@@ -508,5 +522,6 @@ module.exports = {
   deleteAllChatSessions, 
   processChat,
   aiChatLimiter,
+  voiceLimiter, 
   synthesizeVoice
 };

@@ -82,7 +82,6 @@ const BotMessage = ({ content, animated, onComplete }) => {
       }
     }, 15);
     return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cleanContent, animated]);
   return (
     <div className="break-words leading-relaxed text-sm">
@@ -148,6 +147,7 @@ const FloatingAIAssistant = ({ user }) => {
 
   // 'idle' | 'listening' | 'thinking' | 'generating_audio' | 'speaking'
   const [voiceState, setVoiceState] = useState('idle');
+  const [isPremiumVoiceLimited, setIsPremiumVoiceLimited] = useState(false);
   
   const messagesEndRef = useRef(null);
   const abortControllerRef = useRef(null);
@@ -286,6 +286,9 @@ const FloatingAIAssistant = ({ user }) => {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        if (errorData.errorCode === 'DAILY_VOICE_LIMIT_REACHED' || response.status === 429) {
+          setIsPremiumVoiceLimited(true);
+        }
         throw new Error(errorData.errorCode || 'API_FAILED');
       }
 
@@ -648,8 +651,14 @@ const FloatingAIAssistant = ({ user }) => {
                         {voiceState === 'listening' && 'Listening to you...'}
                         {voiceState === 'thinking' && 'Analyzing...'}
                         {voiceState === 'generating_audio' && 'Preparing voice...'}
-                        {voiceState === 'speaking' && 'Speaking...'}
+                        {voiceState === 'speaking' && (isPremiumVoiceLimited ? 'Speaking (Standard Voice)...' : 'Speaking...')}
                       </h4>
+
+                      {voiceState === 'speaking' && isPremiumVoiceLimited && (
+                        <span className="text-[10px] text-amber-400 font-medium px-2 py-0.5 bg-amber-500/10 border border-amber-500/20 rounded-full mb-2 animate-pulse">
+                          Daily Premium Limit Reached
+                        </span>
+                      )}
                       
                       <div className="h-8 flex items-center justify-center w-full">
                         {voiceState === 'listening' && (
