@@ -464,8 +464,21 @@ const synthesizeVoice = async (req, res) => {
     res.setHeader('Content-Type', 'audio/mpeg');
     response.data.pipe(res);
   } catch (error) {
-    console.error('ElevenLabs API error:', error?.response?.data || error.message);
-    res.status(500).json({ success: false, message: 'Audio generation failed' });
+    if (error.response && error.response.data && typeof error.response.data.on === 'function') {
+      let errorMsg = '';
+      error.response.data.on('data', chunk => {
+        errorMsg += chunk.toString();
+      });
+      error.response.data.on('end', () => {
+        console.error('🚨 ElevenLabs Exact Error:', errorMsg);
+      });
+    } else {
+      console.error('ElevenLabs API error:', error.message);
+    }
+    
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, message: 'Audio generation failed' });
+    }
   }
 };
 
