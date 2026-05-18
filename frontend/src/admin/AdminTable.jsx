@@ -10,6 +10,7 @@ const AdminTable = ({
   data,
   AVAILABLE_ICONS,
   handleViewClick,
+  handleViewAILogClick, // ADDED: Prop for handling AI Log View
   handleApprove,
   handleRejectClick,
   handleEditOfferClick,
@@ -24,13 +25,14 @@ const AdminTable = ({
   handleEditOrderClick,
   handleResolveRefundClick, 
   handleRetryRefundClick,
-  handleViewRejectionReason, // ADDED: New prop for view reason modal
+  handleViewRejectionReason, 
   currentPage,
   totalPages,
   setCurrentPage
 }) => {
   
-  const isPaginatedTab = ['pending', 'users', 'items', 'transactions', 'orders'].includes(activeTab);
+  // ADDED: ai-logs to paginated tabs list
+  const isPaginatedTab = ['pending', 'users', 'items', 'transactions', 'orders', 'ai-logs'].includes(activeTab);
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden w-full">
@@ -65,6 +67,13 @@ const AdminTable = ({
                   <th className="px-4 md:px-6 py-3 md:py-5 font-bold uppercase tracking-widest text-[9px] md:text-[10px] hidden md:table-cell">Parties</th>
                   <th className="px-4 md:px-6 py-3 md:py-5 font-bold uppercase tracking-widest text-[9px] md:text-[10px] hidden sm:table-cell">Tracking Details</th>
                   <th className="px-4 md:px-6 py-3 md:py-5 font-bold uppercase tracking-widest text-[9px] md:text-[10px]">Status</th>
+                </>
+              ) : activeTab === 'ai-logs' ? ( // ADDED: Table headers for AI Logs
+                <>
+                  <th className="px-4 md:px-6 py-3 md:py-5 font-bold uppercase tracking-widest text-[9px] md:text-[10px]">User</th>
+                  <th className="px-4 md:px-6 py-3 md:py-5 font-bold uppercase tracking-widest text-[9px] md:text-[10px] hidden md:table-cell">System Prompt</th>
+                  <th className="px-4 md:px-6 py-3 md:py-5 font-bold uppercase tracking-widest text-[9px] md:text-[10px]">Interaction</th>
+                  <th className="px-4 md:px-6 py-3 md:py-5 font-bold uppercase tracking-widest text-[9px] md:text-[10px] hidden sm:table-cell">Date</th>
                 </>
               ) : (
                 <>
@@ -216,6 +225,32 @@ const AdminTable = ({
                       </div>
                     </td>
                   </>
+                ) : activeTab === 'ai-logs' ? ( // ADDED: Table structure for AI Logs mapping
+                  <>
+                    <td className="px-4 md:px-6 py-3 md:py-4">
+                      <div className="flex items-center gap-2 md:gap-3">
+                        <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 shadow-sm">
+                          <User className="w-4 h-4" />
+                        </div>
+                        <div className="max-w-[100px] md:max-w-[150px]">
+                          <p className="font-bold text-gray-200 text-xs md:text-sm truncate">{row.user?.full_name || 'Unknown'}</p>
+                          <p className="text-[9px] text-gray-500 truncate">{row.user?.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 md:px-6 py-3 md:py-4 hidden md:table-cell">
+                      <p className="text-[10px] md:text-xs text-gray-400 truncate max-w-[150px]" title={row.system_prompt}>{row.system_prompt}</p>
+                    </td>
+                    <td className="px-4 md:px-6 py-3 md:py-4">
+                      <div className="max-w-[150px] md:max-w-[250px]">
+                        <p className="text-[10px] md:text-xs text-gray-300 truncate mb-1"><span className="text-blue-400 font-bold">U:</span> {row.user_message}</p>
+                        <p className="text-[10px] md:text-xs text-gray-400 truncate"><span className="text-emerald-400 font-bold">AI:</span> {row.ai_response}</p>
+                      </div>
+                    </td>
+                    <td className="px-4 md:px-6 py-3 md:py-4 hidden sm:table-cell">
+                      <p className="text-[10px] md:text-xs text-gray-400">{new Date(row.created_at).toLocaleDateString()}</p>
+                    </td>
+                  </>
                 ) : (
                   <>
                     <td className="px-4 md:px-6 py-3 md:py-4">
@@ -349,6 +384,12 @@ const AdminTable = ({
                       </button>
                       <button onClick={() => handleDeleteItem(row._id)} className="text-gray-400 hover:text-red-400 hover:bg-red-400/10 border border-transparent hover:border-red-400/30 transition-all p-1.5 md:p-2 rounded-lg md:rounded-xl">
                         <Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                      </button>
+                    </div>
+                  ) : activeTab === 'ai-logs' ? ( // ADDED: Action button for AI Logs to view full details
+                    <div className="flex justify-end gap-1 md:gap-1.5">
+                      <button onClick={() => handleViewAILogClick(row)} className="text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10 border border-transparent hover:border-cyan-400/30 transition-all p-1.5 md:p-2 rounded-lg md:rounded-xl">
+                        <Eye className="w-3.5 h-3.5 md:w-4 md:h-4" />
                       </button>
                     </div>
                   ) : (

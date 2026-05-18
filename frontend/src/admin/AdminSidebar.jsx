@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { 
   Shield, Users, Package, X, List, Image as ImageIcon, 
-  Layers, Settings, IndianRupee, Truck, ChevronRight, LayoutDashboard, ChevronDown, ChevronUp 
+  Layers, Settings, IndianRupee, Truck, ChevronRight, LayoutDashboard, ChevronDown, ChevronUp,
+  Bot // ADDED: Imported Bot icon for AI Logs
 } from 'lucide-react';
 
 const AdminSidebar = ({
@@ -30,6 +31,7 @@ const AdminSidebar = ({
     { id: 'offers', name: 'Offers / Banners', icon: ImageIcon },
     { id: 'categories', name: 'Categories', icon: Layers },
     { id: 'transactions', name: 'Transactions', icon: IndianRupee },
+    { id: 'ai-logs', name: 'AI Training Logs', icon: Bot }, // ADDED: New tab for AI Logs
     { 
       id: 'settings', 
       name: 'System Settings', 
@@ -110,7 +112,7 @@ const AdminSidebar = ({
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <Icon className={`w-5 h-5 transition-colors ${isParentActive ? (item.id === 'offers' ? 'text-[#A388E1]' : item.id === 'transactions' ? 'text-yellow-400' : item.id === 'orders' ? 'text-blue-400' : 'text-emerald-400') : 'group-hover:text-white'}`} />
+                    <Icon className={`w-5 h-5 transition-colors ${isParentActive ? (item.id === 'offers' ? 'text-[#A388E1]' : item.id === 'transactions' ? 'text-yellow-400' : item.id === 'orders' ? 'text-blue-400' : item.id === 'ai-logs' ? 'text-cyan-400' : 'text-emerald-400') : 'group-hover:text-white'}`} />
                     {item.name}
                   </div>
                   

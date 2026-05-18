@@ -6,7 +6,7 @@ import {
   Check, ToggleLeft, ToggleRight, Layers, Settings, Menu, 
   Car, Monitor, Book, Shirt, Gamepad2, Watch, Home as HomeIcon, Sofa, Music, Utensils, Heart, Briefcase, Camera, Dumbbell, Smartphone, Target,
   IndianRupee, Activity, Truck, ChevronRight, LayoutDashboard, Coins,
-  Search, ChevronLeft, RefreshCcw 
+  Search, ChevronLeft, RefreshCcw, Bot ,MessageSquare
 } from 'lucide-react'; 
 import axios from 'axios';
 
@@ -154,6 +154,10 @@ const AdminPanel = ({ user }) => {
   const [isViewUserModalOpen, setIsViewUserModalOpen] = useState(false);
   const [viewingUser, setViewingUser] = useState(null);
 
+  // ADDED: State for viewing full AI Logs
+  const [isViewAILogModalOpen, setIsViewAILogModalOpen] = useState(false);
+  const [viewingAILog, setViewingAILog] = useState(null);
+
   const [isOfferModalOpen, setIsOfferModalOpen] = useState(false);
   const [editingOfferId, setEditingOfferId] = useState(null);
   const [offerForm, setOfferForm] = useState({ mobileImage: '', desktopImage: '', isActive: true });
@@ -229,8 +233,10 @@ const AdminPanel = ({ user }) => {
           else if (activeTab === 'categories') endpoint = `${API_URL}/categories`;
           else if (activeTab === 'transactions') endpoint = `${API_URL}/admin/transactions`; 
           else if (activeTab === 'orders') endpoint = `${API_URL}/admin/orders`; 
+          else if (activeTab === 'ai-logs') endpoint = `${API_URL}/admin/ai-logs`; // ADDED: Endpoint mapping for AI Logs
 
-          if (['pending', 'users', 'items', 'transactions', 'orders'].includes(activeTab)) {
+          // ADDED: Appended ai-logs to the pagination array handler
+          if (['pending', 'users', 'items', 'transactions', 'orders', 'ai-logs'].includes(activeTab)) {
             endpoint += `?page=${currentPage}&limit=${limit}&search=${encodeURIComponent(debouncedSearch)}`;
           }
 
@@ -410,6 +416,12 @@ const AdminPanel = ({ user }) => {
   const handleViewClick = (item) => {
     setViewingItem(item);
     setIsViewModalOpen(true);
+  };
+
+  // ADDED: Handler specifically for viewing AI Log details safely inside AdminPanel
+  const handleViewAILogClick = (log) => {
+    setViewingAILog(log);
+    setIsViewAILogModalOpen(true);
   };
 
   const handleDeleteUser = async (id) => {
@@ -884,17 +896,19 @@ const AdminPanel = ({ user }) => {
               (!Array.isArray(data) || data.length === 0) ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-center p-6 md:p-8 bg-white/[0.01]">
                   <div className="w-16 h-16 md:w-20 md:h-20 bg-white/5 rounded-full flex items-center justify-center mb-4 md:mb-5 border border-white/10 shadow-inner">
+                    {/* ADDED: Icon handling for AI Logs empty state */}
                     {activeTab === 'pending' ? <Package className="w-6 h-6 md:w-8 md:h-8 text-gray-500" /> : 
                      activeTab === 'users' ? <Users className="w-6 h-6 md:w-8 md:h-8 text-gray-500" /> : 
                      activeTab === 'orders' ? <Truck className="w-6 h-6 md:w-8 md:h-8 text-gray-500" /> : 
                      activeTab === 'offers' ? <ImageIcon className="w-6 h-6 md:w-8 md:h-8 text-gray-500" /> : 
                      activeTab === 'categories' ? <Layers className="w-6 h-6 md:w-8 md:h-8 text-gray-500" /> : 
+                     activeTab === 'ai-logs' ? <Bot className="w-6 h-6 md:w-8 md:h-8 text-gray-500" /> : 
                      <List className="w-6 h-6 md:w-8 md:h-8 text-gray-500" />}
                   </div>
                   <h3 className="text-lg md:text-xl font-bold text-gray-200 mb-2 tracking-tight">No Records Found</h3>
                   {searchQuery 
                     ? <p className="text-gray-500 text-xs md:text-sm px-4">We couldn't find anything matching "{searchQuery}". Try a different keyword.</p>
-                    : <p className="text-gray-500 text-xs md:text-sm px-4">There are currently no {activeTab === 'pending' ? 'pending approvals' : activeTab === 'offers' ? 'banners available' : activeTab === 'categories' ? 'categories available' : activeTab === 'orders' ? 'active orders or swaps' : 'records to display'}.</p>
+                    : <p className="text-gray-500 text-xs md:text-sm px-4">There are currently no {activeTab === 'pending' ? 'pending approvals' : activeTab === 'offers' ? 'banners available' : activeTab === 'categories' ? 'categories available' : activeTab === 'orders' ? 'active orders or swaps' : activeTab === 'ai-logs' ? 'training logs to review' : 'records to display'}.</p>
                   }
                 </div>
               ) : (
@@ -903,6 +917,7 @@ const AdminPanel = ({ user }) => {
                   data={Array.isArray(data) ? data : []}
                   AVAILABLE_ICONS={AVAILABLE_ICONS}
                   handleViewClick={handleViewClick}
+                  handleViewAILogClick={handleViewAILogClick} // ADDED: Passed specific log handler to child
                   handleApprove={handleApprove}
                   handleRejectClick={handleRejectClick}
                   handleEditOfferClick={handleEditOfferClick}
@@ -986,7 +1001,7 @@ const AdminPanel = ({ user }) => {
         </div>
       )}
 
-      {/* ADDED: View Rejection Reason Modal */}
+      {/* View Rejection Reason Modal */}
       {isRejectionReasonModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm transition-opacity">
           <div className="bg-[#0B0F19]/95 backdrop-blur-3xl w-full max-w-sm rounded-2xl md:rounded-3xl border border-red-500/20 shadow-[0_0_50px_rgba(239,68,68,0.15)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
@@ -1012,6 +1027,75 @@ const AdminPanel = ({ user }) => {
                 className="px-4 md:px-5 py-2 rounded-xl text-xs md:text-sm font-bold bg-white/5 text-gray-300 hover:text-white hover:bg-white/10 transition-all border border-white/10"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ADDED: View AI Training Log Detail Modal */}
+      {isViewAILogModalOpen && viewingAILog && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 py-8 bg-black/60 backdrop-blur-sm transition-opacity">
+          <div className="bg-[#0B0F19]/95 backdrop-blur-3xl w-full max-w-2xl max-h-[90vh] rounded-2xl md:rounded-3xl border border-cyan-500/20 shadow-[0_0_50px_rgba(34,211,238,0.1)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="p-4 md:p-5 border-b border-cyan-500/10 flex justify-between items-center bg-cyan-500/5 shrink-0">
+              <h2 className="text-base md:text-lg font-black text-cyan-400 flex items-center gap-2">
+                <Bot className="w-4 h-4 md:w-5 md:h-5" /> AI Interaction Details
+              </h2>
+              <button onClick={() => setIsViewAILogModalOpen(false)} className="text-gray-400 hover:text-white transition-all bg-white/5 p-2 rounded-full hover:bg-white/10">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="p-5 md:p-6 overflow-y-auto admin-scroll space-y-6">
+              
+              <div>
+                <p className="text-[10px] font-bold text-gray-500 mb-1.5 uppercase tracking-widest flex items-center gap-1.5">
+                  <User className="w-3 h-3" /> Triggered By
+                </p>
+                <div className="bg-white/[0.02] border border-white/10 rounded-xl p-3 md:p-4 text-xs md:text-sm text-gray-200">
+                  <span className="font-bold">{viewingAILog.user?.full_name || 'Unknown'}</span> ({viewingAILog.user?.email}) 
+                  <span className="text-gray-500 ml-2 text-[10px] md:text-xs">
+                    on {new Date(viewingAILog.created_at).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[10px] font-bold text-gray-500 mb-1.5 uppercase tracking-widest flex items-center gap-1.5">
+                  <Settings className="w-3 h-3" /> System Prompt Context
+                </p>
+                <div className="bg-gray-900/50 border border-white/10 rounded-xl p-3 md:p-4 text-xs text-gray-400 whitespace-pre-wrap font-mono">
+                  {viewingAILog.system_prompt}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[10px] font-bold text-blue-400 mb-1.5 uppercase tracking-widest flex items-center gap-1.5">
+                  <MessageSquare className="w-3 h-3" /> User Prompt
+                </p>
+                <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-3 md:p-4 text-sm text-blue-100 whitespace-pre-wrap">
+                  {viewingAILog.user_message}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[10px] font-bold text-emerald-400 mb-1.5 uppercase tracking-widest flex items-center gap-1.5">
+                  <Bot className="w-3 h-3" /> AI Output / Generation
+                </p>
+                <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-3 md:p-4 text-sm text-emerald-100 whitespace-pre-wrap">
+                  {viewingAILog.ai_response}
+                </div>
+              </div>
+
+            </div>
+            
+            <div className="p-4 md:p-5 border-t border-white/5 bg-white/[0.01] flex justify-end shrink-0">
+              <button 
+                type="button" 
+                onClick={() => setIsViewAILogModalOpen(false)} 
+                className="px-4 md:px-5 py-2 rounded-xl text-xs md:text-sm font-bold bg-white/5 text-gray-300 hover:text-white hover:bg-white/10 transition-all border border-white/10"
+              >
+                Close View
               </button>
             </div>
           </div>
