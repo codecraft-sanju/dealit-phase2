@@ -1,7 +1,6 @@
 import React from 'react';
 import { Coins, ToggleRight, ToggleLeft, Package, List, Gift, Users, Target, Truck, Zap, IndianRupee, Clock, AlertTriangle, Settings, Image as ImageIcon, Bot, Cpu, Database } from 'lucide-react';
 
-
 const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, aiSettings, setAiSettings, handleSaveSettings, updating }) => {
   
 
@@ -349,7 +348,6 @@ const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, aiSetting
                       </div>
                     </div>
                     
-                    {/* Improved Warning & Info Badges */}
                     <div className="flex flex-col sm:flex-row gap-3 mt-3 md:mt-4">
                       <div className="p-3 md:p-4 bg-yellow-500/5 border border-yellow-500/20 rounded-lg md:rounded-xl flex-1 flex items-start gap-2">
                          <AlertTriangle className="w-4 h-4 text-yellow-500 shrink-0" />
@@ -471,6 +469,7 @@ const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, aiSetting
                 )}
               </div>
 
+              {/* CHANGED: Grid columns handling to adapt smoothly to 5 items layout */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
                 
                 {/* Active Model Input */}
@@ -530,11 +529,49 @@ const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, aiSetting
                   <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider">Number of cleaned logs needed to train.</p>
                 </div>
 
+                {/* CHANGED: Added dynamic field for Data Cleaner Cron script interval execution */}
+                <div className="space-y-2 md:space-y-2.5">
+                  <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest">Cleaner Interval (Mins)</label>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
+                      <Clock className="w-4 h-4 text-orange-400 group-focus-within:text-orange-300 transition-colors" />
+                    </div>
+                    <input 
+                      type="number" 
+                      required 
+                      min="1" 
+                      value={aiSettings?.cleanerInterval !== undefined ? aiSettings.cleanerInterval : 15} 
+                      onChange={(e) => setAiSettings({...aiSettings, cleanerInterval: Number(e.target.value)})} 
+                      className="w-full bg-black/20 border border-white/10 rounded-xl pl-9 md:pl-11 pr-3 md:pr-4 py-3 md:py-3.5 text-white text-xs md:text-sm font-bold focus:outline-none focus:border-cyan-500/50 focus:bg-black/40 transition-all shadow-inner" 
+                    />
+                  </div>
+                  <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider">Execution gap for cleaning background charts logs.</p>
+                </div>
+
+                {/* CHANGED: Added dynamic field for Fine-tuning execution status API check loop */}
+                <div className="space-y-2 md:space-y-2.5">
+                  <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest">Status Polling (Mins)</label>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
+                      <Clock className="w-4 h-4 text-blue-400 group-focus-within:text-blue-300 transition-colors" />
+                    </div>
+                    <input 
+                      type="number" 
+                      required 
+                      min="1" 
+                      value={aiSettings?.pollingInterval !== undefined ? aiSettings.pollingInterval : 5} 
+                      onChange={(e) => setAiSettings({...aiSettings, pollingInterval: Number(e.target.value)})} 
+                      className="w-full bg-black/20 border border-white/10 rounded-xl pl-9 md:pl-11 pr-3 md:pr-4 py-3 md:py-3.5 text-white text-xs md:text-sm font-bold focus:outline-none focus:border-cyan-500/50 focus:bg-black/40 transition-all shadow-inner" 
+                    />
+                  </div>
+                  <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider">Polling loop timer to verify training completion.</p>
+                </div>
+
               </div>
             </div>
           )}
 
-        
+          
           <div className="pt-6 md:pt-8 border-t border-white/5 flex justify-end mt-auto">
              <button type="submit" disabled={updating} className={`w-full sm:w-auto px-6 md:px-10 py-3.5 md:py-4 rounded-xl font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 text-[10px] md:text-xs ${updating ? 'bg-purple-600/30 text-white/50 cursor-not-allowed border border-purple-500/20' : 'bg-gradient-to-r from-[#A388E1] to-purple-600 hover:from-purple-500 hover:to-indigo-600 text-white shadow-[0_0_20px_rgba(163,136,225,0.4)] border border-[#A388E1]/50 hover:scale-105 active:scale-95'}`}>
                {updating ? 'Saving...' : 'Save All Settings'}

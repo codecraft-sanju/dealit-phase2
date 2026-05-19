@@ -998,7 +998,8 @@ const getAISettings = async (req, res) => {
 // NEW: Update AI settings
 const updateAISettings = async (req, res) => {
   try {
-    const { activeModelId, fallbackModelId, isAutoTrainingEnabled, batchSize } = req.body;
+    // CHANGED: Added cleanerInterval and pollingInterval here to extract from request body
+    const { activeModelId, fallbackModelId, isAutoTrainingEnabled, batchSize, cleanerInterval, pollingInterval } = req.body;
     
     let setting = await AISetting.findOne();
     if (!setting) {
@@ -1009,6 +1010,9 @@ const updateAISettings = async (req, res) => {
     if (fallbackModelId !== undefined) setting.fallbackModelId = fallbackModelId;
     if (isAutoTrainingEnabled !== undefined) setting.isAutoTrainingEnabled = isAutoTrainingEnabled;
     if (batchSize !== undefined) setting.batchSize = batchSize;
+    // CHANGED: Assigned the new intervals to the database record
+    if (cleanerInterval !== undefined) setting.cleanerInterval = cleanerInterval;
+    if (pollingInterval !== undefined) setting.pollingInterval = pollingInterval;
 
     setting.updated_at = Date.now();
     await setting.save();

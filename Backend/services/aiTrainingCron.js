@@ -2,7 +2,6 @@ const cron = require('node-cron');
 const AITrainingLog = require('../models/AITrainingLog');
 const AISetting = require('../models/AISetting');
 
-// NAYA: Import kiya hamara naya training service
 const { triggerLoRATraining } = require('./aiTrainingService');
 
 const toxicWords = ['badword1', 'badword2', 'stupid', 'idiot', 'fake'];
@@ -23,7 +22,7 @@ const cleanAndBatchData = async () => {
     
     if (pendingLogs.length === 0) {
       console.log('[AI Cron] No pending logs to clean.');
-      return; // Cleanup ke baad check karna bhi zaroori hai ki training trigger karni hai ya nahi
+      return; 
     }
 
     let cleanedCount = 0;
@@ -62,13 +61,10 @@ const cleanAndBatchData = async () => {
 
     console.log(`[AI Cron] Cleanup Done: ${cleanedCount} Cleaned, ${rejectedCount} Rejected.`);
 
-    // --- NAYA LOGIC YAHAN HAI ---
-    // Check if we have enough cleaned data to trigger training
     const totalCleanedLogs = await AITrainingLog.countDocuments({ status: 'cleaned' });
     
     if (totalCleanedLogs >= aiConfig.batchSize) {
       console.log(`[AI Cron] Target batch size (${aiConfig.batchSize}) reached! Triggering LoRA Fine-Tuning...`);
-      // Ab ye function JSONL banayega aur data ko trained mark karega
       await triggerLoRATraining(); 
     }
 
@@ -77,11 +73,26 @@ const cleanAndBatchData = async () => {
   }
 };
 
-const startAITrainingCron = () => {
-  cron.schedule('*/15 * * * *', () => {
-    cleanAndBatchData();
-  });
-  console.log('[AI Cron] Background Data Cleaner scheduled to run every 15 minutes.');
+
+const startAITrainingCron = async () => {
+  try {
+    const aiConfig = await AISetting.findOne();
+    const intervalMins = (aiConfig && aiConfig.cleanerInterval) ? aiConfig.cleanerInterval : 15;
+    
+    console.log(`[AI Cron] Background Data Cleaner scheduled to run in ${intervalMins} minutes.`);
+    
+    setTimeout(async () => {
+      await cleanAndBatchData();
+      startAITrainingCron(); // Recursively calls itself to fetch updated timers for the next run
+    }, intervalMins * 60 * 1000);
+    
+  } catch (error) {
+
+    setTimeout(async () => {
+      await cleanAndBatchData();
+      startAITrainingCron();
+    }, 15 * 60 * 1000);
+  }
 };
 
 module.exports = { startAITrainingCron };

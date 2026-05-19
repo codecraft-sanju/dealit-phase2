@@ -5,25 +5,22 @@ const FormData = require('form-data');
 const AITrainingLog = require('../models/AITrainingLog');
 const AISetting = require('../models/AISetting');
 
-
 const AI_PROVIDER_API_KEY = process.env.FINE_TUNING_API_KEY; 
 
 const checkTrainingStatusAndSwap = async (jobId) => {
   console.log(`[AI Training] Checking status for Job ID: ${jobId}...`);
   
   try {
-   
     const response = await axios.get(`https://api.together.xyz/v1/fine-tunes/${jobId}`, {
       headers: { 'Authorization': `Bearer ${AI_PROVIDER_API_KEY}` }
     });
 
-    const status = response.data.status; // 'pending', 'running', 'succeeded', 'failed'
+    const status = response.data.status; 
     
     if (status === 'succeeded') {
       const newModelId = response.data.model; 
       console.log(`[AI Training] SUCCESS! New Model Ready: ${newModelId}`);
 
-    
       let aiConfig = await AISetting.findOne();
       if (aiConfig) {
         aiConfig.activeModelId = newModelId; 
@@ -33,9 +30,15 @@ const checkTrainingStatusAndSwap = async (jobId) => {
     } else if (status === 'failed') {
       console.log(`[AI Training] Training Job Failed. Please check AI provider dashboard.`);
     } else {
-      console.log(`[AI Training] Job still ${status}... checking again in 5 minutes.`);
-      // Check again after 5 minutes
-      setTimeout(() => checkTrainingStatusAndSwap(jobId), 5 * 60 * 1000);
+    
+      let pollingMins = 5;
+      const aiConfig = await AISetting.findOne();
+      if (aiConfig && aiConfig.pollingInterval) {
+        pollingMins = aiConfig.pollingInterval;
+      }
+      
+      console.log(`[AI Training] Job still ${status}... checking again in ${pollingMins} minutes.`);
+      setTimeout(() => checkTrainingStatusAndSwap(jobId), pollingMins * 60 * 1000);
     }
   } catch (error) {
     console.error("[AI Training] Error checking status:", error.message);
@@ -50,7 +53,6 @@ const uploadAndTrainModel = async (filePath) => {
     formData.append('file', fs.createReadStream(filePath));
     formData.append('purpose', 'fine-tune');
 
-    // 1. Upload File
     const uploadRes = await axios.post('https://api.together.xyz/v1/files', formData, {
       headers: { 
         ...formData.getHeaders(),
@@ -61,7 +63,6 @@ const uploadAndTrainModel = async (filePath) => {
     const fileId = uploadRes.data.id;
     console.log(`[AI Training] File uploaded successfully. File ID: ${fileId}`);
 
-  
     console.log("[AI Training] Triggering LoRA Fine-Tuning Job...");
     const trainRes = await axios.post('https://api.together.xyz/v1/fine-tunes', {
       training_file: fileId,
@@ -78,11 +79,16 @@ const uploadAndTrainModel = async (filePath) => {
     const jobId = trainRes.data.id;
     console.log(`[AI Training] Training Job Started! Job ID: ${jobId}`);
 
-    // 3. Delete the local JSONL file to save server space
     fs.unlinkSync(filePath);
 
-    // 4. Start polling for status
-    setTimeout(() => checkTrainingStatusAndSwap(jobId), 5 * 60 * 1000);
+    
+    let pollingMins = 5;
+    const aiConfig = await AISetting.findOne();
+    if (aiConfig && aiConfig.pollingInterval) {
+      pollingMins = aiConfig.pollingInterval;
+    }
+
+    setTimeout(() => checkTrainingStatusAndSwap(jobId), pollingMins * 60 * 1000);
 
   } catch (error) {
     console.error("[AI Training] Failed to upload/train:", error.response ? error.response.data : error.message);
@@ -95,7 +101,6 @@ const triggerLoRATraining = async () => {
     const aiConfig = await AISetting.findOne();
     const batchLimit = aiConfig ? aiConfig.batchSize : 500;
 
-    // 1. Fetch the exact batch of cleaned data
     const cleanedLogs = await AITrainingLog.find({ status: 'cleaned' }).limit(batchLimit);
     
     if (cleanedLogs.length < batchLimit) {
@@ -103,7 +108,6 @@ const triggerLoRATraining = async () => {
       return;
     }
 
-    // 2. Convert to JSONL Format
     let jsonlData = '';
     cleanedLogs.forEach(log => {
       const trainingRow = {
@@ -116,13 +120,11 @@ const triggerLoRATraining = async () => {
       jsonlData += JSON.stringify(trainingRow) + '\n';
     });
 
-    // 3. Save JSONL to a temporary file
     const fileName = `training_batch_${Date.now()}.jsonl`;
     const filePath = path.join(__dirname, '..', fileName);
     fs.writeFileSync(filePath, jsonlData);
     console.log(`[AI Training] JSONL file created successfully: ${fileName}`);
 
-    // 4. Update logs status to 'trained' so they aren't processed again
     const logIds = cleanedLogs.map(log => log._id);
     await AITrainingLog.updateMany(
       { _id: { $in: logIds } },
@@ -130,7 +132,6 @@ const triggerLoRATraining = async () => {
     );
     console.log(`[AI Training] ${logIds.length} logs marked as 'trained'.`);
 
-    // 5. Fire the API Upload and Training process (runs in background)
     uploadAndTrainModel(filePath);
 
   } catch (error) {

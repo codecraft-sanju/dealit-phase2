@@ -99,12 +99,14 @@ const AdminPanel = ({ user }) => {
   // ADDED: AI Log Stats State
   const [aiLogStats, setAiLogStats] = useState({ pending: 0, cleaned: 0, rejected: 0, trained: 0 });
 
-  // ADDED: AI Settings State
+  // CHANGED: Added cleanerInterval and pollingInterval to the default state template
   const [aiSettings, setAiSettings] = useState({
     activeModelId: '',
     fallbackModelId: '',
     isAutoTrainingEnabled: true,
-    batchSize: 500
+    batchSize: 500,
+    cleanerInterval: 15,
+    pollingInterval: 5
   });
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -242,8 +244,8 @@ const AdminPanel = ({ user }) => {
 
         } else {
           let endpoint = '';
-          if (activeTab === 'pending') endpoint = `${API_URL}/admin/pending-items`;
-          else if (activeTab === 'overview') endpoint = `${API_URL}/admin/dashboard-stats`; 
+          if (activeTab === 'overview') endpoint = `${API_URL}/admin/dashboard-stats`; 
+          else if (activeTab === 'pending') endpoint = `${API_URL}/admin/pending-items`;
           else if (activeTab === 'users') endpoint = `${API_URL}/admin/users`;
           else if (activeTab === 'items') endpoint = `${API_URL}/admin/all-items`;
           else if (activeTab === 'offers') endpoint = `${API_URL}/admin/offers`; 
@@ -975,7 +977,6 @@ const AdminPanel = ({ user }) => {
               (!Array.isArray(data) || data.length === 0) ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-center p-6 md:p-8 bg-white/[0.01]">
                   <div className="w-16 h-16 md:w-20 md:h-20 bg-white/5 rounded-full flex items-center justify-center mb-4 md:mb-5 border border-white/10 shadow-inner">
-                    {/* ADDED: Icon handling for AI Logs empty state */}
                     {activeTab === 'pending' ? <Package className="w-6 h-6 md:w-8 md:h-8 text-gray-500" /> : 
                      activeTab === 'users' ? <Users className="w-6 h-6 md:w-8 md:h-8 text-gray-500" /> : 
                      activeTab === 'orders' ? <Truck className="w-6 h-6 md:w-8 md:h-8 text-gray-500" /> : 

@@ -17,6 +17,15 @@ const aiSettingSchema = new mongoose.Schema({
     type: Number,
     default: 500
   },
+  
+  cleanerInterval: {
+    type: Number,
+    default: 15
+  },
+  pollingInterval: {
+    type: Number,
+    default: 5
+  },
   updated_at: {
     type: Date,
     default: Date.now
