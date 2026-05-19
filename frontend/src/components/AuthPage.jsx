@@ -3,6 +3,11 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import axios from 'axios';
 import { User, Lock, Mail, Phone, MapPin, CheckCircle, Gift, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import Lottie from 'lottie-react';
+
+// --- ADDED: Google Login import ---
+import { GoogleLogin } from '@react-oauth/google';
+// ----------------------------------
+
 import './AuthPage.css';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
@@ -150,7 +155,6 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
     navigate(mode === 'signup' ? '/signup' : '/login', { replace: true });
   };
 
-  // CHANGE ADDED HERE
   const handleGeneratePassword = () => {
     const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     const lower = 'abcdefghijklmnopqrstuvwxyz';
@@ -171,6 +175,30 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
     pass = pass.split('').sort(() => 0.5 - Math.random()).join('');
     setFormData((prev) => ({ ...prev, password: pass }));
   };
+
+  // --- ADDED: Handle Google Login Success ---
+  const handleGoogleLoginSuccess = async (credentialResponse) => {
+    setError('');
+    setLoading(true);
+    try {
+      const res = await axios.post(`${API_URL}/users/google-login`, {
+        token: credentialResponse.credential
+      }, { withCredentials: true });
+
+      if (res.data.success) {
+        setUser(res.data.user);
+        localStorage.setItem('dealit_user', JSON.stringify(res.data.user));
+        if (res.data.token) localStorage.setItem('dealit_token', res.data.token);
+        navigate('/');
+      }
+    } catch (err) {
+      if (err.response) setError(err.response.data.message || 'Google Authentication failed.');
+      else setError('Network Error: Cannot connect to server.');
+    } finally {
+      setLoading(false);
+    }
+  };
+  // ------------------------------------------
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -271,6 +299,19 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                   </button>
                 </form>
 
+                {/* --- ADDED: Desktop Google Login --- */}
+                <div className="google-divider"><span>or continue with</span></div>
+                <div className="google-btn-container">
+                  <GoogleLogin 
+                    onSuccess={handleGoogleLoginSuccess} 
+                    onError={() => setError('Google Sign-In failed.')} 
+                    theme="filled_blue" 
+                    shape="circle" 
+                    width="360" 
+                  />
+                </div>
+                {/* ---------------------------------- */}
+
                 <p className="aw-switch-txt">
                   Don't have an account?{' '}
                   <button className="aw-switch-btn" onClick={() => handleModeSwitch('signup')}>Sign Up</button>
@@ -294,13 +335,15 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                     {error && isSignUpMode && <div className="aw-error">{error}</div>}
 
                     <form onSubmit={handleSignup} className="aw-form" noValidate>
-                      <FloatInput icon={User} label="Full name" name="full_name" value={formData.full_name} onChange={handleChange} required />
-                      <FloatInput icon={Mail} label="Email address" name="email" type="email" value={formData.email} onChange={handleChange} required autoCapitalize="none" autoCorrect="off" />
+                      
+                      <div className="aw-form-row">
+                        <FloatInput icon={User} label="Full name" name="full_name" value={formData.full_name} onChange={handleChange} required />
+                        <FloatInput icon={Mail} label="Email address" name="email" type="email" value={formData.email} onChange={handleChange} required autoCapitalize="none" autoCorrect="off" />
+                      </div>
                       
                       <div className="pwd-wrap">
                         <FloatInput icon={Lock} label="Password" name="password" type="password" value={formData.password} onChange={handleChange} required />
                         
-                        {/* CHANGE ADDED HERE */}
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.4rem' }}>
                           <div className="pwd-strength-bar" style={{ flex: 1, marginRight: '1rem', marginTop: 0 }}>
                             <div 
@@ -330,6 +373,18 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                         {loading ? <span className="aw-spinner" /> : <><span>Create Account</span><ArrowRight size={18} /></>}
                       </button>
                     </form>
+
+                    <div className="google-divider"><span>or register with</span></div>
+                    <div className="google-btn-container">
+                      <GoogleLogin 
+                        onSuccess={handleGoogleLoginSuccess} 
+                        onError={() => setError('Google Sign-In failed.')} 
+                        theme="filled_blue" 
+                        shape="circle" 
+                        width="360" 
+                      />
+                    </div>
+                  
 
                     <p className="aw-switch-txt">
                       Already have an account?{' '}
@@ -378,7 +433,7 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
         </div>
       </div>
 
-      {/* ── MOBILE LAYOUT (bottom sheet style) ── */}
+    
       <div className={`aw-mobile ${isSignUpMode ? 'is-signup' : ''}`}>
         <div className="mb-hero">
           <div className={`mb-hero-img-wrap ${!isSignUpMode ? 'active' : ''}`}>
@@ -403,8 +458,7 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
 
           <div className="mb-form-area">
             <div className={`mb-slider ${isSignUpMode ? 'show-signup' : 'show-login'}`}>
-              
-              {/* LOGIN MOBILE SLIDE */}
+
               <div className="mb-slide custom-scrollbar">
                 <h2 className="aw-heading" style={{ fontSize: '1.4rem', marginTop: '0.5rem', marginBottom: '1.25rem' }}>Welcome back!</h2>
                 {error && !isSignUpMode && <div className="aw-error">{error}</div>}
@@ -418,22 +472,36 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                     {loading ? <span className="aw-spinner" /> : <><span>Sign In</span><ArrowRight size={18} /></>}
                   </button>
                 </form>
+
+                <div className="google-divider"><span>or continue with</span></div>
+                <div className="google-btn-container mobile-g-btn">
+                  <GoogleLogin 
+                    onSuccess={handleGoogleLoginSuccess} 
+                    onError={() => setError('Google Sign-In failed.')} 
+                    theme="filled_blue" 
+                    shape="circle" 
+                    width="320" 
+                  />
+                </div>
+               
               </div>
 
-              {/* SIGNUP / OTP MOBILE SLIDE */}
+           
               <div className="mb-slide custom-scrollbar">
                 {!showOtp ? (
                   <>
                     <h2 className="aw-heading" style={{ fontSize: '1.4rem', marginTop: '0.5rem', marginBottom: '1.25rem' }}>Create account</h2>
                     {error && isSignUpMode && <div className="aw-error">{error}</div>}
                     <form onSubmit={handleSignup} className="aw-form" noValidate>
-                      <FloatInput icon={User} label="Full name" name="full_name" value={formData.full_name} onChange={handleChange} required />
-                      <FloatInput icon={Mail} label="Email address" name="email" type="email" value={formData.email} onChange={handleChange} required autoCapitalize="none" autoCorrect="off" />
+                      
+                      <div className="aw-form-row">
+                        <FloatInput icon={User} label="Full name" name="full_name" value={formData.full_name} onChange={handleChange} required />
+                        <FloatInput icon={Mail} label="Email address" name="email" type="email" value={formData.email} onChange={handleChange} required autoCapitalize="none" autoCorrect="off" />
+                      </div>
                       
                       <div className="pwd-wrap">
                         <FloatInput icon={Lock} label="Password" name="password" type="password" value={formData.password} onChange={handleChange} required />
                         
-                        {/* CHANGE ADDED HERE */}
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.4rem' }}>
                           <div className="pwd-strength-bar" style={{ flex: 1, marginRight: '1rem', marginTop: 0 }}>
                             <div 
@@ -463,6 +531,19 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                         {loading ? <span className="aw-spinner" /> : <><span>Create Account</span><ArrowRight size={18} /></>}
                       </button>
                     </form>
+
+          
+                    <div className="google-divider"><span>or register with</span></div>
+                    <div className="google-btn-container mobile-g-btn">
+                      <GoogleLogin 
+                        onSuccess={handleGoogleLoginSuccess} 
+                        onError={() => setError('Google Sign-In failed.')} 
+                        theme="filled_blue" 
+                        shape="circle" 
+                        width="320" 
+                      />
+                    </div>
+                  
                   </>
                 ) : (
                   <div className="otp-fade-in">

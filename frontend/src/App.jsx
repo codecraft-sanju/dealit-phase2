@@ -6,7 +6,7 @@ import axios from 'axios';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'; 
-
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
 
@@ -378,12 +378,14 @@ function App() {
 
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <Router>
-        <MainAppContent user={user} handleLogout={handleLogout} setUser={setUser} />
-      </Router>
-      <ToastContainer />
-    </QueryClientProvider>
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+      <QueryClientProvider client={queryClient}>
+        <Router>
+          <MainAppContent user={user} handleLogout={handleLogout} setUser={setUser} />
+        </Router>
+        <ToastContainer />
+      </QueryClientProvider>
+    </GoogleOAuthProvider>
   );
 }
 

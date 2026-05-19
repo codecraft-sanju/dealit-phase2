@@ -1,18 +1,15 @@
 const User = require('../models/User');
 const CreditSetting = require('../models/CreditSetting'); 
-
-
 const { queueNotification } = require('../services/queue');
-
 const AuraLog = require('../models/AuraLog'); 
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const sendEmail = require('../utils/sendEmail');
-
 const Item = require('../models/Item');
 const Order = require('../models/Order');
 const BarterRequest = require('../models/BarterRequest');
-
+const { OAuth2Client } = require('google-auth-library');
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const sendTokenResponse = (user, statusCode, res, message) => {
   const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
     expiresIn: '36500d' 
@@ -286,6 +283,62 @@ const loginUser = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server Error during login' });
   }
 };
+
+// --- ADDED: Google Login Function ---
+const googleLogin = async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) {
+      return res.status(400).json({ success: false, message: 'Google token is required' });
+    }
+
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const { email, name, picture } = payload;
+    const cleanEmail = email.toLowerCase().trim();
+
+    let user = await User.findOne({ email: cleanEmail });
+
+    if (user) {
+      if (user.isDeleted) {
+        return res.status(401).json({ success: false, message: 'Account has been deleted.' });
+      }
+      
+      if (!user.isVerified) {
+        user.isVerified = true;
+        await user.save();
+      }
+
+      if (!user.profilePic && picture) {
+        user.profilePic = picture;
+        await user.save();
+      }
+    } else {
+      const newReferralCode = await generateUniqueReferralCode(name);
+      
+      user = new User({
+        full_name: name,
+        email: cleanEmail,
+        profilePic: picture || '',
+        isVerified: true,
+        referralCode: newReferralCode,
+        aura_points: 100 
+      });
+
+      await user.save();
+    }
+
+    sendTokenResponse(user, 200, res, 'Google login successful!');
+  } catch (error) {
+    console.error('Error during Google login:', error);
+    res.status(500).json({ success: false, message: 'Authentication failed with Google' });
+  }
+};
+// ------------------------------------
 
 const logoutUser = (req, res) => {
   const isProduction = process.env.NODE_ENV === 'production';
@@ -677,6 +730,7 @@ module.exports = {
   registerUser,
   verifyOtp, 
   loginUser,
+  googleLogin, 
   logoutUser,
   forgotPassword,
   resetPassword,

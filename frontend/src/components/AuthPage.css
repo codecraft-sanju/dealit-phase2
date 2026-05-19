@@ -852,3 +852,48 @@
   .otp-box  { width: 37px; height: 44px; font-size: 1rem; }
   .mb-hero  { max-height: 240px; }
 }
+
+/* ═══════════════════════════════════════════════
+   GOOGLE SIGN-IN BUTTON STYLES (ADDED)
+═══════════════════════════════════════════════ */
+.google-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 1.25rem 0 0.85rem;
+  color: #9ca3af;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.google-divider::before,
+.google-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px dashed #e9d8ff;
+}
+
+.google-divider:not(:empty)::before {
+  margin-right: .75em;
+}
+
+.google-divider:not(:empty)::after {
+  margin-left: .75em;
+}
+
+.google-btn-container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+/* Mobile specific overrides */
+@media (max-width: 869px) {
+  .google-btn-container.mobile-g-btn {
+    margin-top: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+}
