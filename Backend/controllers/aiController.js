@@ -274,7 +274,8 @@ const processChat = async (req, res) => {
   });
 
   try {
-    const { message, sessionId, isSmartContextEnabled } = req.body;
+    // CHANGED: Added chatMode to destructuring to get it from the frontend request
+    const { message, sessionId, isSmartContextEnabled, chatMode } = req.body;
     const userId = req.user._id;
 
     let user, chatDoc;
@@ -302,7 +303,8 @@ const processChat = async (req, res) => {
         return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    let systemPrompt = prompts.getBaseSystemPrompt(user);
+    // CHANGED: Passing the chatMode to the prompt generator
+    let systemPrompt = prompts.getBaseSystemPrompt(user, chatMode);
 
     if (isSmartContextEnabled !== false) {
       const activeInventoryStr = myItems.length > 0 ? myItems.map(i => `- ${i.title} (${i.estimated_value} credits)`).join('\n') : 'No active items listed.';
@@ -351,7 +353,6 @@ const processChat = async (req, res) => {
 
     let chatCompletion;
 
-    // CHANGED: Fetching dynamic AI configuration from the database instead of hardcoded strings
     let aiConfig = await AISetting.findOne();
     if (!aiConfig) {
       aiConfig = await AISetting.create({});
@@ -360,7 +361,7 @@ const processChat = async (req, res) => {
     try {
       chatCompletion = await groq.chat.completions.create({
         messages: messagesArray,
-        model: aiConfig.activeModelId, // CHANGED: Now using activeModelId from DB
+        model: aiConfig.activeModelId, 
         stream: true, 
       }, { signal: abortController.signal });
     } catch (primaryError) {
@@ -371,7 +372,7 @@ const processChat = async (req, res) => {
       console.log(`[AI] ${aiConfig.activeModelId} model failed, falling back to ${aiConfig.fallbackModelId}...`, primaryError.message);
       chatCompletion = await groq.chat.completions.create({
         messages: messagesArray,
-        model: aiConfig.fallbackModelId, // CHANGED: Now using fallbackModelId from DB
+        model: aiConfig.fallbackModelId, 
         stream: true, 
       }, { signal: abortController.signal });
     }
@@ -433,7 +434,7 @@ const processChat = async (req, res) => {
           system_prompt: systemPrompt,
           user_message: message,
           ai_response: cleanReply,
-          status: 'pending' // Note: Ensure your AITrainingLog schema has this field now.
+          status: 'pending' //  Ensure your AITrainingLog schema has this field now
         });
         console.log("[AI Data] Q&A pair silently saved for training!");
       } catch (logError) {

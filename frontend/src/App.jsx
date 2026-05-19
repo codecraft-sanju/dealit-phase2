@@ -255,9 +255,12 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
 
   const publicDesktopRoutes = ['/login', '/privacy', '/terms', '/refund-policy', '/cancellation-policy'];
 
-  if (isDesktop && !location.pathname.startsWith('/admin') && !publicDesktopRoutes.includes(location.pathname)) {
+  // CHANGED: Added !isAiChatRoute to allow the AI chat full page to render on desktop screens
+  if (isDesktop && !location.pathname.startsWith('/admin') && !publicDesktopRoutes.includes(location.pathname) && !isAiChatRoute) {
     return (
       <Suspense fallback={<PremiumLoader />}>
+        {/* CHANGED: Render the floating AI assistant on the desktop landing page so it's always accessible */}
+        {user && <FloatingAIAssistant user={user} />}
         <DesktopLandingPage user={user} />
       </Suspense>
     );
@@ -276,7 +279,7 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
       
       <main>
         <Suspense fallback={<PremiumLoader />}>
-          {/* --- CHANGED: Hide Floating widget when on the full AI Chat page --- */}
+          {/* --- Hide Floating widget when on the full AI Chat page --- */}
           {user && !isAiChatRoute && <FloatingAIAssistant user={user} />}
           {/* --- END CHANGED --- */}
           

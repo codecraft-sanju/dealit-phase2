@@ -150,6 +150,9 @@ const FloatingAIAssistant = ({ user }) => {
 
   const [voiceState, setVoiceState] = useState('idle');
   const [isPremiumVoiceLimited, setIsPremiumVoiceLimited] = useState(false);
+
+  // CHANGED: Added chatMode state linked to localStorage
+  const [chatMode, setChatMode] = useState(() => localStorage.getItem('dealit_ai_mode') || 'dealit');
   
   const messagesEndRef = useRef(null);
   const abortControllerRef = useRef(null);
@@ -199,9 +202,24 @@ const FloatingAIAssistant = ({ user }) => {
     }, 2500);
     return () => clearInterval(interval);
   }, [isOpen]);
+
+  // Sync mode if changed from other tabs/pages
+  useEffect(() => {
+    const syncMode = () => {
+      setChatMode(localStorage.getItem('dealit_ai_mode') || 'dealit');
+    };
+    window.addEventListener('storage', syncMode);
+    return () => window.removeEventListener('storage', syncMode);
+  }, []);
   
   const markAsAnimated = (id) => {
     setMessages((prev) => prev.map((m) => m.id === id ? { ...m, animated: false } : m));
+  };
+
+  const handleToggleMode = () => {
+    const newMode = chatMode === 'dealit' ? 'general' : 'dealit';
+    setChatMode(newMode);
+    localStorage.setItem('dealit_ai_mode', newMode);
   };
 
   const fallbackToNativeSpeech = (text, pref) => {
@@ -302,10 +320,12 @@ const FloatingAIAssistant = ({ user }) => {
           'Authorization': `Bearer ${token}`
         },
         credentials: 'include',
+        // CHANGED: Added chatMode to API payload
         body: JSON.stringify({ 
           message: userMessage,
           sessionId: currentSessionId,
-          isSmartContextEnabled 
+          isSmartContextEnabled,
+          chatMode 
         }),
         signal: abortControllerRef.current.signal
       });
@@ -424,10 +444,12 @@ const FloatingAIAssistant = ({ user }) => {
           'Authorization': `Bearer ${token}`
         },
         credentials: 'include',
+        // CHANGED: Added chatMode to API payload
         body: JSON.stringify({ 
           message: userMessage,
           sessionId: currentSessionId,
-          isSmartContextEnabled 
+          isSmartContextEnabled,
+          chatMode 
         }),
         signal: abortControllerRef.current.signal
       });
@@ -533,10 +555,20 @@ const FloatingAIAssistant = ({ user }) => {
                 </div>
                 <div>
                   <h3 className="text-white font-bold text-sm tracking-wide">Dealit AI</h3>
-                  <p className="text-emerald-400 text-[10px] font-medium flex items-center gap-1">
-                    <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse"></span>
-                    Online
-                  </p>
+                  {/* CHANGED: Added Mode Badge next to Online indicator */}
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <p className="text-emerald-400 text-[10px] font-medium flex items-center gap-1">
+                      <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse"></span>
+                      Online
+                    </p>
+                    <button 
+                      onClick={handleToggleMode}
+                      className={`text-[9px] px-1.5 py-0.5 rounded border transition-colors ${chatMode === 'general' ? 'bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20' : 'bg-purple-500/10 border-purple-500/30 text-purple-400 hover:bg-purple-500/20'}`}
+                      title="Click to switch AI Mode"
+                    >
+                      {chatMode === 'general' ? 'General Mode' : 'Dealit Mode'}
+                    </button>
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-2">

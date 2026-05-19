@@ -154,6 +154,9 @@ const AiChatPage = ({ user }) => {
     return saved !== null ? JSON.parse(saved) : true;
   });
 
+  // CHANGED: Added chatMode state linked to localStorage
+  const [chatMode, setChatMode] = useState(() => localStorage.getItem('dealit_ai_mode') || 'dealit');
+
   const [voiceState, setVoiceState] = useState('idle');
   const [voicePref, setVoicePref] = useState(() => localStorage.getItem('dealit_ai_voice_pref') || 'female');
   const [isPremiumVoiceLimited, setIsPremiumVoiceLimited] = useState(false);
@@ -162,7 +165,6 @@ const AiChatPage = ({ user }) => {
   const messagesEndRef = useRef(null);
   const audioRef = useRef(null);
   
-  // FIX: Dynamic Viewport calculation to fix mobile keyboard hiding header
   useEffect(() => {
     const handleResize = () => {
       if (window.visualViewport) {
@@ -200,10 +202,25 @@ const AiChatPage = ({ user }) => {
     };
   }, []);
 
+  // Sync mode if changed from other tabs/pages
+  useEffect(() => {
+    const syncMode = () => {
+      setChatMode(localStorage.getItem('dealit_ai_mode') || 'dealit');
+    };
+    window.addEventListener('storage', syncMode);
+    return () => window.removeEventListener('storage', syncMode);
+  }, []);
+
   const handleToggleContext = () => {
     const newVal = !isSmartContextEnabled;
     setIsSmartContextEnabled(newVal);
     localStorage.setItem('dealit_ai_context', JSON.stringify(newVal));
+  };
+
+  const handleToggleMode = () => {
+    const newMode = chatMode === 'dealit' ? 'general' : 'dealit';
+    setChatMode(newMode);
+    localStorage.setItem('dealit_ai_mode', newMode);
   };
   
   const handleToggleVoicePref = () => {
@@ -449,10 +466,12 @@ const AiChatPage = ({ user }) => {
           'Authorization': `Bearer ${token}`
         },
         credentials: 'include',
+        // CHANGED: Added chatMode to API payload
         body: JSON.stringify({ 
           message: userMessage,
           sessionId: currentSessionId,
-          isSmartContextEnabled 
+          isSmartContextEnabled,
+          chatMode
         }),
         signal: abortControllerRef.current.signal
       });
@@ -571,10 +590,12 @@ const AiChatPage = ({ user }) => {
           'Authorization': `Bearer ${token}`
         },
         credentials: 'include',
+        // CHANGED: Added chatMode to API payload
         body: JSON.stringify({ 
           message: userMessage,
           sessionId: currentSessionId,
-          isSmartContextEnabled 
+          isSmartContextEnabled,
+          chatMode
         }),
         signal: abortControllerRef.current.signal
       });
@@ -672,7 +693,6 @@ const AiChatPage = ({ user }) => {
   };
   
   return (
-    // FIX applied here: added style with dynamic viewportHeight to prevent keyboard from pushing UI out of view
     <div 
       className="fixed top-0 left-0 right-0 flex bg-gray-900 z-50 overflow-hidden overscroll-none"
       style={{ height: viewportHeight }}
@@ -756,7 +776,24 @@ const AiChatPage = ({ user }) => {
                 className="overflow-hidden"
               >
                 <div className="p-3 mx-1 mb-1 mt-1 bg-gray-900 border border-gray-700/50 rounded-xl space-y-4">
+                  {/* CHANGED: Added Mode Toggle Switch */}
                   <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-white">AI Mode</p>
+                      <p className="text-xs text-gray-400 mt-0.5 capitalize">{chatMode === 'dealit' ? 'Dealit Strict' : 'General AI'}</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        className="sr-only peer" 
+                        checked={chatMode === 'general'}
+                        onChange={handleToggleMode}
+                      />
+                      <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
+                    </label>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-3 border-t border-gray-800/80">
                     <div>
                       <p className="text-sm font-medium text-white">Smart Context</p>
                       <p className="text-xs text-gray-400 mt-0.5">Read inventory</p>
@@ -771,6 +808,7 @@ const AiChatPage = ({ user }) => {
                       <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
                     </label>
                   </div>
+
                   <div className="flex items-center justify-between pt-3 border-t border-gray-800/80">
                     <div>
                       <p className="text-sm font-medium text-white">AI Voice</p>
@@ -960,7 +998,6 @@ const AiChatPage = ({ user }) => {
           )}
           <div className="bg-gray-800/50 backdrop-blur-sm border-t border-purple-500/20 p-4 container mx-auto max-w-3xl">
             <form onSubmit={handleSendMessage} className="relative flex items-center">
-              {/* FIX applied here: added text-base md:text-sm to prevent iOS keyboard auto-zoom */}
               <input
                 type="text"
                 value={input}
