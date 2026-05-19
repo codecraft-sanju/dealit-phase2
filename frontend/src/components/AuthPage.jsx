@@ -3,15 +3,16 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import axios from 'axios';
 import { User, Lock, Mail, Phone, MapPin, CheckCircle, Gift, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import Lottie from 'lottie-react';
-
-// --- ADDED: Google Login import ---
 import { GoogleLogin } from '@react-oauth/google';
-// ----------------------------------
 
 import './AuthPage.css';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
+
+/* --- ADDED: Detect if running inside React Native WebView --- */
+const isWebView = typeof window !== 'undefined' && window.ReactNativeWebView;
+/* ---------------------------------------------------------- */
 
 /* ── Workaround for Vite/Webpack default export issue ── */
 const LottieComponent = Lottie && Lottie.default ? Lottie.default : Lottie;
@@ -146,6 +147,38 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
     fetchSettings();
   }, [defaultMode, location.pathname]);
 
+  /* --- ADDED: Native-Web Bridge Listener --- */
+  useEffect(() => {
+    const handleNativeMessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'GOOGLE_LOGIN_SUCCESS') {
+          handleGoogleLoginSuccess({ credential: data.token });
+        } else if (data.type === 'GOOGLE_LOGIN_ERROR') {
+          setError(data.message || 'Google Sign-In failed in app.');
+          setLoading(false);
+        }
+      } catch (err) {}
+    };
+
+    window.addEventListener('message', handleNativeMessage);
+    document.addEventListener('message', handleNativeMessage); 
+
+    return () => {
+      window.removeEventListener('message', handleNativeMessage);
+      document.removeEventListener('message', handleNativeMessage);
+    };
+  }, []);
+
+  const triggerNativeGoogleLogin = () => {
+    if (isWebView) {
+      setLoading(true);
+      setError('');
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'START_GOOGLE_LOGIN' }));
+    }
+  };
+  /* ----------------------------------------- */
+
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleModeSwitch = (mode) => {
@@ -176,7 +209,6 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
     setFormData((prev) => ({ ...prev, password: pass }));
   };
 
-  // --- ADDED: Handle Google Login Success ---
   const handleGoogleLoginSuccess = async (credentialResponse) => {
     setError('');
     setLoading(true);
@@ -198,7 +230,6 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
       setLoading(false);
     }
   };
-  // ------------------------------------------
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -299,18 +330,17 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                   </button>
                 </form>
 
-                {/* --- ADDED: Desktop Google Login --- */}
                 <div className="google-divider"><span>or continue with</span></div>
                 <div className="google-btn-container">
-                  <GoogleLogin 
-                    onSuccess={handleGoogleLoginSuccess} 
-                    onError={() => setError('Google Sign-In failed.')} 
-                    theme="filled_blue" 
-                    shape="circle" 
-                    width="360" 
-                  />
+                  {isWebView ? (
+                    <button type="button" onClick={triggerNativeGoogleLogin} className="aw-btn" style={{ backgroundColor: '#ffffff', color: '#3c4043', border: '1px solid #dadce0', boxShadow: 'none' }} disabled={loading}>
+                      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="18" />
+                      <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>Sign in with Google</span>
+                    </button>
+                  ) : (
+                    <GoogleLogin onSuccess={handleGoogleLoginSuccess} onError={() => setError('Google Sign-In failed.')} theme="filled_blue" shape="circle" width="360" />
+                  )}
                 </div>
-                {/* ---------------------------------- */}
 
                 <p className="aw-switch-txt">
                   Don't have an account?{' '}
@@ -374,15 +404,17 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                       </button>
                     </form>
 
+          
                     <div className="google-divider"><span>or register with</span></div>
                     <div className="google-btn-container">
-                      <GoogleLogin 
-                        onSuccess={handleGoogleLoginSuccess} 
-                        onError={() => setError('Google Sign-In failed.')} 
-                        theme="filled_blue" 
-                        shape="circle" 
-                        width="360" 
-                      />
+                      {isWebView ? (
+                        <button type="button" onClick={triggerNativeGoogleLogin} className="aw-btn" style={{ backgroundColor: '#ffffff', color: '#3c4043', border: '1px solid #dadce0', boxShadow: 'none' }} disabled={loading}>
+                          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="18" />
+                          <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>Sign up with Google</span>
+                        </button>
+                      ) : (
+                        <GoogleLogin onSuccess={handleGoogleLoginSuccess} onError={() => setError('Google Sign-In failed.')} theme="filled_blue" shape="circle" width="360" />
+                      )}
                     </div>
                   
 
@@ -475,18 +507,19 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
 
                 <div className="google-divider"><span>or continue with</span></div>
                 <div className="google-btn-container mobile-g-btn">
-                  <GoogleLogin 
-                    onSuccess={handleGoogleLoginSuccess} 
-                    onError={() => setError('Google Sign-In failed.')} 
-                    theme="filled_blue" 
-                    shape="circle" 
-                    width="320" 
-                  />
+                  {isWebView ? (
+                    <button type="button" onClick={triggerNativeGoogleLogin} className="aw-btn" style={{ backgroundColor: '#ffffff', color: '#3c4043', border: '1px solid #dadce0', boxShadow: 'none' }} disabled={loading}>
+                      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="18" />
+                      <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>Sign in with Google</span>
+                    </button>
+                  ) : (
+                    <GoogleLogin onSuccess={handleGoogleLoginSuccess} onError={() => setError('Google Sign-In failed.')} theme="filled_blue" shape="circle" width="320" />
+                  )}
                 </div>
                
               </div>
 
-           
+            
               <div className="mb-slide custom-scrollbar">
                 {!showOtp ? (
                   <>
@@ -535,13 +568,14 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
           
                     <div className="google-divider"><span>or register with</span></div>
                     <div className="google-btn-container mobile-g-btn">
-                      <GoogleLogin 
-                        onSuccess={handleGoogleLoginSuccess} 
-                        onError={() => setError('Google Sign-In failed.')} 
-                        theme="filled_blue" 
-                        shape="circle" 
-                        width="320" 
-                      />
+                      {isWebView ? (
+                        <button type="button" onClick={triggerNativeGoogleLogin} className="aw-btn" style={{ backgroundColor: '#ffffff', color: '#3c4043', border: '1px solid #dadce0', boxShadow: 'none' }} disabled={loading}>
+                          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="18" />
+                          <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>Sign up with Google</span>
+                        </button>
+                      ) : (
+                        <GoogleLogin onSuccess={handleGoogleLoginSuccess} onError={() => setError('Google Sign-In failed.')} theme="filled_blue" shape="circle" width="320" />
+                      )}
                     </div>
                   
                   </>

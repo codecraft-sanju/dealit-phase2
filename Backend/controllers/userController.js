@@ -9,7 +9,9 @@ const Item = require('../models/Item');
 const Order = require('../models/Order');
 const BarterRequest = require('../models/BarterRequest');
 const { OAuth2Client } = require('google-auth-library');
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+const client = new OAuth2Client(); 
+
 const sendTokenResponse = (user, statusCode, res, message) => {
   const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
     expiresIn: '36500d' 
@@ -39,7 +41,7 @@ const sendTokenResponse = (user, statusCode, res, message) => {
       referralCode: user.referralCode,
       totalReferrals: user.totalReferrals,
       listedProductsCount: user.listedProductsCount || 0,
-      rewardedListingsCount: user.rewardedListingsCount || 0, // NEW CHANGE: Added to payload
+      rewardedListingsCount: user.rewardedListingsCount || 0, 
       savedAddresses: user.savedAddresses || [] 
     }
   });
@@ -146,7 +148,6 @@ const registerUser = async (req, res) => {
                 referrer.account_credits += setting.milestoneReferralReward;
                 referrer.aura_points = (referrer.aura_points || 0) + 50; 
                 
-                // CHANGED: Replaced await Notification.create with queueNotification
                 queueNotification({
                   user: referrer._id,
                   type: 'CREDIT_ADDED',
@@ -250,11 +251,9 @@ const loginUser = async (req, res) => {
 
     const user = await User.findOne({ email });
     
-    // -> CHANGES START HERE: Block login if account is soft deleted
     if (!user || user.isDeleted) {
       return res.status(401).json({ success: false, message: 'Invalid credentials or account has been deleted' });
     }
-    // -> CHANGES END HERE
 
     if (!user.isVerified) {
       if (user.otp === undefined && user.password) {
@@ -284,7 +283,6 @@ const loginUser = async (req, res) => {
   }
 };
 
-// --- ADDED: Google Login Function ---
 const googleLogin = async (req, res) => {
   try {
     const { token } = req.body;
@@ -292,9 +290,15 @@ const googleLogin = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Google token is required' });
     }
 
+    // Pass multiple audiences to support Web and Android clients simultaneously.
+    const audienceList = [
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_ANDROID_CLIENT_ID
+    ].filter(Boolean);
+
     const ticket = await client.verifyIdToken({
       idToken: token,
-      audience: process.env.GOOGLE_CLIENT_ID,
+      audience: audienceList,
     });
 
     const payload = ticket.getPayload();
@@ -334,11 +338,10 @@ const googleLogin = async (req, res) => {
 
     sendTokenResponse(user, 200, res, 'Google login successful!');
   } catch (error) {
-    console.error('Error during Google login:', error);
+    console.error('Error during Google login:', error.message);
     res.status(500).json({ success: false, message: 'Authentication failed with Google' });
   }
 };
-// ------------------------------------
 
 const logoutUser = (req, res) => {
   const isProduction = process.env.NODE_ENV === 'production';
@@ -487,19 +490,19 @@ const getUserStats = async (req, res) => {
   try {
     const userId = req.user._id;
 
-   
+    
     const [receivedSwaps, sentSwaps, activeOrders] = await Promise.all([
       
       BarterRequest.countDocuments({ 
         owner: userId, 
         status: { $in: ['PENDING', 'AWAITING_PAYMENT'] } 
       }),
-     
+      
       BarterRequest.countDocuments({ 
         requester: userId, 
         status: { $in: ['PENDING', 'AWAITING_PAYMENT'] } 
       }),
-     
+      
       Order.countDocuments({
         $or: [{ buyer: userId }, { seller: userId }],
         orderStatus: { $in: ['pending', 'processing', 'shipped', 'in_transit'] }
@@ -620,7 +623,7 @@ const claimWelcomeBonus = async (req, res) => {
     user.hasClaimedWelcomeBonus = true;
     await user.save();
 
-   
+    
     queueNotification({
       user: user._id,
       type: 'CREDIT_ADDED',
@@ -651,7 +654,6 @@ const claimWelcomeBonus = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server Error while claiming bonus' });
   }
 };
-
 
 const deleteUserProfile = async (req, res) => {
   try {
@@ -724,7 +726,6 @@ const deleteUserProfile = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server Error during account deletion' });
   }
 };
-
 
 module.exports = {
   registerUser,
