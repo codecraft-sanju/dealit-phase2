@@ -6,6 +6,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import confetti from 'canvas-confetti';
+
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
@@ -37,6 +38,7 @@ const BotMessage = ({ content, animated, onComplete }) => {
   const triggered1 = useRef(false);
   const triggered2 = useRef(false);
   const triggered3 = useRef(false);
+  
   useEffect(() => {
     if (content.includes('[ANIMATION_1]') && !triggered1.current) {
       triggered1.current = true;
@@ -66,6 +68,7 @@ const BotMessage = ({ content, animated, onComplete }) => {
       }());
     }
   }, [content]);
+  
   useEffect(() => {
     if (!animated) {
       setDisplayedText(cleanContent);
@@ -83,6 +86,7 @@ const BotMessage = ({ content, animated, onComplete }) => {
     }, 15);
     return () => clearInterval(interval);
   }, [cleanContent, animated]);
+  
   return (
     <div className="break-words leading-relaxed text-sm">
       <ReactMarkdown
@@ -134,7 +138,6 @@ const SUGGESTIONS = [
 
 const FloatingAIAssistant = ({ user }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [hasFetchedHistory, setHasFetchedHistory] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -145,7 +148,6 @@ const FloatingAIAssistant = ({ user }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState(null);
 
-  // 'idle' | 'listening' | 'thinking' | 'generating_audio' | 'speaking'
   const [voiceState, setVoiceState] = useState('idle');
   const [isPremiumVoiceLimited, setIsPremiumVoiceLimited] = useState(false);
   
@@ -154,7 +156,6 @@ const FloatingAIAssistant = ({ user }) => {
   const audioRef = useRef(null);
   const [buttonState, setButtonState] = useState('bot');
   
-  // CHANGED: Added safe checks for window.speechSynthesis to prevent WebView crash
   useEffect(() => {
     if (window.speechSynthesis) {
       window.speechSynthesis.onvoiceschanged = () => {};
@@ -177,7 +178,6 @@ const FloatingAIAssistant = ({ user }) => {
     const checkOpen = () => {
       if (localStorage.getItem('dealit_open_floating_ai') === 'true') {
         setIsOpen(true);
-        setHasFetchedHistory(false); 
         localStorage.removeItem('dealit_open_floating_ai');
       }
     };
@@ -191,38 +191,6 @@ const FloatingAIAssistant = ({ user }) => {
   useEffect(() => {
     if (isOpen) scrollToBottom();
   }, [messages, isOpen, isLoading, voiceState]);
-  
-  useEffect(() => {
-    if (isOpen && !hasFetchedHistory) {
-      const loadHistory = async () => {
-        setIsLoading(true);
-        try {
-          const token = localStorage.getItem('dealit_token');
-          const res = await axios.get(`${API_URL}/ai/chat/history/latest`, {
-            headers: { Authorization: `Bearer ${token}` },
-            withCredentials: true
-          });
-          
-          if (res.data.success && res.data.history && res.data.history.length > 0) {
-            const formattedHistory = res.data.history.map((msg, index) => ({
-              id: msg._id || `hist_${index}`,
-              role: msg.role === 'assistant' ? 'bot' : 'user',
-              content: msg.content,
-              animated: false
-            }));
-            setMessages(formattedHistory);
-            setCurrentSessionId(res.data.sessionId);
-          }
-        } catch (error) {
-          console.error('Failed to load chat history:', error);
-        } finally {
-          setIsLoading(false);
-          setHasFetchedHistory(true);
-        }
-      };
-      loadHistory();
-    }
-  }, [isOpen, hasFetchedHistory]);
   
   useEffect(() => {
     if (isOpen) return;
@@ -267,7 +235,6 @@ const FloatingAIAssistant = ({ user }) => {
     const voicePref = localStorage.getItem('dealit_ai_voice_pref') || 'female';
     const textToSpeak = text.replace(/[*_#`]/g, '');
 
-    // Show "Preparing voice..." while we wait for ElevenLabs to return audio
     setVoiceState('generating_audio');
     try {
       const token = localStorage.getItem('dealit_token');
@@ -305,7 +272,7 @@ const FloatingAIAssistant = ({ user }) => {
         setVoiceState('idle');
         URL.revokeObjectURL(audioUrl);
       };
-      // Audio is ready — switch to "Speaking..." right before play
+      
       setVoiceState('speaking');
       await audio.play();
     } catch (error) {
@@ -382,6 +349,7 @@ const FloatingAIAssistant = ({ user }) => {
       setVoiceState('idle');
     }
   };
+  
   const handleMicClick = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -413,6 +381,7 @@ const FloatingAIAssistant = ({ user }) => {
     
     recognition.start();
   };
+  
   const cancelVoiceMode = () => {
     if (audioRef.current) {
       audioRef.current.pause();
@@ -424,6 +393,7 @@ const FloatingAIAssistant = ({ user }) => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
     setVoiceState('idle');
   };
+  
   const processMessage = async (userMessage) => {
     if (!userMessage.trim()) return;
     
@@ -435,11 +405,13 @@ const FloatingAIAssistant = ({ user }) => {
     setMessages(newMessages);
     setInput('');
     setIsLoading(true);
+    
     const botMessageId = Date.now() + 1;
     setMessages((prev) => [
       ...prev,
       { id: botMessageId, role: 'bot', content: '', animated: false }
     ]);
+    
     try {
       const token = localStorage.getItem('dealit_token');
       const smartContextStr = localStorage.getItem('dealit_ai_context');
@@ -466,6 +438,7 @@ const FloatingAIAssistant = ({ user }) => {
       const decoder = new TextDecoder("utf-8");
       let botReply = "";
       setIsLoading(false); 
+      
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -513,11 +486,13 @@ const FloatingAIAssistant = ({ user }) => {
       );
     }
   };
+  
   const handleSendMessage = (e) => {
     e.preventDefault();
     if (voiceState !== 'idle') cancelVoiceMode();
     processMessage(input);
   };
+  
   const handleClose = () => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
     if (audioRef.current) {
@@ -538,17 +513,18 @@ const FloatingAIAssistant = ({ user }) => {
       navigate('/ai-chat');
     }
   };
+  
   return (
     <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[60]">
       <AnimatePresence>
         {isOpen && (
           <motion.div
             layout
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            initial={{ opacity: 0, y: 40, scale: 0.9, transformOrigin: 'bottom right' }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
-            className={`fixed flex flex-col bg-gray-900 shadow-[0_15px_50px_rgba(163,136,225,0.2)] overflow-hidden z-[100] overscroll-none bottom-24 right-4 md:right-6 w-[calc(100vw-32px)] sm:w-[400px] h-[500px] border border-purple-500/30 rounded-2xl`}
+            exit={{ opacity: 0, y: 40, scale: 0.9 }}
+            transition={{ type: "spring", damping: 25, stiffness: 250 }}
+            className={`fixed flex flex-col bg-gray-900 shadow-[0_15px_50px_rgba(163,136,225,0.3)] overflow-hidden z-[100] overscroll-none bottom-24 right-4 md:right-6 w-[calc(100vw-32px)] sm:w-[400px] h-[500px] max-h-[75dvh] border border-purple-500/30 rounded-2xl`}
           >
             <div className="bg-gray-800/90 backdrop-blur-md border-b border-purple-500/20 p-4 flex justify-between items-center shadow-sm shrink-0 z-10">
               <div className="flex items-center gap-3">
@@ -611,13 +587,6 @@ const FloatingAIAssistant = ({ user }) => {
                   </div>
                 </motion.div>
               ))}
-              {isLoading && voiceState === 'idle' && (
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex justify-start">
-                  <div className="bg-gray-800 border border-gray-700 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
-                    <TypingLoader />
-                  </div>
-                </motion.div>
-              )}
 
               {/* --- INLINE VOICE UI --- */}
               <AnimatePresence>
@@ -704,7 +673,7 @@ const FloatingAIAssistant = ({ user }) => {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Ask about items, Aura, rules..."
-                  className="w-full bg-gray-900 border border-gray-700 rounded-full py-3 pl-4 pr-20 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-inner"
+                  className="w-full bg-gray-900 border border-gray-700 rounded-full py-3 pl-4 pr-20 text-base md:text-sm text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-inner"
                 />
                 
                 <button
@@ -727,9 +696,10 @@ const FloatingAIAssistant = ({ user }) => {
         )}
       </AnimatePresence>
       <motion.button
-        animate={isOpen ? { y: 0 } : { y: [0, -6, 0] }}
+        animate={isOpen ? { y: 0, scale: 0.9 } : { y: [0, -6, 0], scale: 1 }}
         transition={{ 
-          y: { repeat: Infinity, duration: 2.5, ease: "easeInOut" } 
+          y: { repeat: Infinity, duration: 2.5, ease: "easeInOut" },
+          scale: { type: "spring", damping: 20, stiffness: 200 }
         }}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}

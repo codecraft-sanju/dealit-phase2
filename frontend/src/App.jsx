@@ -375,8 +375,6 @@ function App() {
       console.error('Error logging out:', error);
     }
   }, []);
-
-
   return (
     <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
       <QueryClientProvider client={queryClient}>

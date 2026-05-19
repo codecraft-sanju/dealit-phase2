@@ -6,6 +6,7 @@ import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import confetti from 'canvas-confetti';
+
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
@@ -37,6 +38,7 @@ const BotMessage = ({ content, animated, onComplete }) => {
   const triggered1 = useRef(false);
   const triggered2 = useRef(false);
   const triggered3 = useRef(false);
+  
   useEffect(() => {
     if (content.includes('[ANIMATION_1]') && !triggered1.current) {
       triggered1.current = true;
@@ -66,6 +68,7 @@ const BotMessage = ({ content, animated, onComplete }) => {
       }());
     }
   }, [content]);
+  
   useEffect(() => {
     if (!animated) {
       setDisplayedText(cleanContent);
@@ -83,6 +86,7 @@ const BotMessage = ({ content, animated, onComplete }) => {
     }, 15);
     return () => clearInterval(interval);
   }, [cleanContent, animated]);
+  
   return (
     <div className="break-words leading-relaxed text-sm">
       <ReactMarkdown
@@ -115,8 +119,7 @@ const BotMessage = ({ content, animated, onComplete }) => {
           thead: ({node, ...props}) => <thead className="bg-gray-900" {...props} />,
           th: ({node, ...props}) => <th className="px-4 py-3 text-left font-semibold text-gray-300 uppercase tracking-wider text-xs" {...props} />,
           tbody: ({node, ...props}) => <tbody className="divide-y divide-gray-700 bg-gray-800/50" {...props} />,
-          td: ({node, ...props}) => <td className="px-4 py-3 text-gray-300" {...props} />,
-          blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-purple-500 pl-4 py-1 my-3 bg-gray-900/50 rounded-r-lg italic text-gray-400" {...props} />
+          td: ({node, ...props}) => <td className="px-4 py-3 text-gray-300" {...props} />
         }}
       >
         {displayedText}
@@ -143,6 +146,7 @@ const AiChatPage = ({ user }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 768);
   const [sessions, setSessions] = useState([]);
   const [currentSessionId, setCurrentSessionId] = useState(null);
+  const [viewportHeight, setViewportHeight] = useState('100dvh');
   
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSmartContextEnabled, setIsSmartContextEnabled] = useState(() => {
@@ -150,14 +154,34 @@ const AiChatPage = ({ user }) => {
     return saved !== null ? JSON.parse(saved) : true;
   });
 
-  // 'idle' | 'listening' | 'thinking' | 'generating_audio' | 'speaking'
   const [voiceState, setVoiceState] = useState('idle');
   const [voicePref, setVoicePref] = useState(() => localStorage.getItem('dealit_ai_voice_pref') || 'female');
   const [isPremiumVoiceLimited, setIsPremiumVoiceLimited] = useState(false);
+  
   const abortControllerRef = useRef(null);
   const messagesEndRef = useRef(null);
   const audioRef = useRef(null);
   
+  // FIX: Dynamic Viewport calculation to fix mobile keyboard hiding header
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.visualViewport) {
+        setViewportHeight(`${window.visualViewport.height}px`);
+      }
+    };
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleResize);
+      window.visualViewport.addEventListener('scroll', handleResize);
+      handleResize();
+    }
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleResize);
+        window.visualViewport.removeEventListener('scroll', handleResize);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     if (window.speechSynthesis) {
       window.speechSynthesis.onvoiceschanged = () => {};
@@ -181,6 +205,7 @@ const AiChatPage = ({ user }) => {
     setIsSmartContextEnabled(newVal);
     localStorage.setItem('dealit_ai_context', JSON.stringify(newVal));
   };
+  
   const handleToggleVoicePref = () => {
     const newPref = voicePref === 'female' ? 'male' : 'female';
     setVoicePref(newPref);
@@ -190,17 +215,20 @@ const AiChatPage = ({ user }) => {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+  
   useEffect(() => {
     if (voiceState === 'idle') scrollToBottom();
   }, [messages, isLoading, voiceState]);
+  
   useEffect(() => {
-    const handleResize = () => {
+    const handleResizeSidebar = () => {
       if (window.innerWidth > 768) setIsSidebarOpen(true);
       else setIsSidebarOpen(false);
     };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener('resize', handleResizeSidebar);
+    return () => window.removeEventListener('resize', handleResizeSidebar);
   }, []);
+  
   const fetchSessions = useCallback(async () => {
     try {
       const token = localStorage.getItem('dealit_token');
@@ -215,9 +243,11 @@ const AiChatPage = ({ user }) => {
       console.error('Failed to load chat sessions:', error);
     }
   }, []);
+  
   useEffect(() => {
     fetchSessions();
   }, [fetchSessions]);
+  
   useEffect(() => {
     const loadHistory = async () => {
       if (!routeSessionId) {
@@ -257,6 +287,7 @@ const AiChatPage = ({ user }) => {
     };
     loadHistory();
   }, [routeSessionId, user, navigate]);
+  
   const handleNewChat = () => {
     setCurrentSessionId(null);
     setIsLoading(false);
@@ -272,6 +303,7 @@ const AiChatPage = ({ user }) => {
     window.history.pushState(null, '', '/ai-chat');
     if (window.innerWidth <= 768) setIsSidebarOpen(false); 
   };
+  
   const selectSession = (id) => {
     if (currentSessionId === id || routeSessionId === id) {
       if (window.innerWidth <= 768) setIsSidebarOpen(false);
@@ -280,6 +312,7 @@ const AiChatPage = ({ user }) => {
     navigate(`/ai-chat/${id}`);
     if (window.innerWidth <= 768) setIsSidebarOpen(false);
   };
+  
   const deleteSession = async (e, id) => {
     e.stopPropagation();
     try {
@@ -298,6 +331,7 @@ const AiChatPage = ({ user }) => {
       console.error('Error deleting session:', error);
     }
   };
+  
   const deleteAllSessions = async () => {
     try {
       const token = localStorage.getItem('dealit_token');
@@ -313,6 +347,7 @@ const AiChatPage = ({ user }) => {
       console.error('Error deleting all sessions:', error);
     }
   };
+  
   const markAsAnimated = (id) => {
     setMessages((prev) => prev.map((m) => m.id === id ? { ...m, animated: false } : m));
   };
@@ -461,6 +496,7 @@ const AiChatPage = ({ user }) => {
       setVoiceState('idle');
     }
   };
+  
   const handleMicClick = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -492,6 +528,7 @@ const AiChatPage = ({ user }) => {
     
     recognition.start();
   };
+  
   const cancelVoiceMode = () => {
     if (audioRef.current) {
       audioRef.current.pause();
@@ -503,6 +540,7 @@ const AiChatPage = ({ user }) => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
     setVoiceState('idle');
   };
+  
   const processMessage = async (userMessage) => {
     if (!userMessage.trim()) return;
     
@@ -514,11 +552,13 @@ const AiChatPage = ({ user }) => {
     setMessages(newMessages);
     setInput('');
     setIsLoading(true);
+    
     const botMessageId = Date.now() + 1;
     setMessages((prev) => [
       ...prev,
       { id: botMessageId, role: 'bot', content: '', animated: false } 
     ]);
+    
     try {
       const token = localStorage.getItem('dealit_token');
       const smartContextStr = localStorage.getItem('dealit_ai_context');
@@ -545,6 +585,7 @@ const AiChatPage = ({ user }) => {
       const decoder = new TextDecoder("utf-8");
       let botReply = "";
       setIsLoading(false); 
+      
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -596,11 +637,13 @@ const AiChatPage = ({ user }) => {
       );
     }
   };
+  
   const handleSendMessage = (e) => {
     e.preventDefault();
     if (voiceState !== 'idle') cancelVoiceMode();
     processMessage(input);
   };
+  
   const handleMinimize = () => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
     localStorage.setItem('dealit_open_floating_ai', 'true');
@@ -616,6 +659,7 @@ const AiChatPage = ({ user }) => {
       navigate('/'); 
     }
   };
+  
   const handleClose = () => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
     if (audioRef.current) {
@@ -626,8 +670,13 @@ const AiChatPage = ({ user }) => {
     }
     navigate('/');
   };
+  
   return (
-    <div className="fixed inset-0 flex bg-gray-900 z-50 overflow-hidden overscroll-none">
+    // FIX applied here: added style with dynamic viewportHeight to prevent keyboard from pushing UI out of view
+    <div 
+      className="fixed top-0 left-0 right-0 flex bg-gray-900 z-50 overflow-hidden overscroll-none"
+      style={{ height: viewportHeight }}
+    >
       
       {isSidebarOpen && (
         <div 
@@ -831,13 +880,6 @@ const AiChatPage = ({ user }) => {
               </div>
             </motion.div>
           ))}
-          {isLoading && voiceState === 'idle' && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex justify-start">
-              <div className="bg-gray-800 border border-gray-700 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
-                <TypingLoader />
-              </div>
-            </motion.div>
-          )}
 
           {/* --- INLINE VOICE UI --- */}
           <AnimatePresence>
@@ -918,12 +960,13 @@ const AiChatPage = ({ user }) => {
           )}
           <div className="bg-gray-800/50 backdrop-blur-sm border-t border-purple-500/20 p-4 container mx-auto max-w-3xl">
             <form onSubmit={handleSendMessage} className="relative flex items-center">
+              {/* FIX applied here: added text-base md:text-sm to prevent iOS keyboard auto-zoom */}
               <input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Ask Dealit AI..."
-                className="w-full bg-gray-900 border border-gray-700 rounded-full py-4 pl-6 pr-24 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-inner"
+                className="w-full bg-gray-900 border border-gray-700 rounded-full py-4 pl-6 pr-24 text-base md:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-inner"
               />
               
               <button
