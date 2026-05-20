@@ -175,7 +175,7 @@ const OrderDetailsPage = ({ user }) => {
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
-    }
+    };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -202,7 +202,8 @@ const OrderDetailsPage = ({ user }) => {
 
   const handleUpdateStatus = async (newStatus, reason = '') => {
     try {
-      const res = await axios.put(`${API_URL}/orders/${orderId}/status`, 
+      const res = await axios.put(
+        `${API_URL}/orders/${orderId}/status`, 
         { status: newStatus, cancellationReason: reason }, 
         { withCredentials: true }
       );
@@ -227,7 +228,6 @@ const OrderDetailsPage = ({ user }) => {
         { withCredentials: true }
       );
       if (res.data.success) {
-        // NAYA LOGIC: Backend ka exact message show karo
         alert(res.data.message || 'Action Completed!');
         setShowDispatchModal(false);
         fetchOrderDetails();
@@ -249,25 +249,25 @@ const OrderDetailsPage = ({ user }) => {
       );
 
       if (res.data.success) {
-         if (res.data.labelUrl) {
-            const link = document.createElement('a');
-            link.href = res.data.labelUrl;
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            fetchOrderDetails(); 
-         } else {
-            alert('Shiprocket is still processing the label. Please try again in 1 minute.');
-         }
+        if (res.data.labelUrl) {
+          const link = document.createElement('a');
+          link.href = res.data.labelUrl;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          fetchOrderDetails(); 
+        } else {
+          alert('Shiprocket is still processing the label. Please try again in 1 minute.');
+        }
       } else {
-         alert(res.data.message || 'Failed to generate label.');
+        alert(res.data.message || 'Failed to generate label.');
       }
     } catch (err) {
-       alert(err.response?.data?.message || 'Failed to generate shipping label. Ensure you have balance in Shiprocket wallet.');
+      alert(err.response?.data?.message || 'Failed to generate shipping label. Ensure you have balance in Shiprocket wallet.');
     } finally {
-       setDownloadingLabel(false);
+      setDownloadingLabel(false);
     }
   };
 
@@ -376,44 +376,44 @@ const OrderDetailsPage = ({ user }) => {
 
         <div className="max-w-md mx-auto md:max-w-4xl px-4 md:px-8 pt-28 relative z-20">
           <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 md:p-6 mb-6">
-             <div className="relative px-2 sm:px-4 flex justify-between">
-                <div className="absolute top-5 left-0 w-full h-1.5 bg-gray-100 rounded-full animate-pulse"></div>
-                {[1, 2, 3, 4, 5].map(i => (
-                  <div key={i} className="flex flex-col items-center gap-2 z-10 w-[4.5rem] sm:w-20">
-                    <div className="w-10 h-10 rounded-full bg-gray-200 border-4 border-white animate-pulse"></div>
-                    <div className="w-12 h-2.5 bg-gray-200 rounded-full animate-pulse mt-1"></div>
-                  </div>
-                ))}
-             </div>
+            <div className="relative px-2 sm:px-4 flex justify-between">
+              <div className="absolute top-5 left-0 w-full h-1.5 bg-gray-100 rounded-full animate-pulse"></div>
+              {[1, 2, 3, 4, 5].map(i => (
+                <div key={i} className="flex flex-col items-center gap-2 z-10 w-[4.5rem] sm:w-20">
+                  <div className="w-10 h-10 rounded-full bg-gray-200 border-4 border-white animate-pulse"></div>
+                  <div className="w-12 h-2.5 bg-gray-200 rounded-full animate-pulse mt-1"></div>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 md:p-6">
             <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
-               <div className="w-24 h-4 bg-gray-200 rounded-md animate-pulse"></div>
-               <div className="w-20 h-6 bg-gray-200 rounded-full animate-pulse"></div>
+              <div className="w-24 h-4 bg-gray-200 rounded-md animate-pulse"></div>
+              <div className="w-20 h-6 bg-gray-200 rounded-full animate-pulse"></div>
             </div>
 
             <div className="flex flex-col md:flex-row gap-6">
-               <div className="flex gap-4 md:w-1/2">
-                  <div className="w-24 h-24 sm:w-28 sm:h-28 bg-gray-200 rounded-[1.2rem] shrink-0 animate-pulse"></div>
-                  <div className="flex-1 flex flex-col gap-2 pt-1">
-                     <div className="w-full h-5 bg-gray-200 rounded-md animate-pulse"></div>
-                     <div className="w-2/3 h-4 bg-gray-200 rounded-md animate-pulse"></div>
-                     <div className="w-1/2 h-3 bg-gray-100 rounded-md animate-pulse mt-2"></div>
-                     <div className="flex gap-2 mt-2">
-                       <div className="w-20 h-6 bg-gray-100 rounded-md animate-pulse"></div>
-                       <div className="w-24 h-6 bg-gray-100 rounded-md animate-pulse"></div>
-                     </div>
+              <div className="flex gap-4 md:w-1/2">
+                <div className="w-24 h-24 sm:w-28 sm:h-28 bg-gray-200 rounded-[1.2rem] shrink-0 animate-pulse"></div>
+                <div className="flex-1 flex flex-col gap-2 pt-1">
+                  <div className="w-full h-5 bg-gray-200 rounded-md animate-pulse"></div>
+                  <div className="w-2/3 h-4 bg-gray-200 rounded-md animate-pulse"></div>
+                  <div className="w-1/2 h-3 bg-gray-100 rounded-md animate-pulse mt-2"></div>
+                  <div className="flex gap-2 mt-2">
+                    <div className="w-20 h-6 bg-gray-100 rounded-md animate-pulse"></div>
+                    <div className="w-24 h-6 bg-gray-100 rounded-md animate-pulse"></div>
                   </div>
-               </div>
+                </div>
+              </div>
 
-               <div className="bg-[#f8f6ff] p-5 rounded-2xl md:w-1/2 flex flex-col gap-2 animate-pulse">
-                  <div className="w-32 h-3 bg-gray-200 rounded-md mb-2"></div>
-                  <div className="w-48 h-4 bg-gray-300 rounded-md"></div>
-                  <div className="w-full h-3 bg-gray-200 rounded-md mt-1"></div>
-                  <div className="w-3/4 h-3 bg-gray-200 rounded-md"></div>
-                  <div className="w-24 h-4 bg-gray-300 rounded-md mt-2"></div>
-               </div>
+              <div className="bg-[#f8f6ff] p-5 rounded-2xl md:w-1/2 flex flex-col gap-2 animate-pulse">
+                <div className="w-32 h-3 bg-gray-200 rounded-md mb-2"></div>
+                <div className="w-48 h-4 bg-gray-300 rounded-md"></div>
+                <div className="w-full h-3 bg-gray-200 rounded-md mt-1"></div>
+                <div className="w-3/4 h-3 bg-gray-200 rounded-md"></div>
+                <div className="w-24 h-4 bg-gray-300 rounded-md mt-2"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -426,6 +426,7 @@ const OrderDetailsPage = ({ user }) => {
   const estimatedInfo = getEstimatedDelivery();
 
   return (
+    // ✅ DIV A — outermost wrapper (min-h-screen)
     <div className="min-h-screen bg-[#f4f2f9] pb-24 font-sans relative overflow-x-hidden">
       
       <header 
@@ -464,11 +465,15 @@ const OrderDetailsPage = ({ user }) => {
         className="absolute top-0 left-0 right-0 bg-[#6B46C1] h-40 rounded-b-[2rem] z-0"
       />
 
+      {/* ✅ DIV B — content wrapper (max-w-md) */}
       <div className="max-w-md mx-auto md:max-w-4xl px-4 md:px-8 pt-28 relative z-20">
         
         <OrderTrackingStepper currentStatus={order.orderStatus} />
         
+        {/* ✅ DIV C — main white card */}
         <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm p-5 md:p-6 mb-6">
+
+          {/* Order Info Header */}
           <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
             <span className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
               <Package className="w-4 h-4 text-[#A388E1]" /> Order Info
@@ -485,6 +490,7 @@ const OrderDetailsPage = ({ user }) => {
             </div>
           </div>
 
+          {/* Product + Address Row */}
           <div className="flex flex-col md:flex-row gap-6">
             <div className="flex gap-4 md:w-1/2">
               <div className="w-24 h-24 sm:w-28 sm:h-28 bg-[#f8f6ff] rounded-[1.2rem] overflow-hidden shrink-0 border border-gray-100">
@@ -576,17 +582,14 @@ const OrderDetailsPage = ({ user }) => {
                       <div className="absolute right-[-15px] top-[-15px] opacity-10 pointer-events-none">
                         <RefreshCcw className="w-24 h-24 text-orange-600" />
                       </div>
-                      
                       <div className="bg-orange-100 p-2 rounded-full shrink-0 relative z-10 mt-0.5">
                         <Clock className="w-5 h-5 text-orange-600" />
                       </div>
-                      
                       <div className="relative z-10 w-full">
                         <div className="flex justify-between items-center mb-2.5">
-                           <h4 className="text-[10px] font-bold text-orange-800 uppercase tracking-widest">Refund Processing</h4>
-                           <span className="bg-orange-500 text-white text-[9px] font-black px-2 py-0.5 rounded-sm uppercase tracking-wider shadow-sm">In Progress</span>
+                          <h4 className="text-[10px] font-bold text-orange-800 uppercase tracking-widest">Refund Processing</h4>
+                          <span className="bg-orange-500 text-white text-[9px] font-black px-2 py-0.5 rounded-sm uppercase tracking-wider shadow-sm">In Progress</span>
                         </div>
-                        
                         <div className="space-y-2.5">
                           <p className="text-xs text-orange-900 font-medium leading-relaxed">
                             Your order was cancelled. <strong>{order.itemPrice} Credits</strong> have been returned to your wallet instantly. The shipping amount of <strong>₹{order.shippingCost}</strong> is being processed and will reflect in your bank account in 3-5 days.
@@ -599,45 +602,42 @@ const OrderDetailsPage = ({ user }) => {
                   {order.paymentStatus === 'refunded' && (
                     <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl flex items-start gap-3 shadow-sm relative overflow-hidden">
                       <div className="absolute right-[-15px] top-[-15px] opacity-10 pointer-events-none">
-                         <CheckCircle className="w-24 h-24 text-emerald-600" />
+                        <CheckCircle className="w-24 h-24 text-emerald-600" />
                       </div>
-                      
                       <div className="bg-emerald-100 p-2 rounded-full shrink-0 relative z-10 mt-0.5">
                         <CheckCircle className="w-5 h-5 text-emerald-600" />
                       </div>
-                      
                       <div className="relative z-10 w-full">
                         <div className="flex justify-between items-center mb-2.5">
-                           <h4 className="text-[10px] font-bold text-emerald-800 uppercase tracking-widest">Refund Successful</h4>
-                           <span className="bg-emerald-500 text-white text-[9px] font-black px-2 py-0.5 rounded-sm uppercase tracking-wider shadow-sm">Verified</span>
+                          <h4 className="text-[10px] font-bold text-emerald-800 uppercase tracking-widest">Refund Successful</h4>
+                          <span className="bg-emerald-500 text-white text-[9px] font-black px-2 py-0.5 rounded-sm uppercase tracking-wider shadow-sm">Verified</span>
                         </div>
-                        
                         <div className="space-y-2.5">
                           <div className="flex justify-between items-center bg-white/70 p-2.5 rounded-xl border border-emerald-100/50">
-                             <div className="flex items-center gap-2">
-                                <div className="bg-[#FFF4D2] p-1.5 rounded-lg">
-                                  <Coins className="w-3.5 h-3.5 text-yellow-600" />
-                                </div>
-                                <span className="text-xs font-bold text-gray-800">Credits Refund</span>
-                             </div>
-                             <div className="text-right">
-                               <span className="text-sm font-black text-emerald-600">+{order.itemPrice} CR</span>
-                               <p className="text-[9px] text-gray-500 font-medium leading-none mt-0.5">Added to Wallet</p>
-                             </div>
+                            <div className="flex items-center gap-2">
+                              <div className="bg-[#FFF4D2] p-1.5 rounded-lg">
+                                <Coins className="w-3.5 h-3.5 text-yellow-600" />
+                              </div>
+                              <span className="text-xs font-bold text-gray-800">Credits Refund</span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-sm font-black text-emerald-600">+{order.itemPrice} CR</span>
+                              <p className="text-[9px] text-gray-500 font-medium leading-none mt-0.5">Added to Wallet</p>
+                            </div>
                           </div>
 
                           {order.shippingCost > 0 && (
                             <div className="flex justify-between items-center bg-white/70 p-2.5 rounded-xl border border-emerald-100/50">
-                               <div className="flex items-center gap-2">
-                                  <div className="bg-blue-50 p-1.5 rounded-lg">
-                                    <Truck className="w-3.5 h-3.5 text-blue-600" />
-                                  </div>
-                                  <span className="text-xs font-bold text-gray-800">Shipping Refund</span>
-                               </div>
-                               <div className="text-right">
-                                 <span className="text-sm font-black text-emerald-600">+₹{order.shippingCost}</span>
-                                 <p className="text-[9px] text-gray-500 font-medium leading-none mt-0.5">Sent to Bank</p>
-                               </div>
+                              <div className="flex items-center gap-2">
+                                <div className="bg-blue-50 p-1.5 rounded-lg">
+                                  <Truck className="w-3.5 h-3.5 text-blue-600" />
+                                </div>
+                                <span className="text-xs font-bold text-gray-800">Shipping Refund</span>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-sm font-black text-emerald-600">+₹{order.shippingCost}</span>
+                                <p className="text-[9px] text-gray-500 font-medium leading-none mt-0.5">Sent to Bank</p>
+                              </div>
                             </div>
                           )}
                         </div>
@@ -648,19 +648,16 @@ const OrderDetailsPage = ({ user }) => {
                   {order.paymentStatus === 'refund_failed' && (
                     <div className="bg-red-50 border border-red-200 p-4 rounded-2xl flex items-start gap-3 shadow-sm relative overflow-hidden mt-3">
                       <div className="absolute right-[-15px] top-[-15px] opacity-10 pointer-events-none">
-                         <AlertCircle className="w-24 h-24 text-red-600" />
+                        <AlertCircle className="w-24 h-24 text-red-600" />
                       </div>
-                      
                       <div className="bg-red-100 p-2 rounded-full shrink-0 relative z-10 mt-0.5">
                         <AlertCircle className="w-5 h-5 text-red-600" />
                       </div>
-                      
                       <div className="relative z-10 w-full">
                         <div className="flex justify-between items-center mb-2.5">
-                           <h4 className="text-[10px] font-bold text-red-800 uppercase tracking-widest">Refund Failed</h4>
-                           <span className="bg-red-500 text-white text-[9px] font-black px-2 py-0.5 rounded-sm uppercase tracking-wider shadow-sm">Action Needed</span>
+                          <h4 className="text-[10px] font-bold text-red-800 uppercase tracking-widest">Refund Failed</h4>
+                          <span className="bg-red-500 text-white text-[9px] font-black px-2 py-0.5 rounded-sm uppercase tracking-wider shadow-sm">Action Needed</span>
                         </div>
-                        
                         <div className="space-y-2.5">
                           <p className="text-xs text-red-900 font-medium leading-relaxed">
                             Your <strong>{order.itemPrice} Credits</strong> have been returned to your wallet. However, the bank rejected the shipping refund of <strong>₹{order.shippingCost}</strong>. Our support team has been notified and will process this manually.
@@ -695,48 +692,47 @@ const OrderDetailsPage = ({ user }) => {
               </div>
               
               <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-                 {order.trackingDetails.awb_code && (
-                   <div className="flex gap-2 flex-1 sm:flex-none">
-                     <button
-                       onClick={handleViewLiveTracking}
-                       className="bg-[#f8f6ff] border border-[#e9d8ff] text-[#6B46C1] hover:bg-[#6B46C1] hover:text-white hover:border-[#6B46C1] px-4 py-2.5 rounded-xl font-bold text-xs transition-all duration-300 flex items-center justify-center gap-2 flex-1 sm:flex-none"
-                     >
-                       Live Tracking <Truck className="w-3.5 h-3.5" />
-                     </button>
-                     <a
-                       href={`https://shiprocket.co/tracking/${order.trackingDetails.awb_code}`}
-                       target="_blank"
-                       rel="noopener noreferrer"
-                       className="bg-white border border-gray-200 text-gray-500 hover:text-[#6B46C1] hover:border-[#6B46C1] hover:bg-[#f8f6ff] px-3 py-2.5 rounded-xl transition-all duration-300 flex items-center justify-center shadow-sm shrink-0"
-                       title="Track on Shiprocket Website"
-                     >
-                       <ExternalLink className="w-4 h-4" />
-                     </a>
-                   </div>
-                 )}
-                 
-                 {userType === 'sales' && order.orderStatus === 'processing' && (
-                   <button
-                     onClick={handleDownloadLabel}
-                     disabled={downloadingLabel}
-                     className={`bg-[#6B46C1] text-white hover:bg-[#5a3aa3] px-4 py-2.5 rounded-xl font-bold text-xs transition-all duration-300 flex items-center justify-center gap-2 flex-1 sm:flex-none shadow-sm disabled:opacity-70 ${downloadingLabel ? 'cursor-not-allowed' : ''}`}
-                   >
-                     {downloadingLabel ? (
-                        <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating...</>
-                     ) : (
-                        <><FileText className="w-3.5 h-3.5" /> Get Slip</>
-                     )}
-                   </button>
-                 )}
+                {order.trackingDetails.awb_code && (
+                  <div className="flex gap-2 flex-1 sm:flex-none">
+                    <button
+                      onClick={handleViewLiveTracking}
+                      className="bg-[#f8f6ff] border border-[#e9d8ff] text-[#6B46C1] hover:bg-[#6B46C1] hover:text-white hover:border-[#6B46C1] px-4 py-2.5 rounded-xl font-bold text-xs transition-all duration-300 flex items-center justify-center gap-2 flex-1 sm:flex-none"
+                    >
+                      Live Tracking <Truck className="w-3.5 h-3.5" />
+                    </button>
+                    <a
+                      href={`https://shiprocket.co/tracking/${order.trackingDetails.awb_code}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-white border border-gray-200 text-gray-500 hover:text-[#6B46C1] hover:border-[#6B46C1] hover:bg-[#f8f6ff] px-3 py-2.5 rounded-xl transition-all duration-300 flex items-center justify-center shadow-sm shrink-0"
+                      title="Track on Shiprocket Website"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </a>
+                  </div>
+                )}
+                
+                {userType === 'sales' && order.orderStatus === 'processing' && (
+                  <button
+                    onClick={handleDownloadLabel}
+                    disabled={downloadingLabel}
+                    className={`bg-[#6B46C1] text-white hover:bg-[#5a3aa3] px-4 py-2.5 rounded-xl font-bold text-xs transition-all duration-300 flex items-center justify-center gap-2 flex-1 sm:flex-none shadow-sm disabled:opacity-70 ${downloadingLabel ? 'cursor-not-allowed' : ''}`}
+                  >
+                    {downloadingLabel ? (
+                      <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating...</>
+                    ) : (
+                      <><FileText className="w-3.5 h-3.5" /> Get Slip</>
+                    )}
+                  </button>
+                )}
               </div>
             </div>
           )}
 
-        {/* Action Buttons & Timers for SELLER */}
+          {/* Action Buttons & Timers for SELLER */}
           {userType === 'sales' && order.orderStatus !== 'delivered' && order.orderStatus !== 'shipped' && order.orderStatus !== 'in_transit' && order.orderStatus !== 'cancelled' && (
             <div className="mt-6 pt-5 border-t border-gray-100">
               
-              {/* SMART LOGIC: Checking isReadyToDispatch & Order Type */}
               {order.orderStatus === 'pending' && !order.isReadyToDispatch && (
                 <div className="bg-orange-50 border border-orange-100 p-4 rounded-xl mb-4 flex items-start gap-3 shadow-sm">
                   <AlertCircle className="w-5 h-5 text-orange-500 mt-0.5 shrink-0" />
@@ -755,7 +751,7 @@ const OrderDetailsPage = ({ user }) => {
                       ) : (
                         <>
                           Please coordinate with your partner and click <strong>Ready to Dispatch</strong> when you have packed the item.
-                          <br/><br/>
+                          <br /><br />
                           <strong className="text-orange-900">Safety Rule:</strong> Once one of you clicks "Ready", a strict 24-hour timer will start for the other person to ensure no one is kept waiting.
                         </>
                       )
@@ -772,7 +768,6 @@ const OrderDetailsPage = ({ user }) => {
                 </div>
               )}
 
-              {/* NAYA LOGIC: Showing waiting message if seller clicked dispatch but waiting for partner */}
               {order.orderStatus === 'pending' && order.isReadyToDispatch && order.orderType === 'barter' && (
                 <div className="bg-purple-50 border border-purple-100 p-4 rounded-xl mb-4 flex items-start gap-3 shadow-sm">
                   <Package className="w-5 h-5 text-purple-600 mt-0.5 shrink-0" />
@@ -784,7 +779,6 @@ const OrderDetailsPage = ({ user }) => {
               )}
               
               <div className="flex flex-wrap gap-3">
-                {/* NAYA LOGIC: Only show dispatch if they haven't clicked it yet */}
                 {order.orderStatus === 'pending' && !order.isReadyToDispatch && (
                   <button 
                     onClick={() => {
@@ -814,42 +808,47 @@ const OrderDetailsPage = ({ user }) => {
 
                 {order.orderStatus === 'processing' && (
                   <div className="text-sm font-bold text-purple-600 flex flex-col gap-1 w-full bg-purple-50 rounded-xl border border-purple-100 p-4">
-                     <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4" /> 
-                        <span>Waiting for Courier Pickup. Status will update automatically.</span>
-                     </div>
-                     <p className="text-xs text-purple-500 font-medium pl-6">
-                        Use the "Get Slip" button above to download your shipping label.
-                     </p>
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4" /> 
+                      <span>Waiting for Courier Pickup. Status will update automatically.</span>
+                    </div>
+                    <p className="text-xs text-purple-500 font-medium pl-6">
+                      Use the "Get Slip" button above to download your shipping label.
+                    </p>
                   </div>
                 )}
               </div>
             </div>
           )}
-          
-        {/* Messages for BUYER */}
-              {order.orderStatus === 'pending' && (
-                <div className="text-[11px] text-gray-500 px-2 flex flex-col gap-1.5 font-medium mt-1">
-                  {order.orderType === 'barter' ? (
-                    <span className="flex items-center gap-1.5">
-                      <Info className="w-3.5 h-3.5 shrink-0 text-[#6B46C1]" /> 
-                      Both parties must click "Ready to Dispatch". Once one clicks, the other has 24 hours to comply, otherwise the system cancels the deal to protect you.
-                    </span>
-                  ) : (
-                    <>
-                      <span className="flex items-center gap-1.5">
-                        <Info className="w-3.5 h-3.5 shrink-0" /> 
-                        If the seller doesn't dispatch within {autoCancelHours} hours, the order will auto-cancel and you'll be fully refunded.
-                      </span>
-                      <span className="flex items-center gap-1.5 text-red-500 font-bold bg-red-50/50 w-fit px-2 py-1 rounded-md border border-red-50">
-                        <Clock className="w-3.5 h-3.5" /> 
-                        Time Left: <span className="animate-pulse"><CountdownTimer createdAt={order.createdAt || order.created_at} hours={autoCancelHours} /></span>
-                      </span>
-                    </>
-                  )}
-                </div>
+
+          {/* Messages for BUYER */}
+          {userType === 'purchases' && order.orderStatus === 'pending' && (
+            <div className="text-[11px] text-gray-500 px-2 flex flex-col gap-1.5 font-medium mt-4">
+              {order.orderType === 'barter' ? (
+                <span className="flex items-center gap-1.5">
+                  <Info className="w-3.5 h-3.5 shrink-0 text-[#6B46C1]" /> 
+                  Both parties must click "Ready to Dispatch". Once one clicks, the other has 24 hours to comply, otherwise the system cancels the deal to protect you.
+                </span>
+              ) : (
+                <>
+                  <span className="flex items-center gap-1.5">
+                    <Info className="w-3.5 h-3.5 shrink-0" /> 
+                    If the seller doesn't dispatch within {autoCancelHours} hours, the order will auto-cancel and you'll be fully refunded.
+                  </span>
+                  <span className="flex items-center gap-1.5 text-red-500 font-bold bg-red-50/50 w-fit px-2 py-1 rounded-md border border-red-50">
+                    <Clock className="w-3.5 h-3.5" /> 
+                    Time Left: <span className="animate-pulse"><CountdownTimer createdAt={order.createdAt || order.created_at} hours={autoCancelHours} /></span>
+                  </span>
+                </>
               )}
+            </div>
+          )}
+
+        </div>
+        {/* ✅ /DIV C — closes white card */}
+
       </div>
+      {/* ✅ /DIV B — closes max-w-md content wrapper */}
 
       {/* Dispatch Modal */}
       {showDispatchModal && (
@@ -946,7 +945,6 @@ const OrderDetailsPage = ({ user }) => {
             
             <h3 className="text-xl font-black text-gray-900 mb-1">Cancel Order</h3>
             
-            {/* NAYA LOGIC: Warning for Barter cancellations */}
             {order.orderType === 'barter' ? (
               <div className="bg-red-50 border border-red-100 p-3 rounded-xl mb-4 mt-2">
                 <p className="text-xs text-red-700 font-bold">⚠️ Warning: This is a Barter deal.</p>
@@ -1034,7 +1032,9 @@ const OrderDetailsPage = ({ user }) => {
           </motion.div>
         </div>
       )}
+
     </div>
+   
   );
 };
 
