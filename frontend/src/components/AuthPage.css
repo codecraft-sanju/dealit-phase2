@@ -816,7 +816,7 @@
   }
   .aw-btn.loading::after { display: none; }
 
-  /* ── SWITCH TEXT ── */
+
   .aw-switch-txt {
     font-size: 0.83rem;
     margin-top: 1.1rem;
@@ -827,7 +827,7 @@
     color: #7c3aed;
   }
 
-  /* ── OTP MOBILE ── */
+  
   .otp-grid {
     gap: 0.55rem;
     margin: 0.25rem auto 1.25rem;
@@ -858,7 +858,7 @@
     color: #6B46C1;
   }
 
-  /* ── PASSWORD STRENGTH ── */
+
   .pwd-strength-bar {
     height: 3px;
     border-radius: 3px;
@@ -866,7 +866,7 @@
     background: #ede9fe;
   }
 
-  /* ── ERROR ── */
+ 
   .aw-error {
     border-radius: 12px;
     font-size: 0.75rem;
@@ -879,7 +879,7 @@
   .aw-form     { gap: 0.6rem; }
 }
 
-/* ─── Very small screens ─── */
+
 @media (max-width: 380px) {
   .mb-slide { padding: 1.2rem 1.25rem 2.5rem; }
   .aw-form  { gap: 0.6rem; }
