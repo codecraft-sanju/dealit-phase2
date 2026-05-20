@@ -119,9 +119,14 @@ const SwapsPage = ({ user }) => {
       if (formData.pincode && formData.pincode.length >= 6 && activeSwap) {
         setIsCalculatingShipping(true);
         setActionError({ id: null, message: '' });
+        
+        const targetItemId = flowType === 'owner_accept' 
+          ? activeSwap.offeredItem._id 
+          : activeSwap.requestedItem._id;
+
         try {
           const res = await axios.post(`${API_URL}/orders/calculate-shipping`, {
-            itemId: activeSwap.offeredItem._id, 
+            itemId: targetItemId, 
             pincode: formData.pincode
           }, { withCredentials: true });
           
@@ -138,7 +143,7 @@ const SwapsPage = ({ user }) => {
     };
     const timeoutId = setTimeout(fetchDynamicShippingCost, 800);
     return () => clearTimeout(timeoutId);
-  }, [formData.pincode, activeSwap]);
+  }, [formData.pincode, activeSwap, flowType]);
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -179,10 +184,10 @@ const SwapsPage = ({ user }) => {
       );
       if (response.data.success) {
         const updatedStatus = response.data.data.status || newStatus;
-     
+      
         setReceivedSwaps(receivedSwaps.map(s => s._id === swapId ? { ...s, status: updatedStatus, expiresAt: response.data.data.expiresAt, rejectionReason: response.data.data.rejectionReason } : s));
         setSentSwaps(sentSwaps.map(s => s._id === swapId ? { ...s, status: updatedStatus, expiresAt: response.data.data.expiresAt, rejectionReason: response.data.data.rejectionReason } : s));
-      
+       
         if (updatedStatus === 'ACCEPTED') {
           navigate(`/deal/${swapId}`);
         }
@@ -446,7 +451,7 @@ const SwapsPage = ({ user }) => {
                     <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
                       {activeTab === 'received' && swap.status === 'PENDING' && (
                         <>
-                       
+                        
                           <button
                             onClick={() => openAcceptFlow(swap, 'owner_accept')}
                             disabled={processingId === swap._id}
@@ -915,7 +920,7 @@ const SwapsPage = ({ user }) => {
           </motion.div>
         )}
       </AnimatePresence>
-     
+      
 
     </div>
   );
