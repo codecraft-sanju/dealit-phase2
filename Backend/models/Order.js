@@ -28,7 +28,7 @@ const orderSchema = new mongoose.Schema({
     state: { type: String, required: true },
     pincode: { type: String, required: true }
   },
-
+isReadyToDispatch: { type: Boolean, default: false },
   orderStatus: {
     type: String,
    

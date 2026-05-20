@@ -4,9 +4,7 @@ const Item = require('../models/Item');
 const User = require('../models/User'); 
 
 const { queueNotification } = require('../services/queue');
-
 const CreditSetting = require('../models/CreditSetting');
-
 const crypto = require('crypto');
 const Order = require('../models/Order');
 const Transaction = require('../models/Transaction');
@@ -106,9 +104,7 @@ const formatRequestsForFrontend = (requests) => {
     sender: req.requester,
     created_at: req.created_at,
     expiresAt: req.expiresAt,
-   
     rejectionReason: req.rejectionReason
-  
   }));
 };
 
@@ -368,7 +364,7 @@ const updateSwapStatus = async (req, res) => {
           : `Your offer for "${barter.item.title}" has been declined.`,
         metadata: { reason: 'trade_rejected', referenceId: barter._id, imageUrl: barter.item?.images?.[0] }
       });
-     
+      
       barter.status = status;
     }
 
@@ -449,7 +445,7 @@ const completeSwapPayment = async (req, res) => {
 
     if (setting) {
       if (setting.shippingMethod === 'dynamic') {
-       
+        
         const itemOwner = await User.findById(barter.item.owner);
         const pickupPincode = itemOwner?.pickupAddress?.pincode;
         
@@ -627,7 +623,6 @@ const autoCancelOverdueBarters = async () => {
   try {
     const now = new Date();
 
-    
     const overdueAwaiting = await BarterRequest.find({
       status: 'AWAITING_PAYMENT',
       expiresAt: { $lte: now }
@@ -723,6 +718,98 @@ const autoCancelOverdueBarters = async () => {
   }
 };
 
+// NEW LOGIC: AUTO CANCEL INCOMPLETE DISPATCHES (The 24 Hour Rule)
+const autoCancelIncompleteDispatches = async () => {
+    try {
+        const cancelHours = 24;
+        const threshold = new Date(Date.now() - cancelHours * 60 * 60 * 1000);
+
+        const overdueBarters = await BarterRequest.find({
+            status: 'ACCEPTED',
+            first_dispatch_at: { $lte: threshold }
+        }).populate('owner requester item offered_item');
+
+        for (const barter of overdueBarters) {
+            try {
+                const orders = await Order.find({ barterRequestRef: barter._id });
+                if (orders.length !== 2) continue;
+
+                const isAnyNotReady = orders.some(o => !o.isReadyToDispatch && o.orderStatus === 'pending');
+
+                if (isAnyNotReady) {
+                    for (const order of orders) {
+                        order.orderStatus = 'cancelled';
+                        order.cancellationReason = 'System Auto-Cancel: Deal collapsed because one party failed to dispatch within 24 hours.';
+                        
+                        let newPaymentStatus = 'refunded';
+                        if (order.shippingCost > 0 && order.razorpay_payment_id) {
+                            const refundRes = await refundRazorpayPayment(order.razorpay_payment_id, order.shippingCost);
+                            if (refundRes.success) {
+                                await Transaction.create({
+                                    user: order.buyer,
+                                    amount: order.shippingCost,
+                                    razorpay_order_id: order.razorpay_order_id,
+                                    razorpay_payment_id: order.razorpay_payment_id,
+                                    status: 'success',
+                                    transactionType: 'shipping_refund'
+                                });
+                                newPaymentStatus = 'refund_processing';
+                            }
+                        }
+                        order.paymentStatus = newPaymentStatus;
+                        await order.save();
+
+                        const orderItem = await Item.findById(order.item);
+                        if(orderItem) {
+                            orderItem.status = 'active';
+                            await orderItem.save();
+                        }
+                    }
+
+                    // Refund credits to requester if they paid difference
+                    const targetValue = barter.item?.estimated_value || 0;
+                    const offeredValue = barter.offered_item?.estimated_value || 0;
+                    const diff = Math.max(0, targetValue - offeredValue);
+                    
+                    if (diff > 0) {
+                         await User.findByIdAndUpdate(barter.requester._id, { $inc: { account_credits: diff } });
+                         await Transaction.create({
+                            user: barter.requester._id,
+                            amount: diff,
+                            status: 'success',
+                            transactionType: 'order_refund'
+                         });
+                    }
+
+                    barter.status = 'CANCELLED';
+                    barter.updated_at = Date.now();
+                    await barter.save();
+
+                    queueNotification({ 
+                        user: barter.owner._id,
+                        type: 'SYSTEM_ALERT',
+                        title: 'Barter Cancelled & Refunded 🚫',
+                        message: 'The deal collapsed because dispatch was not confirmed within 24 hours. Your shipping fee has been refunded.',
+                        metadata: { referenceId: barter._id }
+                    });
+
+                    queueNotification({ 
+                        user: barter.requester._id,
+                        type: 'SYSTEM_ALERT',
+                        title: 'Barter Cancelled & Refunded 🚫',
+                        message: 'The deal collapsed because dispatch was not confirmed within 24 hours. Your shipping fee has been refunded.',
+                        metadata: { referenceId: barter._id }
+                    });
+                }
+            } catch (innerErr) {
+                console.error(`Failed auto-canceling incomplete dispatch for barter ${barter._id}:`, innerErr);
+            }
+        }
+    } catch (error) {
+        console.error('Error in autoCancelIncompleteDispatches cron job:', error);
+    }
+};
+
 module.exports = {
   createBarterRequest,
   getReceivedRequests,
@@ -732,5 +819,6 @@ module.exports = {
   deleteBarterRequest,
   updateSwapStatus,
   completeSwapPayment,
-  autoCancelOverdueBarters 
+  autoCancelOverdueBarters,
+  autoCancelIncompleteDispatches 
 };

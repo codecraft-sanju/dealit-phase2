@@ -1,3 +1,4 @@
+// server.js
 require('dotenv').config();
 const express = require('express');
 const cookieParser = require('cookie-parser');
@@ -23,8 +24,8 @@ const { startAITrainingCron } = require('./services/aiTrainingCron');
 
 const cron = require('node-cron');
 const { autoCancelOverdueOrders } = require('./controllers/orderController');
-const { autoCancelOverdueBarters } = require('./controllers/barterController');
-
+// CHANGED: Imported autoCancelIncompleteDispatches
+const { autoCancelOverdueBarters, autoCancelIncompleteDispatches } = require('./controllers/barterController');
 
 const User = require('./models/User');
 const Notification = require('./models/Notification');
@@ -93,7 +94,6 @@ app.listen(PORT, async () => {
   verifyRazorpayConnection();
   await verifyShiprocketConnection();
 
- 
   startAITrainingCron();
 
  
@@ -101,13 +101,15 @@ app.listen(PORT, async () => {
     console.log('Running auto-cancel overdue orders cron job...');
     await autoCancelOverdueOrders();
     
-  
     console.log('Running auto-cancel overdue barters cron job...');
     await autoCancelOverdueBarters();
     
+  
+    console.log('Running auto-cancel incomplete dispatches cron job...');
+    await autoCancelIncompleteDispatches();
   });
 
-  
+ 
   cron.schedule('0 0 * * *', async () => {
     console.log('Running daily notification count sync job...');
     try {

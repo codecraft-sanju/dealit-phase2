@@ -1,30 +1,22 @@
+// orderController.js
 const Order = require('../models/Order');
 const Item = require('../models/Item');
 const User = require('../models/User');
 const CreditSetting = require('../models/CreditSetting');
 const Transaction = require('../models/Transaction'); 
 const crypto = require('crypto'); 
+const BarterRequest = require('../models/BarterRequest'); // NEW: Added BarterRequest import
 
-// CHANGED: queueNotification ko import kiya aur purane Notification model ko hata diya (queue will handle it)
 const { queueNotification } = require('../services/queue');
-
-/* --- ULTRA SMART RECOVERY START: Import added --- */
 const { checkServiceability, createShiprocketOrder, addPickupLocation, generateAWB, generateLabel, schedulePickup, getTrackingByAWB, getShiprocketOrderDetails } = require('../utils/shiprocket'); 
-/* --- ULTRA SMART RECOVERY END --- */
-
 const AuraLog = require('../models/AuraLog'); 
-
-/* --- NAYA CHANGE START: Naya function import kiya --- */
 const { refundRazorpayPayment, fetchRazorpayPaymentInfo } = require('./paymentController');
-/* --- NAYA CHANGE END --- */
 
 const calculateShippingCost = async (req, res) => {
   try {
     const { itemId, pincode } = req.body;
-    
     const item = await Item.findById(itemId).populate('owner', 'pickupAddress');
     
-
     if (!item) return res.status(404).json({ success: false, message: 'Item not found' });
 
     let setting = await CreditSetting.findOne();
@@ -32,19 +24,14 @@ const calculateShippingCost = async (req, res) => {
 
     if (setting) {
       if (setting.shippingMethod === 'dynamic') {
-        
         const pickupPincode = item.owner.pickupAddress?.pincode;
         if (!pickupPincode) {
           return res.status(400).json({ success: false, message: 'Seller pickup pincode missing.' });
         }
-        
         const weight = item.weight || 0.5;
-        
         const dimensions = item.dimensions || { length: 10, width: 10, height: 10 }; 
-        
         finalCost = await checkServiceability(pickupPincode, pincode, weight, dimensions);
       } else {
-        // Flat rate
         finalCost = setting.flatShippingCost !== undefined ? setting.flatShippingCost : 60;
       }
     }
@@ -61,9 +48,7 @@ const createOrder = async (req, res) => {
     const { itemId, shippingAddress, paymentDetails } = req.body;
     const buyerId = req.user._id;
 
-    /* --- CHANGE START --- */
     const item = await Item.findById(itemId).populate('owner', 'pickupAddress');
-    /* --- CHANGE END --- */
 
     if (!item) {
       return res.status(404).json({ success: false, message: 'Item not found' });
@@ -83,7 +68,6 @@ const createOrder = async (req, res) => {
         const pickupPincode = item.owner.pickupAddress?.pincode;
         const weight = item.weight || 0.5;
         const dimensions = item.dimensions || { length: 10, width: 10, height: 10 };
-        
         shippingCost = await checkServiceability(pickupPincode, shippingAddress.pincode, weight, dimensions);
       } else {
         shippingCost = setting.flatShippingCost !== undefined ? setting.flatShippingCost : 60;
@@ -111,7 +95,6 @@ const createOrder = async (req, res) => {
         return res.status(400).json({ success: false, message: 'Invalid payment signature. Shipping payment verification failed.' });
       }
       
-      /* --- NAYA CHANGE START: Amount Cross Verification with Razorpay API --- */
       const paymentCheck = await fetchRazorpayPaymentInfo(razorpay_payment_id);
       if (!paymentCheck.success) {
         return res.status(400).json({ success: false, message: 'Failed to verify payment details with Razorpay.' });
@@ -120,7 +103,6 @@ const createOrder = async (req, res) => {
       if (actualPaidINR < shippingCost) {
         return res.status(400).json({ success: false, message: `Payment manipulation detected. Expected ₹${shippingCost} but received ₹${actualPaidINR}.` });
       }
-      /* --- NAYA CHANGE END --- */
 
       const newTransaction = new Transaction({
         user: buyerId,
@@ -136,7 +118,6 @@ const createOrder = async (req, res) => {
 
     const itemPrice = item.estimated_value || 0;
 
-    /* --- CHANGE START: Atomic check and deduction to prevent double spend --- */
     const buyer = await User.findById(buyerId);
     if (buyer.account_credits < itemPrice) {
       return res.status(400).json({ 
@@ -171,7 +152,6 @@ const createOrder = async (req, res) => {
         message: 'Transaction failed. Insufficient credits or concurrent request detected.' 
       });
     }
-    /* --- CHANGE END --- */
 
     item.status = 'reserved'; 
     await item.save();
@@ -197,7 +177,6 @@ const createOrder = async (req, res) => {
       }
     });
 
-    // CHANGED: Added imageUrl to metadata
     queueNotification({
       user: buyerId,
       type: 'CREDIT_DEDUCTED',
@@ -206,7 +185,6 @@ const createOrder = async (req, res) => {
       metadata: { amount: itemPrice, reason: 'item_purchase', referenceId: order._id, imageUrl: item.images?.[0] }
     });
 
-    // CHANGED: Added imageUrl to metadata
     queueNotification({
       user: item.owner._id,
       type: 'ORDER_UPDATE',
@@ -280,19 +258,16 @@ const updateOrderStatus = async (req, res) => {
     const auraPenaltyAmount = setting && setting.auraPenalty !== undefined ? setting.auraPenalty : 50;
 
     if (status === 'delivered' && order.isSellerPaid === false) {
-      /* --- CHANGE START: Use atomic $inc for rewards --- */
       const seller = await User.findByIdAndUpdate(order.seller, {
         $inc: {
           account_credits: order.itemPrice,
           aura_points: auraRewardAmount
         }
       }, { new: true });
-      /* --- CHANGE END --- */
       
       if (seller) {
         order.isSellerPaid = true;
 
-        // CHANGED: Added imageUrl to metadata
         queueNotification({
           user: seller._id,
           type: 'CREDIT_ADDED',
@@ -316,14 +291,11 @@ const updateOrderStatus = async (req, res) => {
     }
 
     if (status === 'cancelled' && order.paymentStatus === 'paid') {
-      /* --- CHANGE START: Use atomic $inc for refund --- */
       const buyer = await User.findByIdAndUpdate(order.buyer, {
         $inc: { account_credits: order.itemPrice }
       }, { new: true });
-      /* --- CHANGE END --- */
       
       if (buyer) {
-        // -> NAYA CHANGE START: Save Credits Refund Transaction
         await Transaction.create({
           user: buyer._id,
           amount: order.itemPrice,
@@ -331,16 +303,11 @@ const updateOrderStatus = async (req, res) => {
           transactionType: 'order_refund'
         });
         
-        // --> CHANGE START: Checking if shipping cost exists to set correct paymentStatus
         let newPaymentStatus = 'refunded';
 
-        // Refund shipping money via Razorpay
         if (order.shippingCost > 0 && order.razorpay_payment_id) {
           const refundRes = await refundRazorpayPayment(order.razorpay_payment_id, order.shippingCost);
-          if (!refundRes.success) {
-            console.error('Failed to process Razorpay refund for order:', order._id);
-          } else {
-            // Log shipping refund transaction if successful
+          if (refundRes.success) {
             await Transaction.create({
               user: buyer._id,
               amount: order.shippingCost,
@@ -349,13 +316,12 @@ const updateOrderStatus = async (req, res) => {
               status: 'success',
               transactionType: 'shipping_refund'
             });
-            newPaymentStatus = 'refund_processing'; // Set status to processing since bank takes time
+            newPaymentStatus = 'refund_processing'; 
           }
         }
         
         order.paymentStatus = newPaymentStatus;
         
-        // CHANGED: Added imageUrl to metadata
         queueNotification({
           user: buyer._id,
           type: 'CREDIT_ADDED',
@@ -373,7 +339,6 @@ const updateOrderStatus = async (req, res) => {
             }
           }
         ], { new: true });
-        /* --- CHANGE END --- */
         
         if (seller) {
           await AuraLog.create({
@@ -383,7 +348,6 @@ const updateOrderStatus = async (req, res) => {
             type: "negative"
           });
 
-          // CHANGED: Added imageUrl to metadata
           queueNotification({
             user: seller._id,
             type: 'AURA_UPDATE', 
@@ -398,6 +362,70 @@ const updateOrderStatus = async (req, res) => {
            await order.item.save();
         }
       }
+
+      // NEW LOGIC: IF THIS IS A BARTER ORDER, COLLAPSE THE WHOLE DEAL
+      if (order.orderType === 'barter' && order.barterRequestRef) {
+        const partnerOrder = await Order.findOne({ 
+          barterRequestRef: order.barterRequestRef, 
+          _id: { $ne: order._id } 
+        });
+
+        if (partnerOrder && partnerOrder.orderStatus !== 'cancelled') {
+           partnerOrder.orderStatus = 'cancelled';
+           partnerOrder.cancellationReason = 'Partner cancelled their side of the barter deal.';
+           
+           let pNewPaymentStatus = 'refunded';
+           if (partnerOrder.shippingCost > 0 && partnerOrder.razorpay_payment_id) {
+             const pRefundRes = await refundRazorpayPayment(partnerOrder.razorpay_payment_id, partnerOrder.shippingCost);
+             if (pRefundRes.success) {
+               await Transaction.create({
+                 user: partnerOrder.buyer,
+                 amount: partnerOrder.shippingCost,
+                 razorpay_order_id: partnerOrder.razorpay_order_id,
+                 razorpay_payment_id: partnerOrder.razorpay_payment_id,
+                 status: 'success',
+                 transactionType: 'shipping_refund'
+               });
+               pNewPaymentStatus = 'refund_processing';
+             }
+           }
+           partnerOrder.paymentStatus = pNewPaymentStatus;
+           await partnerOrder.save();
+
+           if(partnerOrder.item) {
+              await Item.findByIdAndUpdate(partnerOrder.item, { status: 'active' });
+           }
+
+           queueNotification({
+             user: partnerOrder.buyer,
+             type: 'SYSTEM_ALERT',
+             title: 'Barter Deal Collapsed 🚫',
+             message: `The partner cancelled their side of the deal. Your shipping fee of ₹${partnerOrder.shippingCost} has been refunded.`,
+             metadata: { referenceId: partnerOrder._id }
+           });
+        }
+
+        // Refund Barter Credits if any
+        const barterReq = await BarterRequest.findById(order.barterRequestRef).populate('item offered_item');
+        if (barterReq && barterReq.status !== 'CANCELLED') {
+           barterReq.status = 'CANCELLED';
+           await barterReq.save();
+
+           const reqValue = barterReq.item?.estimated_value || 0;
+           const offValue = barterReq.offered_item?.estimated_value || 0;
+           const diff = Math.max(0, reqValue - offValue);
+           
+           if (diff > 0) {
+             await User.findByIdAndUpdate(barterReq.requester, { $inc: { account_credits: diff } });
+             await Transaction.create({
+                user: barterReq.requester,
+                amount: diff,
+                status: 'success',
+                transactionType: 'order_refund'
+             });
+           }
+        }
+      }
     }
 
     await order.save();
@@ -409,19 +437,63 @@ const updateOrderStatus = async (req, res) => {
   }
 };
 
+// Helper function to build Shiprocket payload and hit API
+const processShiprocketAPI = async (orderDoc, itemDoc) => {
+    const dynamicPickupLocation = await addPickupLocation(itemDoc.owner);
+    const orderDate = new Date().toISOString().slice(0, 19).replace('T', ' '); 
+    
+    let cleanPhone = orderDoc.shippingAddress.phone.replace(/\D/g, ''); 
+    if (cleanPhone.length > 10) cleanPhone = cleanPhone.slice(-10);
+
+    const shiprocketPayload = {
+      order_id: orderDoc._id.toString(), 
+      order_date: orderDate,
+      pickup_location: dynamicPickupLocation, 
+      channel_id: "", 
+      billing_customer_name: orderDoc.shippingAddress.fullName,
+      billing_last_name: "User", 
+      billing_address: `${orderDoc.shippingAddress.houseNo}, ${orderDoc.shippingAddress.areaStreet}`,
+      billing_address_2: orderDoc.shippingAddress.landmark || "",
+      billing_city: orderDoc.shippingAddress.city,
+      billing_pincode: orderDoc.shippingAddress.pincode,
+      billing_state: orderDoc.shippingAddress.state,
+      billing_country: "India",
+      billing_email: orderDoc.buyer.email,
+      billing_phone: cleanPhone,
+      shipping_is_billing: true,
+      order_items: [
+        {
+          name: itemDoc.title,
+          sku: itemDoc._id.toString(),
+          units: 1,
+          selling_price: orderDoc.itemPrice > 0 ? orderDoc.itemPrice : 100, 
+          discount: 0,
+          tax: 0,
+          hsn: ""
+        }
+      ],
+      payment_method: "Prepaid",
+      sub_total: orderDoc.itemPrice > 0 ? orderDoc.itemPrice : 100,
+      length: itemDoc.dimensions?.length || 10,
+      breadth: itemDoc.dimensions?.width || 10,
+      height: itemDoc.dimensions?.height || 10,
+      weight: itemDoc.weight || 0.5
+    };
+
+    return await createShiprocketOrder(shiprocketPayload);
+};
+
 const dispatchOrder = async (req, res) => {
   try {
     const { orderId } = req.params;
     const { weight, length, width, height } = req.body;
 
-    /* --- CHANGE START --- */
     const order = await Order.findById(orderId)
       .populate({
         path: 'item', 
         populate: { path: 'owner', select: 'full_name email phone pickupAddress' }
       })
       .populate('buyer', 'full_name email phone');
-    /* --- CHANGE END --- */
     
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
     if (order.seller.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
@@ -431,60 +503,109 @@ const dispatchOrder = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Only pending orders can be dispatched' });
     }
 
-    /* --- NAYA CHANGE START: Double Click / Duplicate Dispatch Prevention --- */
     if (order.trackingDetails && order.trackingDetails.shiprocket_shipment_id) {
       return res.status(400).json({ success: false, message: 'Order is already processing in Shiprocket. Please refresh the page.' });
     }
-    /* --- NAYA CHANGE END --- */
 
     const item = order.item;
-    const buyer = order.buyer;
-    const shippingAddress = order.shippingAddress;
-    const itemPrice = order.itemPrice;
 
-    const dynamicPickupLocation = await addPickupLocation(item.owner);
-    const orderDate = new Date().toISOString().slice(0, 19).replace('T', ' '); 
-    
-    let cleanPhone = shippingAddress.phone.replace(/\D/g, ''); 
-    if (cleanPhone.length > 10) cleanPhone = cleanPhone.slice(-10);
+    // Save dimensions strictly to item model for future shiprocket payload
+    if (weight || length || width || height) {
+       item.weight = weight || item.weight;
+       item.dimensions = {
+           length: length || item.dimensions?.length || 10,
+           width: width || item.dimensions?.width || 10,
+           height: height || item.dimensions?.height || 10,
+       };
+       await item.save();
+    }
 
-    const shiprocketPayload = {
-      order_id: order._id.toString(), 
-      order_date: orderDate,
-      pickup_location: dynamicPickupLocation, 
-      channel_id: "", 
-      billing_customer_name: shippingAddress.fullName,
-      billing_last_name: "User", 
-      billing_address: `${shippingAddress.houseNo}, ${shippingAddress.areaStreet}`,
-      billing_address_2: shippingAddress.landmark || "",
-      billing_city: shippingAddress.city,
-      billing_pincode: shippingAddress.pincode,
-      billing_state: shippingAddress.state,
-      billing_country: "India",
-      billing_email: buyer.email,
-      billing_phone: cleanPhone,
-      shipping_is_billing: true,
-      order_items: [
-        {
-          name: item.title,
-          sku: item._id.toString(),
-          units: 1,
-          selling_price: itemPrice > 0 ? itemPrice : 100, 
-          discount: 0,
-          tax: 0,
-          hsn: ""
+    // NEW LOGIC: SYNCHRONIZED DISPATCH FOR BARTERS
+    if (order.orderType === 'barter' && order.barterRequestRef) {
+        order.isReadyToDispatch = true;
+        await order.save();
+
+        const partnerOrder = await Order.findOne({
+            barterRequestRef: order.barterRequestRef,
+            _id: { $ne: order._id }
+        }).populate({
+            path: 'item', 
+            populate: { path: 'owner', select: 'full_name email phone pickupAddress' }
+        }).populate('buyer', 'full_name email phone');
+
+        // Check if partner is ready
+        if (!partnerOrder || !partnerOrder.isReadyToDispatch) {
+            
+            const barterReq = await BarterRequest.findById(order.barterRequestRef);
+            if (barterReq && !barterReq.first_dispatch_at) {
+                barterReq.first_dispatch_at = Date.now();
+                await barterReq.save();
+            }
+
+            queueNotification({
+                user: partnerOrder ? partnerOrder.seller : order.buyer, 
+                type: 'SYSTEM',
+                title: 'Partner is Ready! ⏳',
+                message: `Your partner has packed their item and is ready. You have 24 hours to click Ready to Dispatch, otherwise the deal will be cancelled.`,
+                metadata: { referenceId: order.barterRequestRef }
+            });
+
+            return res.status(200).json({
+                success: true,
+                message: 'Marked as Ready to Dispatch! Waiting for your partner to confirm. The deal will auto-cancel if they don\'t respond in 24 hours.',
+                data: order
+            });
         }
-      ],
-      payment_method: "Prepaid",
-      sub_total: itemPrice > 0 ? itemPrice : 100,
-      length: length || item.dimensions?.length || 10,
-      breadth: width || item.dimensions?.width || 10,
-      height: height || item.dimensions?.height || 10,
-      weight: weight || item.weight || 0.5
-    };
 
-    const shiprocketRes = await createShiprocketOrder(shiprocketPayload);
+        // Both are ready! Dispatch both to Shiprocket.
+        try {
+            const shiprocketRes1 = await processShiprocketAPI(order, item);
+            order.trackingDetails = {
+                shiprocket_order_id: shiprocketRes1.order_id,
+                shiprocket_shipment_id: shiprocketRes1.shipment_id,
+                awb_code: '', courier_company: ''
+            };
+            order.orderStatus = 'processing';
+            await order.save();
+
+            const shiprocketRes2 = await processShiprocketAPI(partnerOrder, partnerOrder.item);
+            partnerOrder.trackingDetails = {
+                shiprocket_order_id: shiprocketRes2.order_id,
+                shiprocket_shipment_id: shiprocketRes2.shipment_id,
+                awb_code: '', courier_company: ''
+            };
+            partnerOrder.orderStatus = 'processing';
+            await partnerOrder.save();
+
+            queueNotification({
+                user: order.seller,
+                type: 'ORDER_UPDATE',
+                title: 'Both Ready! Pickup Scheduled 🚚',
+                message: `Your partner is also ready! We have scheduled your pickup with Shiprocket.`,
+                metadata: { referenceId: order._id, imageUrl: item.images?.[0] }
+            });
+
+            queueNotification({
+                user: partnerOrder.seller,
+                type: 'ORDER_UPDATE',
+                title: 'Both Ready! Pickup Scheduled 🚚',
+                message: `Your partner is also ready! We have scheduled your pickup with Shiprocket.`,
+                metadata: { referenceId: partnerOrder._id, imageUrl: partnerOrder.item.images?.[0] }
+            });
+
+            return res.status(200).json({
+                success: true,
+                message: 'Both parties are ready! Orders dispatched successfully. Shiprocket pickup scheduled.',
+                data: order
+            });
+        } catch (dispatchErr) {
+            console.error("Error dispatching barter pair:", dispatchErr);
+            return res.status(400).json({ success: false, message: 'Failed to schedule pickup with Shiprocket. Please check dimensions or addresses.' });
+        }
+    } 
     
+    // REGULAR PURCHASE DISPATCH (No partner wait)
+    const shiprocketRes = await processShiprocketAPI(order, item);
     order.trackingDetails = {
       shiprocket_order_id: shiprocketRes.order_id,
       shiprocket_shipment_id: shiprocketRes.shipment_id,
@@ -503,22 +624,15 @@ const dispatchOrder = async (req, res) => {
 
   } catch (error) {
     console.error('Error dispatching order:', error);
-
-    // CHANGED: Yahan JSON error ko parse karke theek message nikal rahe hain
     let frontendMessage = 'Failed to dispatch order. Please try again.';
-
     try {
       let rawError = error.message;
-
       if (typeof rawError === 'string' && rawError.includes('{') && rawError.includes('}')) {
         const jsonStart = rawError.indexOf('{');
         const jsonEnd = rawError.lastIndexOf('}') + 1;
         const jsonString = rawError.substring(jsonStart, jsonEnd);
-        
         const parsedError = JSON.parse(jsonString);
-        
         if (typeof parsedError === 'object' && !Array.isArray(parsedError)) {
-          // Object ke errors nikal kar array banayega
           const errorDetails = Object.values(parsedError).flat().join(' | ');
           frontendMessage = `Validation Error: ${errorDetails}`;
         } else {
@@ -535,7 +649,6 @@ const dispatchOrder = async (req, res) => {
   }
 };
 
-/* --- MODIFIED: REGEX RECOVERY START --- */
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 const getShippingLabel = async (req, res) => {
@@ -553,7 +666,6 @@ const getShippingLabel = async (req, res) => {
 
     const shipmentId = order.trackingDetails.shiprocket_shipment_id;
 
-    // STEP 1: Process AWB Generation or Regex Recovery
     if (!order.trackingDetails.awb_code || order.trackingDetails.awb_code === '') {
        try {
            const awbData = await generateAWB(shipmentId);
@@ -563,18 +675,14 @@ const getShippingLabel = async (req, res) => {
            await order.save();
        } catch (awbError) {
            const errMsg = (awbError.message || '');
-           
            if (errMsg.toLowerCase().includes('reassign') || errMsg.toLowerCase().includes('17 hour') || errMsg.toLowerCase().includes('already')) {
-               console.log(`AWB already assigned for order ${order._id}. Extracting directly from error text...`);
-               
                const awbMatch = errMsg.match(/AWB\s*(\d+)/i);
                let recoveredAwb = awbMatch ? awbMatch[1] : null;
                
                if (recoveredAwb) {
                    order.trackingDetails.awb_code = recoveredAwb;
-                   order.trackingDetails.courier_company = 'Courier Partner'; // Default fallback
+                   order.trackingDetails.courier_company = 'Courier Partner';
                    await order.save();
-                   console.log(`Regex Recovery Successful: Saved extracted AWB ${recoveredAwb}`);
                } else {
                    return res.status(400).json({ 
                        success: false, 
@@ -587,12 +695,10 @@ const getShippingLabel = async (req, res) => {
        }
     }
 
-    // STEP 2: Process Label Generation with Retry Logic
     let labelUrl = null;
     let labelAttempts = 0;
     let lastLabelError = null;
     
-    // Retry generating label up to 3 times if Shiprocket is slow
     while (!labelUrl && labelAttempts < 3) {
       try {
          labelUrl = await generateLabel(shipmentId);
@@ -600,8 +706,7 @@ const getShippingLabel = async (req, res) => {
       } catch (labelError) {
          lastLabelError = labelError;
          if (labelError.message.toLowerCase().includes('processing')) {
-            console.log(`Label processing for shipment ${shipmentId}, attempt ${labelAttempts + 1}... waiting 2s`);
-            await delay(2000); // wait 2 seconds before retry
+            await delay(2000); 
             labelAttempts++;
          } else {
             throw labelError; 
@@ -621,50 +726,39 @@ const getShippingLabel = async (req, res) => {
      res.status(500).json({ success: false, message: error.message || 'Server error generating label' });
   }
 };
-/* --- MODIFIED: REGEX RECOVERY END --- */
 
 const handleShiprocketWebhook = async (req, res) => {
   try {
-    // -> NAYA CODE: Security check
     const token = req.headers['x-api-key'];
     if (token !== process.env.SHIPROCKET_WEBHOOK_SECRET) {
       console.warn('Unauthorized webhook attempt blocked');
       return res.status(401).json({ success: false, message: 'Unauthorized access' });
     }
 
-    // --> CHANGE START: Extract 'etd' and 'shipment_id' from webhook
     const { awb, current_status, etd, shipment_id } = req.body;
-    // --> CHANGE END
     
-    // Test ping from Shiprocket
     if (!awb || !current_status) {
       return res.status(200).json({ success: true, message: 'Webhook endpoint is active.' });
     }
 
     let order = await Order.findOne({ 'trackingDetails.awb_code': awb }).populate('item');
     
-    /* --- NAYA CHANGE START: Smart Auto-Recovery --- */
     if (!order && shipment_id) {
       order = await Order.findOne({ 'trackingDetails.shiprocket_shipment_id': shipment_id }).populate('item');
       if (order) {
         order.trackingDetails.awb_code = awb;
         await order.save();
-        console.log(`Auto-recovered missing AWB ${awb} for order ${order._id}`);
       }
     }
-    /* --- NAYA CHANGE END --- */
 
     if (!order) {
-      console.log(`Shiprocket test ping or invalid AWB received: ${awb}`);
       return res.status(200).json({ success: true, message: 'Webhook received but order not found.' });
     }
 
     let setting = await CreditSetting.findOne();
     const auraRewardAmount = setting && setting.auraReward !== undefined ? setting.auraReward : 50;
 
-  
     if (etd && order.trackingDetails) {
-      
       if (etd.trim() !== '') {
         order.trackingDetails.expected_date = etd;
       }
@@ -675,19 +769,16 @@ const handleShiprocketWebhook = async (req, res) => {
       order.updated_at = Date.now();
 
       if (order.isSellerPaid === false) {
-        /* --- CHANGE START: Use atomic $inc for webhook payout --- */
         const seller = await User.findByIdAndUpdate(order.seller, {
           $inc: {
             account_credits: order.itemPrice,
             aura_points: auraRewardAmount
           }
         }, { new: true });
-        /* --- CHANGE END --- */
         
         if (seller) {
           order.isSellerPaid = true;
 
-          // CHANGED: Added imageUrl to metadata
           queueNotification({
             user: seller._id,
             type: 'CREDIT_ADDED',
@@ -711,7 +802,6 @@ const handleShiprocketWebhook = async (req, res) => {
       }
       await order.save();
     } 
-    // -> MODIFICATION START: Separate IN TRANSIT and SHIPPED statuses
     else if (current_status === 'IN TRANSIT' && (order.orderStatus === 'processing' || order.orderStatus === 'shipped')) {
       order.orderStatus = 'in_transit';
       await order.save(); 
@@ -720,7 +810,6 @@ const handleShiprocketWebhook = async (req, res) => {
       order.orderStatus = 'shipped';
       await order.save(); 
     } 
-    // -> MODIFICATION END
     else {
       await order.save();
     }
@@ -740,7 +829,6 @@ const autoCancelOverdueOrders = async () => {
     
     const cancelThreshold = new Date(Date.now() - cancelHours * 60 * 60 * 1000);
 
-    // -> MODIFICATION START: Safely fetch only IDs first to avoid memory bloat and infinite loops
     const overdueOrderDocs = await Order.find({
       orderStatus: 'pending',
       created_at: { $lt: cancelThreshold }
@@ -759,20 +847,20 @@ const autoCancelOverdueOrders = async () => {
 
       for (const order of ordersBatch) {
         try {
-    // -> MODIFICATION END
+          // If this is a barter and they are pending but isReadyToDispatch is true (waiting for partner), DONT cancel here. 
+          // The autoCancelIncompleteDispatches function handles barter specific 24 hr limits based on first_dispatch_at.
+          if (order.orderType === 'barter' && order.barterRequestRef) {
+              continue; // Skip barter orders here, handled by specialized cron.
+          }
+
           order.orderStatus = 'cancelled';
           order.cancellationReason = `System Auto-Cancel: Seller failed to dispatch within ${cancelHours} hours.`;
           
-          // --> CHANGE START: Checking if shipping cost exists to set correct paymentStatus
           let newPaymentStatus = 'refunded';
 
-          // Refund shipping money via Razorpay on auto-cancel
           if (order.shippingCost > 0 && order.razorpay_payment_id) {
             const refundRes = await refundRazorpayPayment(order.razorpay_payment_id, order.shippingCost);
-            if (!refundRes.success) {
-              console.error('Failed to process Razorpay refund for auto-cancelled order:', order._id);
-            } else {
-               // Log shipping refund transaction if successful
+            if (refundRes.success) {
                await Transaction.create({
                  user: order.buyer._id, 
                  amount: order.shippingCost,
@@ -781,28 +869,24 @@ const autoCancelOverdueOrders = async () => {
                  status: 'success',
                  transactionType: 'shipping_refund'
                });
-               newPaymentStatus = 'refund_processing'; // Set status to processing since bank takes time
+               newPaymentStatus = 'refund_processing'; 
             }
           }
 
           order.paymentStatus = newPaymentStatus;
-          // --> CHANGE END
 
           await order.save({ validateBeforeSave: false });
 
-          /* --- CHANGE START: Use atomic update for background refunds and penalties --- */
           const buyerId = order.buyer._id;
           await User.findByIdAndUpdate(buyerId, {
             $inc: { account_credits: order.itemPrice }
           });
-          // -> NAYA CHANGE START: Save Credits Refund Transaction for Auto-Cancel
           await Transaction.create({
             user: buyerId,
             amount: order.itemPrice,
             status: 'success',
             transactionType: 'order_refund'
           });
-          // -> NAYA CHANGE END
           
           const sellerId = order.seller._id;
           await User.findByIdAndUpdate(sellerId, [
@@ -814,9 +898,7 @@ const autoCancelOverdueOrders = async () => {
               }
             }
           ]);
-          /* --- CHANGE END --- */
 
-          // CHANGED: Added imageUrl to metadata
           queueNotification({
             user: buyerId,
             type: 'CREDIT_ADDED',
@@ -832,7 +914,6 @@ const autoCancelOverdueOrders = async () => {
             type: "negative"
           });
 
-          // CHANGED: Added imageUrl to metadata
           queueNotification({
             user: sellerId,
             type: 'AURA_UPDATE',
@@ -845,18 +926,15 @@ const autoCancelOverdueOrders = async () => {
             order.item.status = 'active';
             await order.item.save();
           }
-    // -> MODIFICATION START: Close try-catch and batching loops
         } catch (innerError) {
           console.error(`Failed to process auto-cancel for order ${order._id}:`, innerError);
         }
       }
     }
-    // -> MODIFICATION END
   } catch (error) {
     console.error(error);
   }
 };
-
 
 const getLiveTracking = async (req, res) => {
   try {
@@ -893,13 +971,14 @@ const getOrderById = async (req, res) => {
     const order = await Order.findById(orderId)
       .populate('item', 'title images category condition weight dimensions') 
       .populate('buyer', 'full_name email phone')
-      .populate('seller', 'full_name email phone');
+      .populate('seller', 'full_name email phone')
+      
+      .populate('barterRequestRef', 'first_dispatch_at status');
 
     if (!order) {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
-    // Security check: Sirf buyer, seller ya admin hi order details dekh paye
     if (order.buyer._id.toString() !== req.user._id.toString() && 
         order.seller._id.toString() !== req.user._id.toString() && 
         req.user.role !== 'admin') {
@@ -912,7 +991,6 @@ const getOrderById = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error fetching order details' });
   }
 };
-
 module.exports = {
   calculateShippingCost, 
   createOrder,

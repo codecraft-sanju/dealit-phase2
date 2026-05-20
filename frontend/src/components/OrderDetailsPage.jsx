@@ -36,7 +36,6 @@ const CountdownTimer = ({ createdAt, hours }) => {
   return <span>{timeLeft}</span>;
 };
 
-// --> MODIFICATION START: Stepper Component Added
 const OrderTrackingStepper = ({ currentStatus }) => {
   const steps = [
     { id: 'pending', label: 'Placed', icon: Clock },
@@ -102,7 +101,6 @@ const OrderTrackingStepper = ({ currentStatus }) => {
     </div>
   );
 };
-// --> MODIFICATION END
 
 const OrderDetailsPage = ({ user }) => {
   const { orderId } = useParams();
@@ -229,7 +227,8 @@ const OrderDetailsPage = ({ user }) => {
         { withCredentials: true }
       );
       if (res.data.success) {
-        alert('Order Dispatched! Shiprocket pickup scheduled.');
+        // NAYA LOGIC: Backend ka exact message show karo
+        alert(res.data.message || 'Action Completed!');
         setShowDispatchModal(false);
         fetchOrderDetails();
       }
@@ -360,11 +359,9 @@ const OrderDetailsPage = ({ user }) => {
     return activities;
   })();
 
-  // --> MODIFICATION START: Modern Shimmer Loader
   if (loading) {
     return (
       <div className="min-h-screen bg-[#f4f2f9] font-sans relative overflow-x-hidden">
-        {/* Header Skeleton */}
         <div className="fixed top-0 left-0 right-0 z-50 bg-[#6B46C1] py-5 shadow-md">
           <div className="max-w-md mx-auto md:max-w-4xl px-5 md:px-8 flex items-center gap-4">
             <div className="w-9 h-9 bg-white/20 rounded-full animate-pulse"></div>
@@ -378,7 +375,6 @@ const OrderDetailsPage = ({ user }) => {
         <div className="absolute top-0 left-0 right-0 bg-[#6B46C1] h-40 rounded-b-[2rem] z-0 animate-pulse opacity-80" />
 
         <div className="max-w-md mx-auto md:max-w-4xl px-4 md:px-8 pt-28 relative z-20">
-          {/* Stepper Skeleton */}
           <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 md:p-6 mb-6">
              <div className="relative px-2 sm:px-4 flex justify-between">
                 <div className="absolute top-5 left-0 w-full h-1.5 bg-gray-100 rounded-full animate-pulse"></div>
@@ -391,7 +387,6 @@ const OrderDetailsPage = ({ user }) => {
              </div>
           </div>
 
-          {/* Order Info Skeleton */}
           <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 md:p-6">
             <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
                <div className="w-24 h-4 bg-gray-200 rounded-md animate-pulse"></div>
@@ -425,7 +420,6 @@ const OrderDetailsPage = ({ user }) => {
       </div>
     );
   }
-  // --> MODIFICATION END
 
   if (!order) return null;
   
@@ -472,9 +466,7 @@ const OrderDetailsPage = ({ user }) => {
 
       <div className="max-w-md mx-auto md:max-w-4xl px-4 md:px-8 pt-28 relative z-20">
         
-        {/* --> MODIFICATION START: Stepper Injection */}
         <OrderTrackingStepper currentStatus={order.orderStatus} />
-        {/* --> MODIFICATION END */}
         
         <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm p-5 md:p-6 mb-6">
           <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
@@ -522,7 +514,6 @@ const OrderDetailsPage = ({ user }) => {
                   
                   <div className="flex items-start gap-1.5 mt-1">
                     <Info className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
-                    {/* --- CHANGES START HERE: Barter text formatting for Details --- */}
                     {order.orderType === 'barter' ? (
                       <p className="text-[10px] sm:text-[11px] text-gray-500 font-medium leading-tight">
                         <strong className="text-[#6B46C1]">Barter Deal:</strong> This item is part of an exchange. You paid ₹{order.shippingCost} online for shipping.
@@ -536,7 +527,6 @@ const OrderDetailsPage = ({ user }) => {
                         <strong className="text-gray-700">Earnings:</strong> You get <strong className="text-emerald-600">{order.itemPrice} Credits</strong> on delivery. (Buyer paid shipping).
                       </p>
                     )}
-                    {/* --- CHANGES END HERE --- */}
                   </div>
                 </div>
               </div>
@@ -579,10 +569,8 @@ const OrderDetailsPage = ({ user }) => {
                 </div>
               )}
               
-              {/* Only show refund details to the Buyer */}
               {userType === 'purchases' && (
                 <>
-                  {/* Refund Processing Block */}
                   {order.paymentStatus === 'refund_processing' && (
                     <div className="bg-orange-50 border border-orange-200 p-4 rounded-2xl flex items-start gap-3 shadow-sm relative overflow-hidden">
                       <div className="absolute right-[-15px] top-[-15px] opacity-10 pointer-events-none">
@@ -608,7 +596,6 @@ const OrderDetailsPage = ({ user }) => {
                     </div>
                   )}
 
-                  {/* SUCCESS REFUND VERIFIED RECEIPT */}
                   {order.paymentStatus === 'refunded' && (
                     <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl flex items-start gap-3 shadow-sm relative overflow-hidden">
                       <div className="absolute right-[-15px] top-[-15px] opacity-10 pointer-events-none">
@@ -658,7 +645,6 @@ const OrderDetailsPage = ({ user }) => {
                     </div>
                   )}
 
-                  {/* FAILED REFUND ALERT */}
                   {order.paymentStatus === 'refund_failed' && (
                     <div className="bg-red-50 border border-red-200 p-4 rounded-2xl flex items-start gap-3 shadow-sm relative overflow-hidden mt-3">
                       <div className="absolute right-[-15px] top-[-15px] opacity-10 pointer-events-none">
@@ -708,7 +694,6 @@ const OrderDetailsPage = ({ user }) => {
                 )}
               </div>
               
-              {/* --> MODIFICATION START: External Link Button added with Flex Wrap */}
               <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                  {order.trackingDetails.awb_code && (
                    <div className="flex gap-2 flex-1 sm:flex-none">
@@ -744,30 +729,63 @@ const OrderDetailsPage = ({ user }) => {
                    </button>
                  )}
               </div>
-              {/* --> MODIFICATION END */}
             </div>
           )}
 
-          {/* Action Buttons & Timers for SELLER */}
+        {/* Action Buttons & Timers for SELLER */}
           {userType === 'sales' && order.orderStatus !== 'delivered' && order.orderStatus !== 'shipped' && order.orderStatus !== 'in_transit' && order.orderStatus !== 'cancelled' && (
             <div className="mt-6 pt-5 border-t border-gray-100">
               
-              {order.orderStatus === 'pending' && (
+              {/* SMART LOGIC: Checking isReadyToDispatch & Order Type */}
+              {order.orderStatus === 'pending' && !order.isReadyToDispatch && (
                 <div className="bg-orange-50 border border-orange-100 p-4 rounded-xl mb-4 flex items-start gap-3 shadow-sm">
                   <AlertCircle className="w-5 h-5 text-orange-500 mt-0.5 shrink-0" />
                   <div className="text-xs text-orange-800 font-medium leading-relaxed w-full">
                     <span className="font-bold text-orange-900 block mb-1">Action Required:</span> 
-                    Please dispatch this order within <span className="font-bold">{autoCancelHours} hours</span>.
-                    <div className="text-red-600 font-bold flex items-center gap-1.5 mt-1.5 mb-1.5 bg-red-50/50 w-fit px-2 py-1 rounded-md border border-red-100">
-                      <Clock className="w-3.5 h-3.5" /> Time Left: <span className="animate-pulse"><CountdownTimer createdAt={order.createdAt || order.created_at} hours={autoCancelHours} /></span>
-                    </div>
-                    Failure to dispatch will result in automatic cancellation and a <span className="font-bold text-red-600">{auraPenalty} Aura point penalty</span>.
+                    
+                    {order.orderType === 'barter' ? (
+                      order.barterRequestRef?.first_dispatch_at ? (
+                        <>
+                          Your partner has already packed their item! You must click <strong>Ready to Dispatch</strong> within <span className="font-bold">24 hours</span>.
+                          <div className="text-red-600 font-bold flex items-center gap-1.5 mt-1.5 mb-1.5 bg-red-50/50 w-fit px-2 py-1 rounded-md border border-red-100">
+                            <Clock className="w-3.5 h-3.5" /> Time Left: <span className="animate-pulse"><CountdownTimer createdAt={order.barterRequestRef.first_dispatch_at} hours={24} /></span>
+                          </div>
+                          Failure to dispatch will cancel the entire deal and refund shipping fees.
+                        </>
+                      ) : (
+                        <>
+                          Please coordinate with your partner and click <strong>Ready to Dispatch</strong> when you have packed the item.
+                          <br/><br/>
+                          <strong className="text-orange-900">Safety Rule:</strong> Once one of you clicks "Ready", a strict 24-hour timer will start for the other person to ensure no one is kept waiting.
+                        </>
+                      )
+                    ) : (
+                      <>
+                        Please dispatch this order within <span className="font-bold">{autoCancelHours} hours</span>.
+                        <div className="text-red-600 font-bold flex items-center gap-1.5 mt-1.5 mb-1.5 bg-red-50/50 w-fit px-2 py-1 rounded-md border border-red-100">
+                          <Clock className="w-3.5 h-3.5" /> Time Left: <span className="animate-pulse"><CountdownTimer createdAt={order.createdAt || order.created_at} hours={autoCancelHours} /></span>
+                        </div>
+                        Failure to dispatch will result in automatic cancellation and a <span className="font-bold text-red-600">{auraPenalty} Aura point penalty</span>.
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* NAYA LOGIC: Showing waiting message if seller clicked dispatch but waiting for partner */}
+              {order.orderStatus === 'pending' && order.isReadyToDispatch && order.orderType === 'barter' && (
+                <div className="bg-purple-50 border border-purple-100 p-4 rounded-xl mb-4 flex items-start gap-3 shadow-sm">
+                  <Package className="w-5 h-5 text-purple-600 mt-0.5 shrink-0" />
+                  <div className="text-xs text-purple-800 font-medium leading-relaxed w-full">
+                    <span className="font-bold text-purple-900 block mb-1">You are Ready! 📦</span> 
+                    Waiting for your partner to confirm their dispatch. The Shiprocket pickup will be scheduled automatically for both of you once they confirm.
                   </div>
                 </div>
               )}
               
               <div className="flex flex-wrap gap-3">
-                {order.orderStatus === 'pending' && (
+                {/* NAYA LOGIC: Only show dispatch if they haven't clicked it yet */}
+                {order.orderStatus === 'pending' && !order.isReadyToDispatch && (
                   <button 
                     onClick={() => {
                       setDispatchError(''); 
@@ -788,9 +806,9 @@ const OrderDetailsPage = ({ user }) => {
                 {order.orderStatus === 'pending' && (
                   <button 
                     onClick={() => setShowCancelModal(true)}
-                    className="flex-1 sm:flex-none bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 px-6 py-3 rounded-xl font-bold text-sm transition-colors active:scale-95"
+                    className="flex-1 sm:flex-none bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 px-6 py-3 rounded-xl font-bold text-sm transition-colors active:scale-95 flex items-center justify-center gap-2"
                   >
-                    Cancel Order
+                    <X className="w-4 h-4" /> Cancel Order
                   </button>
                 )}
 
@@ -809,43 +827,28 @@ const OrderDetailsPage = ({ user }) => {
             </div>
           )}
           
-          {/* Messages for BUYER */}
-          {userType === 'purchases' && order.orderStatus !== 'cancelled' && (
-            <div className="mt-6 flex flex-col gap-2">
-              <div className="flex items-center gap-3 text-gray-600 text-sm font-medium bg-[#f8f6ff] p-4 rounded-xl border border-gray-100">
-                <Truck className="w-5 h-5 text-[#6B46C1]" />
-                <span>{order.orderStatus === 'pending' ? 'Waiting for the seller to pack and dispatch your item.' : `Your item is currently ${order.orderStatus.replace('_', ' ')}. Tracking will update automatically.`}</span>
-              </div>
-
-              {order.orderStatus !== 'delivered' && (
-                <div className="flex items-center gap-3 text-emerald-700 bg-emerald-50 p-4 rounded-xl border border-emerald-100">
-                  <Calendar className="w-5 h-5 text-emerald-600 shrink-0" />
-                  <div className="flex flex-col">
-                    <span className="font-bold text-sm">Estimated Delivery: {estimatedInfo.date}</span>
-                    <span className="text-[10px] text-emerald-600/80 font-medium mt-0.5 uppercase tracking-wide">
-                      {estimatedInfo.source === 'shiprocket' ? 'Live Courier Estimate' : 
-                       estimatedInfo.source === 'in_transit' ? 'In Transit (Awaiting Exact Date)' : 
-                       'Standard Estimate (5-7 days)'}
-                    </span>
-                  </div>
-                </div>
-              )}
-              
+        {/* Messages for BUYER */}
               {order.orderStatus === 'pending' && (
                 <div className="text-[11px] text-gray-500 px-2 flex flex-col gap-1.5 font-medium mt-1">
-                  <span className="flex items-center gap-1.5">
-                    <Info className="w-3.5 h-3.5 shrink-0" /> 
-                    If the seller doesn't dispatch within {autoCancelHours} hours, the order will auto-cancel and you'll be fully refunded.
-                  </span>
-                  <span className="flex items-center gap-1.5 text-red-500 font-bold bg-red-50/50 w-fit px-2 py-1 rounded-md border border-red-50">
-                    <Clock className="w-3.5 h-3.5" /> 
-                    Time Left: <span className="animate-pulse"><CountdownTimer createdAt={order.createdAt || order.created_at} hours={autoCancelHours} /></span>
-                  </span>
+                  {order.orderType === 'barter' ? (
+                    <span className="flex items-center gap-1.5">
+                      <Info className="w-3.5 h-3.5 shrink-0 text-[#6B46C1]" /> 
+                      Both parties must click "Ready to Dispatch". Once one clicks, the other has 24 hours to comply, otherwise the system cancels the deal to protect you.
+                    </span>
+                  ) : (
+                    <>
+                      <span className="flex items-center gap-1.5">
+                        <Info className="w-3.5 h-3.5 shrink-0" /> 
+                        If the seller doesn't dispatch within {autoCancelHours} hours, the order will auto-cancel and you'll be fully refunded.
+                      </span>
+                      <span className="flex items-center gap-1.5 text-red-500 font-bold bg-red-50/50 w-fit px-2 py-1 rounded-md border border-red-50">
+                        <Clock className="w-3.5 h-3.5" /> 
+                        Time Left: <span className="animate-pulse"><CountdownTimer createdAt={order.createdAt || order.created_at} hours={autoCancelHours} /></span>
+                      </span>
+                    </>
+                  )}
                 </div>
               )}
-            </div>
-          )}
-        </div>
       </div>
 
       {/* Dispatch Modal */}
@@ -942,7 +945,16 @@ const OrderDetailsPage = ({ user }) => {
             </button>
             
             <h3 className="text-xl font-black text-gray-900 mb-1">Cancel Order</h3>
-            <p className="text-xs text-gray-500 font-medium mb-6">Please provide a reason. This will be shared with the buyer.</p>
+            
+            {/* NAYA LOGIC: Warning for Barter cancellations */}
+            {order.orderType === 'barter' ? (
+              <div className="bg-red-50 border border-red-100 p-3 rounded-xl mb-4 mt-2">
+                <p className="text-xs text-red-700 font-bold">⚠️ Warning: This is a Barter deal.</p>
+                <p className="text-xs text-red-600 mt-1">Cancelling this will collapse the entire deal for both parties. All shipping fees will be refunded.</p>
+              </div>
+            ) : (
+              <p className="text-xs text-gray-500 font-medium mb-6 mt-1">Please provide a reason. This will be shared with the buyer.</p>
+            )}
             
             <form onSubmit={submitCancelOrder} className="space-y-4">
               <div>
@@ -960,7 +972,7 @@ const OrderDetailsPage = ({ user }) => {
               <button 
                 type="submit" 
                 disabled={cancelling}
-                className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3.5 rounded-xl mt-4 transition-all shadow-md shadow-red-500/20 disabled:opacity-70 flex justify-center items-center gap-2"
+                className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3.5 rounded-xl mt-2 transition-all shadow-md shadow-red-500/20 disabled:opacity-70 flex justify-center items-center gap-2"
               >
                 {cancelling ? 'Cancelling...' : 'Confirm Cancellation'}
               </button>

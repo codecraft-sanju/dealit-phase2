@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { Check, ArrowLeft, MessageSquare, Package, User, ShieldAlert, Phone, Calendar, Copy, Clock, X, AlertCircle } from 'lucide-react';
@@ -7,6 +7,36 @@ import { getOptimizedCloudinaryUrl } from './HomePage';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
+
+// NEW: CountdownTimer for AWAITING_PAYMENT state
+const CountdownTimer = ({ expiresAt }) => {
+  const [timeLeft, setTimeLeft] = useState('');
+
+  useEffect(() => {
+    const calculateTime = () => {
+      if (!expiresAt) return '00h 00m 00s';
+      
+      const expireDate = new Date(expiresAt).getTime();
+      const now = new Date().getTime();
+      const diff = expireDate - now;
+
+      if (diff <= 0) return '00h 00m 00s';
+
+      const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+      return `${h}h ${m}m ${s}s`;
+    };
+
+    setTimeLeft(calculateTime());
+    const timer = setInterval(() => setTimeLeft(calculateTime()), 1000);
+    
+    return () => clearInterval(timer);
+  }, [expiresAt]);
+
+  return <span>{timeLeft}</span>;
+};
 
 const DealDetailsPage = ({ user }) => {
   const { id } = useParams();
@@ -33,7 +63,6 @@ const DealDetailsPage = ({ user }) => {
     }
   };
 
-  // --- CHANGES START HERE: Replaced simple loading text with shimmer skeleton ---
   if (loading) {
     return (
       <div className="min-h-screen bg-[#f4f2f9] pb-10 font-sans relative overflow-hidden">
@@ -108,7 +137,6 @@ const DealDetailsPage = ({ user }) => {
       </div>
     );
   }
-  // --- CHANGES END HERE ---
 
   if (error || !deal) {
     return (
@@ -131,6 +159,7 @@ const DealDetailsPage = ({ user }) => {
 
   const dealStatus = deal.status || 'PENDING';
   const isAccepted = dealStatus === 'ACCEPTED';
+  const isAwaitingPayment = dealStatus === 'AWAITING_PAYMENT';
 
   const getStatusConfig = () => {
     switch (dealStatus) {
@@ -142,16 +171,16 @@ const DealDetailsPage = ({ user }) => {
           bgConfig: 'bg-[#E6F4EA]',
           borderColor: 'border-white'
         };
-      // --- CHANGES START HERE: Added AWAITING_PAYMENT block ---
       case 'AWAITING_PAYMENT':
         return {
           title: 'Awaiting Payment ⏳',
-          message: 'The owner has accepted. Waiting for the requester to complete the payment within 24 hours.',
+          message: isRequester 
+            ? 'The owner accepted! Please complete your shipping payment within 24 hours to lock this deal.' 
+            : 'You accepted! Waiting for the requester to complete their payment within 24 hours.',
           icon: <Clock className="w-10 h-10 text-purple-500" />,
           bgConfig: 'bg-purple-100',
           borderColor: 'border-white'
         };
-      // --- CHANGES END HERE ---
       case 'PENDING':
         return {
           title: 'Offer Pending ⏳',
@@ -222,9 +251,23 @@ const DealDetailsPage = ({ user }) => {
             <span>Date: {dealDate}</span>
           </div>
           
-          <p className="text-sm text-gray-500 mb-8 font-medium">
+          <p className="text-sm text-gray-500 mb-4 font-medium">
             {statusDisplay.message}
           </p>
+
+          {/* NEW LOGIC: AWAITING PAYMENT Timer Alert */}
+          {isAwaitingPayment && (
+            <div className={`mb-8 ${isRequester ? 'bg-orange-50 border-orange-200' : 'bg-purple-50 border-purple-200'} border p-4 rounded-xl flex items-start justify-center gap-3 shadow-sm`}>
+              <Clock className={`w-5 h-5 ${isRequester ? 'text-orange-500' : 'text-purple-500'} shrink-0`} />
+              <div className={`text-xs ${isRequester ? 'text-orange-800' : 'text-purple-800'} font-medium leading-relaxed text-left`}>
+                <span className="font-bold block mb-1">{isRequester ? 'Action Required!' : 'Waiting on Partner'}</span> 
+                {isRequester ? 'Complete your payment now to lock this deal.' : 'The deal will auto-cancel if they don\'t pay.'}
+                <div className="text-red-600 font-bold flex items-center gap-1.5 mt-1.5 bg-red-50/50 w-fit px-2 py-1 rounded-md border border-red-100">
+                  <Clock className="w-3.5 h-3.5" /> Time Left: <span className="animate-pulse"><CountdownTimer expiresAt={deal.expiresAt} /></span>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="bg-[#fcfbff] rounded-2xl p-5 mb-6 text-left border border-[#f0eaff]">
             <div className="flex items-center gap-3 mb-4 border-b border-gray-100 pb-4">
@@ -297,6 +340,15 @@ const DealDetailsPage = ({ user }) => {
             
           </div>
 
+          {isAwaitingPayment && isRequester && (
+            <button
+              onClick={() => navigate('/swaps?tab=sent')}
+              className="w-full bg-[#6B46C1] hover:bg-[#5a3aa3] text-white font-black text-lg py-4 px-4 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 mb-4"
+            >
+              Complete Payment Now
+            </button>
+          )}
+
           {isAccepted ? (
             counterpart?.phone ? (
               <a 
@@ -315,7 +367,7 @@ const DealDetailsPage = ({ user }) => {
           ) : (
             <div className="w-full bg-gray-50 text-gray-400 font-bold text-sm py-4 px-4 rounded-xl border border-gray-200 mb-4 flex flex-col items-center justify-center gap-1">
               <ShieldAlert className="w-5 h-5 text-gray-400" />
-              Contact details hidden until the deal is accepted.
+              Contact details hidden until the deal is fully accepted.
             </div>
           )}
 

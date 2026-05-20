@@ -253,7 +253,7 @@ const OrdersPage = ({ user }) => {
                       <p className="text-[11px] text-gray-500 font-bold mb-2.5 truncate uppercase tracking-wider">{order.item?.category}</p>
                       
                       <div className="flex flex-wrap items-center gap-2">
-                       
+                        
                         {order.orderType === 'barter' ? (
                           <div className="inline-flex items-center gap-1 bg-gradient-to-br from-[#EBE5F7] to-[#f8f6ff] border border-[#d6bcfa]/60 px-2 py-0.5 rounded-md shadow-sm">
                             <Package className="w-3 h-3 text-[#6B46C1] drop-shadow-sm" />
@@ -265,18 +265,22 @@ const OrdersPage = ({ user }) => {
                             <span className="font-black text-[10px] text-gray-900">{order.itemPrice || 0} CR</span>
                           </div>
                         )}
-                        {/* --- CHANGES END HERE --- */}
 
-                        {/* NEW: Shipping Cost Badge */}
+                        {/* Shipping Cost Badge */}
                         <div className={`inline-flex items-center gap-1 border px-2 py-0.5 rounded-md shadow-sm ${order.shippingCost > 0 ? 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200' : 'bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200'}`}>
                           <Truck className={`w-3 h-3 ${order.shippingCost > 0 ? 'text-blue-600' : 'text-emerald-600'}`} />
-                          <span className={`font-black text-[10px] ${order.shippingCost > 0 ? 'text-blue-900' : 'text-emerald-900'}`}>
+                          <span className={`font-bold text-[10px] ${order.shippingCost > 0 ? 'text-blue-900' : 'text-emerald-900'}`}>
                             {order.shippingCost > 0 ? `₹${order.shippingCost}` : 'Free'}
                           </span>
                         </div>
 
+                        {/* NAYA LOGIC ADDED HERE: isReadyToDispatch check for Action Req vs Ready */}
                         {order.orderStatus === 'pending' && activeTab === 'sales' && (
-                          <span className="text-[9px] font-black text-red-600 animate-pulse bg-gradient-to-r from-red-50 to-rose-50 px-2 py-1 rounded-md border border-red-200 uppercase tracking-widest shadow-sm">Action Req</span>
+                          order.isReadyToDispatch ? (
+                            <span className="text-[9px] font-black text-purple-600 bg-gradient-to-r from-purple-50 to-purple-100 px-2 py-1 rounded-md border border-purple-200 uppercase tracking-widest shadow-sm">Ready</span>
+                          ) : (
+                            <span className="text-[9px] font-black text-red-600 animate-pulse bg-gradient-to-r from-red-50 to-rose-50 px-2 py-1 rounded-md border border-red-200 uppercase tracking-widest shadow-sm">Action Req</span>
+                          )
                         )}
                       </div>
                     </div>

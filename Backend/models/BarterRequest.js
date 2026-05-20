@@ -6,7 +6,7 @@ const barterRequestSchema = new mongoose.Schema({
   owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   item: { type: mongoose.Schema.Types.ObjectId, ref: 'Item' },
   offered_item: { type: mongoose.Schema.Types.ObjectId, ref: 'Item' },
-  
+  first_dispatch_at: { type: Date },
   status: { 
     type: String, 
     enum: ['PENDING', 'AWAITING_PAYMENT', 'ACCEPTED', 'REJECTED', 'GHOSTING', 'CANCELLED'],

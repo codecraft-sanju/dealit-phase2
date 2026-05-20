@@ -1,3 +1,4 @@
+// barterRoutes.js
 const express = require('express');
 const router = express.Router();
 const { 
@@ -9,7 +10,6 @@ const {
   deleteBarterRequest,
   updateSwapStatus,
   completeSwapPayment
-
 } = require('../controllers/barterController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -19,9 +19,7 @@ router.route('/received').get(protect, getReceivedRequests);
 router.route('/sent').get(protect, getSentRequests);
 router.route('/:id/status').put(protect, updateSwapStatus);
 
-
 router.route('/:id/complete-payment').put(protect, completeSwapPayment);
-
 
 router.route('/:id')
   .get(protect, getBarterRequestById)
