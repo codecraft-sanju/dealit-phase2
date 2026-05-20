@@ -10,6 +10,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
 
+
 const smartLazy = (importFunc) => {
   return lazy(() =>
     importFunc().catch((error) => {
@@ -19,7 +20,7 @@ const smartLazy = (importFunc) => {
     })
   );
 };
-
+const OffersPage = smartLazy(() => import('./offer/OffersPage'));
 const PromoAlert = smartLazy(() => import('./popup/PromoAlert'));
 const IosInstallPopup = smartLazy(() => import('./components/IosInstallPopup'));
 const DesktopLandingPage = smartLazy(() => import('./Desktop/DesktopLandingPage'));
@@ -279,9 +280,9 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
       
       <main>
         <Suspense fallback={<PremiumLoader />}>
-          {/* --- Hide Floating widget when on the full AI Chat page --- */}
+         
           {user && !isAiChatRoute && <FloatingAIAssistant user={user} />}
-          {/* --- END CHANGED --- */}
+         
           
           <Routes>
             <Route path="/" element={
@@ -308,7 +309,7 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/refund-policy" element={<RefundPolicyPage />} />
             <Route path="/cancellation-policy" element={<CancellationPolicyPage />} />
-    
+    <Route path="/offers" element={user ? <OffersPage user={user} /> : <Navigate to="/login" />} /> 
 
           <Route 
   path="/admin" 

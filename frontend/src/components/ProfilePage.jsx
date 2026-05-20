@@ -206,7 +206,7 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
     { to: "/dashboard", icon: ClipboardList, title: "My Listings", subtitle: "", badge: "Active" },
     { to: "/orders", icon: Archive, title: "My Orders", subtitle: "View your past transactions", badge: ordersBadge },
     { to: "/swaps", icon: RefreshCw, title: "My Swaps", subtitle: swapsSubtitle, badge: swapsBadge },
-    { to: "#", icon: Tag, title: "My Offers", subtitle: "Items You've Bid On", iconClass: "fill-[#6B46C1]/20" },
+    { to: "/offers", icon: Tag, title: "Play & Earn", subtitle: "Complete events for free credits", iconClass: "fill-[#6B46C1]/20" },
     { to: "/wishlist", icon: Heart, title: "Wishlist", subtitle: "Saved Items", iconClass: "fill-[#6B46C1]" },
     { to: "/wallet", icon: Wallet, title: "My Wallet", subtitle: "Credit Balance & Purchases" },
     { to: "/notifications", icon: Bell, title: "Notifications", subtitle: "Alert Settings", iconClass: "fill-[#6B46C1]" },     
@@ -215,14 +215,31 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
 
 
   return (
-    <div className="min-h-screen bg-[#f4f2f9] pb-10 font-sans relative overflow-x-hidden">
+    <div className="min-h-screen bg-[#f8f7fc] pb-10 font-sans relative overflow-x-hidden">
       
+      {/* Animated Background Orbs for Glossy Feel */}
+      <motion.div 
+        animate={{ scale: [1, 1.2, 1], x: [0, 50, 0], y: [0, 30, 0] }}
+        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute top-20 -left-20 w-80 h-80 bg-purple-400 rounded-full mix-blend-multiply filter blur-[90px] opacity-40 z-0 pointer-events-none"
+      />
+      <motion.div 
+        animate={{ scale: [1, 1.5, 1], x: [0, -40, 0], y: [0, 60, 0] }}
+        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute top-60 -right-20 w-80 h-80 bg-pink-400 rounded-full mix-blend-multiply filter blur-[90px] opacity-30 z-0 pointer-events-none"
+      />
+      <motion.div 
+        animate={{ scale: [1, 1.3, 1], y: [0, -50, 0] }}
+        transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute bottom-0 left-1/4 w-80 h-80 bg-indigo-300 rounded-full mix-blend-multiply filter blur-[90px] opacity-40 z-0 pointer-events-none"
+      />
+
       <header 
-        className={`fixed top-0 left-0 right-0 z-50 bg-[#6B46C1] transition-all duration-300 ease-in-out shadow-md ${
-          isScrolled ? 'py-3' : 'py-5'
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out shadow-md ${
+          isScrolled ? 'py-3 bg-[#6B46C1]/95 backdrop-blur-md' : 'py-5 bg-[#6B46C1]'
         }`}
       >
-        <div className="max-w-md mx-auto md:max-w-7xl px-5 md:px-8 flex justify-between items-center text-white">
+        <div className="max-w-md mx-auto md:max-w-7xl px-5 md:px-8 flex justify-between items-center text-white relative z-10">
           <div className="flex flex-col justify-center">
             <h1 className={`font-bold tracking-wide leading-tight transition-all duration-300 ${
               isScrolled ? 'text-xl' : 'text-2xl'
@@ -247,14 +264,15 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
         </div>
       </header>
 
+      {/* Top Banner Gradient */}
       <motion.div 
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
-        className="absolute top-0 left-0 right-0 bg-[#6B46C1] h-48 rounded-b-[2rem] z-0"
+        className="absolute top-0 left-0 right-0 bg-gradient-to-b from-[#6B46C1] via-[#7c52d6] to-[#9b6fee] h-52 rounded-b-[2.5rem] z-0 shadow-[0_8px_30px_rgba(107,70,193,0.15)]"
       />
 
-      <div className="max-w-md mx-auto md:max-w-7xl px-5 md:px-8 pt-28 relative z-20">
+      <div className="max-w-md mx-auto md:max-w-7xl px-5 md:px-8 pt-32 relative z-20">
         <AnimatePresence mode="wait">
           {loading ? (
             <motion.div 
@@ -264,19 +282,19 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
               exit={{ opacity: 0, transition: { duration: 0.2 } }}
               className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 animate-pulse"
             >
-              <div className="md:col-span-1 bg-white rounded-3xl shadow-sm border border-gray-100 p-5 flex flex-col items-center text-center">
-                <div className="w-24 h-24 bg-gray-200 rounded-[1.5rem] mb-4"></div>
-                <div className="h-6 w-3/4 bg-gray-200 rounded-lg mb-2"></div>
-                <div className="h-4 w-1/2 bg-gray-200 rounded-lg mb-4"></div>
+              <div className="md:col-span-1 bg-white/80 backdrop-blur-xl rounded-3xl shadow-sm border border-white p-5 flex flex-col items-center text-center">
+                <div className="w-24 h-24 bg-gray-200/50 rounded-[1.5rem] mb-4"></div>
+                <div className="h-6 w-3/4 bg-gray-200/50 rounded-lg mb-2"></div>
+                <div className="h-4 w-1/2 bg-gray-200/50 rounded-lg mb-4"></div>
               </div>
 
               <div className="md:col-span-2 flex flex-col gap-4">
-                <div className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm">
+                <div className="bg-white/80 backdrop-blur-xl rounded-3xl border border-white p-5 shadow-sm">
                   {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex items-center justify-between py-4 border-b border-gray-50">
+                    <div key={i} className="flex items-center justify-between py-4 border-b border-gray-50/50">
                       <div className="flex items-center gap-4">
-                        <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
-                        <div className="h-4 w-24 bg-gray-200 rounded-md"></div>
+                        <div className="w-8 h-8 bg-gray-200/50 rounded-full"></div>
+                        <div className="h-4 w-24 bg-gray-200/50 rounded-md"></div>
                       </div>
                     </div>
                   ))}
@@ -292,15 +310,18 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
               className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6"
             >
               
-              <motion.div variants={itemVariants} className="md:col-span-1 bg-white rounded-3xl shadow-sm border border-gray-100 p-5 flex flex-col items-center text-center relative overflow-hidden">
-                <div className="relative mb-4">
+              {/* Profile Main Card with Glassmorphism */}
+              <motion.div variants={itemVariants} className="md:col-span-1 bg-white/70 backdrop-blur-2xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/80 p-5 flex flex-col items-center text-center relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent pointer-events-none" />
+                
+                <div className="relative mb-4 z-10">
                   <motion.div 
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ duration: 0.3, ease: 'easeOut', delay: 0.1 }}
-                    className="w-24 h-24 bg-white rounded-[1.5rem] p-1.5 shadow-sm border border-gray-100"
+                    className="w-24 h-24 bg-white/90 backdrop-blur-md rounded-[1.5rem] p-1.5 shadow-lg border border-white"
                   >
-                    <div className="w-full h-full bg-[#f8f6ff] rounded-[1.2rem] flex items-center justify-center overflow-hidden">
+                    <div className="w-full h-full bg-gradient-to-br from-[#f8f6ff] to-[#f0ebff] rounded-[1.2rem] flex items-center justify-center overflow-hidden">
                       {uploadImageMutation.isPending ? (
                         <Loader2 className="w-8 h-8 text-[#A388E1] animate-spin" />
                       ) : profileData?.profilePic ? (
@@ -317,7 +338,7 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                   </motion.div>
                   
                   <label 
-                    className="absolute -bottom-2 -right-2 bg-gradient-to-r from-[#805ad5] to-[#6B46C1] p-2.5 rounded-full text-white cursor-pointer shadow-md border-2 border-white z-10 hover:scale-110 active:scale-95 transition-transform"
+                    className="absolute -bottom-2 -right-2 bg-gradient-to-r from-[#805ad5] to-[#6B46C1] p-2.5 rounded-full text-white cursor-pointer shadow-lg border-2 border-white z-10 hover:scale-110 active:scale-95 transition-transform"
                   >
                     <Camera className="w-4 h-4" />
                     <input 
@@ -330,32 +351,32 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                   </label>
                 </div>
 
-                <h2 className="text-xl font-bold text-gray-900 leading-tight">{profileData?.full_name}</h2>
-                <p className="text-sm text-gray-500 font-medium mb-3">{profileData?.email}</p>
+                <h2 className="text-xl font-bold text-gray-900 leading-tight z-10">{profileData?.full_name}</h2>
+                <p className="text-sm text-gray-500 font-medium mb-3 z-10">{profileData?.email}</p>
 
                 
-                <div className="mt-1 w-full flex flex-col items-center">
+                <div className="mt-1 w-full flex flex-col items-center z-10">
                   
-                  <span className="bg-[#F4F0FF] text-[#6B46C1] text-[11px] font-bold px-4 py-1.5 rounded-full uppercase tracking-wider mb-5">
+                  <span className="bg-purple-100/80 backdrop-blur-sm text-[#6B46C1] text-[11px] font-bold px-4 py-1.5 rounded-full uppercase tracking-wider mb-5 border border-purple-200/50">
                     {profileData?.role || 'USER'}
                   </span>
 
                   <div className="flex w-full gap-3 mb-4">
-                    <div className="flex-1 bg-[#FFF9E6] rounded-xl py-3 px-2 flex items-center justify-center gap-2 border border-[#FFF0C2]/50 shadow-sm">
+                    <div className="flex-1 bg-yellow-50/80 backdrop-blur-sm rounded-xl py-3 px-2 flex items-center justify-center gap-2 border border-yellow-200/50 shadow-sm">
                       <Coins className="w-5 h-5 text-[#EAB308]" />
                       <span className="font-bold text-gray-800 text-sm">{profileData?.account_credits || 0} Credits</span>
                     </div>
 
-                    <div className="flex-1 bg-[#F5F0FF] rounded-xl py-3 px-2 flex items-center justify-center gap-2 border border-[#E9DFFF]/50 shadow-sm">
+                    <div className="flex-1 bg-purple-50/80 backdrop-blur-sm rounded-xl py-3 px-2 flex items-center justify-center gap-2 border border-purple-200/50 shadow-sm">
                       <Shield className="w-5 h-5 text-[#6B46C1] fill-[#6B46C1]/20" />
                       <span className="font-bold text-gray-800 text-sm">{profileData?.aura_points || 0} Aura</span>
                     </div>
                   </div>
 
                   
-                  <Link to="/aura" className="w-full bg-white border border-gray-100 rounded-2xl p-4 flex items-center justify-between shadow-sm hover:shadow-md active:scale-[0.98] transition-all cursor-pointer block">
+                  <Link to="/aura" className="w-full bg-white/90 backdrop-blur-md border border-white rounded-2xl p-4 flex items-center justify-between shadow-sm hover:shadow-md active:scale-[0.98] transition-all cursor-pointer block">
                     <div className="flex items-center gap-3">
-                      <div className="bg-[#6B46C1] p-3 rounded-xl flex-shrink-0 shadow-sm border border-[#5a3aa3]">
+                      <div className="bg-gradient-to-br from-[#805ad5] to-[#6B46C1] p-3 rounded-xl flex-shrink-0 shadow-sm border border-[#5a3aa3]/30">
                         <Star className="w-6 h-6 text-white fill-white" />
                       </div>
                       <div className="text-left">
@@ -371,13 +392,15 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                 </div>
               </motion.div>
 
-              <motion.div variants={itemVariants} className="md:col-span-2 flex flex-col gap-4">
-                <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+              {/* Menu Items Card with Glassmorphism */}
+              <motion.div variants={itemVariants} className="md:col-span-2 flex flex-col gap-4 relative z-10">
+                <div className="bg-white/70 backdrop-blur-2xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/80 overflow-hidden flex flex-col relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent pointer-events-none" />
                   
-                  <div className="flex items-center justify-between border-b border-gray-100 bg-white group">
+                  <div className="flex items-center justify-between border-b border-white/60 bg-white/40 group relative z-10">
                     <button 
                       onClick={() => setShowAccountDetails(!showAccountDetails)} 
-                      className="flex items-center w-full justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                      className="flex items-center w-full justify-between p-4 hover:bg-white/60 active:bg-white/80 transition-colors"
                     >
                       <div className="flex items-center gap-4 text-left">
                         <User className="w-6 h-6 text-[#6B46C1]" />
@@ -391,7 +414,7 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                       </div>
                     </button>
                     {showAccountDetails && (
-                      <button onClick={openEditModal} className="pr-4 pl-2 py-4 hover:text-[#6B46C1] active:scale-90 text-gray-400 transition-all">
+                      <button onClick={openEditModal} className="pr-4 pl-2 py-4 hover:text-[#6B46C1] active:scale-90 text-gray-400 transition-all z-20">
                         <Edit2 className="w-5 h-5" />
                       </button>
                     )}
@@ -404,9 +427,9 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
                         transition={{ duration: 0.3, ease: "easeInOut" }}
-                        className="overflow-hidden bg-gray-50/50 shadow-inner"
+                        className="overflow-hidden bg-gray-50/40 backdrop-blur-sm shadow-inner relative z-10"
                       >
-                        <div className="p-4 border-b border-gray-100 space-y-1">
+                        <div className="p-4 border-b border-white/60 space-y-1">
                           {[
                             { icon: Mail, label: 'Email Address', value: profileData?.email },
                             { icon: Phone, label: 'Phone Number', value: profileData?.phone },
@@ -421,11 +444,11 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                             { icon: Calendar, label: 'Member Since', value: profileData?.created_at ? new Date(profileData.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Recently' }
                           ].map((item, idx) => (
                             <div key={idx} className="flex items-center gap-4 py-2 px-2">
-                              <div className="bg-white p-2 rounded-xl text-[#A388E1] shadow-sm border border-gray-100">
+                              <div className="bg-white/80 p-2 rounded-xl text-[#A388E1] shadow-sm border border-white">
                                 <item.icon className="w-4 h-4" />
                               </div>
                               <div>
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">{item.label}</p>
+                                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">{item.label}</p>
                                 <p className={`font-semibold text-gray-900 text-sm ${item.capitalize ? 'capitalize' : ''}`}>
                                   {item.value || <span className="text-gray-400 italic">Not provided</span>}
                                 </p>
@@ -437,12 +460,12 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                     )}
                   </AnimatePresence>
 
-                
+                  
                   {menuItems.map((item, index) => (
                     <Link 
                       key={index}
                       to={item.to}
-                      className={`flex items-center justify-between p-4 group border-b border-gray-100 hover:bg-gray-50 active:bg-gray-100 active:scale-[0.98] transition-all`}
+                      className={`flex items-center justify-between p-4 group border-b border-white/60 bg-transparent hover:bg-white/40 active:bg-white/60 active:scale-[0.98] transition-all relative z-10`}
                     >
                       <div className="flex items-center gap-4">
                         <item.icon className={`w-6 h-6 ${item.iconClass || 'text-[#6B46C1]'} ${item.icon === Archive ? 'text-[#4B5563]' : ''}`} />
@@ -465,11 +488,11 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                       <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-[#6B46C1] transition-colors" />
                     </Link>
                   ))}
-                
+                  
 
                   <Link
                     to="/delete-account"
-                    className="flex items-center justify-between p-4 group hover:bg-red-50 active:bg-red-100 active:scale-[0.98] transition-all"
+                    className="flex items-center justify-between p-4 group hover:bg-red-50/50 active:bg-red-100/50 active:scale-[0.98] transition-all relative z-10"
                   >
                     <div className="flex items-center gap-4">
                       <Trash2 className="w-6 h-6 text-red-500" />
@@ -491,19 +514,19 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
 
       <AnimatePresence>
         {isEditModalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/40 backdrop-blur-md">
             <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.95 }}
               transition={{ duration: 0.2 }}
-              className="bg-white w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+              className="bg-white/95 backdrop-blur-xl w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] border border-white/50"
             >
-              <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-[#f8f6ff]">
+              <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-[#f8f6ff] to-white">
                 <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                   <Edit2 className="w-5 h-5 text-[#6B46C1]" /> Edit Profile
                 </h2>
-                <button onClick={() => setIsEditModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-2 bg-white rounded-full shadow-sm active:scale-95 transition-all">
+                <button onClick={() => setIsEditModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-2 bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-all">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -513,15 +536,15 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                   
                   <div className="space-y-4">
                     <h3 className="font-bold text-gray-800 text-sm border-b pb-2">Basic Information</h3>
-                    <div className="relative">
-                      <User className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
+                    <div className="relative group">
+                      <User className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400 group-focus-within:text-[#6B46C1] transition-colors" />
                       <input type="text" placeholder="Full Name" required value={editForm.full_name} onChange={(e) => setEditForm({...editForm, full_name: e.target.value})}
-                        className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3 focus:border-[#6B46C1] focus:bg-white outline-none transition-all text-sm font-medium" />
+                        className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3 focus:border-[#6B46C1] focus:bg-white focus:shadow-[0_0_0_4px_rgba(107,70,193,0.1)] outline-none transition-all text-sm font-medium" />
                     </div>
-                    <div className="relative">
-                      <Phone className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
+                    <div className="relative group">
+                      <Phone className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400 group-focus-within:text-[#6B46C1] transition-colors" />
                       <input type="tel" placeholder="Phone Number" required value={editForm.phone} onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
-                        className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3 focus:border-[#6B46C1] focus:bg-white outline-none transition-all text-sm font-medium" />
+                        className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3 focus:border-[#6B46C1] focus:bg-white focus:shadow-[0_0_0_4px_rgba(107,70,193,0.1)] outline-none transition-all text-sm font-medium" />
                     </div>
                   </div>
 
@@ -532,20 +555,20 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                     </div>
                     
                     <div className="space-y-3">
-                      <div className="relative">
-                        <Home className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
+                      <div className="relative group">
+                        <Home className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400 group-focus-within:text-[#6B46C1] transition-colors" />
                         <input type="text" placeholder="House No. / Flat No. / Road No." required value={editForm.pickupAddress.houseNo} onChange={(e) => setEditForm({...editForm, pickupAddress: {...editForm.pickupAddress, houseNo: e.target.value}})}
-                          className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3 focus:border-[#6B46C1] focus:bg-white outline-none transition-all text-sm font-medium" />
+                          className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3 focus:border-[#6B46C1] focus:bg-white focus:shadow-[0_0_0_4px_rgba(107,70,193,0.1)] outline-none transition-all text-sm font-medium" />
                       </div>
-                      <div className="relative">
-                        <MapPin className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
+                      <div className="relative group">
+                        <MapPin className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400 group-focus-within:text-[#6B46C1] transition-colors" />
                         <input type="text" placeholder="Area, Street, Sector" required value={editForm.pickupAddress.areaStreet} onChange={(e) => setEditForm({...editForm, pickupAddress: {...editForm.pickupAddress, areaStreet: e.target.value}})}
-                          className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3 focus:border-[#6B46C1] focus:bg-white outline-none transition-all text-sm font-medium" />
+                          className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3 focus:border-[#6B46C1] focus:bg-white focus:shadow-[0_0_0_4px_rgba(107,70,193,0.1)] outline-none transition-all text-sm font-medium" />
                       </div>
-                      <div className="relative">
-                        <MapPin className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400 opacity-50" />
+                      <div className="relative group">
+                        <MapPin className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400 opacity-50 group-focus-within:text-[#6B46C1] group-focus-within:opacity-100 transition-colors" />
                         <input type="text" placeholder="Landmark (Optional)" value={editForm.pickupAddress.landmark} onChange={(e) => setEditForm({...editForm, pickupAddress: {...editForm.pickupAddress, landmark: e.target.value}})}
-                          className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3 focus:border-[#6B46C1] focus:bg-white outline-none transition-all text-sm font-medium" />
+                          className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3 focus:border-[#6B46C1] focus:bg-white focus:shadow-[0_0_0_4px_rgba(107,70,193,0.1)] outline-none transition-all text-sm font-medium" />
                       </div>
                     </div>
 
@@ -557,16 +580,16 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                           pickupAddress: {...editForm.pickupAddress, city: e.target.value}
                         })
                       }}
-                        className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl px-4 py-3 focus:border-[#6B46C1] focus:bg-white outline-none transition-all text-sm font-medium" />
+                        className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl px-4 py-3 focus:border-[#6B46C1] focus:bg-white focus:shadow-[0_0_0_4px_rgba(107,70,193,0.1)] outline-none transition-all text-sm font-medium" />
                       
                       <input type="text" placeholder="State" required value={editForm.pickupAddress.state} onChange={(e) => setEditForm({...editForm, pickupAddress: {...editForm.pickupAddress, state: e.target.value}})}
-                        className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl px-4 py-3 focus:border-[#6B46C1] focus:bg-white outline-none transition-all text-sm font-medium" />
+                        className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl px-4 py-3 focus:border-[#6B46C1] focus:bg-white focus:shadow-[0_0_0_4px_rgba(107,70,193,0.1)] outline-none transition-all text-sm font-medium" />
                     </div>
 
-                    <div className="relative">
-                      <Hash className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
+                    <div className="relative group">
+                      <Hash className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400 group-focus-within:text-[#6B46C1] transition-colors" />
                       <input type="text" placeholder="Pincode (6 Digits)" required maxLength="6" value={editForm.pickupAddress.pincode} onChange={(e) => setEditForm({...editForm, pickupAddress: {...editForm.pickupAddress, pincode: e.target.value}})}
-                        className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3 focus:border-[#6B46C1] focus:bg-white outline-none transition-all text-sm font-medium" />
+                        className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3 focus:border-[#6B46C1] focus:bg-white focus:shadow-[0_0_0_4px_rgba(107,70,193,0.1)] outline-none transition-all text-sm font-medium" />
                     </div>
                   </div>
                 </form>
@@ -574,7 +597,7 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
 
               <div className="p-5 border-t border-gray-100 bg-[#f8f6ff] flex justify-end gap-3 shrink-0">
                 <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-5 py-2.5 rounded-xl font-bold text-gray-500 hover:bg-gray-200 active:bg-gray-300 transition-all text-sm">Cancel</button>
-                <button type="submit" form="editProfileForm" disabled={editProfileMutation.isPending} className={`px-6 py-2.5 rounded-xl font-bold transition-all text-sm flex items-center gap-2 ${editProfileMutation.isPending ? 'bg-[#6B46C1]/50 text-white cursor-not-allowed' : 'bg-[#6B46C1] hover:bg-[#5a3aa3] active:scale-95 text-white shadow-md shadow-[#6B46C1]/20'}`}>
+                <button type="submit" form="editProfileForm" disabled={editProfileMutation.isPending} className={`px-6 py-2.5 rounded-xl font-bold transition-all text-sm flex items-center gap-2 ${editProfileMutation.isPending ? 'bg-[#6B46C1]/50 text-white cursor-not-allowed' : 'bg-gradient-to-r from-[#805ad5] to-[#6B46C1] hover:opacity-90 active:scale-95 text-white shadow-md shadow-[#6B46C1]/20'}`}>
                   {editProfileMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Details'}
                 </button>
               </div>
