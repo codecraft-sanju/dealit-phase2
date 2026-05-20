@@ -317,6 +317,18 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
 
                 {error && !isSignUpMode && <div className="aw-error">{error}</div>}
 
+                <div className="google-btn-container">
+                  {isWebView ? (
+                    <button type="button" onClick={triggerNativeGoogleLogin} className="aw-btn" style={{ backgroundColor: '#ffffff', color: '#3c4043', border: '1px solid #dadce0', boxShadow: 'none' }} disabled={loading}>
+                      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="18" />
+                      <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>Sign in with Google</span>
+                    </button>
+                  ) : (
+                    <GoogleLogin onSuccess={handleGoogleLoginSuccess} onError={() => setError('Google Sign-In failed.')} theme="filled_blue" shape="circle" width="360" />
+                  )}
+                </div>
+                <div className="google-divider"><span>or continue with email</span></div>
+
                 <form onSubmit={handleLogin} className="aw-form" noValidate>
                   <FloatInput icon={Mail} label="Email address" name="email" type="email" value={formData.email} onChange={handleChange} required autoCapitalize="none" autoCorrect="off" />
                   <FloatInput icon={Lock} label="Password" name="password" type="password" value={formData.password} onChange={handleChange} required />
@@ -329,18 +341,6 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                     {loading ? <span className="aw-spinner" /> : <><span>Sign In</span><ArrowRight size={18} /></>}
                   </button>
                 </form>
-
-                <div className="google-divider"><span>or continue with</span></div>
-                <div className="google-btn-container">
-                  {isWebView ? (
-                    <button type="button" onClick={triggerNativeGoogleLogin} className="aw-btn" style={{ backgroundColor: '#ffffff', color: '#3c4043', border: '1px solid #dadce0', boxShadow: 'none' }} disabled={loading}>
-                      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="18" />
-                      <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>Sign in with Google</span>
-                    </button>
-                  ) : (
-                    <GoogleLogin onSuccess={handleGoogleLoginSuccess} onError={() => setError('Google Sign-In failed.')} theme="filled_blue" shape="circle" width="360" />
-                  )}
-                </div>
 
                 <p className="aw-switch-txt">
                   Don't have an account?{' '}
@@ -363,6 +363,18 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                     <p className="aw-sub">Join and start trading smarter</p>
 
                     {error && isSignUpMode && <div className="aw-error">{error}</div>}
+
+                    <div className="google-btn-container">
+                      {isWebView ? (
+                        <button type="button" onClick={triggerNativeGoogleLogin} className="aw-btn" style={{ backgroundColor: '#ffffff', color: '#3c4043', border: '1px solid #dadce0', boxShadow: 'none' }} disabled={loading}>
+                          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="18" />
+                          <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>Sign up with Google</span>
+                        </button>
+                      ) : (
+                        <GoogleLogin onSuccess={handleGoogleLoginSuccess} onError={() => setError('Google Sign-In failed.')} theme="filled_blue" shape="circle" width="360" />
+                      )}
+                    </div>
+                    <div className="google-divider"><span>or register with email</span></div>
 
                     <form onSubmit={handleSignup} className="aw-form" noValidate>
                       
@@ -403,20 +415,6 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                         {loading ? <span className="aw-spinner" /> : <><span>Create Account</span><ArrowRight size={18} /></>}
                       </button>
                     </form>
-
-          
-                    <div className="google-divider"><span>or register with</span></div>
-                    <div className="google-btn-container">
-                      {isWebView ? (
-                        <button type="button" onClick={triggerNativeGoogleLogin} className="aw-btn" style={{ backgroundColor: '#ffffff', color: '#3c4043', border: '1px solid #dadce0', boxShadow: 'none' }} disabled={loading}>
-                          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="18" />
-                          <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>Sign up with Google</span>
-                        </button>
-                      ) : (
-                        <GoogleLogin onSuccess={handleGoogleLoginSuccess} onError={() => setError('Google Sign-In failed.')} theme="filled_blue" shape="circle" width="360" />
-                      )}
-                    </div>
-                  
 
                     <p className="aw-switch-txt">
                       Already have an account?{' '}
@@ -494,18 +492,7 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
               <div className="mb-slide custom-scrollbar">
                 <h2 className="aw-heading" style={{ fontSize: '1.4rem', marginTop: '0.5rem', marginBottom: '1.25rem' }}>Welcome back!</h2>
                 {error && !isSignUpMode && <div className="aw-error">{error}</div>}
-                <form onSubmit={handleLogin} className="aw-form" noValidate>
-                  <FloatInput icon={Mail} label="Email address" name="email" type="email" value={formData.email} onChange={handleChange} required autoCapitalize="none" autoCorrect="off" />
-                  <FloatInput icon={Lock} label="Password" name="password" type="password" value={formData.password} onChange={handleChange} required />
-                  <div className="aw-forgot-row">
-                    <Link to="/forgot-password" className="aw-link">Forgot password?</Link>
-                  </div>
-                  <button type="submit" className={`aw-btn ${loading ? 'loading' : ''}`} disabled={loading}>
-                    {loading ? <span className="aw-spinner" /> : <><span>Sign In</span><ArrowRight size={18} /></>}
-                  </button>
-                </form>
-
-                <div className="google-divider"><span>or continue with</span></div>
+                
                 <div className="google-btn-container mobile-g-btn">
                   {isWebView ? (
                     <button type="button" onClick={triggerNativeGoogleLogin} className="aw-btn" style={{ backgroundColor: '#ffffff', color: '#3c4043', border: '1px solid #dadce0', boxShadow: 'none' }} disabled={loading}>
@@ -516,7 +503,18 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                     <GoogleLogin onSuccess={handleGoogleLoginSuccess} onError={() => setError('Google Sign-In failed.')} theme="filled_blue" shape="circle" width="320" />
                   )}
                 </div>
-               
+                <div className="google-divider"><span>or continue with email</span></div>
+
+                <form onSubmit={handleLogin} className="aw-form" noValidate>
+                  <FloatInput icon={Mail} label="Email address" name="email" type="email" value={formData.email} onChange={handleChange} required autoCapitalize="none" autoCorrect="off" />
+                  <FloatInput icon={Lock} label="Password" name="password" type="password" value={formData.password} onChange={handleChange} required />
+                  <div className="aw-forgot-row">
+                    <Link to="/forgot-password" className="aw-link">Forgot password?</Link>
+                  </div>
+                  <button type="submit" className={`aw-btn ${loading ? 'loading' : ''}`} disabled={loading}>
+                    {loading ? <span className="aw-spinner" /> : <><span>Sign In</span><ArrowRight size={18} /></>}
+                  </button>
+                </form>
               </div>
 
             
@@ -525,6 +523,19 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                   <>
                     <h2 className="aw-heading" style={{ fontSize: '1.4rem', marginTop: '0.5rem', marginBottom: '1.25rem' }}>Create account</h2>
                     {error && isSignUpMode && <div className="aw-error">{error}</div>}
+                    
+                    <div className="google-btn-container mobile-g-btn">
+                      {isWebView ? (
+                        <button type="button" onClick={triggerNativeGoogleLogin} className="aw-btn" style={{ backgroundColor: '#ffffff', color: '#3c4043', border: '1px solid #dadce0', boxShadow: 'none' }} disabled={loading}>
+                          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="18" />
+                          <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>Sign up with Google</span>
+                        </button>
+                      ) : (
+                        <GoogleLogin onSuccess={handleGoogleLoginSuccess} onError={() => setError('Google Sign-In failed.')} theme="filled_blue" shape="circle" width="320" />
+                      )}
+                    </div>
+                    <div className="google-divider"><span>or register with email</span></div>
+
                     <form onSubmit={handleSignup} className="aw-form" noValidate>
                       
                       <div className="aw-form-row">
@@ -564,20 +575,6 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                         {loading ? <span className="aw-spinner" /> : <><span>Create Account</span><ArrowRight size={18} /></>}
                       </button>
                     </form>
-
-          
-                    <div className="google-divider"><span>or register with</span></div>
-                    <div className="google-btn-container mobile-g-btn">
-                      {isWebView ? (
-                        <button type="button" onClick={triggerNativeGoogleLogin} className="aw-btn" style={{ backgroundColor: '#ffffff', color: '#3c4043', border: '1px solid #dadce0', boxShadow: 'none' }} disabled={loading}>
-                          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="18" />
-                          <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>Sign up with Google</span>
-                        </button>
-                      ) : (
-                        <GoogleLogin onSuccess={handleGoogleLoginSuccess} onError={() => setError('Google Sign-In failed.')} theme="filled_blue" shape="circle" width="320" />
-                      )}
-                    </div>
-                  
                   </>
                 ) : (
                   <div className="otp-fade-in">

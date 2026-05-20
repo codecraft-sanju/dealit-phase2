@@ -480,6 +480,39 @@
 }
 
 /* ═══════════════════════════════════════════════
+   GOOGLE SIGN-IN BUTTON STYLES (UPDATED)
+═══════════════════════════════════════════════ */
+.google-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 1.2rem 0;
+  color: #9ca3af;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.google-divider::before,
+.google-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px dashed #e9d8ff;
+}
+
+.google-divider:not(:empty)::before { margin-right: .75em; }
+.google-divider:not(:empty)::after { margin-left: .75em; }
+
+.google-btn-container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+
+/* ═══════════════════════════════════════════════
    MOBILE LAYOUT  (< 870px)  — PREMIUM REDESIGN
 ═══════════════════════════════════════════════ */
 @media (max-width: 869px) {
@@ -508,7 +541,6 @@
     overflow: hidden;
   }
 
-  /* Decorative orbs inside hero */
   .mb-hero::before {
     content: '';
     position: absolute;
@@ -528,7 +560,6 @@
     pointer-events: none;
   }
 
-  /* Brand — top-left */
   .mb-brand {
     position: absolute;
     top: env(safe-area-inset-top, 1rem);
@@ -548,7 +579,6 @@
     filter: brightness(0) invert(1);
   }
 
-  /* Lottie animation crossfade */
   .mb-hero-img-wrap {
     position: absolute;
     top: 50%; left: 50%;
@@ -588,7 +618,6 @@
     z-index: 10;
   }
 
-  /* Drag handle */
   .mb-sheet::before {
     content: '';
     display: block;
@@ -669,7 +698,7 @@
     height: 100%;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 1.6rem 1.6rem 3rem;
+    padding: 1.2rem 1.2rem 2.5rem; /* Adjusted for smaller inputs */
     -webkit-overflow-scrolling: touch;
     scroll-behavior: smooth;
   }
@@ -683,17 +712,26 @@
   }
   .mb-slide .aw-sub {
     font-size: 0.82rem;
-    margin-bottom: 1.4rem;
+    margin-bottom: 1rem; /* Slightly reduced margin */
     color: #9ca3af;
   }
 
-  /* ── INPUTS — Mobile Premium ── */
+  /* ── GOOGLE BUTTON ADJUSTMENTS FOR MOBILE ── */
+  .google-btn-container.mobile-g-btn {
+    margin-top: 0.5rem;
+    margin-bottom: 0;
+  }
+  .google-divider {
+    margin: 1rem 0; /* Ensures proper spacing between button and form */
+  }
+
+  /* ── INPUTS — Mobile Premium (Smaller) ── */
   .fi-wrap {
-    height: 3.7rem;
-    border-radius: 18px;
+    height: 3.25rem; /* Reduced height from 3.7rem */
+    border-radius: 12px; /* Adjusted radius to match the smaller height */
     background: #faf8ff;
     border: 1.5px solid #ede9fe;
-    padding: 0 1.1rem;
+    padding: 0 0.9rem; /* Slightly reduced padding */
     transition:
       border-color 0.25s ease,
       background 0.25s ease,
@@ -709,16 +747,17 @@
     transform: scale(1.015);
   }
   .fi-label {
-    font-size: 0.88rem;
+    font-size: 0.85rem;
   }
   .fi-wrap.active .fi-label {
-    font-size: 0.62rem;
+    font-size: 0.6rem;
     letter-spacing: 0.04em;
   }
   .fi-input {
-    font-size: 0.97rem;
+    font-size: 0.9rem; /* Slightly smaller text inside input */
     font-weight: 600;
     color: #111827;
+    padding-top: 0.8rem;
   }
 
   /* ── FORGOT PASSWORD ── */
@@ -732,12 +771,12 @@
 
   /* ── CTA BUTTON — Mobile Premium ── */
   .aw-btn {
-    height: 3.6rem;
-    border-radius: 18px;
-    font-size: 1rem;
+    height: 3.25rem; /* Matched input field height */
+    border-radius: 12px;
+    font-size: 0.95rem; /* Slightly adjusted down from 1rem */
     font-weight: 800;
     letter-spacing: -0.01em;
-    margin-top: 0.75rem;
+    margin-top: 0.5rem;
     background: linear-gradient(135deg, #8b5cf6 0%, #6B46C1 100%);
     box-shadow:
       0 10px 24px rgba(107, 70, 193, 0.3),
@@ -762,7 +801,6 @@
       0 4px 12px rgba(107, 70, 193, 0.2),
       inset 0 1px 0 rgba(255,255,255,0.2);
   }
-  /* Shine sweep on load */
   .aw-btn::after {
     content: '';
     position: absolute;
@@ -797,7 +835,7 @@
   }
   .otp-box {
     width: 42px; height: 50px;
-    border-radius: 14px;
+    border-radius: 12px;
     font-size: 1.15rem;
     font-weight: 900;
     border: 1.5px solid #ede9fe;
@@ -830,70 +868,25 @@
 
   /* ── ERROR ── */
   .aw-error {
-    border-radius: 14px;
-    font-size: 0.78rem;
-    padding: 0.65rem 0.9rem;
-    margin-bottom: 0.9rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    padding: 0.5rem 0.8rem;
+    margin-bottom: 0.6rem;
   }
 
   /* ── FORM ROW ── */
-  .aw-form-row { gap: 0.75rem; }
-  .aw-form     { gap: 0.8rem; }
+  .aw-form-row { gap: 0.6rem; }
+  .aw-form     { gap: 0.6rem; }
 }
 
 /* ─── Very small screens ─── */
 @media (max-width: 380px) {
   .mb-slide { padding: 1.2rem 1.25rem 2.5rem; }
-  .aw-form  { gap: 0.7rem; }
-  .aw-form-row { gap: 0.65rem; }
-  .fi-wrap  { height: 3.5rem; }
+  .aw-form  { gap: 0.6rem; }
+  .aw-form-row { gap: 0.5rem; }
+  .fi-wrap  { height: 3.1rem; }
 
   .otp-grid { gap: 0.38rem; }
   .otp-box  { width: 37px; height: 44px; font-size: 1rem; }
   .mb-hero  { max-height: 240px; }
-}
-
-/* ═══════════════════════════════════════════════
-   GOOGLE SIGN-IN BUTTON STYLES (ADDED)
-═══════════════════════════════════════════════ */
-.google-divider {
-  display: flex;
-  align-items: center;
-  text-align: center;
-  margin: 1.25rem 0 0.85rem;
-  color: #9ca3af;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.google-divider::before,
-.google-divider::after {
-  content: '';
-  flex: 1;
-  border-bottom: 1px dashed #e9d8ff;
-}
-
-.google-divider:not(:empty)::before {
-  margin-right: .75em;
-}
-
-.google-divider:not(:empty)::after {
-  margin-left: .75em;
-}
-
-.google-btn-container {
-  display: flex;
-  justify-content: center;
-  width: 100%;
-  margin-bottom: 0.5rem;
-}
-
-/* Mobile specific overrides */
-@media (max-width: 869px) {
-  .google-btn-container.mobile-g-btn {
-    margin-top: 0.5rem;
-    margin-bottom: 1.5rem;
-  }
 }
