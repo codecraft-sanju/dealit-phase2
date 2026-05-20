@@ -319,7 +319,7 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
 
                 <div className="google-btn-container">
                   {isWebView ? (
-                <button type="button" onClick={triggerNativeGoogleLogin} className="aw-btn" style={{ backgroundColor: '#5194EE', color: '#ffffff', border: 'none', boxShadow: 'none' }} disabled={loading}>
+               <button type="button" onClick={triggerNativeGoogleLogin} className="aw-btn" style={{ backgroundColor: '#ffffff', color: '#3c4043', border: '1px solid #dadce0', boxShadow: 'none' }} disabled={loading}>
                       <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="18" />
                       <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>Sign in with Google</span>
                     </button>
