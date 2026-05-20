@@ -290,7 +290,6 @@ const googleLogin = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Google token is required' });
     }
 
-    // Pass multiple audiences to support Web and Android clients simultaneously.
     const audienceList = [
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_ANDROID_CLIENT_ID
@@ -338,8 +337,10 @@ const googleLogin = async (req, res) => {
 
     sendTokenResponse(user, 200, res, 'Google login successful!');
   } catch (error) {
-    console.error('Error during Google login:', error.message);
+   
+    console.error('Google token verification failed:', error);
     res.status(500).json({ success: false, message: 'Authentication failed with Google' });
+   
   }
 };
 
