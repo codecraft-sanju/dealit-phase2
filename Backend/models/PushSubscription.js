@@ -7,28 +7,26 @@ const pushSubscriptionSchema = new mongoose.Schema({
     required: true 
   },
   
-  type: {
-    type: String,
-    enum: ['web', 'expo'],
-    default: 'web'
-  },
-
-  expoToken: { type: String },
+ 
   endpoint: { 
-    type: String
+    type: String,
+    required: true 
   },
   expirationTime: {
     type: Date,
     default: null
   },
   keys: {
-    p256dh: { type: String },
-    auth: { type: String }
+    p256dh: { type: String, required: true }, // Keys bhi web push ke liye required hoti hain
+    auth: { type: String, required: true }
   },
   created_at: { 
     type: Date, 
     default: Date.now 
   }
 });
+
+
+pushSubscriptionSchema.index({ user: 1, endpoint: 1 }, { unique: true });
 
 module.exports = mongoose.model('PushSubscription', pushSubscriptionSchema);

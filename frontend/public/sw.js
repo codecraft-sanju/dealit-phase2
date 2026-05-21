@@ -3,7 +3,7 @@ self.addEventListener('push', function(event) {
   if (event.data) {
     const data = event.data.json();
     
-    // Customize how the notification looks
+  
     const options = {
       body: data.message,
       // You should add a 192x192 logo image in your public folder and name it logo192.png
@@ -25,19 +25,32 @@ self.addEventListener('push', function(event) {
 self.addEventListener('notificationclick', function(event) {
   event.notification.close(); 
 
+  // Backend se aane wale relative URL ko Absolute URL mein convert karna
+  const targetUrl = event.notification.data.url || '/';
+  const urlToOpen = new URL(targetUrl, self.location.origin).href;
+
   // Open the app or focus the existing open tab
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
-      // If a tab is already open, focus it and navigate
+      
+      // Case 1: Agar EXACT same URL wala tab pehle se open hai, toh usko focus karo
       for (let i = 0; i < clientList.length; i++) {
         const client = clientList[i];
-        if (client.url === event.notification.data.url && 'focus' in client) {
+        if (client.url === urlToOpen && 'focus' in client) {
           return client.focus();
         }
       }
-     
+      
+      // Case 2: Agar app khuli hui hai par dusre page par hai, toh wahi tab focus karke redirect kar do
+      if (clientList.length > 0) {
+        const client = clientList[0];
+        if ('focus' in client) client.focus();
+        if ('navigate' in client) return client.navigate(urlToOpen); // Yeh duplicate tabs banne se rokega
+      }
+
+      // Case 3: Agar app browser me completely band hai, toh naya tab open karo
       if (clients.openWindow) {
-        return clients.openWindow(event.notification.data.url);
+        return clients.openWindow(urlToOpen);
       }
     })
   );

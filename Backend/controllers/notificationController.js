@@ -17,7 +17,7 @@ const getUserNotifications = async (req, res) => {
       .limit(limit)
       .lean();
 
-    // Count queries hata kar seedha User model se pre-calculated count fetch kiya
+  
     const user = await User.findById(req.user._id).select('unreadNotificationsCount');
 
     res.status(200).json({
@@ -37,7 +37,7 @@ const getUserNotifications = async (req, res) => {
 
 const markAsRead = async (req, res) => {
   try {
-    // CHANGED: Sirf tab update karega agar isRead false hai
+
     const notification = await Notification.findOneAndUpdate(
       { _id: req.params.id, user: req.user._id, isRead: false },
       { isRead: true },
@@ -48,7 +48,7 @@ const markAsRead = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Notification not found or already read' });
     }
 
-    // CHANGED: User fetch karke check kiya taaki counter zero se niche na jaye
+  
     const user = await User.findById(req.user._id);
     if (user && user.unreadNotificationsCount > 0) {
       user.unreadNotificationsCount -= 1;
@@ -69,7 +69,7 @@ const markAllAsRead = async (req, res) => {
       { isRead: true }
     );
 
-    // CHANGED: User model mein counter ko reset karke 0 kar diya
+ 
     await User.findByIdAndUpdate(req.user._id, {
       unreadNotificationsCount: 0
     });
@@ -84,6 +84,7 @@ const markAllAsRead = async (req, res) => {
 const subscribePush = async (req, res) => {
   try {
     const { endpoint, keys, expirationTime } = req.body;
+    
     
     await PushSubscription.findOneAndUpdate(
       { endpoint: endpoint },

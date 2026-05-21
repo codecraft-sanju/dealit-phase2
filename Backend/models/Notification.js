@@ -44,12 +44,12 @@ const notificationSchema = new mongoose.Schema({
 });
 
 notificationSchema.index({ user: 1, created_at: -1 });
-
 notificationSchema.index({ user: 1, isRead: 1 });
 
 
 notificationSchema.post('save', async function(doc) {
   try {
+    
     const { sendPushToUser } = require('../utils/pushService');
     
     let url = '/';
@@ -78,7 +78,7 @@ notificationSchema.post('save', async function(doc) {
     const payload = {
       title: doc.title,
       message: doc.message,
-      url: url
+      url: url 
     };
 
     await sendPushToUser(doc.user, payload);
