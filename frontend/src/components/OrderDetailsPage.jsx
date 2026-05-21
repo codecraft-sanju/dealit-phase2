@@ -490,6 +490,19 @@ const OrderDetailsPage = ({ user }) => {
             </div>
           </div>
 
+          {/* Expected Delivery Date Banner */}
+          {order.orderStatus !== 'delivered' && order.orderStatus !== 'cancelled' && estimatedInfo.date && (
+            <div className="mb-6 bg-blue-50 border border-blue-100 p-3.5 rounded-2xl flex items-center justify-between shadow-sm">
+              <div className="flex items-center gap-2.5">
+                <div className="bg-blue-100 p-1.5 rounded-lg">
+                  <Calendar className="w-4 h-4 text-blue-600" />
+                </div>
+                <span className="text-xs font-bold text-blue-800 uppercase tracking-wide">Expected Delivery</span>
+              </div>
+              <span className="text-sm font-black text-blue-700">{estimatedInfo.date}</span>
+            </div>
+          )}
+
           {/* Product + Address Row */}
           <div className="flex flex-col md:flex-row gap-6">
             <div className="flex gap-4 md:w-1/2">
