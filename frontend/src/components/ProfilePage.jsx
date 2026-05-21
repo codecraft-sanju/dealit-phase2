@@ -1,17 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { LogOut, User, Mail, Phone, MapPin, Calendar, Package, RefreshCw, Camera, Loader2, Coins, ChevronRight, ClipboardList, Archive, Tag, Heart, Wallet, Bell, HelpCircle, Edit2, X, Home, Hash, Truck, Shield, Star, Trash2 } from 'lucide-react'; 
+import { LogOut, User, Mail, Phone, MapPin, Calendar, Package, RefreshCw, Camera, Loader2, Coins, ChevronRight, ClipboardList, Archive, Tag, Heart, Wallet, Bell, HelpCircle, Edit2, X, Home, Hash, Truck, Shield, Star, Trash2, Settings } from 'lucide-react'; 
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'; 
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
+// --- Animation Variants for Premium Feel ---
+const pageVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.08, delayChildren: 0.05 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 15 },
+  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+};
+
 const ProfilePage = ({ user, setUser, onLogout }) => {
   const navigate = useNavigate();
-  const [showAccountDetails, setShowAccountDetails] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   
@@ -43,7 +55,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
     }
   });
 
-
   const { data: userStats } = useQuery({
     queryKey: ['userStats'],
     queryFn: async () => {
@@ -53,7 +64,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
     refetchInterval: 10000
   });
  
-
   useEffect(() => {
     if (profileData && setUser) {
       setUser(profileData);
@@ -63,14 +73,14 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
 
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 50) {
+      if (window.scrollY > 30) {
         setIsScrolled(true);
       } else if (window.scrollY < 10) {
         setIsScrolled(false);
       }
     };
 
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -152,8 +162,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
       } catch (e) {
         console.error("Failed to update global user state", e);
       }
-
-      alert('Profile updated successfully!');
     },
     onError: (error) => {
       console.error('Error updating profile:', error);
@@ -163,416 +171,361 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
 
   const handleEditSubmit = (e) => {
     e.preventDefault();
-    
     if (editForm.pickupAddress.houseNo && !/\d/.test(editForm.pickupAddress.houseNo)) {
       alert('Please include at least one number in your House No. (e.g., Flat 4B, Plot 12) for Shiprocket pickups.');
       return;
     }
-
     editProfileMutation.mutate(editForm);
   };
 
   if (!user) return <Navigate to="/login" />;
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.05 }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 15 },
-    visible: { 
-      opacity: 1, 
-      y: 0, 
-      transition: { duration: 0.3, ease: 'easeOut' } 
-    }
-  };
-
- 
   const swapsBadge = userStats?.swapsActive > 0 ? `${userStats.swapsActive} Active` : null;
-  let swapsSubtitle = "Your Trade Offers & Barters";
+  let swapsSubtitle = "Your Trade Offers";
   if (userStats?.receivedSwaps > 0 || userStats?.sentSwaps > 0) {
     const receivedText = userStats.receivedSwaps > 0 ? `${userStats.receivedSwaps} Received` : '';
     const sentText = userStats.sentSwaps > 0 ? `${userStats.sentSwaps} Sent` : '';
     swapsSubtitle = [receivedText, sentText].filter(Boolean).join(' | ');
   }
-
   const ordersBadge = userStats?.activeOrders > 0 ? `${userStats.activeOrders} Active` : null;
 
-  const menuItems = [
-    { to: "/dashboard", icon: ClipboardList, title: "My Listings", subtitle: "", badge: "Active" },
-    { to: "/orders", icon: Archive, title: "My Orders", subtitle: "View your past transactions", badge: ordersBadge },
-    { to: "/swaps", icon: RefreshCw, title: "My Swaps", subtitle: swapsSubtitle, badge: swapsBadge },
-    { to: "/offers", icon: Tag, title: "Play & Earn", subtitle: "Complete events for free credits", iconClass: "fill-[#6B46C1]/20" },
-    { to: "/wishlist", icon: Heart, title: "Wishlist", subtitle: "Saved Items", iconClass: "fill-[#6B46C1]" },
-    { to: "/wallet", icon: Wallet, title: "My Wallet", subtitle: "Credit Balance & Purchases" },
-    { to: "/notifications", icon: Bell, title: "Notifications", subtitle: "Alert Settings", iconClass: "fill-[#6B46C1]" },     
-    { to: "/help-support", icon: HelpCircle, title: "Help & Support", subtitle: "Get Assistance", iconClass: "fill-[#6B46C1]/20" }
+  const menuGroups = [
+    {
+      title: "My Activity",
+      items: [
+        { to: "/dashboard", icon: ClipboardList, title: "My Listings", subtitle: "Manage your items", badge: "Active", color: "bg-blue-100 text-blue-600" },
+        { to: "/orders", icon: Archive, title: "My Orders", subtitle: "Past transactions", badge: ordersBadge, color: "bg-teal-100 text-teal-600" },
+        { to: "/swaps", icon: RefreshCw, title: "My Swaps", subtitle: swapsSubtitle, badge: swapsBadge, color: "bg-indigo-100 text-indigo-600" },
+        { to: "/wishlist", icon: Heart, title: "Wishlist", subtitle: "Saved Items", color: "bg-rose-100 text-rose-600" },
+      ]
+    },
+    {
+      title: "Rewards & Payments",
+      items: [
+        { to: "/offers", icon: Tag, title: "Play & Earn", subtitle: "Complete events for credits", color: "bg-orange-100 text-orange-600" },
+        { to: "/wallet", icon: Wallet, title: "My Wallet", subtitle: "Credit Balance & Purchases", color: "bg-emerald-100 text-emerald-600" },
+      ]
+    },
+    {
+      title: "Preferences",
+      items: [
+        { to: "/notifications", icon: Bell, title: "Notifications", subtitle: "Alert Settings", color: "bg-purple-100 text-purple-600" },     
+        { to: "/help-support", icon: HelpCircle, title: "Help & Support", subtitle: "Get Assistance", color: "bg-gray-100 text-gray-600" }
+      ]
+    }
   ];
 
-
   return (
-    <div className="min-h-screen bg-[#f8f7fc] pb-10 font-sans relative overflow-x-hidden">
+    <div className="min-h-screen bg-[#f2f2f7] pb-24 font-sans relative overflow-x-hidden selection:bg-[#6B46C1]/20">
       
-      {/* Animated Background Orbs for Glossy Feel */}
-      <motion.div 
-        animate={{ scale: [1, 1.2, 1], x: [0, 50, 0], y: [0, 30, 0] }}
-        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-20 -left-20 w-80 h-80 bg-purple-400 rounded-full mix-blend-multiply filter blur-[90px] opacity-40 z-0 pointer-events-none"
-      />
-      <motion.div 
-        animate={{ scale: [1, 1.5, 1], x: [0, -40, 0], y: [0, 60, 0] }}
-        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-60 -right-20 w-80 h-80 bg-pink-400 rounded-full mix-blend-multiply filter blur-[90px] opacity-30 z-0 pointer-events-none"
-      />
-      <motion.div 
-        animate={{ scale: [1, 1.3, 1], y: [0, -50, 0] }}
-        transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute bottom-0 left-1/4 w-80 h-80 bg-indigo-300 rounded-full mix-blend-multiply filter blur-[90px] opacity-40 z-0 pointer-events-none"
-      />
+      {/* Background Orbs (Static to prevent lag, glossy look) */}
+      <div className="absolute top-0 left-0 w-full h-72 bg-gradient-to-b from-[#6B46C1] via-[#7c52d6] to-transparent z-0 pointer-events-none" />
+      <div className="absolute top-10 -left-20 w-80 h-80 bg-[#805ad5] rounded-full mix-blend-multiply filter blur-[100px] opacity-60 z-0 pointer-events-none" />
+      <div className="absolute top-20 -right-20 w-80 h-80 bg-[#d53f8c] rounded-full mix-blend-multiply filter blur-[100px] opacity-30 z-0 pointer-events-none" />
 
+      {/* Header */}
       <header 
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out shadow-md ${
-          isScrolled ? 'py-3 bg-[#6B46C1]/95 backdrop-blur-md' : 'py-5 bg-[#6B46C1]'
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-out ${
+          isScrolled ? 'py-4 bg-[#6B46C1]/95 backdrop-blur-xl shadow-sm border-b border-white/10' : 'py-5 bg-transparent'
         }`}
       >
         <div className="max-w-md mx-auto md:max-w-7xl px-5 md:px-8 flex justify-between items-center text-white relative z-10">
           <div className="flex flex-col justify-center">
-            <h1 className={`font-bold tracking-wide leading-tight transition-all duration-300 ${
-              isScrolled ? 'text-xl' : 'text-2xl'
-            }`}>
-              My Profile
+            <h1 className={`font-bold tracking-wide transition-all duration-300 ${isScrolled ? 'text-lg' : 'text-2xl'}`}>
+              Profile
             </h1>
-            <p className={`text-purple-200 font-medium transition-all duration-300 overflow-hidden ${
-              isScrolled ? 'max-h-0 opacity-0 text-[0px] m-0 p-0' : 'max-h-10 opacity-100 text-sm mt-0.5'
-            }`}>
-              Manage your account
-            </p>
           </div>
           <button 
             onClick={onLogout}
-            className={`flex items-center gap-2 bg-white/10 hover:bg-red-500 rounded-full font-bold transition-all duration-300 shadow-sm border border-white/20 hover:border-red-500 active:scale-95 ${
+            style={{ WebkitTapHighlightColor: 'transparent' }}
+            className={`flex items-center gap-1.5 bg-white/10 backdrop-blur-md rounded-full font-semibold transition-all active:scale-90 border border-white/20 hover:bg-white/20 ${
               isScrolled ? 'px-3 py-1.5 text-xs' : 'px-4 py-2 text-sm'
             }`}
           >
-            <LogOut className={`transition-all duration-300 ${isScrolled ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} /> 
-            <span className="hidden sm:inline">Logout</span>
+            <LogOut className={`w-4 h-4`} /> 
+            <span>Logout</span>
           </button>
         </div>
       </header>
 
-      {/* Top Banner Gradient */}
-      <motion.div 
-        initial={{ y: -50, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-        className="absolute top-0 left-0 right-0 bg-gradient-to-b from-[#6B46C1] via-[#7c52d6] to-[#9b6fee] h-52 rounded-b-[2.5rem] z-0 shadow-[0_8px_30px_rgba(107,70,193,0.15)]"
-      />
-
-      <div className="max-w-md mx-auto md:max-w-7xl px-5 md:px-8 pt-32 relative z-20">
+      <div className="max-w-md mx-auto md:max-w-7xl px-4 md:px-8 pt-28 relative z-20">
         <AnimatePresence mode="wait">
           {loading ? (
             <motion.div 
               key="skeleton"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0, transition: { duration: 0.2 } }}
-              className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 animate-pulse"
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="flex flex-col gap-6 animate-pulse"
             >
-              <div className="md:col-span-1 bg-white/80 backdrop-blur-xl rounded-3xl shadow-sm border border-white p-5 flex flex-col items-center text-center">
-                <div className="w-24 h-24 bg-gray-200/50 rounded-[1.5rem] mb-4"></div>
-                <div className="h-6 w-3/4 bg-gray-200/50 rounded-lg mb-2"></div>
-                <div className="h-4 w-1/2 bg-gray-200/50 rounded-lg mb-4"></div>
-              </div>
-
-              <div className="md:col-span-2 flex flex-col gap-4">
-                <div className="bg-white/80 backdrop-blur-xl rounded-3xl border border-white p-5 shadow-sm">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex items-center justify-between py-4 border-b border-gray-50/50">
-                      <div className="flex items-center gap-4">
-                        <div className="w-8 h-8 bg-gray-200/50 rounded-full"></div>
-                        <div className="h-4 w-24 bg-gray-200/50 rounded-md"></div>
-                      </div>
-                    </div>
-                  ))}
+              {/* Premium Skeleton matched to layout */}
+              <div className="bg-white/80 rounded-[2rem] p-6 flex flex-col items-center border border-white">
+                <div className="w-24 h-24 bg-gray-200/60 rounded-full mb-4"></div>
+                <div className="h-6 w-40 bg-gray-200/60 rounded-lg mb-3"></div>
+                <div className="h-4 w-48 bg-gray-200/60 rounded-lg mb-6"></div>
+                <div className="flex w-full gap-3">
+                  <div className="flex-1 h-16 bg-gray-200/60 rounded-2xl"></div>
+                  <div className="flex-1 h-16 bg-gray-200/60 rounded-2xl"></div>
                 </div>
               </div>
+              <div className="h-20 bg-gray-200/60 rounded-[1.5rem] w-full"></div>
             </motion.div>
           ) : (
             <motion.div 
-              key="content"
-              variants={containerVariants}
+              variants={pageVariants}
               initial="hidden"
-              animate="visible"
-              className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6"
+              animate="show"
+              className="grid grid-cols-1 lg:grid-cols-12 gap-6"
             >
               
-              {/* Profile Main Card with Glassmorphism */}
-              <motion.div variants={itemVariants} className="md:col-span-1 bg-white/70 backdrop-blur-2xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/80 p-5 flex flex-col items-center text-center relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent pointer-events-none" />
-                
-                <div className="relative mb-4 z-10">
-                  <motion.div 
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ duration: 0.3, ease: 'easeOut', delay: 0.1 }}
-                    className="w-24 h-24 bg-white/90 backdrop-blur-md rounded-[1.5rem] p-1.5 shadow-lg border border-white"
-                  >
-                    <div className="w-full h-full bg-gradient-to-br from-[#f8f6ff] to-[#f0ebff] rounded-[1.2rem] flex items-center justify-center overflow-hidden">
-                      {uploadImageMutation.isPending ? (
-                        <Loader2 className="w-8 h-8 text-[#A388E1] animate-spin" />
-                      ) : profileData?.profilePic ? (
-                        <motion.img 
-                          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                          src={profileData.profilePic} 
-                          alt="Profile" 
-                          className="w-full h-full object-cover" 
-                        />
-                      ) : (
-                        <User className="w-10 h-10 text-[#A388E1]" />
-                      )}
-                    </div>
-                  </motion.div>
+              {/* Profile Header Widget */}
+              <div className="lg:col-span-4 flex flex-col gap-4">
+                <motion.div variants={itemVariants} className="bg-white rounded-[2rem] shadow-[0_2px_20px_rgb(0,0,0,0.04)] p-6 flex flex-col items-center text-center relative border border-gray-50">
                   
-                  <label 
-                    className="absolute -bottom-2 -right-2 bg-gradient-to-r from-[#805ad5] to-[#6B46C1] p-2.5 rounded-full text-white cursor-pointer shadow-lg border-2 border-white z-10 hover:scale-110 active:scale-95 transition-transform"
-                  >
-                    <Camera className="w-4 h-4" />
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      className="hidden" 
-                      onChange={handleImageUpload} 
-                      disabled={uploadImageMutation.isPending}
-                    />
-                  </label>
-                </div>
-
-                <h2 className="text-xl font-bold text-gray-900 leading-tight z-10">{profileData?.full_name}</h2>
-                <p className="text-sm text-gray-500 font-medium mb-3 z-10">{profileData?.email}</p>
-
-                
-                <div className="mt-1 w-full flex flex-col items-center z-10">
-                  
-                  <span className="bg-purple-100/80 backdrop-blur-sm text-[#6B46C1] text-[11px] font-bold px-4 py-1.5 rounded-full uppercase tracking-wider mb-5 border border-purple-200/50">
-                    {profileData?.role || 'USER'}
-                  </span>
-
-                  <div className="flex w-full gap-3 mb-4">
-                    <div className="flex-1 bg-yellow-50/80 backdrop-blur-sm rounded-xl py-3 px-2 flex items-center justify-center gap-2 border border-yellow-200/50 shadow-sm">
-                      <Coins className="w-5 h-5 text-[#EAB308]" />
-                      <span className="font-bold text-gray-800 text-sm">{profileData?.account_credits || 0} Credits</span>
+                  <div className="relative mb-4">
+                    <div className="w-24 h-24 bg-gradient-to-tr from-gray-50 to-gray-100 rounded-full p-1 shadow-sm border border-gray-100">
+                      <div className="w-full h-full rounded-full flex items-center justify-center overflow-hidden bg-white relative">
+                        {uploadImageMutation.isPending ? (
+                          <div className="absolute inset-0 bg-white/80 flex items-center justify-center backdrop-blur-sm z-10">
+                            <Loader2 className="w-8 h-8 text-[#A388E1] animate-spin" />
+                          </div>
+                        ) : null}
+                        {profileData?.profilePic ? (
+                          <img 
+                            src={profileData.profilePic} 
+                            alt="Profile" 
+                            className="w-full h-full object-cover" 
+                          />
+                        ) : (
+                          <User className="w-10 h-10 text-gray-300" />
+                        )}
+                      </div>
                     </div>
-
-                    <div className="flex-1 bg-purple-50/80 backdrop-blur-sm rounded-xl py-3 px-2 flex items-center justify-center gap-2 border border-purple-200/50 shadow-sm">
-                      <Shield className="w-5 h-5 text-[#6B46C1] fill-[#6B46C1]/20" />
-                      <span className="font-bold text-gray-800 text-sm">{profileData?.aura_points || 0} Aura</span>
-                    </div>
+                    
+                    <label 
+                      style={{ WebkitTapHighlightColor: 'transparent' }}
+                      className="absolute bottom-0 right-0 bg-[#6B46C1] p-2.5 rounded-full text-white cursor-pointer shadow-md border-[2.5px] border-white active:scale-90 transition-transform hover:bg-[#5a3aa3]"
+                    >
+                      <Camera className="w-4 h-4" />
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        onChange={handleImageUpload} 
+                        disabled={uploadImageMutation.isPending}
+                      />
+                    </label>
                   </div>
 
-                  
-                  <Link to="/aura" className="w-full bg-white/90 backdrop-blur-md border border-white rounded-2xl p-4 flex items-center justify-between shadow-sm hover:shadow-md active:scale-[0.98] transition-all cursor-pointer block">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-gradient-to-br from-[#805ad5] to-[#6B46C1] p-3 rounded-xl flex-shrink-0 shadow-sm border border-[#5a3aa3]/30">
+                  <h2 className="text-[22px] font-bold text-gray-900 leading-tight tracking-tight">{profileData?.full_name}</h2>
+                  <p className="text-[14px] text-gray-500 font-medium mb-4">{profileData?.email}</p>
+
+                  <button 
+                    onClick={openEditModal}
+                    style={{ WebkitTapHighlightColor: 'transparent' }}
+                    className="bg-gray-100 hover:bg-gray-200 active:bg-gray-300 active:scale-95 text-gray-800 font-semibold text-sm px-6 py-2.5 rounded-full transition-all flex items-center gap-2 mb-6"
+                  >
+                    <Edit2 className="w-4 h-4" /> Edit Profile
+                  </button>
+
+                  {/* Compact & Premium Stats Row */}
+                  <div className="flex w-full gap-3">
+                    {/* 3D Shiny Coin Card */}
+                    <div className="flex-1 bg-white rounded-2xl p-3 flex items-center gap-3 border border-gray-100 shadow-[0_2px_12px_rgb(0,0,0,0.03)] hover:shadow-md transition-shadow">
+                      <div className="relative w-10 h-10 shrink-0 rounded-full bg-gradient-to-br from-[#FFE770] via-[#F5C341] to-[#D97706] shadow-[0_3px_8px_rgba(217,119,6,0.3)] border-[1.5px] border-[#FFF7A1] flex items-center justify-center">
+                        <div className="absolute inset-[2px] rounded-full border border-white/50 border-b-black/10 flex items-center justify-center bg-gradient-to-b from-transparent to-black/5">
+                          <span className="text-[#87590C] font-black text-[16px] drop-shadow-[0_1px_1px_rgba(255,255,255,0.5)]">C</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-start overflow-hidden">
+                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Credits</span>
+                        <span className="font-extrabold text-gray-900 text-[19px] leading-tight truncate w-full">{profileData?.account_credits || 0}</span>
+                      </div>
+                    </div>
+
+                    {/* Premium Aura Card */}
+                    <div className="flex-1 bg-white rounded-2xl p-3 flex items-center gap-3 border border-gray-100 shadow-[0_2px_12px_rgb(0,0,0,0.03)] hover:shadow-md transition-shadow">
+                      <div className="relative w-10 h-10 shrink-0 rounded-full bg-gradient-to-br from-[#D8B4FE] via-[#A855F7] to-[#7E22CE] shadow-[0_3px_8px_rgba(168,85,247,0.3)] border-[1.5px] border-[#F3E8FF] flex items-center justify-center">
+                        <div className="absolute inset-[2px] rounded-full border border-white/50 border-b-black/10 flex items-center justify-center bg-gradient-to-b from-transparent to-black/5">
+                          <Shield className="w-[18px] h-[18px] text-white fill-white/20 drop-shadow-sm" />
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-start overflow-hidden">
+                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Aura</span>
+                        <span className="font-extrabold text-gray-900 text-[19px] leading-tight truncate w-full">{profileData?.aura_points || 0}</span>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+
+                <motion.div variants={itemVariants}>
+                  <Link 
+                    to="/aura" 
+                    style={{ WebkitTapHighlightColor: 'transparent' }}
+                    className="bg-gradient-to-r from-[#8b5cf6] to-[#6B46C1] rounded-[1.5rem] p-4 flex items-center justify-between shadow-md active:scale-[0.97] transition-all cursor-pointer block"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
                         <Star className="w-6 h-6 text-white fill-white" />
                       </div>
                       <div className="text-left">
-                        <h3 className="font-bold text-gray-900 text-[14px]">Build your Aura!</h3>
-                        <p className="text-[11px] text-gray-500 font-medium mt-0.5 leading-snug pr-2">
-                          Complete trades, get good reviews & be active to increase your Aura.
+                        <h3 className="font-bold text-white text-[15px]">Level Up Your Aura</h3>
+                        <p className="text-[12px] text-white/80 font-medium mt-0.5">
+                          Build trust to get better deals.
                         </p>
                       </div>
                     </div>
-                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                    <ChevronRight className="w-5 h-5 text-white/70" />
                   </Link>
+                </motion.div>
+              </div>
 
-                </div>
-              </motion.div>
-
-              {/* Menu Items Card with Glassmorphism */}
-              <motion.div variants={itemVariants} className="md:col-span-2 flex flex-col gap-4 relative z-10">
-                <div className="bg-white/70 backdrop-blur-2xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/80 overflow-hidden flex flex-col relative">
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent pointer-events-none" />
-                  
-                  <div className="flex items-center justify-between border-b border-white/60 bg-white/40 group relative z-10">
-                    <button 
-                      onClick={() => setShowAccountDetails(!showAccountDetails)} 
-                      className="flex items-center w-full justify-between p-4 hover:bg-white/60 active:bg-white/80 transition-colors"
-                    >
-                      <div className="flex items-center gap-4 text-left">
-                        <User className="w-6 h-6 text-[#6B46C1]" />
-                        <div className="flex flex-col">
-                          <span className="text-[15px] font-bold text-gray-800">Account Details</span>
-                          <span className="text-[11px] text-gray-500 font-medium mt-0.5">Personal info & Pickup address</span>
-                        </div>
-                      </div>
-                      <div className={`transition-transform duration-300 ${showAccountDetails ? 'rotate-90' : 'rotate-0'}`}>
-                        <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-[#6B46C1]" />
-                      </div>
-                    </button>
-                    {showAccountDetails && (
-                      <button onClick={openEditModal} className="pr-4 pl-2 py-4 hover:text-[#6B46C1] active:scale-90 text-gray-400 transition-all z-20">
-                        <Edit2 className="w-5 h-5" />
-                      </button>
-                    )}
-                  </div>
-
-                  <AnimatePresence initial={false}>
-                    {showAccountDetails && (
-                      <motion.div 
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.3, ease: "easeInOut" }}
-                        className="overflow-hidden bg-gray-50/40 backdrop-blur-sm shadow-inner relative z-10"
-                      >
-                        <div className="p-4 border-b border-white/60 space-y-1">
-                          {[
-                            { icon: Mail, label: 'Email Address', value: profileData?.email },
-                            { icon: Phone, label: 'Phone Number', value: profileData?.phone },
-                            { icon: MapPin, label: 'Location', value: profileData?.city, capitalize: true },
-                            { 
-                              icon: Truck, 
-                              label: 'Pickup Address', 
-                              value: profileData?.pickupAddress?.houseNo 
-                                ? `${profileData.pickupAddress.houseNo}, ${profileData.pickupAddress.areaStreet}${profileData.pickupAddress.landmark ? `, ${profileData.pickupAddress.landmark}` : ''}, ${profileData.pickupAddress.city}, ${profileData.pickupAddress.pincode}` 
-                                : 'Not provided (Needed for selling)' 
-                            },
-                            { icon: Calendar, label: 'Member Since', value: profileData?.created_at ? new Date(profileData.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Recently' }
-                          ].map((item, idx) => (
-                            <div key={idx} className="flex items-center gap-4 py-2 px-2">
-                              <div className="bg-white/80 p-2 rounded-xl text-[#A388E1] shadow-sm border border-white">
-                                <item.icon className="w-4 h-4" />
-                              </div>
-                              <div>
-                                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">{item.label}</p>
-                                <p className={`font-semibold text-gray-900 text-sm ${item.capitalize ? 'capitalize' : ''}`}>
-                                  {item.value || <span className="text-gray-400 italic">Not provided</span>}
-                                </p>
-                              </div>
+              {/* Grouped Menu Section */}
+              <div className="lg:col-span-8 flex flex-col gap-6 mt-2 lg:mt-0 pb-10">
+                {menuGroups.map((group, groupIdx) => (
+                  <motion.div variants={itemVariants} key={groupIdx} className="flex flex-col gap-2">
+                    <h3 className="pl-4 text-[13px] font-bold text-gray-500 uppercase tracking-wider">{group.title}</h3>
+                    <div className="bg-white rounded-[2rem] shadow-[0_2px_15px_rgb(0,0,0,0.03)] border border-gray-50 overflow-hidden">
+                      {group.items.map((item, index) => (
+                        <Link 
+                          key={index}
+                          to={item.to}
+                          style={{ WebkitTapHighlightColor: 'transparent' }}
+                          className={`flex items-center justify-between p-4 active:bg-gray-50 transition-colors ${
+                            index !== group.items.length - 1 ? 'border-b border-gray-50' : ''
+                          }`}
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className={`p-2.5 rounded-xl ${item.color}`}>
+                              <item.icon className="w-5 h-5" />
                             </div>
-                          ))}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[16px] font-semibold text-gray-900">{item.title}</span>
+                                {item.badge && (
+                                  <span className="bg-[#f3f0ff] text-[#6B46C1] text-[10px] font-bold px-2 py-0.5 rounded-md">
+                                    {item.badge}
+                                  </span>
+                                )}
+                              </div>
+                              {item.subtitle && (
+                                <span className="text-[12px] text-gray-500 mt-0.5 font-medium">
+                                  {item.subtitle}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <ChevronRight className="w-5 h-5 text-gray-300" />
+                        </Link>
+                      ))}
+                    </div>
+                  </motion.div>
+                ))}
 
-                  
-                  {menuItems.map((item, index) => (
-                    <Link 
-                      key={index}
-                      to={item.to}
-                      className={`flex items-center justify-between p-4 group border-b border-white/60 bg-transparent hover:bg-white/40 active:bg-white/60 active:scale-[0.98] transition-all relative z-10`}
+                {/* Danger Zone */}
+                <motion.div variants={itemVariants} className="flex flex-col gap-2 mt-2">
+                  <div className="bg-white rounded-[2rem] shadow-[0_2px_15px_rgb(0,0,0,0.03)] border border-gray-50 overflow-hidden">
+                    <Link
+                      to="/delete-account"
+                      style={{ WebkitTapHighlightColor: 'transparent' }}
+                      className="flex items-center justify-between p-4 active:bg-red-50 transition-colors"
                     >
                       <div className="flex items-center gap-4">
-                        <item.icon className={`w-6 h-6 ${item.iconClass || 'text-[#6B46C1]'} ${item.icon === Archive ? 'text-[#4B5563]' : ''}`} />
+                        <div className="p-2.5 rounded-xl bg-red-100 text-red-600">
+                          <Trash2 className="w-5 h-5" />
+                        </div>
                         <div className="flex flex-col">
-                          <div className="flex items-center gap-3">
-                            <span className="text-[15px] font-bold text-gray-800">{item.title}</span>
-                            {item.badge && (
-                              <span className="bg-[#EBE5F7] text-[#6B46C1] text-[10px] font-bold px-2 py-0.5 rounded-full">
-                                {item.badge}
-                              </span>
-                            )}
-                          </div>
-                          {item.subtitle && (
-                            <span className={`text-[11px] font-medium mt-0.5 ${item.badge && (item.title === 'My Swaps' || item.title === 'My Orders') ? 'text-[#A388E1]' : 'text-gray-500'}`}>
-                              {item.subtitle}
-                            </span>
-                          )}
+                          <span className="text-[16px] font-semibold text-red-600">Delete Account</span>
+                          <span className="text-[12px] text-gray-500 mt-0.5 font-medium">Permanently remove your data</span>
                         </div>
                       </div>
-                      <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-[#6B46C1] transition-colors" />
+                      <ChevronRight className="w-5 h-5 text-gray-300" />
                     </Link>
-                  ))}
-                  
+                  </div>
+                </motion.div>
 
-                  <Link
-                    to="/delete-account"
-                    className="flex items-center justify-between p-4 group hover:bg-red-50/50 active:bg-red-100/50 active:scale-[0.98] transition-all relative z-10"
-                  >
-                    <div className="flex items-center gap-4">
-                      <Trash2 className="w-6 h-6 text-red-500" />
-                      <div className="flex flex-col">
-                        <span className="text-[15px] font-bold text-red-600">Delete Account</span>
-                        <span className="text-[11px] text-red-400 font-medium mt-0.5">Permanently remove your data</span>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-red-300 group-hover:text-red-500 transition-colors" />
-                  </Link>
-
-                </div>
-              </motion.div>
-
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
+      {/* Spring Modal for Edit Profile */}
       <AnimatePresence>
         {isEditModalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/40 backdrop-blur-md">
+          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
+            {/* Backdrop */}
             <motion.div 
-              initial={{ opacity: 0, y: 20, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 20, scale: 0.95 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="bg-white/95 backdrop-blur-xl w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] border border-white/50"
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+              onClick={() => setIsEditModalOpen(false)}
+            />
+            
+            {/* Modal Content */}
+            <motion.div 
+              initial={{ opacity: 0, y: "100%" }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: "100%" }}
+              transition={{ type: "spring", damping: 26, stiffness: 260 }}
+              className="bg-white w-full max-w-lg rounded-t-[2rem] sm:rounded-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[90vh] relative z-10"
             >
-              <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-[#f8f6ff] to-white">
-                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                  <Edit2 className="w-5 h-5 text-[#6B46C1]" /> Edit Profile
-                </h2>
-                <button onClick={() => setIsEditModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-2 bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-all">
+              <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-20">
+                <h2 className="text-xl font-bold text-gray-900">Edit Profile</h2>
+                <button 
+                  onClick={() => setIsEditModalOpen(false)} 
+                  style={{ WebkitTapHighlightColor: 'transparent' }}
+                  className="bg-gray-100 p-2 rounded-full text-gray-600 active:scale-90 transition-transform"
+                >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="p-6 overflow-y-auto flex-1 admin-scroll">
+              <div className="p-6 overflow-y-auto flex-1 overscroll-contain pb-24 sm:pb-6">
                 <form id="editProfileForm" onSubmit={handleEditSubmit} className="space-y-6">
                   
                   <div className="space-y-4">
-                    <h3 className="font-bold text-gray-800 text-sm border-b pb-2">Basic Information</h3>
-                    <div className="relative group">
-                      <User className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400 group-focus-within:text-[#6B46C1] transition-colors" />
+                    <h3 className="text-[13px] font-bold text-[#6B46C1] uppercase tracking-wider">Basic Information</h3>
+                    <div className="relative">
+                      <User className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
                       <input type="text" placeholder="Full Name" required value={editForm.full_name} onChange={(e) => setEditForm({...editForm, full_name: e.target.value})}
-                        className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3 focus:border-[#6B46C1] focus:bg-white focus:shadow-[0_0_0_4px_rgba(107,70,193,0.1)] outline-none transition-all text-sm font-medium" />
+                        className="w-full bg-gray-50 border border-gray-200 rounded-2xl pl-12 pr-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-sm font-semibold" />
                     </div>
-                    <div className="relative group">
-                      <Phone className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400 group-focus-within:text-[#6B46C1] transition-colors" />
+                    <div className="relative">
+                      <Phone className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
                       <input type="tel" placeholder="Phone Number" required value={editForm.phone} onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
-                        className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3 focus:border-[#6B46C1] focus:bg-white focus:shadow-[0_0_0_4px_rgba(107,70,193,0.1)] outline-none transition-all text-sm font-medium" />
+                        className="w-full bg-gray-50 border border-gray-200 rounded-2xl pl-12 pr-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-sm font-semibold" />
                     </div>
                   </div>
 
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between border-b pb-2">
-                      <h3 className="font-bold text-gray-800 text-sm">Pickup Address</h3>
-                      <span className="text-[10px] bg-yellow-100 text-yellow-700 px-2 py-1 rounded font-bold">Needed for Sellers</span>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-[13px] font-bold text-[#6B46C1] uppercase tracking-wider">Pickup Address</h3>
+                      <span className="text-[10px] bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded font-bold">Seller Req.</span>
                     </div>
                     
                     <div className="space-y-3">
-                      <div className="relative group">
-                        <Home className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400 group-focus-within:text-[#6B46C1] transition-colors" />
-                        <input type="text" placeholder="House No. / Flat No. / Road No." required value={editForm.pickupAddress.houseNo} onChange={(e) => setEditForm({...editForm, pickupAddress: {...editForm.pickupAddress, houseNo: e.target.value}})}
-                          className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3 focus:border-[#6B46C1] focus:bg-white focus:shadow-[0_0_0_4px_rgba(107,70,193,0.1)] outline-none transition-all text-sm font-medium" />
+                      <div className="relative">
+                        <Home className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
+                        <input type="text" placeholder="House No. / Flat No." required value={editForm.pickupAddress.houseNo} onChange={(e) => setEditForm({...editForm, pickupAddress: {...editForm.pickupAddress, houseNo: e.target.value}})}
+                          className="w-full bg-gray-50 border border-gray-200 rounded-2xl pl-12 pr-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-sm font-semibold" />
                       </div>
-                      <div className="relative group">
-                        <MapPin className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400 group-focus-within:text-[#6B46C1] transition-colors" />
+                      <div className="relative">
+                        <MapPin className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
                         <input type="text" placeholder="Area, Street, Sector" required value={editForm.pickupAddress.areaStreet} onChange={(e) => setEditForm({...editForm, pickupAddress: {...editForm.pickupAddress, areaStreet: e.target.value}})}
-                          className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3 focus:border-[#6B46C1] focus:bg-white focus:shadow-[0_0_0_4px_rgba(107,70,193,0.1)] outline-none transition-all text-sm font-medium" />
+                          className="w-full bg-gray-50 border border-gray-200 rounded-2xl pl-12 pr-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-sm font-semibold" />
                       </div>
-                      <div className="relative group">
-                        <MapPin className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400 opacity-50 group-focus-within:text-[#6B46C1] group-focus-within:opacity-100 transition-colors" />
+                      <div className="relative">
+                        <MapPin className="absolute left-4 top-3.5 w-5 h-5 text-gray-300" />
                         <input type="text" placeholder="Landmark (Optional)" value={editForm.pickupAddress.landmark} onChange={(e) => setEditForm({...editForm, pickupAddress: {...editForm.pickupAddress, landmark: e.target.value}})}
-                          className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3 focus:border-[#6B46C1] focus:bg-white focus:shadow-[0_0_0_4px_rgba(107,70,193,0.1)] outline-none transition-all text-sm font-medium" />
+                          className="w-full bg-gray-50 border border-gray-200 rounded-2xl pl-12 pr-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-sm font-semibold" />
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 mt-2">
+                    <div className="grid grid-cols-2 gap-3 mt-2">
                       <input type="text" placeholder="City" required value={editForm.pickupAddress.city} onChange={(e) => {
                         setEditForm({
                           ...editForm, 
@@ -580,25 +533,38 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                           pickupAddress: {...editForm.pickupAddress, city: e.target.value}
                         })
                       }}
-                        className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl px-4 py-3 focus:border-[#6B46C1] focus:bg-white focus:shadow-[0_0_0_4px_rgba(107,70,193,0.1)] outline-none transition-all text-sm font-medium" />
+                        className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-sm font-semibold" />
                       
                       <input type="text" placeholder="State" required value={editForm.pickupAddress.state} onChange={(e) => setEditForm({...editForm, pickupAddress: {...editForm.pickupAddress, state: e.target.value}})}
-                        className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl px-4 py-3 focus:border-[#6B46C1] focus:bg-white focus:shadow-[0_0_0_4px_rgba(107,70,193,0.1)] outline-none transition-all text-sm font-medium" />
+                        className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-sm font-semibold" />
                     </div>
 
-                    <div className="relative group">
-                      <Hash className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400 group-focus-within:text-[#6B46C1] transition-colors" />
+                    <div className="relative">
+                      <Hash className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
                       <input type="text" placeholder="Pincode (6 Digits)" required maxLength="6" value={editForm.pickupAddress.pincode} onChange={(e) => setEditForm({...editForm, pickupAddress: {...editForm.pickupAddress, pincode: e.target.value}})}
-                        className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-11 pr-4 py-3 focus:border-[#6B46C1] focus:bg-white focus:shadow-[0_0_0_4px_rgba(107,70,193,0.1)] outline-none transition-all text-sm font-medium" />
+                        className="w-full bg-gray-50 border border-gray-200 rounded-2xl pl-12 pr-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-sm font-semibold tracking-widest" />
                     </div>
                   </div>
                 </form>
               </div>
 
-              <div className="p-5 border-t border-gray-100 bg-[#f8f6ff] flex justify-end gap-3 shrink-0">
-                <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-5 py-2.5 rounded-xl font-bold text-gray-500 hover:bg-gray-200 active:bg-gray-300 transition-all text-sm">Cancel</button>
-                <button type="submit" form="editProfileForm" disabled={editProfileMutation.isPending} className={`px-6 py-2.5 rounded-xl font-bold transition-all text-sm flex items-center gap-2 ${editProfileMutation.isPending ? 'bg-[#6B46C1]/50 text-white cursor-not-allowed' : 'bg-gradient-to-r from-[#805ad5] to-[#6B46C1] hover:opacity-90 active:scale-95 text-white shadow-md shadow-[#6B46C1]/20'}`}>
-                  {editProfileMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Details'}
+              <div className="p-4 border-t border-gray-100 bg-white flex justify-end gap-3 shrink-0 absolute sm:relative bottom-0 w-full z-20 pb-safe">
+                <button 
+                  type="button" 
+                  onClick={() => setIsEditModalOpen(false)} 
+                  style={{ WebkitTapHighlightColor: 'transparent' }}
+                  className="w-1/2 sm:w-auto px-6 py-3.5 rounded-2xl font-bold text-gray-600 bg-gray-100 active:bg-gray-200 active:scale-95 transition-all text-sm"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  form="editProfileForm" 
+                  disabled={editProfileMutation.isPending} 
+                  style={{ WebkitTapHighlightColor: 'transparent' }}
+                  className={`w-1/2 sm:w-auto px-8 py-3.5 rounded-2xl font-bold transition-all text-sm flex items-center justify-center gap-2 ${editProfileMutation.isPending ? 'bg-[#6B46C1]/50 text-white cursor-not-allowed' : 'bg-[#6B46C1] active:bg-[#5a3aa3] active:scale-95 text-white shadow-lg shadow-[#6B46C1]/30'}`}
+                >
+                  {editProfileMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Save Details'}
                 </button>
               </div>
             </motion.div>
