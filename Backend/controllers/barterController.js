@@ -242,6 +242,14 @@ const updateSwapStatus = async (req, res) => {
     const { id } = req.params;
   
     const { status, shippingAddress, paymentDetails, rejectionReason } = req.body; 
+    
+    const VALID_STATUSES = ['ACCEPTED', 'REJECTED'];
+    if (!VALID_STATUSES.includes(status)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Invalid status "${status}". Allowed values: ACCEPTED, REJECTED.` 
+      });
+    }
   
     const userId = req.user._id;
 
@@ -319,7 +327,7 @@ const updateSwapStatus = async (req, res) => {
       if (actualPaidINR < finalShippingCost) {
         return res.status(400).json({ success: false, message: `Payment manipulation detected. Expected ₹${finalShippingCost} but received ₹${actualPaidINR}.` });
       }
-   
+    
 
       await Transaction.create({
         user: userId,
@@ -340,7 +348,7 @@ const updateSwapStatus = async (req, res) => {
       barter.status = 'AWAITING_PAYMENT';
       barter.expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); 
 
-     
+      
       queueNotification({
         user: barter.requester._id,
         type: 'TRADE_ALERT',
@@ -718,7 +726,7 @@ const autoCancelOverdueBarters = async () => {
   }
 };
 
-// NEW LOGIC: AUTO CANCEL INCOMPLETE DISPATCHES (The 24 Hour Rule)
+
 const autoCancelIncompleteDispatches = async () => {
     try {
         const cancelHours = 24;
