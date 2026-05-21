@@ -280,9 +280,9 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
       
       <main>
         <Suspense fallback={<PremiumLoader />}>
-         
+          
           {user && !isAiChatRoute && <FloatingAIAssistant user={user} />}
-         
+          
           
           <Routes>
             <Route path="/" element={
@@ -367,6 +367,23 @@ function App() {
   
   const handleLogout = useCallback(async () => {
     try {
+     
+      if ('serviceWorker' in navigator && 'PushManager' in window) {
+        try {
+          const registration = await navigator.serviceWorker.ready;
+          const subscription = await registration.pushManager.getSubscription();
+          if (subscription) {
+           
+            await axios.post(`${API_URL}/notifications/unsubscribe`, { endpoint: subscription.endpoint }, { withCredentials: true });
+         
+            await subscription.unsubscribe();
+          }
+        } catch (pushErr) {
+          console.error('Error clearing push subscription on logout:', pushErr);
+        }
+      }
+    
+
       await axios.post(`${API_URL}/users/logout`, {}, { withCredentials: true });
       setUser(null);
     
@@ -379,6 +396,7 @@ function App() {
       console.error('Error logging out:', error);
     }
   }, []);
+
   return (
     <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
       <QueryClientProvider client={queryClient}>
