@@ -51,6 +51,9 @@ const NotificationsPage = () => {
   const [toast, setToast] = useState(null);
   const toastTimeoutRef = useRef(null);
   const publicVapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+  
+  // CHANGED: Determine if the user is in the mobile app
+  const isMobileApp = localStorage.getItem('is_dealit_app') === 'true';
 
   const showToast = (text, type = 'info') => {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
@@ -59,8 +62,6 @@ const NotificationsPage = () => {
   };
 
   useEffect(() => {
-    const isMobileApp = localStorage.getItem('is_dealit_app') === 'true';
-
     if (isMobileApp) {
       // App ke andar hamesha disable dikhao initially
       setIsPushEnabled(false);
@@ -76,7 +77,7 @@ const NotificationsPage = () => {
     return () => {
       if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     };
-  }, []);
+  }, [isMobileApp]); // CHANGED: Added isMobileApp to dependency array
 
   const urlBase64ToUint8Array = (base64String) => {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -90,11 +91,9 @@ const NotificationsPage = () => {
   };
 
   const handlePushToggle = async () => {
-    const isMobileApp = localStorage.getItem('is_dealit_app') === 'true';
-
     // Agar app ke andar se click kiya toh sidha error de do
     if (isMobileApp) {
-      showToast('This is not working in app right now. Try after some time.', 'error');
+      showToast('Push notifications are managed automatically in the app.', 'error');
       return;
     }
 
@@ -347,17 +346,20 @@ const NotificationsPage = () => {
           </div>
           
           <div className="flex items-center gap-2">
-            <button
-              onClick={handlePushToggle}
-              className="p-2 hover:bg-white/10 rounded-full transition-colors flex items-center justify-center relative"
-              title={isPushEnabled ? "Disable Push Notifications" : "Enable Push Notifications"}
-            >
-              {isPushEnabled ? (
-                <Bell className="w-5 h-5 text-emerald-300" />
-              ) : (
-                <BellOff className="w-5 h-5 text-white/70" />
-              )}
-            </button>
+            {/* CHANGED: Hide the Bell button if inside the mobile app to avoid confusion */}
+            {!isMobileApp && (
+              <button
+                onClick={handlePushToggle}
+                className="p-2 hover:bg-white/10 rounded-full transition-colors flex items-center justify-center relative"
+                title={isPushEnabled ? "Disable Push Notifications" : "Enable Push Notifications"}
+              >
+                {isPushEnabled ? (
+                  <Bell className="w-5 h-5 text-emerald-300" />
+                ) : (
+                  <BellOff className="w-5 h-5 text-white/70" />
+                )}
+              </button>
+            )}
           </div>
         </div>
       </header>

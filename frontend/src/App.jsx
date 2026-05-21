@@ -248,6 +248,63 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // NEW: Catch native Expo Push Token from React Native WebView
+  useEffect(() => {
+    const handleMessage = async (event) => {
+      try {
+        let data = event.data;
+        if (typeof data === 'string') {
+          data = JSON.parse(data);
+        }
+
+        if (data.type === 'EXPO_PUSH_TOKEN' && data.token && user) {
+          console.log("Received Expo token from native app, saving to backend...");
+          await axios.post(`${API_URL}/notifications/subscribe`, {
+            endpoint: data.token,
+            type: 'expo', 
+            keys: null // Expo doesn't use p256dh/auth keys
+          }, { withCredentials: true });
+        }
+      } catch (error) {
+        // Ignore JSON parse errors from non-app messages
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    document.addEventListener('message', handleMessage); // For some Android WebViews
+
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      document.removeEventListener('message', handleMessage);
+    };
+  }, [user]); // Re-run if user logs in to attach token to the correct user
+
+  // NEW: Catch Route Changes from React Native (When notification is clicked)
+  useEffect(() => {
+    const handleRouteMessage = (event) => {
+      try {
+        let data = event.data;
+        if (typeof data === 'string') {
+          data = JSON.parse(data);
+        }
+        
+        if (data.type === 'ROUTE_CHANGE' && data.url) {
+          console.log(`Native app requested route change to: ${data.url}`);
+          navigate(data.url);
+        }
+      } catch (e) {
+         // ignore
+      }
+    };
+
+    window.addEventListener('message', handleRouteMessage);
+    document.addEventListener('message', handleRouteMessage);
+    
+    return () => {
+      window.removeEventListener('message', handleRouteMessage);
+      document.removeEventListener('message', handleRouteMessage);
+    }
+  }, [navigate]);
 
   const isAiChatRoute = location.pathname.startsWith('/ai-chat');
   const hideNavbarRoutes = ['/login', '/signup', '/forgot-password'];
@@ -256,11 +313,9 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
 
   const publicDesktopRoutes = ['/login', '/privacy', '/terms', '/refund-policy', '/cancellation-policy'];
 
-  // CHANGED: Added !isAiChatRoute to allow the AI chat full page to render on desktop screens
   if (isDesktop && !location.pathname.startsWith('/admin') && !publicDesktopRoutes.includes(location.pathname) && !isAiChatRoute) {
     return (
       <Suspense fallback={<PremiumLoader />}>
-        {/* CHANGED: Render the floating AI assistant on the desktop landing page so it's always accessible */}
         {user && <FloatingAIAssistant user={user} />}
         <DesktopLandingPage user={user} />
       </Suspense>
@@ -367,15 +422,15 @@ function App() {
   
   const handleLogout = useCallback(async () => {
     try {
-     
+      
       if ('serviceWorker' in navigator && 'PushManager' in window) {
         try {
           const registration = await navigator.serviceWorker.ready;
           const subscription = await registration.pushManager.getSubscription();
           if (subscription) {
-           
+            
             await axios.post(`${API_URL}/notifications/unsubscribe`, { endpoint: subscription.endpoint }, { withCredentials: true });
-         
+          
             await subscription.unsubscribe();
           }
         } catch (pushErr) {

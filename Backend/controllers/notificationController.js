@@ -83,13 +83,13 @@ const markAllAsRead = async (req, res) => {
 
 const subscribePush = async (req, res) => {
   try {
-    const { endpoint, keys, expirationTime } = req.body;
-    
+    const { endpoint, keys, expirationTime, type = 'web' } = req.body;
     
     await PushSubscription.findOneAndUpdate(
       { endpoint: endpoint },
       { 
         user: req.user._id,
+        type: type, // Save the token type to the database
         endpoint: endpoint,
         keys: keys,
         expirationTime: expirationTime
