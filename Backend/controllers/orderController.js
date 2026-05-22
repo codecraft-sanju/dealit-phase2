@@ -5,7 +5,7 @@ const User = require('../models/User');
 const CreditSetting = require('../models/CreditSetting');
 const Transaction = require('../models/Transaction'); 
 const crypto = require('crypto'); 
-const BarterRequest = require('../models/BarterRequest'); // NEW: Added BarterRequest import
+const BarterRequest = require('../models/BarterRequest'); 
 
 const { queueNotification } = require('../services/queue');
 const { checkServiceability, createShiprocketOrder, addPickupLocation, generateAWB, generateLabel, schedulePickup, getTrackingByAWB, getShiprocketOrderDetails } = require('../utils/shiprocket'); 
@@ -268,11 +268,14 @@ const updateOrderStatus = async (req, res) => {
       if (seller) {
         order.isSellerPaid = true;
 
+        const isBarter = order.orderType === 'barter';
         queueNotification({
           user: seller._id,
           type: 'CREDIT_ADDED',
-          title: 'Payment Released! 💰',
-          message: `Order delivered! ${order.itemPrice} credits and +${auraRewardAmount} Aura have been added to your wallet.`,
+          title: isBarter ? 'Swap Completed! 🎉' : 'Payment Released! 💰',
+          message: isBarter 
+            ? `Your barter item has been delivered! +${auraRewardAmount} Aura points have been added to your profile.`
+            : `Order delivered! ${order.itemPrice} credits and +${auraRewardAmount} Aura have been added to your wallet.`,
           metadata: { amount: order.itemPrice, reason: 'escrow_release', referenceId: order._id, imageUrl: order.item?.images?.[0] }
         });
 
@@ -363,7 +366,6 @@ const updateOrderStatus = async (req, res) => {
         }
       }
 
-      // NEW LOGIC: IF THIS IS A BARTER ORDER, COLLAPSE THE WHOLE DEAL
       if (order.orderType === 'barter' && order.barterRequestRef) {
         const partnerOrder = await Order.findOne({ 
           barterRequestRef: order.barterRequestRef, 
@@ -405,12 +407,12 @@ const updateOrderStatus = async (req, res) => {
            });
         }
 
-        // Refund Barter Credits if any
-        const barterReq = await BarterRequest.findById(order.barterRequestRef).populate('item offered_item');
-        if (barterReq && barterReq.status !== 'CANCELLED') {
-           barterReq.status = 'CANCELLED';
-           await barterReq.save();
+        const barterReq = await BarterRequest.findOneAndUpdate(
+            { _id: order.barterRequestRef, status: { $ne: 'CANCELLED' } },
+            { $set: { status: 'CANCELLED', updated_at: Date.now() } }
+        ).populate('item offered_item');
 
+        if (barterReq) {
            const reqValue = barterReq.item?.estimated_value || 0;
            const offValue = barterReq.offered_item?.estimated_value || 0;
            const diff = Math.max(0, reqValue - offValue);
@@ -437,7 +439,6 @@ const updateOrderStatus = async (req, res) => {
   }
 };
 
-// Helper function to build Shiprocket payload and hit API
 const processShiprocketAPI = async (orderDoc, itemDoc) => {
     const dynamicPickupLocation = await addPickupLocation(itemDoc.owner);
     const orderDate = new Date().toISOString().slice(0, 19).replace('T', ' '); 
@@ -509,7 +510,6 @@ const dispatchOrder = async (req, res) => {
 
     const item = order.item;
 
-    // Save dimensions strictly to item model for future shiprocket payload
     if (weight || length || width || height) {
        item.weight = weight || item.weight;
        item.dimensions = {
@@ -520,7 +520,6 @@ const dispatchOrder = async (req, res) => {
        await item.save();
     }
 
-    // NEW LOGIC: SYNCHRONIZED DISPATCH FOR BARTERS
     if (order.orderType === 'barter' && order.barterRequestRef) {
         order.isReadyToDispatch = true;
         await order.save();
@@ -533,9 +532,7 @@ const dispatchOrder = async (req, res) => {
             populate: { path: 'owner', select: 'full_name email phone pickupAddress' }
         }).populate('buyer', 'full_name email phone');
 
-        // Check if partner is ready
         if (!partnerOrder || !partnerOrder.isReadyToDispatch) {
-            
             const barterReq = await BarterRequest.findById(order.barterRequestRef);
             if (barterReq && !barterReq.first_dispatch_at) {
                 barterReq.first_dispatch_at = Date.now();
@@ -557,7 +554,20 @@ const dispatchOrder = async (req, res) => {
             });
         }
 
-        // Both are ready! Dispatch both to Shiprocket.
+        const barterLock = await BarterRequest.findOneAndUpdate(
+            { _id: order.barterRequestRef, shiprocket_synced: { $ne: true } },
+            { $set: { shiprocket_synced: true } },
+            { new: true }
+        );
+
+        if (!barterLock) {
+            return res.status(200).json({
+                success: true,
+                message: 'Both parties are ready! Orders are currently being dispatched.',
+                data: order
+            });
+        }
+
         try {
             const shiprocketRes1 = await processShiprocketAPI(order, item);
             order.trackingDetails = {
@@ -599,12 +609,18 @@ const dispatchOrder = async (req, res) => {
                 data: order
             });
         } catch (dispatchErr) {
+            await BarterRequest.updateOne(
+                { _id: order.barterRequestRef }, 
+                { $unset: { shiprocket_synced: "" } }
+            );
+            order.isReadyToDispatch = false;
+            await order.save();
+            
             console.error("Error dispatching barter pair:", dispatchErr);
             return res.status(400).json({ success: false, message: 'Failed to schedule pickup with Shiprocket. Please check dimensions or addresses.' });
         }
     } 
     
-    // REGULAR PURCHASE DISPATCH (No partner wait)
     const shiprocketRes = await processShiprocketAPI(order, item);
     order.trackingDetails = {
       shiprocket_order_id: shiprocketRes.order_id,
@@ -674,10 +690,24 @@ const getShippingLabel = async (req, res) => {
            await schedulePickup(shipmentId);
            await order.save();
        } catch (awbError) {
-           const errMsg = (awbError.message || '');
-           if (errMsg.toLowerCase().includes('reassign') || errMsg.toLowerCase().includes('17 hour') || errMsg.toLowerCase().includes('already')) {
+           const errMsg = (awbError.message || '').toLowerCase();
+           if (errMsg.includes('reassign') || errMsg.includes('17 hour') || errMsg.includes('already')) {
+               
+               let recoveredAwb = null;
+               
                const awbMatch = errMsg.match(/AWB\s*(\d+)/i);
-               let recoveredAwb = awbMatch ? awbMatch[1] : null;
+               if (awbMatch && awbMatch[1]) {
+                   recoveredAwb = awbMatch[1];
+               } else if (order.trackingDetails.shiprocket_order_id) {
+                   try {
+                       const srDetails = await getShiprocketOrderDetails(order.trackingDetails.shiprocket_order_id);
+                       if (srDetails && srDetails.data && srDetails.data.awb_code) {
+                           recoveredAwb = srDetails.data.awb_code;
+                       }
+                   } catch (fetchErr) {
+                       console.error("AWB Recovery API failed:", fetchErr);
+                   }
+               }
                
                if (recoveredAwb) {
                    order.trackingDetails.awb_code = recoveredAwb;
@@ -779,11 +809,14 @@ const handleShiprocketWebhook = async (req, res) => {
         if (seller) {
           order.isSellerPaid = true;
 
+          const isBarter = order.orderType === 'barter';
           queueNotification({
             user: seller._id,
             type: 'CREDIT_ADDED',
-            title: 'Payment Released! 💰',
-            message: `Order successfully delivered! ${order.itemPrice} credits and +${auraRewardAmount} Aura have been credited to your account.`,
+            title: isBarter ? 'Swap Completed! 🎉' : 'Payment Released! 💰',
+            message: isBarter 
+              ? `Your barter item has been successfully delivered! +${auraRewardAmount} Aura points have been added.`
+              : `Order successfully delivered! ${order.itemPrice} credits and +${auraRewardAmount} Aura have been credited to your account.`,
             metadata: { amount: order.itemPrice, reason: 'escrow_release', referenceId: order._id, imageUrl: order.item?.images?.[0] }
           });
 
@@ -847,10 +880,8 @@ const autoCancelOverdueOrders = async () => {
 
       for (const order of ordersBatch) {
         try {
-          // If this is a barter and they are pending but isReadyToDispatch is true (waiting for partner), DONT cancel here. 
-          // The autoCancelIncompleteDispatches function handles barter specific 24 hr limits based on first_dispatch_at.
           if (order.orderType === 'barter' && order.barterRequestRef) {
-              continue; // Skip barter orders here, handled by specialized cron.
+              continue; 
           }
 
           order.orderStatus = 'cancelled';
@@ -991,6 +1022,7 @@ const getOrderById = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error fetching order details' });
   }
 };
+
 module.exports = {
   calculateShippingCost, 
   createOrder,
