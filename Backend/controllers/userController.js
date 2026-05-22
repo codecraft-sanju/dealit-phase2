@@ -9,6 +9,7 @@ const Item = require('../models/Item');
 const Order = require('../models/Order');
 const BarterRequest = require('../models/BarterRequest');
 const { OAuth2Client } = require('google-auth-library');
+const axios = require('axios');
 
 const client = new OAuth2Client(); 
 
@@ -290,18 +291,32 @@ const googleLogin = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Google token is required' });
     }
 
-    const audienceList = [
-      process.env.GOOGLE_CLIENT_ID,
-      process.env.GOOGLE_ANDROID_CLIENT_ID
-    ].filter(Boolean);
+    let email, name, picture;
 
-    const ticket = await client.verifyIdToken({
-      idToken: token,
-      audience: audienceList,
-    });
+    if (token.split('.').length === 3) {
+      const audienceList = [
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_ANDROID_CLIENT_ID
+      ].filter(Boolean);
 
-    const payload = ticket.getPayload();
-    const { email, name, picture } = payload;
+      const ticket = await client.verifyIdToken({
+        idToken: token,
+        audience: audienceList,
+      });
+
+      const payload = ticket.getPayload();
+      email = payload.email;
+      name = payload.name;
+      picture = payload.picture;
+    } else {
+      const googleRes = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      email = googleRes.data.email;
+      name = googleRes.data.name;
+      picture = googleRes.data.picture;
+    }
+
     const cleanEmail = email.toLowerCase().trim();
 
     let user = await User.findOne({ email: cleanEmail });
@@ -337,10 +352,8 @@ const googleLogin = async (req, res) => {
 
     sendTokenResponse(user, 200, res, 'Google login successful!');
   } catch (error) {
-   
     console.error('Google token verification failed:', error);
     res.status(500).json({ success: false, message: 'Authentication failed with Google' });
-   
   }
 };
 

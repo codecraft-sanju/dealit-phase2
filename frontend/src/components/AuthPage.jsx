@@ -3,7 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import axios from 'axios';
 import { User, Lock, Mail, Phone, MapPin, CheckCircle, Gift, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import Lottie from 'lottie-react';
-import { GoogleLogin } from '@react-oauth/google';
+import { useGoogleLogin } from '@react-oauth/google';
 
 import './AuthPage.css';
 
@@ -179,6 +179,16 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
   };
   /* ----------------------------------------- */
 
+  const loginWithGoogle = useGoogleLogin({
+    onSuccess: (tokenResponse) => {
+      handleGoogleLoginSuccess({ credential: tokenResponse.access_token });
+    },
+    onError: () => {
+      setError('Google Sign-In failed.');
+      setLoading(false);
+    }
+  });
+
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleModeSwitch = (mode) => {
@@ -324,7 +334,10 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                       <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>Sign in with Google</span>
                     </button>
                   ) : (
-                    <GoogleLogin onSuccess={handleGoogleLoginSuccess} onError={() => setError('Google Sign-In failed.')} theme="filled_blue" shape="circle" width="360" />
+                    <button type="button" onClick={() => loginWithGoogle()} className="aw-btn" style={{ backgroundColor: '#ffffff', color: '#3c4043', border: '1px solid #dadce0', boxShadow: 'none' }} disabled={loading}>
+                      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="18" />
+                      <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>Sign in with Google</span>
+                    </button>
                   )}
                 </div>
                 <div className="google-divider"><span>or continue with email</span></div>
@@ -371,7 +384,10 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                           <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>Sign up with Google</span>
                         </button>
                       ) : (
-                        <GoogleLogin onSuccess={handleGoogleLoginSuccess} onError={() => setError('Google Sign-In failed.')} theme="filled_blue" shape="circle" width="360" />
+                        <button type="button" onClick={() => loginWithGoogle()} className="aw-btn" style={{ backgroundColor: '#ffffff', color: '#3c4043', border: '1px solid #dadce0', boxShadow: 'none' }} disabled={loading}>
+                          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="18" />
+                          <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>Sign up with Google</span>
+                        </button>
                       )}
                     </div>
                     <div className="google-divider"><span>or register with email</span></div>
@@ -500,7 +516,10 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                       <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>Sign in with Google</span>
                     </button>
                   ) : (
-                    <GoogleLogin onSuccess={handleGoogleLoginSuccess} onError={() => setError('Google Sign-In failed.')} theme="filled_blue" shape="circle" width="320" />
+                    <button type="button" onClick={() => loginWithGoogle()} className="aw-btn" style={{ backgroundColor: '#ffffff', color: '#3c4043', border: '1px solid #dadce0', boxShadow: 'none' }} disabled={loading}>
+                      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="18" />
+                      <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>Sign in with Google</span>
+                    </button>
                   )}
                 </div>
                 <div className="google-divider"><span>or continue with email</span></div>
@@ -531,7 +550,10 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                           <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>Sign up with Google</span>
                         </button>
                       ) : (
-                        <GoogleLogin onSuccess={handleGoogleLoginSuccess} onError={() => setError('Google Sign-In failed.')} theme="filled_blue" shape="circle" width="320" />
+                        <button type="button" onClick={() => loginWithGoogle()} className="aw-btn" style={{ backgroundColor: '#ffffff', color: '#3c4043', border: '1px solid #dadce0', boxShadow: 'none' }} disabled={loading}>
+                          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="18" />
+                          <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>Sign up with Google</span>
+                        </button>
                       )}
                     </div>
                     <div className="google-divider"><span>or register with email</span></div>
