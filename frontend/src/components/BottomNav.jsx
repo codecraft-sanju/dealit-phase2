@@ -45,7 +45,8 @@ const BottomNav = ({ user }) => {
         {/* 1. Home */}
         <Link
           to="/"
-          className={`flex flex-col items-center gap-1 w-12 pb-1 transition-all ${location.pathname === '/' ? 'text-[#6B46C1] scale-110' : 'text-gray-400 hover:text-gray-600'}`}
+          style={{ WebkitTapHighlightColor: 'transparent' }}
+          className={`flex flex-col items-center gap-1 w-12 pb-1 transition-transform duration-200 active:scale-90 ${location.pathname === '/' ? 'text-[#6B46C1] scale-110' : 'text-gray-400'}`}
         >
           <Home className={`w-6 h-6 ${location.pathname === '/' ? 'fill-[#EBE5F7]' : ''}`} />
           <span className="text-[10px] font-bold tracking-wide">Home</span>
@@ -54,7 +55,8 @@ const BottomNav = ({ user }) => {
         {/* 2. Earn */}
         <Link
           to={user ? '/wallet' : '/login'}
-          className={`flex flex-col items-center gap-1 w-12 pb-1 transition-all ${location.pathname === '/wallet' ? 'text-yellow-500 scale-110' : 'text-gray-400 hover:text-gray-600'}`}
+          style={{ WebkitTapHighlightColor: 'transparent' }}
+          className={`flex flex-col items-center gap-1 w-12 pb-1 transition-transform duration-200 active:scale-90 ${location.pathname === '/wallet' ? 'text-yellow-500 scale-110' : 'text-gray-400'}`}
         >
           <Coins className={`w-6 h-6 ${location.pathname === '/wallet' ? 'fill-yellow-100' : ''}`} />
           <span className="text-[10px] font-bold tracking-wide">Earn</span>
@@ -64,16 +66,18 @@ const BottomNav = ({ user }) => {
         <div className="relative -top-5">
           <Link
             to={user ? '/add-item' : '/login'}
-            className="flex flex-col items-center justify-center w-14 h-14 bg-gradient-to-tr from-[#6B46C1] to-[#A388E1] rounded-full shadow-[0_8px_20px_rgba(107,70,193,0.4)] border-4 border-white text-white transform transition-transform hover:scale-105 active:scale-95"
+            style={{ WebkitTapHighlightColor: 'transparent' }}
+            className="flex flex-col items-center justify-center w-14 h-14 bg-gradient-to-tr from-[#6B46C1] to-[#A388E1] rounded-full shadow-[0_8px_20px_rgba(107,70,193,0.4)] border-4 border-white transform transition-transform duration-200 active:scale-90"
           >
-            <Plus className="w-7 h-7" strokeWidth={3} />
+            <Plus className="w-7 h-7 text-white" strokeWidth={3} />
           </Link>
         </div>
 
         {/* 4. Notifications */}
         <Link
           to={user ? '/notifications' : '/login'}
-          className={`flex flex-col items-center gap-1 w-12 pb-1 transition-all ${location.pathname === '/notifications' ? 'text-[#6B46C1] scale-110' : 'text-gray-400 hover:text-gray-600'}`}
+          style={{ WebkitTapHighlightColor: 'transparent' }}
+          className={`flex flex-col items-center gap-1 w-12 pb-1 transition-transform duration-200 active:scale-90 ${location.pathname === '/notifications' ? 'text-[#6B46C1] scale-110' : 'text-gray-400'}`}
         >
           <div className="relative">
             <Bell className={`w-6 h-6 ${location.pathname === '/notifications' ? 'fill-[#EBE5F7]' : ''}`} />
@@ -89,7 +93,8 @@ const BottomNav = ({ user }) => {
         {/* 5. Profile */}
         <Link
           to={user ? '/profile' : '/login'}
-          className={`flex flex-col items-center gap-1 w-12 pb-1 transition-all ${location.pathname === '/profile' ? 'text-[#6B46C1] scale-110' : 'text-gray-400 hover:text-gray-600'}`}
+          style={{ WebkitTapHighlightColor: 'transparent' }}
+          className={`flex flex-col items-center gap-1 w-12 pb-1 transition-transform duration-200 active:scale-90 ${location.pathname === '/profile' ? 'text-[#6B46C1] scale-110' : 'text-gray-400'}`}
         >
           <User className={`w-6 h-6 ${location.pathname === '/profile' ? 'fill-[#EBE5F7]' : ''}`} />
           <span className="text-[10px] font-bold tracking-wide">Profile</span>
