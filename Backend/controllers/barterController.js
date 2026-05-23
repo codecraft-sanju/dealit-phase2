@@ -456,13 +456,11 @@ const completeSwapPayment = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Shipping payment details missing' });
     }
 
-  
     let setting = await CreditSetting.findOne();
     let finalShippingCost = 60; // Default fallback
 
     if (setting) {
       if (setting.shippingMethod === 'dynamic') {
-        
         const itemOwner = await User.findById(barter.item.owner);
         const pickupPincode = itemOwner?.pickupAddress?.pincode;
         
@@ -491,7 +489,6 @@ const completeSwapPayment = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid payment signature.' });
     }
 
-   
     const paymentCheck = await fetchRazorpayPaymentInfo(rzpPaymentId);
     if (!paymentCheck.success) {
       return res.status(400).json({ success: false, message: 'Failed to verify payment details with Razorpay.' });
@@ -501,122 +498,122 @@ const completeSwapPayment = async (req, res) => {
       return res.status(400).json({ success: false, message: `Payment manipulation detected. Expected ₹${finalShippingCost} but received ₹${actualPaidINR}.` });
     }
 
-    // Start MongoDB Session for Transaction
+    // CHANGES MADE HERE: Setup mongoose session using withTransaction
     const session = await mongoose.startSession();
-    session.startTransaction();
-
     let ownerDispatchOrder;
+    let customError = null;
 
     try {
-      await Transaction.create([{
-        user: userId,
-        amount: finalShippingCost, 
-        razorpay_order_id: rzpOrderId,
-        razorpay_payment_id: rzpPaymentId,
-        razorpay_signature: razorpay_signature,
-        status: 'success',
-        transactionType: 'shipping_fee'
-      }], { session });
+      await session.withTransaction(async () => {
+        await Transaction.create([{
+          user: userId,
+          amount: finalShippingCost, 
+          razorpay_order_id: rzpOrderId,
+          razorpay_payment_id: rzpPaymentId,
+          razorpay_signature: razorpay_signature,
+          status: 'success',
+          transactionType: 'shipping_fee'
+        }], { session });
 
-      if (requiredCredits > 0) {
-        const updatedRequester = await User.findOneAndUpdate(
-          { _id: barter.requester._id, account_credits: { $gte: requiredCredits } },
-          { $inc: { account_credits: -requiredCredits } },
-          { new: true, session }
+        if (requiredCredits > 0) {
+          const updatedRequester = await User.findOneAndUpdate(
+            { _id: barter.requester._id, account_credits: { $gte: requiredCredits } },
+            { $inc: { account_credits: -requiredCredits } },
+            { new: true, session }
+          );
+
+          if (!updatedRequester) {
+            customError = 'INSUFFICIENT_CREDITS';
+            throw new Error(customError); // This automatically aborts the transaction
+          }
+        }
+
+        await Item.findByIdAndUpdate(barter.item._id, { status: 'reserved' }, { session });
+        await Item.findByIdAndUpdate(barter.offered_item._id, { status: 'reserved' }, { session });
+
+        await BarterRequest.updateMany(
+          {
+            _id: { $ne: barter._id },
+            status: { $in: ['PENDING', 'AWAITING_PAYMENT'] },
+            $or: [
+              { item: { $in: [barter.item._id, barter.offered_item._id] } },
+              { offered_item: { $in: [barter.item._id, barter.offered_item._id] } }
+            ]
+          },
+          { status: 'CANCELLED', updated_at: Date.now() },
+          { session }
         );
 
-        if (!updatedRequester) {
-          await session.abortTransaction();
-          session.endSession();
+        const orders = await Order.create([{
+          buyer: barter.requester._id, 
+          seller: barter.owner._id, 
+          item: barter.item._id, 
+          orderType: 'barter',
+          barterRequestRef: barter._id,
+          itemPrice: 0, 
+          shippingCost: finalShippingCost,
+          totalAmount: finalShippingCost, 
+          shippingAddress: shippingAddress,
+          orderStatus: 'pending',
+          paymentStatus: 'paid', 
+          isSellerPaid: true, 
+          razorpay_order_id: rzpOrderId,
+          razorpay_payment_id: rzpPaymentId,
+        }, {
+          buyer: barter.owner._id, 
+          seller: barter.requester._id, 
+          item: barter.offered_item._id, 
+          orderType: 'barter',
+          barterRequestRef: barter._id,
+          itemPrice: 0, 
+          shippingCost: barter.ownerShippingCost,
+          totalAmount: barter.ownerShippingCost, 
+          shippingAddress: barter.ownerShippingAddress,
+          orderStatus: 'pending',
+          paymentStatus: 'paid', 
+          isSellerPaid: true, 
+          razorpay_order_id: barter.owner_razorpay_order_id,
+          razorpay_payment_id: barter.owner_razorpay_payment_id,
+        }], { session });
 
-          const refundRes = await refundRazorpayPayment(rzpPaymentId, finalShippingCost);
-          
-          if (refundRes.success) {
-            await Transaction.create({
-              user: userId,
-              amount: finalShippingCost,
-              razorpay_order_id: rzpOrderId,
-              razorpay_payment_id: rzpPaymentId,
-              status: 'success',
-              transactionType: 'shipping_refund'
-            });
-          }
-          
-          return res.status(400).json({ 
-            success: false, 
-            message: 'Swap failed. You spent your credits while this was processing. Your shipping fee has been refunded.' 
-          });
-        }
-      }
+        ownerDispatchOrder = orders[0];
 
-      await Item.findByIdAndUpdate(barter.item._id, { status: 'reserved' }, { session });
-      await Item.findByIdAndUpdate(barter.offered_item._id, { status: 'reserved' }, { session });
-
-      await BarterRequest.updateMany(
-        {
-          _id: { $ne: barter._id },
-          status: { $in: ['PENDING', 'AWAITING_PAYMENT'] },
-          $or: [
-            { item: { $in: [barter.item._id, barter.offered_item._id] } },
-            { offered_item: { $in: [barter.item._id, barter.offered_item._id] } }
-          ]
-        },
-        { status: 'CANCELLED', updated_at: Date.now() },
-        { session }
-      );
-
-      const orders = await Order.create([{
-        buyer: barter.requester._id, 
-        seller: barter.owner._id, 
-        item: barter.item._id, 
-        orderType: 'barter',
-        barterRequestRef: barter._id,
-        itemPrice: 0, 
-        shippingCost: finalShippingCost,
-        totalAmount: finalShippingCost, 
-        shippingAddress: shippingAddress,
-        orderStatus: 'pending',
-        paymentStatus: 'paid', 
-        isSellerPaid: true, 
-        razorpay_order_id: rzpOrderId,
-        razorpay_payment_id: rzpPaymentId,
-      }, {
-        buyer: barter.owner._id, 
-        seller: barter.requester._id, 
-        item: barter.offered_item._id, 
-        orderType: 'barter',
-        barterRequestRef: barter._id,
-        itemPrice: 0, 
-        shippingCost: barter.ownerShippingCost,
-        totalAmount: barter.ownerShippingCost, 
-        shippingAddress: barter.ownerShippingAddress,
-        orderStatus: 'pending',
-        paymentStatus: 'paid', 
-        isSellerPaid: true, 
-        razorpay_order_id: barter.owner_razorpay_order_id,
-        razorpay_payment_id: barter.owner_razorpay_payment_id,
-      }], { session });
-
-      ownerDispatchOrder = orders[0];
-
-      barter.requesterShippingAddress = shippingAddress;
-      barter.requesterShippingCost = finalShippingCost;
-      barter.requester_razorpay_order_id = rzpOrderId;
-      barter.requester_razorpay_payment_id = rzpPaymentId;
-      barter.requesterPaymentStatus = 'paid';
-      
-      barter.status = 'ACCEPTED';
-      barter.updated_at = Date.now();
-      await barter.save({ session });
-
-      await session.commitTransaction();
-      session.endSession();
+        barter.requesterShippingAddress = shippingAddress;
+        barter.requesterShippingCost = finalShippingCost;
+        barter.requester_razorpay_order_id = rzpOrderId;
+        barter.requester_razorpay_payment_id = rzpPaymentId;
+        barter.requesterPaymentStatus = 'paid';
+        
+        barter.status = 'ACCEPTED';
+        barter.updated_at = Date.now();
+        await barter.save({ session });
+      });
 
     } catch (dbError) {
-      await session.abortTransaction();
-      session.endSession();
-      throw dbError;
+      if (customError === 'INSUFFICIENT_CREDITS') {
+        const refundRes = await refundRazorpayPayment(rzpPaymentId, finalShippingCost);
+        
+        if (refundRes.success) {
+          await Transaction.create({
+            user: userId,
+            amount: finalShippingCost,
+            razorpay_order_id: rzpOrderId,
+            razorpay_payment_id: rzpPaymentId,
+            status: 'success',
+            transactionType: 'shipping_refund'
+          });
+        }
+        
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Swap failed. You spent your credits while this was processing. Your shipping fee has been refunded.' 
+        });
+      }
+      throw dbError; // If it's a real database error, pass it to the main catch block
+    } finally {
+      await session.endSession(); // Ensures the session is always closed
     }
+    // CHANGES END HERE
 
     // External Notifications out of Transaction
     if (requiredCredits > 0) {

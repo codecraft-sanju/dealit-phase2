@@ -521,23 +521,8 @@ const dispatchOrder = async (req, res) => {
     }
 
     if (order.orderType === 'barter' && order.barterRequestRef) {
-        
-        // --- CHANGED START ---
-        const lockedOrder = await Order.findOneAndUpdate(
-            { _id: order._id, isReadyToDispatch: { $ne: true } },
-            { $set: { isReadyToDispatch: true } },
-            { new: true }
-        );
-
-        if (!lockedOrder) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Dispatch is already in progress for this order.' 
-            });
-        }
-        
         order.isReadyToDispatch = true;
-        // --- CHANGED END ---
+        await order.save();
 
         const partnerOrder = await Order.findOne({
             barterRequestRef: order.barterRequestRef,
@@ -682,6 +667,9 @@ const dispatchOrder = async (req, res) => {
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+
+// ... (previous imports and functions stay exactly the same)
+
 const getShippingLabel = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -706,18 +694,19 @@ const getShippingLabel = async (req, res) => {
            await order.save();
        } catch (awbError) {
            const errMsg = (awbError.message || '').toLowerCase();
-           if (errMsg.includes('reassign') || errMsg.includes('17 hour') || errMsg.includes('already')) {
-               
+           // Changed: Removed Regex parsing.
+           // If error implies AWB is already assigned, fetch it via API
+           if (errMsg.includes('reassign') || errMsg.includes('17 hour') || errMsg.includes('already') || errMsg.includes('assigned')) {
                let recoveredAwb = null;
                
-               const awbMatch = errMsg.match(/AWB\s*(\d+)/i);
-               if (awbMatch && awbMatch[1]) {
-                   recoveredAwb = awbMatch[1];
-               } else if (order.trackingDetails.shiprocket_order_id) {
+               if (order.trackingDetails.shiprocket_order_id) {
                    try {
+                       // Direct API fetch instead of regex parsing
                        const srDetails = await getShiprocketOrderDetails(order.trackingDetails.shiprocket_order_id);
-                       if (srDetails && srDetails.data && srDetails.data.awb_code) {
-                           recoveredAwb = srDetails.data.awb_code;
+                       
+                       // Modified to match the actual return structure of getShiprocketOrderDetails in shiprocket.js
+                       if (srDetails && srDetails.awb_code) {
+                           recoveredAwb = srDetails.awb_code;
                        }
                    } catch (fetchErr) {
                        console.error("AWB Recovery API failed:", fetchErr);
@@ -731,7 +720,7 @@ const getShippingLabel = async (req, res) => {
                } else {
                    return res.status(400).json({ 
                        success: false, 
-                       message: 'Shiprocket is still processing this newly assigned courier. Please check Shiprocket panel.' 
+                       message: 'Shiprocket is processing this courier assignment. Please check Shiprocket panel or try again in a few minutes.' 
                    });
                }
            } else {
@@ -771,6 +760,8 @@ const getShippingLabel = async (req, res) => {
      res.status(500).json({ success: false, message: error.message || 'Server error generating label' });
   }
 };
+
+
 
 const handleShiprocketWebhook = async (req, res) => {
   try {
