@@ -1,17 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
+
 import { Link } from 'react-router-dom';
+
 import { useQuery, useMutation } from '@tanstack/react-query';
+
 import { motion, AnimatePresence } from 'framer-motion';
+
 import { 
   Package, Coins, ChevronRight, Plus, UserCircle, Gift,
   Smartphone, Shirt, Watch, Home as HomeIcon, Gamepad2, 
   Car, Monitor, Book, Sofa, Music, Utensils, Heart, Briefcase, Camera, Dumbbell, Sparkles
 } from 'lucide-react';
+
 import axios from 'axios';
+
 import ProductCard from './ProductCard';
+
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
+
 
 export const getOptimizedCloudinaryUrl = (url) => {
   if (!url || typeof url !== 'string' || !url.includes('cloudinary.com') || url.includes('q_auto')) {
@@ -19,6 +27,7 @@ export const getOptimizedCloudinaryUrl = (url) => {
   }
   return url.replace('/upload/', '/upload/q_auto,f_auto,w_800/');
 };
+
 
 const ICON_DICTIONARY = {
   'Package': Package,
@@ -39,6 +48,7 @@ const ICON_DICTIONARY = {
   'Dumbbell': Dumbbell
 };
 
+
 const DUMMY_AVATARS = [
   'https://i.pravatar.cc/40?img=11',
   'https://i.pravatar.cc/40?img=32',
@@ -46,6 +56,7 @@ const DUMMY_AVATARS = [
   'https://i.pravatar.cc/40?img=16',
   'https://i.pravatar.cc/40?img=57',
 ];
+
 
 // --- Framer Motion Variants ---
 const containerVariants = {
@@ -64,14 +75,17 @@ const itemVariants = {
 const scaleTap = { scale: 0.92 };
 const hoverSpring = { scale: 1.05, transition: { type: "spring", stiffness: 400, damping: 10 } };
 
+
 const ModernShimmer = ({ className }) => (
   <div className={`relative overflow-hidden bg-gray-100 rounded-2xl ${className}`}>
     <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
   </div>
 );
 
+
 // Global variable to track if the initial animation has played this session
 let initialAnimationPlayed = false;
+
 
 const HomePage = ({ user, setUser }) => {
   const [activeCategory, setActiveCategory] = useState('All');
@@ -123,7 +137,6 @@ const HomePage = ({ user, setUser }) => {
   const { data: categories = [], isLoading: loadingCategories } = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
-      // Changed: Added hasItems=true to optionally allow backend filtering
       const response = await axios.get(`${API_URL}/categories?activeOnly=true&hasItems=true`);
       return response.data.data;
     },
@@ -236,8 +249,6 @@ const HomePage = ({ user, setUser }) => {
     'radial-gradient(circle, #FDE047 20%, #EAB308 80%, #92400E 100%)'
   ];
 
-  const shouldShowClaimButton = user && !user.hasClaimedWelcomeBonus && bonusSettings.enabled;
-
   return (
     <motion.div 
       initial={shouldAnimate ? "hidden" : false} 
@@ -250,128 +261,46 @@ const HomePage = ({ user, setUser }) => {
 
       <div className="px-4 pt-3 pb-0 relative z-10">
         
-        {/* --- Hero Banner Section --- */}
-        <div className="grid grid-cols-7 gap-2 mb-3">
-          <motion.div 
-            variants={itemVariants}
-            className="col-span-5 bg-white border border-white shadow-[0_4px_20px_rgb(0,0,0,0.03),inset_0_1px_1px_rgb(255,255,255,1)] rounded-2xl p-3 flex flex-col justify-center h-full relative overflow-hidden group"
-          >
-            {/* Glossy Gradient Background */}
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-50/50 via-white to-white opacity-80 z-0"></div>
-            
-            {/* Subtle floating background gradient */}
-            <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#A388E1]/20 rounded-full blur-3xl group-hover:bg-[#A388E1]/30 transition-colors duration-500 z-0"></div>
-            
-            <h1 className="text-[16px] sm:text-[15px] md:text-[20px] font-extrabold text-gray-900 leading-tight mb-1.5 tracking-tight relative z-10 drop-shadow-sm">
+      {/* --- Hero Banner Section --- */}
+        <motion.div 
+          variants={itemVariants}
+          className="mb-3 bg-[#0B1021] border border-blue-900/40 shadow-[0_8px_20px_rgba(0,0,0,0.15)] rounded-2xl p-5 flex flex-col justify-center relative overflow-hidden group"
+        >
+          {/* Deep Blue & Dark Slate Gradient Background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-950 to-[#0B1021] opacity-90 z-0"></div>
+          
+          {/* Subtle floating blue and cyan glows */}
+          <div className="absolute -top-10 -right-10 w-48 h-48 bg-blue-500/20 rounded-full blur-3xl group-hover:bg-blue-400/30 transition-colors duration-500 z-0"></div>
+          <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-cyan-600/10 rounded-full blur-2xl z-0"></div>
+
+          {/* Text Content - Changed pr-20 to pr-14 to reduce the gap with the image */}
+          <div className="relative z-10 pr-14 sm:pr-16">
+            <h1 className="text-[16px] sm:text-[18px] md:text-[24px] font-extrabold text-white leading-tight mb-2 tracking-tight drop-shadow-md">
               Sell what you don't use<br/>
-              Get what you <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#805ad5] to-[#A388E1]">actually want</span>
+              Get what you <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">actually want</span>
             </h1>
-            <p className="text-[10px] sm:text-[11px] md:text-xs text-gray-500 font-medium leading-snug relative z-10">
+            <p className="text-[11px] sm:text-[12px] md:text-sm text-blue-200/80 font-medium leading-snug">
               Sell your stuff &rarr; Earn credits &rarr; Buy anything.
             </p>
+          </div>
 
-            {/* Corner Gloss Glare overlay on hover */}
-            <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none z-20"></div>
+          {/* Shopping Bag Image — Pulled closer to the left and slightly enlarged */}
+          <motion.div
+            animate={{ y: [0, -6, 0], rotate: [0, 3, -3, 0] }}
+            transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+            className="absolute right-2 sm:right-4 bottom-[-5px] z-10 pointer-events-none"
+          >
+            <img
+              src="https://res.cloudinary.com/dia3qhc0x/image/upload/v1779476732/bouncy-yellow-shopping-bag_rhyypz.png"
+              alt="Shopping Bag"
+              className="w-24 h-24 sm:w-28 sm:h-28 object-contain drop-shadow-[0_10px_15px_rgba(0,0,0,0.4)]"
+            />
           </motion.div>
 
-          <motion.div variants={itemVariants} className="col-span-2 h-full">
-            {user ? (
-              <div className={`h-full bg-gradient-to-br from-[#A388E1] via-[#8c67d6] to-[#6b46c1] rounded-2xl p-2 text-white shadow-[0_8px_20px_rgba(163,136,225,0.4),inset_0_1px_1px_rgba(255,255,255,0.3)] flex flex-col justify-between relative overflow-hidden transition-all duration-700 ${showCelebration ? 'shadow-[0_0_30px_rgba(250,204,21,0.6)] scale-[1.05]' : ''}`}>
-                
-                {/* Continuous Glossy Shimmer Line */}
-                <div className="absolute top-0 left-[-150%] w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-[-25deg] animate-[glare_4s_infinite_ease-in-out] pointer-events-none z-0"></div>
+          {/* Corner Gloss Glare overlay on hover */}
+          <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none z-20"></div>
+        </motion.div>
 
-                <div className="absolute top-1.5 right-1.5 bg-white/20 px-1 py-[1px] rounded text-[7px] font-semibold border border-white/20 backdrop-blur-md shadow-sm tracking-wide z-10 whitespace-nowrap">
-                  ₹1 = 1 Cr
-                </div>
-
-                <div className="relative z-10 flex flex-col justify-end">
-                  {/* --- PREMIUM 3D COIN REPLACEMENT --- */}
-                  <motion.div 
-                    animate={showCelebration ? { rotateY: 360, scale: 1.2 } : { rotateY: 0, scale: 1 }}
-                    transition={{ duration: 0.8, type: "spring" }}
-                    className="mb-1 w-max"
-                  >
-                    <div className="relative w-6 h-6 rounded-full shadow-[0_3px_8px_rgba(217,119,6,0.6),inset_0_-2px_4px_rgba(146,64,14,0.6),inset_0_1px_3px_rgba(255,255,255,0.9)] border border-[#FEF08A] bg-gradient-to-br from-[#FEF08A] via-[#F59E0B] to-[#92400E] flex items-center justify-center overflow-hidden">
-                      {/* Inner Engraving */}
-                      <div className="absolute inset-[2px] rounded-full border-[0.5px] border-[#92400E]/50 bg-gradient-to-tl from-[#FEF08A]/20 via-transparent to-[#D97706]/40 flex items-center justify-center shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)]">
-                        <span className="font-black text-[#78350F] text-[9px] tracking-tighter drop-shadow-[0_1px_1px_rgba(255,255,255,0.7)]">Cr</span>
-                      </div>
-                      {/* Premium Glare sweep inside the coin */}
-                      <div className="absolute top-0 left-[-150%] w-full h-full bg-gradient-to-r from-transparent via-white/60 to-transparent skew-x-[-25deg] animate-[glare_3s_infinite_ease-in-out]"></div>
-                    </div>
-                  </motion.div>
-                  {/* ------------------------------------- */}
-
-                  <div className="flex items-end gap-0.5 mt-0.5">
-                    <span className="text-base font-bold leading-none relative drop-shadow-md">
-                      {user.account_credits || 0}
-                      <AnimatePresence>
-                        {showCelebration && (
-                          <motion.span 
-                            initial={{ opacity: 0, y: 10, scale: 0.5 }}
-                            animate={{ opacity: 1, y: -30, scale: 1.2 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 1.5, ease: "easeOut" }}
-                            className="absolute -top-2 -right-8 text-xs text-yellow-300 font-black drop-shadow-[0_0_10px_rgba(253,224,71,1)] flex items-center z-10"
-                          >
-                            +{bonusSettings.amount} <Sparkles className="w-2.5 h-2.5 ml-0.5 animate-spin" />
-                          </motion.span>
-                        )}
-                      </AnimatePresence>
-                    </span>
-                    <span className="text-[8px] font-medium opacity-90 mb-0.5">credits</span>
-                  </div>
-                </div>
-
-                {shouldShowClaimButton ? (
-                  <motion.button 
-                    whileTap={scaleTap}
-                    onClick={() => claimBonusMutation.mutate()} 
-                    disabled={claimBonusMutation.isPending}
-                    className="bg-gradient-to-r from-[#FFE28A] via-[#FFF0B3] to-[#FFD75E] text-yellow-900 text-[9px] font-extrabold px-1 py-1.5 mt-1.5 rounded-lg flex items-center justify-center gap-0.5 shadow-[0_4px_10px_rgba(0,0,0,0.1),inset_0_1px_1px_rgba(255,255,255,0.8)] transition hover:brightness-105 z-10 whitespace-nowrap disabled:opacity-80 relative overflow-hidden"
-                  >
-                    {/* Sharp Glass Sweep inside Button */}
-                    <motion.div 
-                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/70 to-transparent skew-x-[-20deg]"
-                      animate={{ x: ["-150%", "250%"] }}
-                      transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-                    />
-                    <span className="relative z-10 drop-shadow-sm">{claimBonusMutation.isPending ? 'Claiming...' : `Claim ${bonusSettings.amount}`}</span>
-                    <Gift className="w-2.5 h-2.5 relative z-10 drop-shadow-sm" />
-                  </motion.button>
-                ) : (
-                  <Link to="/wallet" className="block relative z-10">
-                    <motion.div whileTap={scaleTap} className="bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white text-[9px] font-bold px-1 py-1.5 mt-1.5 rounded-lg flex items-center justify-center gap-0.5 shadow-sm transition-colors whitespace-nowrap overflow-hidden relative">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-[-20deg] animate-[glare_3s_infinite_ease-in-out]"></div>
-                      <span className="relative z-10">Earn More</span> <ChevronRight className="w-2.5 h-2.5 relative z-10" />
-                    </motion.div>
-                  </Link>
-                )}
-              </div>
-            ) : (
-              <div className="h-full bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-2 text-white shadow-[0_8px_20px_rgba(0,0,0,0.2),inset_0_1px_1px_rgba(255,255,255,0.1)] flex flex-col justify-between relative overflow-hidden">
-                <div className="absolute top-0 left-[-150%] w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-[-25deg] animate-[glare_5s_infinite_ease-in-out] pointer-events-none"></div>
-                <div className="relative z-10">
-                  <UserCircle className="w-4 h-4 text-gray-400 opacity-80 mb-0.5" />
-                  <h3 className="text-[10px] font-bold leading-tight">Join</h3>
-                </div>
-                <div className="flex flex-col gap-1 mt-1 relative z-10">
-                  <Link to="/login">
-                    <motion.div whileTap={scaleTap} className="bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 text-white text-center text-[9px] font-bold py-1 rounded-md shadow-sm transition-colors">
-                      Login
-                    </motion.div>
-                  </Link>
-                  <Link to="/signup">
-                    <motion.div whileTap={scaleTap} className="bg-gradient-to-r from-[#A388E1] to-[#805ad5] text-white text-center text-[9px] font-bold py-1 rounded-md shadow-[0_2px_8px_rgba(163,136,225,0.4)]">
-                      Join
-                    </motion.div>
-                  </Link>
-                </div>
-              </div>
-            )}
-          </motion.div>
-        </div>
 
         {/* --- Offers Section --- */}
         {loadingOffers ? (
@@ -421,8 +350,8 @@ const HomePage = ({ user, setUser }) => {
 
       </div>
 
-      {/* *** MODIFIED: Updated Categories Section for fluid pill design *** */}
-      {/* --- Categories Section --- */}
+
+      
       <motion.div variants={itemVariants} className="px-4 pt-1.5 pb-0 relative z-10">
         <div className="flex gap-2.5 overflow-x-auto hide-scrollbar items-center pb-3 pt-1">
           {/* ALL Category */}
@@ -454,8 +383,6 @@ const HomePage = ({ user, setUser }) => {
             <>
               {categories
                 .filter((cat) => {
-                  // Changed: Ensure we only show categories that have items. 
-                  // Checks itemCount, itemsCount, count, or totalItems. If undefined, falls back to true to avoid breaking if backend doesn't support counting yet.
                   const count = cat.itemCount ?? cat.itemsCount ?? cat.count ?? cat.totalItems;
                   if (count !== undefined) return count > 0;
                   return true;
@@ -511,6 +438,7 @@ const HomePage = ({ user, setUser }) => {
         </div>
       </motion.div>
 
+
       {/* --- Items Listing Section --- */}
       <motion.div variants={itemVariants} className="px-4 pt-1.5 pb-0 relative z-10">
         <div className="flex justify-between items-center mb-2">
@@ -553,6 +481,7 @@ const HomePage = ({ user, setUser }) => {
         )}
       </motion.div>
 
+
       {/* --- Call to Action Section --- */}
       <motion.div variants={itemVariants} className="px-4 pt-1 pb-1 relative z-10">
         <motion.div 
@@ -588,6 +517,7 @@ const HomePage = ({ user, setUser }) => {
           </motion.div>
         </motion.div>
       </motion.div>
+
 
       {/* --- Social Proof Footer --- */}
       <motion.div variants={itemVariants} className="px-4 pb-6 pt-3 relative z-10">
@@ -631,6 +561,7 @@ const HomePage = ({ user, setUser }) => {
           </div>
         </div>
       </motion.div>
+
 
       {/* --- Celebration Particle Effect (CSS driven for perf on mobile) --- */}
       {showCelebration && (
