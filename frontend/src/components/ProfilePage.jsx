@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { LogOut, User, Mail, Phone, MapPin, Calendar, Package, RefreshCw, Camera, Loader2, Coins, ChevronRight, ClipboardList, Archive, Tag, Heart, Wallet, Bell, HelpCircle, Edit2, X, Home, Hash, Truck, Shield, Star, Trash2, Settings } from 'lucide-react'; 
+// MODIFIED: Added LayoutList, ShoppingBag, ArrowLeftRight, Trophy, and Headset
+import { LogOut, User, Mail, Phone, MapPin, Calendar, Package, RefreshCw, Camera, Loader2, Coins, ChevronRight, ClipboardList, Archive, Tag, Heart, Wallet, Bell, HelpCircle, Edit2, X, Home, Hash, Truck, Shield, Star, Trash2, Settings, LayoutList, ShoppingBag, ArrowLeftRight, Trophy, Headset } from 'lucide-react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'; 
@@ -189,28 +190,29 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
   }
   const ordersBadge = userStats?.activeOrders > 0 ? `${userStats.activeOrders} Active` : null;
 
+ // MODIFIED: Updated icons and unified the color scheme to match the primary theme
   const menuGroups = [
     {
       title: "My Activity",
       items: [
-        { to: "/dashboard", icon: ClipboardList, title: "My Listings", subtitle: "Manage your items", badge: "Active", color: "bg-blue-100 text-blue-600" },
-        { to: "/orders", icon: Archive, title: "My Orders", subtitle: "Past transactions", badge: ordersBadge, color: "bg-teal-100 text-teal-600" },
-        { to: "/swaps", icon: RefreshCw, title: "My Swaps", subtitle: swapsSubtitle, badge: swapsBadge, color: "bg-indigo-100 text-indigo-600" },
-        { to: "/wishlist", icon: Heart, title: "Wishlist", subtitle: "Saved Items", color: "bg-rose-100 text-rose-600" },
+        { to: "/dashboard", icon: LayoutList, title: "My Listings", subtitle: "Manage your items", badge: "Active", color: "bg-[#f3f0ff] text-[#6B46C1]" },
+        { to: "/orders", icon: ShoppingBag, title: "My Orders", subtitle: "Past transactions", badge: ordersBadge, color: "bg-[#f3f0ff] text-[#6B46C1]" },
+        { to: "/swaps", icon: ArrowLeftRight, title: "My Swaps", subtitle: swapsSubtitle, badge: swapsBadge, color: "bg-[#f3f0ff] text-[#6B46C1]" },
+        { to: "/wishlist", icon: Heart, title: "Wishlist", subtitle: "Saved Items", color: "bg-[#f3f0ff] text-[#6B46C1]" },
       ]
     },
     {
       title: "Rewards & Payments",
       items: [
-        { to: "/offers", icon: Tag, title: "Play & Earn", subtitle: "Complete events for credits", color: "bg-orange-100 text-orange-600" },
-        { to: "/wallet", icon: Wallet, title: "My Wallet", subtitle: "Credit Balance & Purchases", color: "bg-emerald-100 text-emerald-600" },
+        { to: "/offers", icon: Trophy, title: "Play & Earn", subtitle: "Complete events for credits", color: "bg-[#f3f0ff] text-[#6B46C1]" },
+        { to: "/wallet", icon: Wallet, title: "My Wallet", subtitle: "Credit Balance & Purchases", color: "bg-[#f3f0ff] text-[#6B46C1]" },
       ]
     },
     {
       title: "Preferences",
       items: [
-        { to: "/notifications", icon: Bell, title: "Notifications", subtitle: "Alert Settings", color: "bg-purple-100 text-purple-600" },     
-        { to: "/help-support", icon: HelpCircle, title: "Help & Support", subtitle: "Get Assistance", color: "bg-gray-100 text-gray-600" }
+        { to: "/notifications", icon: Bell, title: "Notifications", subtitle: "Alert Settings", color: "bg-[#f3f0ff] text-[#6B46C1]" },      
+        { to: "/help-support", icon: Headset, title: "Help & Support", subtitle: "Get Assistance", color: "bg-[#f3f0ff] text-[#6B46C1]" }
       ]
     }
   ];
