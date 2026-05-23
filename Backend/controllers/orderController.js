@@ -521,8 +521,23 @@ const dispatchOrder = async (req, res) => {
     }
 
     if (order.orderType === 'barter' && order.barterRequestRef) {
+        
+        // --- CHANGED START ---
+        const lockedOrder = await Order.findOneAndUpdate(
+            { _id: order._id, isReadyToDispatch: { $ne: true } },
+            { $set: { isReadyToDispatch: true } },
+            { new: true }
+        );
+
+        if (!lockedOrder) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Dispatch is already in progress for this order.' 
+            });
+        }
+        
         order.isReadyToDispatch = true;
-        await order.save();
+        // --- CHANGED END ---
 
         const partnerOrder = await Order.findOne({
             barterRequestRef: order.barterRequestRef,

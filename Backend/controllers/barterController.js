@@ -246,15 +246,10 @@ const deleteBarterRequest = async (req, res) => {
 const updateSwapStatus = async (req, res) => {
   try {
     const { id } = req.params;
-  
     const { status, shippingAddress, paymentDetails, rejectionReason } = req.body; 
     
-    const VALID_STATUSES = ['ACCEPTED', 'REJECTED'];
-    if (!VALID_STATUSES.includes(status)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: `Invalid status "${status}". Allowed values: ACCEPTED, REJECTED.` 
-      });
+    if (!['ACCEPTED', 'REJECTED'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status value' });
     }
   
     const userId = req.user._id;
@@ -277,6 +272,14 @@ const updateSwapStatus = async (req, res) => {
     }
 
     if (status === 'ACCEPTED') {
+      // NEW CHANGE: Check if both items are still active before allowing the acceptance
+      if (barter.item.status !== 'active' || barter.offered_item.status !== 'active') {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Sorry, one of the items in this swap has just been reserved by someone else.' 
+        });
+      }
+
       if (!shippingAddress || !shippingAddress.fullName || !shippingAddress.phone || !shippingAddress.houseNo || !shippingAddress.areaStreet || !shippingAddress.city || !shippingAddress.state || !shippingAddress.pincode) {
         return res.status(400).json({ 
           success: false, 
@@ -288,7 +291,6 @@ const updateSwapStatus = async (req, res) => {
         return res.status(400).json({ success: false, message: 'Shipping payment details missing' });
       }
 
-    
       let setting = await CreditSetting.findOne();
       let finalShippingCost = 60; // Default fallback
 
@@ -323,7 +325,6 @@ const updateSwapStatus = async (req, res) => {
         return res.status(400).json({ success: false, message: 'Invalid payment signature. Shipping verification failed.' });
       }
 
-  
       const paymentCheck = await fetchRazorpayPaymentInfo(rzpPaymentId);
       if (!paymentCheck.success) {
         return res.status(400).json({ success: false, message: 'Failed to verify payment details with Razorpay.' });
@@ -332,8 +333,7 @@ const updateSwapStatus = async (req, res) => {
       if (actualPaidINR < finalShippingCost) {
         return res.status(400).json({ success: false, message: `Payment manipulation detected. Expected ₹${finalShippingCost} but received ₹${actualPaidINR}.` });
       }
-    
-
+      
       await Transaction.create({
         user: userId,
         amount: finalShippingCost, 
@@ -344,6 +344,12 @@ const updateSwapStatus = async (req, res) => {
         transactionType: 'shipping_fee'
       });
 
+      // NEW CHANGE: Reserve the items immediately so no one else can accept them
+      await Item.updateMany(
+        { _id: { $in: [barter.item._id, barter.offered_item._id] } },
+        { status: 'reserved' }
+      );
+
       barter.ownerShippingAddress = shippingAddress;
       barter.ownerShippingCost = finalShippingCost;
       barter.owner_razorpay_order_id = rzpOrderId;
@@ -353,7 +359,6 @@ const updateSwapStatus = async (req, res) => {
       barter.status = 'AWAITING_PAYMENT';
       barter.expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); 
 
-      
       queueNotification({
         user: barter.requester._id,
         type: 'TRADE_ALERT',
@@ -753,7 +758,8 @@ const autoCancelIncompleteDispatches = async () => {
             status: 'ACCEPTED',
             $or: [
                 { first_dispatch_at: { $lte: threshold } },
-                { first_dispatch_at: null, updated_at: { $lte: threshold } }
+                { first_dispatch_at: null, updated_at: { $lte: threshold } },
+                { first_dispatch_at: { $exists: false }, updated_at: { $lte: threshold } }
             ]
         }).populate('owner requester item offered_item');
 
