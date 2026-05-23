@@ -1,21 +1,46 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+
 import { useNavigate } from 'react-router-dom';
+
 import {
   X, Plus, ChevronLeft, Gift, Image as ImageIcon,
   Sparkles, Wand2, Scale, Box, MapPin, Home, Hash,
   Loader2, ChevronDown, Check, AlertCircle
 } from 'lucide-react';
+
 import axios from 'axios';
+
 import Cropper from 'react-easy-crop';
+
 import { toast } from 'react-toastify';
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
 import imageCompression from 'browser-image-compression';
+
 import { motion, AnimatePresence } from 'framer-motion';
+
+
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
-// ─── Cloudinary URL optimizer ────────────────────────────────────────────────
+
+// ─── Indian States List ───────────────────────────────────────────────────────
+const INDIAN_STATES = [
+  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
+  'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand',
+  'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur',
+  'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab',
+  'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura',
+  'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
+  // Union Territories
+  'Andaman and Nicobar Islands', 'Chandigarh',
+  'Dadra and Nagar Haveli and Daman and Diu', 'Delhi', 'Jammu and Kashmir',
+  'Ladakh', 'Lakshadweep', 'Puducherry'
+];
+
+
 export const getOptimizedCloudinaryUrl = (url) => {
   if (!url || typeof url !== 'string' || !url.includes('cloudinary.com') || url.includes('q_auto')) {
     return url;
@@ -23,7 +48,7 @@ export const getOptimizedCloudinaryUrl = (url) => {
   return url.replace('/upload/', '/upload/q_auto,f_auto,w_800/');
 };
 
-// ─── Canvas helpers ───────────────────────────────────────────────────────────
+
 const createImage = (url) =>
   new Promise((resolve, reject) => {
     const image = new Image();
@@ -62,6 +87,138 @@ const getCroppedImg = async (imageSrc, pixelCrop) => {
     }, 'image/jpeg', 0.9);
   });
 };
+
+
+// ─── State Autocomplete Input ─────────────────────────────────────────────────
+const StateAutocompleteInput = ({ value, onChange }) => {
+  const [suggestions, setSuggestions] = useState([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const containerRef = useRef(null);
+  const inputRef = useRef(null);
+
+  // Filter states based on input
+  const getFilteredStates = (query) => {
+    if (!query.trim()) return [];
+    const q = query.toLowerCase();
+    return INDIAN_STATES.filter(state =>
+      state.toLowerCase().startsWith(q) ||
+      state.toLowerCase().includes(q)
+    ).slice(0, 6);
+  };
+
+  const handleChange = (e) => {
+    const val = e.target.value;
+    onChange(val);
+    const filtered = getFilteredStates(val);
+    setSuggestions(filtered);
+    setIsOpen(filtered.length > 0);
+    setActiveIndex(-1);
+  };
+
+  const handleSelect = (state) => {
+    onChange(state);
+    setSuggestions([]);
+    setIsOpen(false);
+    setActiveIndex(-1);
+    inputRef.current?.blur();
+  };
+
+  const handleKeyDown = (e) => {
+    if (!isOpen) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIndex(prev => Math.min(prev + 1, suggestions.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIndex(prev => Math.max(prev - 1, 0));
+    } else if (e.key === 'Enter' && activeIndex >= 0) {
+      e.preventDefault();
+      handleSelect(suggestions[activeIndex]);
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
+      setActiveIndex(-1);
+    }
+  };
+
+  // Close on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Highlight matching part of text
+  const highlightMatch = (text, query) => {
+    if (!query.trim()) return text;
+    const idx = text.toLowerCase().indexOf(query.toLowerCase());
+    if (idx === -1) return text;
+    return (
+      <>
+        {text.slice(0, idx)}
+        <span className="font-black text-[#6B46C1]">{text.slice(idx, idx + query.length)}</span>
+        {text.slice(idx + query.length)}
+      </>
+    );
+  };
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <MapPin className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-400 pointer-events-none z-10" />
+      <input
+        ref={inputRef}
+        type="text"
+        placeholder="State"
+        required
+        value={value}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        onFocus={() => {
+          if (value.trim()) {
+            const filtered = getFilteredStates(value);
+            setSuggestions(filtered);
+            setIsOpen(filtered.length > 0);
+          }
+        }}
+        autoComplete="off"
+        className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-10 pr-3 py-3 text-sm focus:border-[#6B46C1] focus:bg-white outline-none transition-all font-medium text-gray-800"
+      />
+
+      <AnimatePresence>
+        {isOpen && suggestions.length > 0 && (
+          <motion.ul
+            initial={{ opacity: 0, y: 6, scale: 0.97 }}
+            animate={{ opacity: 1, y: 2, scale: 1 }}
+            exit={{ opacity: 0, y: 6, scale: 0.97 }}
+            transition={{ duration: 0.15, ease: 'easeOut' }}
+            className="absolute z-[200] left-0 right-0 mt-1 bg-white border border-purple-100 rounded-2xl shadow-[0_8px_30px_rgba(107,70,193,0.15)] overflow-hidden py-1"
+          >
+            {suggestions.map((state, idx) => (
+              <li
+                key={state}
+                onMouseDown={(e) => { e.preventDefault(); handleSelect(state); }}
+                onMouseEnter={() => setActiveIndex(idx)}
+                className={`px-4 py-2.5 text-sm cursor-pointer flex items-center gap-2.5 transition-colors select-none ${
+                  idx === activeIndex
+                    ? 'bg-purple-50 text-[#6B46C1]'
+                    : 'text-gray-700 hover:bg-purple-50 hover:text-[#6B46C1]'
+                }`}
+              >
+                <MapPin className="w-3.5 h-3.5 shrink-0 text-purple-300" />
+                <span>{highlightMatch(state, value)}</span>
+              </li>
+            ))}
+          </motion.ul>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
 
 // ─── Custom Dropdown ──────────────────────────────────────────────────────────
 const CustomDropdown = ({ label, options, value, onChange, placeholder, icon: Icon, disabled, hasError }) => {
@@ -138,7 +295,8 @@ const CustomDropdown = ({ label, options, value, onChange, placeholder, icon: Ic
   );
 };
 
-// ─── Shimmer skeleton ─────────────────────────────────────────────────────────
+
+// ─── Shimmer Loading ──────────────────────────────────────────────────────────
 const ShimmerLoading = () => (
   <div className="min-h-screen bg-[#f4f2f9] md:py-10 flex justify-center font-sans">
     <div className="w-full max-w-xl bg-[#fcfbff] md:rounded-[2.5rem] shadow-2xl flex flex-col relative overflow-hidden">
@@ -180,6 +338,7 @@ const ShimmerLoading = () => (
     </div>
   </div>
 );
+
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const AddItemPage = ({ user, setUser }) => {
@@ -366,11 +525,11 @@ const AddItemPage = ({ user, setUser }) => {
       let croppedImageBlob = await getCroppedImg(imageToCrop, croppedAreaPixels);
 
       try {
-        croppedImageBlob = await imageCompression(croppedImageBlob, { 
-          maxSizeMB: 0.8, 
-          maxWidthOrHeight: 1920, 
+        croppedImageBlob = await imageCompression(croppedImageBlob, {
+          maxSizeMB: 0.8,
+          maxWidthOrHeight: 1920,
           useWebWorker: true,
-          fileType: 'image/jpeg' 
+          fileType: 'image/jpeg'
         });
       } catch (error) {
         console.warn("Compression failed, using original cropped blob", error);
@@ -742,18 +901,26 @@ const AddItemPage = ({ user, setUser }) => {
                         </div>
                       ))}
 
+                      {/* City + State row — State uses autocomplete */}
                       <div className="grid grid-cols-2 gap-3">
-                        {['city', 'state'].map(key => (
+                        {/* City — plain input */}
+                        <div className="relative">
+                          <MapPin className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-400 pointer-events-none" />
                           <input
-                            key={key}
                             type="text"
-                            placeholder={key.charAt(0).toUpperCase() + key.slice(1)}
+                            placeholder="City"
                             required
-                            value={addressForm[key]}
-                            onChange={(e) => setAddressForm(prev => ({ ...prev, [key]: e.target.value }))}
-                            className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-[#6B46C1] focus:bg-white outline-none transition-all font-medium text-gray-800"
+                            value={addressForm.city}
+                            onChange={(e) => setAddressForm(prev => ({ ...prev, city: e.target.value }))}
+                            className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl pl-10 pr-3 py-3 text-sm focus:border-[#6B46C1] focus:bg-white outline-none transition-all font-medium text-gray-800"
                           />
-                        ))}
+                        </div>
+
+                        {/* State — autocomplete */}
+                        <StateAutocompleteInput
+                          value={addressForm.state}
+                          onChange={(val) => setAddressForm(prev => ({ ...prev, state: val }))}
+                        />
                       </div>
 
                       <div className="relative">
