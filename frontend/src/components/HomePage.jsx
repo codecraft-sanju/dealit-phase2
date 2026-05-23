@@ -259,47 +259,76 @@ const HomePage = ({ user, setUser }) => {
       {/* Background Ambient Glows */}
       <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-purple-100/40 to-transparent pointer-events-none"></div>
 
-      <div className="px-4 pt-3 pb-0 relative z-10">
+    <div className="px-4 pt-0 pb-0 relative z-10">
         
-      {/* --- Hero Banner Section --- */}
-        <motion.div 
-          variants={itemVariants}
-          className="mb-3 bg-[#0B1021] border border-blue-900/40 shadow-[0_8px_20px_rgba(0,0,0,0.15)] rounded-2xl p-5 flex flex-col justify-center relative overflow-hidden group"
-        >
-          {/* Deep Blue & Dark Slate Gradient Background */}
-          <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-950 to-[#0B1021] opacity-90 z-0"></div>
-          
-          {/* Subtle floating blue and cyan glows */}
-          <div className="absolute -top-10 -right-10 w-48 h-48 bg-blue-500/20 rounded-full blur-3xl group-hover:bg-blue-400/30 transition-colors duration-500 z-0"></div>
-          <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-cyan-600/10 rounded-full blur-2xl z-0"></div>
-
-          {/* Text Content - Changed pr-20 to pr-14 to reduce the gap with the image */}
-          <div className="relative z-10 pr-14 sm:pr-16">
-            <h1 className="text-[16px] sm:text-[18px] md:text-[24px] font-extrabold text-white leading-tight mb-2 tracking-tight drop-shadow-md">
-              Sell what you don't use<br/>
-              Get what you <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">actually want</span>
-            </h1>
-            <p className="text-[11px] sm:text-[12px] md:text-sm text-blue-200/80 font-medium leading-snug">
-              Sell your stuff &rarr; Earn credits &rarr; Buy anything.
-            </p>
-          </div>
-
-          {/* Shopping Bag Image — Pulled closer to the left and slightly enlarged */}
-          <motion.div
-            animate={{ y: [0, -6, 0], rotate: [0, 3, -3, 0] }}
-            transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
-            className="absolute right-2 sm:right-4 bottom-[-5px] z-10 pointer-events-none"
-          >
-            <img
-              src="https://res.cloudinary.com/dia3qhc0x/image/upload/v1779476732/bouncy-yellow-shopping-bag_rhyypz.png"
-              alt="Shopping Bag"
-              className="w-24 h-24 sm:w-28 sm:h-28 object-contain drop-shadow-[0_10px_15px_rgba(0,0,0,0.4)]"
+    {/* --- Hero Banner Section --- */}
+      <motion.div 
+        variants={itemVariants}
+        className="mb-3 bg-[#0B1021] border-y md:border border-blue-900/40 shadow-[0_8px_20px_rgba(0,0,0,0.15)] rounded-none md:rounded-b-2xl md:rounded-t-none -mx-4 md:mx-0 p-5 flex flex-col justify-center relative overflow-hidden group"
+      >
+        {/* Deep Blue & Dark Slate Gradient Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-950 to-[#0B1021] opacity-90 z-0"></div>
+        
+        {/* CHANGED: Added Floating Ambient Particles */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+          {[...Array(20)].map((_, i) => (
+            <motion.div
+              key={`particle-${i}`}
+              className="absolute rounded-full bg-cyan-300"
+              style={{
+                width: Math.random() * 3 + 1 + 'px',
+                height: Math.random() * 3 + 1 + 'px',
+                left: Math.random() * 100 + '%',
+                top: Math.random() * 100 + '%',
+              }}
+              animate={{
+                y: [0, -40, 0],
+                x: [0, Math.random() * 20 - 10, 0],
+                opacity: [0, 0.5, 0],
+                scale: [1, 1.5, 1],
+              }}
+              transition={{
+                duration: Math.random() * 5 + 4,
+                repeat: Infinity,
+                ease: "easeInOut",
+                delay: Math.random() * 2,
+              }}
             />
-          </motion.div>
+          ))}
+        </div>
+        {/* END CHANGED */}
 
-          {/* Corner Gloss Glare overlay on hover */}
-          <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none z-20"></div>
+        {/* Subtle floating blue and cyan glows */}
+        <div className="absolute -top-10 -right-10 w-48 h-48 bg-blue-500/20 rounded-full blur-3xl group-hover:bg-blue-400/30 transition-colors duration-500 z-0"></div>
+        <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-cyan-600/10 rounded-full blur-2xl z-0"></div>
+
+        {/* Text Content */}
+        <div className="relative z-10 pr-14 sm:pr-16">
+          <h1 className="text-[16px] sm:text-[18px] md:text-[24px] font-extrabold text-white leading-tight mb-2 tracking-tight drop-shadow-md">
+            Sell what you don't use<br/>
+            Get what you <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">actually want</span>
+          </h1>
+          <p className="text-[11px] sm:text-[12px] md:text-sm text-blue-200/80 font-medium leading-snug">
+            Sell your stuff &rarr; Earn credits &rarr; Buy anything.
+          </p>
+        </div>
+
+        {/* Shopping Bag Image */}
+        <motion.div
+          animate={{ y: [0, -6, 0], rotate: [0, 3, -3, 0] }}
+          transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+          className="absolute right-2 sm:right-4 bottom-[-5px] z-10 pointer-events-none"
+        >
+          <img
+            src="https://res.cloudinary.com/dia3qhc0x/image/upload/v1779476732/bouncy-yellow-shopping-bag_rhyypz.png"
+            alt="Shopping Bag"
+            className="w-24 h-24 sm:w-28 sm:h-28 object-contain drop-shadow-[0_10px_15px_rgba(0,0,0,0.4)]"
+          />
         </motion.div>
+
+        {/* Corner Gloss Glare overlay on hover */}
+        <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none z-20"></div>
+      </motion.div>
 
 
         {/* --- Offers Section --- */}
