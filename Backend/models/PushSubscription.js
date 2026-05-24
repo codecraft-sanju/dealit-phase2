@@ -6,11 +6,7 @@ const pushSubscriptionSchema = new mongoose.Schema({
     ref: 'User', 
     required: true 
   },
-  type: { 
-    type: String, 
-    enum: ['web', 'expo'], 
-    default: 'web' // NEW: Added type to differentiate mobile and web tokens
-  },
+
   endpoint: { 
     type: String,
     required: true 

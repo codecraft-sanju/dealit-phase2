@@ -17,7 +17,6 @@ const getUserNotifications = async (req, res) => {
       .limit(limit)
       .lean();
 
-  
     const user = await User.findById(req.user._id).select('unreadNotificationsCount');
 
     res.status(200).json({
@@ -37,7 +36,6 @@ const getUserNotifications = async (req, res) => {
 
 const markAsRead = async (req, res) => {
   try {
-
     const notification = await Notification.findOneAndUpdate(
       { _id: req.params.id, user: req.user._id, isRead: false },
       { isRead: true },
@@ -48,7 +46,6 @@ const markAsRead = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Notification not found or already read' });
     }
 
-  
     const user = await User.findById(req.user._id);
     if (user && user.unreadNotificationsCount > 0) {
       user.unreadNotificationsCount -= 1;
@@ -69,7 +66,6 @@ const markAllAsRead = async (req, res) => {
       { isRead: true }
     );
 
- 
     await User.findByIdAndUpdate(req.user._id, {
       unreadNotificationsCount: 0
     });
@@ -83,13 +79,12 @@ const markAllAsRead = async (req, res) => {
 
 const subscribePush = async (req, res) => {
   try {
-    const { endpoint, keys, expirationTime, type = 'web' } = req.body;
+    const { endpoint, keys, expirationTime } = req.body;
     
     await PushSubscription.findOneAndUpdate(
       { endpoint: endpoint },
       { 
         user: req.user._id,
-        type: type, // Save the token type to the database
         endpoint: endpoint,
         keys: keys,
         expirationTime: expirationTime
