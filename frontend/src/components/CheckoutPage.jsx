@@ -10,6 +10,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
+// --> MODIFICATION START: Added list of Indian States for the dropdown
+const INDIAN_STATES = [
+  "Andaman and Nicobar Islands", "Andhra Pradesh", "Arunachal Pradesh", "Assam", 
+  "Bihar", "Chandigarh", "Chhattisgarh", "Dadra and Nagar Haveli and Daman and Diu", 
+  "Delhi", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jammu and Kashmir", 
+  "Jharkhand", "Karnataka", "Kerala", "Ladakh", "Lakshadweep", "Madhya Pradesh", 
+  "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", 
+  "Puducherry", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", 
+  "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal"
+];
+// --> MODIFICATION END
+
 const loadRazorpayScript = () => {
   return new Promise((resolve) => {
     const script = document.createElement('script');
@@ -19,7 +31,6 @@ const loadRazorpayScript = () => {
     document.body.appendChild(script);
   });
 };
-
 
 const calculateFrontendFees = (base) => {
   const platformFee = parseFloat((base * 0.02).toFixed(2));
@@ -31,7 +42,6 @@ const calculateFrontendFees = (base) => {
     totalShippingCost: base + platformFee + gstAmount
   };
 };
-
 
 const CheckoutPage = ({ user, setUser }) => {
   const { itemId } = useParams();
@@ -49,11 +59,8 @@ const CheckoutPage = ({ user, setUser }) => {
   
   const [autoCancelHours, setAutoCancelHours] = useState(24);
 
-
   const [currentStep, setCurrentStep] = useState(1);
   
-
-
   const savedAddresses = user?.savedAddresses || [];
   const [selectedAddressIndex, setSelectedAddressIndex] = useState(savedAddresses.length > 0 ? 0 : -1);
 
@@ -67,6 +74,11 @@ const CheckoutPage = ({ user, setUser }) => {
     state: user?.state || '',
     pincode: user?.pincode || ''
   });
+
+  // --> MODIFICATION START: Added states for handling the dropdown logic
+  const [filteredStates, setFilteredStates] = useState(INDIAN_STATES);
+  const [showStateDropdown, setShowStateDropdown] = useState(false);
+  // --> MODIFICATION END
 
   const [error, setError] = useState('');
 
@@ -184,14 +196,34 @@ const CheckoutPage = ({ user, setUser }) => {
   }, [formData.pincode, itemId]);
 
   const handleInputChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    // --> MODIFICATION START: Added logic to filter states as the user types
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+
+    if (name === 'state') {
+      const filtered = INDIAN_STATES.filter(stateName =>
+        stateName.toLowerCase().startsWith(value.toLowerCase()) || 
+        stateName.toLowerCase().includes(value.toLowerCase())
+      );
+      setFilteredStates(filtered);
+      setShowStateDropdown(true);
+    }
+
     if (selectedAddressIndex !== -1) {
       setSelectedAddressIndex(-1);
     }
-    // --> MODIFICATION START: Clear error when user types to re-enable button
+    
     if (error) setError('');
     // --> MODIFICATION END
   };
+
+  // --> MODIFICATION START: Handler to select a state from the dropdown
+  const handleStateSelect = (stateName) => {
+    setFormData({ ...formData, state: stateName });
+    setShowStateDropdown(false);
+    if (error) setError('');
+  };
+  // --> MODIFICATION END
 
   // --> MODIFICATION START
   const handleContinueToSummary = () => {
@@ -436,7 +468,7 @@ const CheckoutPage = ({ user, setUser }) => {
   if (!item) return <div className="min-h-screen bg-[#f4f2f9] text-gray-900 p-10 text-center font-bold">Item not found.</div>;
 
   return (
-   
+    
     <div className="min-h-screen bg-[#f4f2f9] pb-24 font-sans relative overflow-x-hidden">
  
       
@@ -447,7 +479,7 @@ const CheckoutPage = ({ user, setUser }) => {
       >
         <div className="max-w-md mx-auto md:max-w-3xl px-5 md:px-8 flex items-center gap-4 text-white">
           <button 
-      
+       
             onClick={() => currentStep === 2 ? setCurrentStep(1) : navigate(-1)} 
          
             className={`p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors backdrop-blur-sm border border-white/10 ${
@@ -460,9 +492,9 @@ const CheckoutPage = ({ user, setUser }) => {
             <h1 className={`font-bold tracking-wide leading-tight transition-all duration-300 ${
               isScrolled ? 'text-xl' : 'text-2xl'
             }`}>
-             
+              
               {currentStep === 1 ? 'Delivery Address' : 'Review & Pay'}
-           
+            
             </h1>
             <p className={`text-purple-200 font-medium transition-all duration-300 overflow-hidden ${
               isScrolled ? 'max-h-0 opacity-0 text-[0px] m-0 p-0' : 'max-h-10 opacity-100 text-sm mt-0.5'
@@ -536,7 +568,7 @@ const CheckoutPage = ({ user, setUser }) => {
                       ))}
                       
                       <div 
-                   
+                    
                         onClick={() => { setSelectedAddressIndex(-1); setError(''); }}
                         
                         className={`relative p-4 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all duration-200 min-h-[90px] ${
@@ -593,8 +625,56 @@ const CheckoutPage = ({ user, setUser }) => {
                       <div className="grid grid-cols-2 gap-4">
                         <input type="text" name="city" placeholder="City" required value={formData.city} onChange={handleInputChange}
                           className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl px-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-gray-800 placeholder-gray-400 font-medium" />
-                        <input type="text" name="state" placeholder="State" required value={formData.state} onChange={handleInputChange}
-                          className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl px-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-gray-800 placeholder-gray-400 font-medium" />
+                        
+                        {/* --> MODIFICATION START: Replaced State input with Autocomplete Dropdown */}
+                        <div className="relative w-full">
+                          <input 
+                            type="text" 
+                            name="state" 
+                            placeholder="State" 
+                            required 
+                            value={formData.state} 
+                            onChange={handleInputChange}
+                            autoComplete="off"
+                            onFocus={(e) => {
+                               if (e.target.value) {
+                                 const filtered = INDIAN_STATES.filter(s => 
+                                   s.toLowerCase().startsWith(e.target.value.toLowerCase()) || 
+                                   s.toLowerCase().includes(e.target.value.toLowerCase())
+                                 );
+                                 setFilteredStates(filtered);
+                               } else {
+                                 setFilteredStates(INDIAN_STATES);
+                               }
+                               setShowStateDropdown(true);
+                            }}
+                            onBlur={() => setTimeout(() => setShowStateDropdown(false), 200)}
+                            className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl px-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-gray-800 placeholder-gray-400 font-medium" 
+                          />
+                          
+                          <AnimatePresence>
+                            {showStateDropdown && filteredStates.length > 0 && (
+                              <motion.ul 
+                                initial={{ opacity: 0, y: -10 }} 
+                                animate={{ opacity: 1, y: 0 }} 
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.2 }}
+                                className="absolute z-50 w-full mt-2 bg-white border border-gray-100 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] max-h-48 overflow-y-auto overflow-x-hidden"
+                              >
+                                {filteredStates.map((stateName) => (
+                                  <li 
+                                    key={stateName} 
+                                    onClick={() => handleStateSelect(stateName)}
+                                    className="px-4 py-3 text-sm text-gray-700 hover:bg-[#f8f6ff] hover:text-[#6B46C1] font-medium cursor-pointer transition-colors border-b border-gray-50 last:border-0"
+                                  >
+                                    {stateName}
+                                  </li>
+                                ))}
+                              </motion.ul>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                        {/* --> MODIFICATION END */}
                       </div>
 
                       <div className="relative">
