@@ -26,6 +26,10 @@ import EditItemModal from '../admin/EditItemModal';
 import EditOrderModal from '../admin/EditOrderModal';
 import RejectItemModal from '../admin/RejectItemModal';
 import ImageCropModal from '../admin/ImageCropModal';
+import ViewAILogModal from '../admin/ViewAILogModal';
+// --> MODIFICATION START
+import ResolveRefundModal from '../admin/ResolveRefundModal';
+// --> MODIFICATION END
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -247,7 +251,7 @@ const AdminPanel = ({ user }) => {
             setCreditSettings({ ...creditSettings, ...response.data.data });
           }
 
-          // CHANGED: Fetch AI Settings
+          
           const aiResponse = await axios.get(`${API_URL}/admin/ai-settings`, { withCredentials: true });
           if (aiResponse.data.success && aiResponse.data.data) {
             setAiSettings(aiResponse.data.data);
@@ -265,7 +269,7 @@ const AdminPanel = ({ user }) => {
           else if (activeTab === 'orders') endpoint = `${API_URL}/admin/orders`; 
           else if (activeTab === 'ai-logs') {
             endpoint = `${API_URL}/admin/ai-logs`;
-            // CHANGED: Fetch AI Stats concurrently
+        
             const statsRes = await axios.get(`${API_URL}/admin/ai-log-stats`, { withCredentials: true });
             if (statsRes.data.success && statsRes.data.data) {
               const statsObj = { pending: 0, cleaned: 0, rejected: 0, trained: 0 };
@@ -653,14 +657,12 @@ const AdminPanel = ({ user }) => {
     e.preventDefault();
     setUpdating(true);
     try {
-      // If saving AI Settings
       if (activeTab === 'settings-ai') {
         const aiResponse = await axios.put(`${API_URL}/admin/ai-settings`, aiSettings, { withCredentials: true });
         if (aiResponse.data.success) {
           toast.success('AI Settings successfully updated! 🤖'); 
         }
       } else {
-        // Saving Credit Settings
         const response = await axios.put(`${API_URL}/admin/credit-settings`, creditSettings, { withCredentials: true });
         if (response.data.success) {
           toast.success('Credit settings successfully updated! 🎉'); 
@@ -683,7 +685,7 @@ const AdminPanel = ({ user }) => {
       
       <ToastContainer theme="dark" position="bottom-right" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick pauseOnFocusLoss draggable pauseOnHover />
 
-      {/* --- Ambient Deep Space Background Glows --- */}
+  
       <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-purple-600/10 rounded-full blur-[140px] pointer-events-none"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] bg-emerald-600/10 rounded-full blur-[140px] pointer-events-none"></div>
 
@@ -695,7 +697,7 @@ const AdminPanel = ({ user }) => {
         .admin-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
       `}} />
 
-      {/* --- IMPORTED SIDEBAR --- */}
+  
       <AdminSidebar 
         user={user}
         isMobileSidebarOpen={isMobileSidebarOpen}
@@ -711,7 +713,7 @@ const AdminPanel = ({ user }) => {
         setDebouncedSearch={setDebouncedSearch}
       />
 
-      {/* --- MAIN CONTENT AREA --- */}
+  
       <main className="flex-1 flex flex-col z-10 overflow-hidden relative w-full">
         
         <header className="px-4 md:px-8 py-4 md:py-6 flex flex-col md:flex-row md:items-center justify-between border-b border-white/5 bg-white/[0.01] backdrop-blur-md shrink-0 gap-4">
@@ -771,7 +773,7 @@ const AdminPanel = ({ user }) => {
               <DashboardOverview data={data} />
             )}
 
-            {/* CHANGED: Passed aiSettings to SettingsPanel */}
+
             {activeTab.startsWith('settings') && !loading && (
               <SettingsPanel 
                 activeTab={activeTab} 
@@ -784,7 +786,7 @@ const AdminPanel = ({ user }) => {
               />
             )}
 
-            {/* ADDED: Top Stats Display for AI Logs */}
+        
             {activeTab === 'ai-logs' && !loading && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 shrink-0 bg-white/[0.01] border-b border-white/5">
                 <div className="bg-blue-500/10 border border-blue-500/20 p-3 md:p-4 rounded-xl shadow-sm">
@@ -829,7 +831,7 @@ const AdminPanel = ({ user }) => {
               <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden">
                 <div className="flex flex-row gap-2 md:gap-4 mb-3 md:mb-4 shrink-0">
                   
-                  {/* Compact Card 1: Net Balance (takes up 2/3 width) */}
+               
                   <div className="flex-[2] relative overflow-hidden bg-gradient-to-br from-emerald-500/10 to-teal-900/30 rounded-xl md:rounded-2xl p-2.5 md:p-4 border border-emerald-500/20 shadow-sm flex flex-col justify-center gap-2 md:gap-3">
                     <div className="flex items-center gap-2 md:gap-3">
                       <div className="bg-emerald-500/20 p-1.5 md:p-2.5 rounded-lg border border-emerald-500/30 shrink-0">
@@ -847,7 +849,7 @@ const AdminPanel = ({ user }) => {
                       <div className="flex-1 min-w-0">
                         <p className="text-[7px] md:text-[9px] text-emerald-400/70 font-bold uppercase tracking-wider mb-0.5 truncate">Total In</p>
                         <p className="text-[10px] sm:text-xs md:text-sm font-bold text-emerald-300 truncate leading-none mb-1">₹{financials.totalRevenue ? financials.totalRevenue.toLocaleString('en-IN') : '0'}</p>
-                        {/* --> MODIFICATION START: Added detailed financial breakdown for transactions tab */}
+                   
                         <div className="flex flex-col gap-0.5">
                           <p className="text-[7px] md:text-[8px] text-gray-400 truncate leading-none"><span className="text-purple-400 font-semibold">Wallet:</span> ₹{financials.walletIncome ? financials.walletIncome.toLocaleString('en-IN') : '0'}</p>
                           <p className="text-[7px] md:text-[8px] text-blue-400 font-semibold mt-1">Shipping Breakdown:</p>
@@ -856,7 +858,7 @@ const AdminPanel = ({ user }) => {
                           <p className="text-[7px] md:text-[8px] text-gray-500 pl-1.5 border-l border-white/10 ml-1 truncate leading-none">GST (18%): ₹{financials.totalGstCollected ? financials.totalGstCollected.toLocaleString('en-IN') : '0'}</p>
                           <p className="text-[7px] md:text-[8px] text-gray-300 pl-1.5 border-l border-white/10 ml-1 mt-0.5 truncate leading-none font-semibold">= Total Ship: ₹{financials.shippingIncome ? financials.shippingIncome.toLocaleString('en-IN') : '0'}</p>
                         </div>
-                        {/* --> MODIFICATION END */}
+         
                       </div>
                       <div className="w-px self-stretch bg-emerald-500/20 shrink-0"></div>
                       <div className="flex-1 min-w-0">
@@ -866,7 +868,7 @@ const AdminPanel = ({ user }) => {
                     </div>
                   </div>
 
-                  {/* Compact Card 2: Transactions Displayed (takes up 1/3 width) */}
+          
                   <div className="flex-[1] relative overflow-hidden bg-white/[0.03] rounded-xl md:rounded-2xl p-2.5 md:p-4 border border-white/10 shadow-sm flex flex-col items-center justify-center text-center shrink-0">
                     <div className="bg-blue-500/10 p-1.5 md:p-2.5 rounded-lg border border-blue-500/20 mb-1.5 md:mb-2">
                       <Activity className="w-4 h-4 md:w-6 md:h-6 text-blue-400" />
@@ -923,7 +925,7 @@ const AdminPanel = ({ user }) => {
                                 ₹{txn.amount}
                               </span>
                               
-                              {/* --> MODIFICATION START: Per-transaction fee breakdown */}
+                       
                               {txn.transactionType === 'shipping_fee' && txn.amount > 0 && (() => {
                                 const base = Number((txn.amount / 1.20).toFixed(2));
                                 const fee = Number((base * 0.02).toFixed(2));
@@ -936,7 +938,7 @@ const AdminPanel = ({ user }) => {
                                   </div>
                                 );
                               })()}
-                              {/* --> MODIFICATION END */}
+                            
 
                             </td>
                             <td className="p-4 md:p-5">
@@ -1056,65 +1058,17 @@ const AdminPanel = ({ user }) => {
         </div>
       </main>
 
-      {/* --- ALL MODALS --- */}
-      
-      {/* Resolve Failed Refund Modal */}
-      {isResolveModalOpen && resolvingOrder && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm transition-opacity">
-          <div className="bg-[#0B0F19]/95 backdrop-blur-3xl w-full max-w-md rounded-2xl md:rounded-3xl border border-red-500/20 shadow-[0_0_50px_rgba(239,68,68,0.15)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
-            <div className="p-4 md:p-5 border-b border-red-500/10 flex justify-between items-center bg-red-500/5">
-              <h2 className="text-base md:text-lg font-black text-red-400 flex items-center gap-2">
-                <RefreshCcw className="w-4 h-4 md:w-5 md:h-5" /> Resolve Failed Refund
-              </h2>
-              <button onClick={() => setIsResolveModalOpen(false)} className="text-gray-400 hover:text-white transition-all bg-white/5 p-2 rounded-full hover:bg-white/10">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            
-            <div className="p-5 md:p-6">
-              <p className="text-xs text-gray-400 mb-5 leading-relaxed">
-                Confirming this will mark the <span className="text-red-400 font-bold">₹{resolvingOrder.shippingCost}</span> shipping refund as resolved. Ensure you have transferred the money to the buyer manually via UPI/Bank.
-              </p>
-              <form id="resolveForm" onSubmit={handleResolveSubmit} className="space-y-4 md:space-y-5">
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Transaction ID (Optional)</label>
-                  <input 
-                    type="text" 
-                    value={resolveForm.transactionId} 
-                    onChange={(e) => setResolveForm({ ...resolveForm, transactionId: e.target.value })} 
-                    className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-white text-xs focus:outline-none focus:border-red-500/50 focus:bg-white/[0.05] transition-all shadow-inner placeholder:text-gray-600 font-mono"
-                    placeholder="e.g. UPI Ref No. 123456789"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Admin Note / Reason</label>
-                  <textarea 
-                    value={resolveForm.adminNote} 
-                    onChange={(e) => setResolveForm({ ...resolveForm, adminNote: e.target.value })} 
-                    rows="3"
-                    className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-white text-xs focus:outline-none focus:border-red-500/50 focus:bg-white/[0.05] transition-all shadow-inner placeholder:text-gray-600 resize-none"
-                    placeholder="e.g. Refunded manually to user's GPay account."
-                  ></textarea>
-                </div>
-              </form>
-            </div>
-            
-            <div className="p-4 md:p-5 border-t border-white/5 bg-white/[0.01] flex justify-end gap-2 md:gap-3">
-              <button type="button" onClick={() => setIsResolveModalOpen(false)} className="px-4 md:px-5 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all">Cancel</button>
-              <button 
-                type="submit" 
-                form="resolveForm" 
-                disabled={updating} 
-                className={`px-5 md:px-6 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center gap-2 ${updating ? 'bg-red-600/30 text-white/50 cursor-not-allowed border-red-500/20' : 'bg-red-600 hover:bg-red-500 text-white shadow-[0_0_15px_rgba(220,38,38,0.3)] border border-red-500/50'}`}
-              >
-                {updating ? 'Resolving...' : 'Confirm Resolution'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* View Rejection Reason Modal */}
+  
+      <ResolveRefundModal
+        isResolveModalOpen={isResolveModalOpen}
+        setIsResolveModalOpen={setIsResolveModalOpen}
+        resolvingOrder={resolvingOrder}
+        handleResolveSubmit={handleResolveSubmit}
+        resolveForm={resolveForm}
+        setResolveForm={setResolveForm}
+        updating={updating}
+      />
+   
       {isRejectionReasonModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm transition-opacity">
           <div className="bg-[#0B0F19]/95 backdrop-blur-3xl w-full max-w-sm rounded-2xl md:rounded-3xl border border-red-500/20 shadow-[0_0_50px_rgba(239,68,68,0.15)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
@@ -1146,74 +1100,12 @@ const AdminPanel = ({ user }) => {
         </div>
       )}
 
-      {/* View AI Training Log Detail Modal */}
-      {isViewAILogModalOpen && viewingAILog && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 py-8 bg-black/60 backdrop-blur-sm transition-opacity">
-          <div className="bg-[#0B0F19]/95 backdrop-blur-3xl w-full max-w-2xl max-h-[90vh] rounded-2xl md:rounded-3xl border border-cyan-500/20 shadow-[0_0_50px_rgba(34,211,238,0.1)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
-            <div className="p-4 md:p-5 border-b border-cyan-500/10 flex justify-between items-center bg-cyan-500/5 shrink-0">
-              <h2 className="text-base md:text-lg font-black text-cyan-400 flex items-center gap-2">
-                <Bot className="w-4 h-4 md:w-5 md:h-5" /> AI Interaction Details
-              </h2>
-              <button onClick={() => setIsViewAILogModalOpen(false)} className="text-gray-400 hover:text-white transition-all bg-white/5 p-2 rounded-full hover:bg-white/10">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            
-            <div className="p-5 md:p-6 overflow-y-auto admin-scroll space-y-6">
-              
-              <div>
-                <p className="text-[10px] font-bold text-gray-500 mb-1.5 uppercase tracking-widest flex items-center gap-1.5">
-                  <User className="w-3 h-3" /> Triggered By
-                </p>
-                <div className="bg-white/[0.02] border border-white/10 rounded-xl p-3 md:p-4 text-xs md:text-sm text-gray-200">
-                  <span className="font-bold">{viewingAILog.user?.full_name || 'Unknown'}</span> ({viewingAILog.user?.email}) 
-                  <span className="text-gray-500 ml-2 text-[10px] md:text-xs">
-                    on {new Date(viewingAILog.created_at).toLocaleString()}
-                  </span>
-                </div>
-              </div>
-
-              <div>
-                <p className="text-[10px] font-bold text-gray-500 mb-1.5 uppercase tracking-widest flex items-center gap-1.5">
-                  <Settings className="w-3 h-3" /> System Prompt Context
-                </p>
-                <div className="bg-gray-900/50 border border-white/10 rounded-xl p-3 md:p-4 text-xs text-gray-400 whitespace-pre-wrap font-mono">
-                  {viewingAILog.system_prompt}
-                </div>
-              </div>
-
-              <div>
-                <p className="text-[10px] font-bold text-blue-400 mb-1.5 uppercase tracking-widest flex items-center gap-1.5">
-                  <MessageSquare className="w-3 h-3" /> User Prompt
-                </p>
-                <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-3 md:p-4 text-sm text-blue-100 whitespace-pre-wrap">
-                  {viewingAILog.user_message}
-                </div>
-              </div>
-
-              <div>
-                <p className="text-[10px] font-bold text-emerald-400 mb-1.5 uppercase tracking-widest flex items-center gap-1.5">
-                  <Bot className="w-3 h-3" /> AI Output / Generation
-                </p>
-                <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-3 md:p-4 text-sm text-emerald-100 whitespace-pre-wrap">
-                  {viewingAILog.ai_response}
-                </div>
-              </div>
-
-            </div>
-            
-            <div className="p-4 md:p-5 border-t border-white/5 bg-white/[0.01] flex justify-end shrink-0">
-              <button 
-                type="button" 
-                onClick={() => setIsViewAILogModalOpen(false)} 
-                className="px-4 md:px-5 py-2 rounded-xl text-xs md:text-sm font-bold bg-white/5 text-gray-300 hover:text-white hover:bg-white/10 transition-all border border-white/10"
-              >
-                Close View
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+   
+      <ViewAILogModal 
+        isViewAILogModalOpen={isViewAILogModalOpen}
+        setIsViewAILogModalOpen={setIsViewAILogModalOpen}
+        viewingAILog={viewingAILog}
+      />
 
       <EditOrderModal 
         isEditOrderModalOpen={isEditOrderModalOpen}
