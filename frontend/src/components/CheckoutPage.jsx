@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
-// --> MODIFICATION START: Added list of Indian States for the dropdown
+
 const INDIAN_STATES = [
   "Andaman and Nicobar Islands", "Andhra Pradesh", "Arunachal Pradesh", "Assam", 
   "Bihar", "Chandigarh", "Chhattisgarh", "Dadra and Nagar Haveli and Daman and Diu", 
@@ -20,7 +20,7 @@ const INDIAN_STATES = [
   "Puducherry", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", 
   "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal"
 ];
-// --> MODIFICATION END
+
 
 const loadRazorpayScript = () => {
   return new Promise((resolve) => {
@@ -75,10 +75,9 @@ const CheckoutPage = ({ user, setUser }) => {
     pincode: user?.pincode || ''
   });
 
-  // --> MODIFICATION START: Added states for handling the dropdown logic
   const [filteredStates, setFilteredStates] = useState(INDIAN_STATES);
   const [showStateDropdown, setShowStateDropdown] = useState(false);
-  // --> MODIFICATION END
+
 
   const [error, setError] = useState('');
 
@@ -106,12 +105,12 @@ const CheckoutPage = ({ user, setUser }) => {
 
         const settingsRes = await axios.get(`${API_URL}/admin/public-settings`);
         if (settingsRes.data.success) {
-          // --> MODIFICATION START: Calculate initial breakdown for flat rate
+        
           const baseRate = settingsRes.data.data.flatShippingCost !== undefined ? settingsRes.data.data.flatShippingCost : 60;
           const fees = calculateFrontendFees(baseRate);
           setShippingCost(fees.totalShippingCost);
           setFeeBreakdown(fees);
-          // --> MODIFICATION END
+ 
           
           if (settingsRes.data.data.autoCancelHours) {
             setAutoCancelHours(settingsRes.data.data.autoCancelHours);
@@ -128,7 +127,7 @@ const CheckoutPage = ({ user, setUser }) => {
     fetchCheckoutData();
   }, [itemId]);
 
-  // Effect to auto-fill form when a saved address is selected
+ 
   useEffect(() => {
     if (selectedAddressIndex >= 0 && savedAddresses[selectedAddressIndex]) {
       const addr = savedAddresses[selectedAddressIndex];
@@ -143,7 +142,7 @@ const CheckoutPage = ({ user, setUser }) => {
         pincode: addr.pincode || ''
       });
     } else if (selectedAddressIndex === -1) {
-      // Clear form for new address
+
       setFormData({
         fullName: user?.full_name || '',
         phone: user?.phone || '',
@@ -157,7 +156,7 @@ const CheckoutPage = ({ user, setUser }) => {
     }
   }, [selectedAddressIndex]);
 
-  // Calculate Shipping Cost
+
   useEffect(() => {
     const fetchDynamicShippingCost = async () => {
       if (formData.pincode && formData.pincode.length >= 6) {
@@ -171,17 +170,17 @@ const CheckoutPage = ({ user, setUser }) => {
           
           if (res.data.success) {
             setShippingCost(res.data.shippingCost);
-            // --> MODIFICATION START: Set fee breakdown from backend response
+       
             setFeeBreakdown(res.data.feeBreakdown);
-            // --> MODIFICATION END
+  
           }
         } catch (err) {
           console.error('Error calculating dynamic shipping:', err);
           setError(err.response?.data?.message || 'Failed to calculate shipping. Please check address or contact support.');
-          // --> MODIFICATION START: Set to null instead of 0 on error
+ 
           setShippingCost(null);
           setFeeBreakdown(null);
-          // --> MODIFICATION END
+
         } finally {
           setIsCalculatingShipping(false);
         }
@@ -196,7 +195,7 @@ const CheckoutPage = ({ user, setUser }) => {
   }, [formData.pincode, itemId]);
 
   const handleInputChange = (e) => {
-    // --> MODIFICATION START: Added logic to filter states as the user types
+
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
 
@@ -214,18 +213,18 @@ const CheckoutPage = ({ user, setUser }) => {
     }
     
     if (error) setError('');
-    // --> MODIFICATION END
+   
   };
 
-  // --> MODIFICATION START: Handler to select a state from the dropdown
+
   const handleStateSelect = (stateName) => {
     setFormData({ ...formData, state: stateName });
     setShowStateDropdown(false);
     if (error) setError('');
   };
-  // --> MODIFICATION END
+  
 
-  // --> MODIFICATION START
+
   const handleContinueToSummary = () => {
     if (selectedAddressIndex === -1) {
       if (!formData.fullName || !formData.phone || !formData.houseNo || !formData.areaStreet || !formData.city || !formData.state || !formData.pincode) {
@@ -245,7 +244,7 @@ const CheckoutPage = ({ user, setUser }) => {
     setCurrentStep(2);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-  // --> MODIFICATION END
+ 
 
   const itemPrice = item?.estimated_value || 0;
   const hasEnoughCredits = user?.account_credits >= itemPrice;
@@ -355,7 +354,7 @@ const CheckoutPage = ({ user, setUser }) => {
     }
   };
 
-  // --> MODIFICATION START
+
   const stepVariants = {
     hidden: { opacity: 0, x: 20 },
     visible: { 
@@ -365,7 +364,7 @@ const CheckoutPage = ({ user, setUser }) => {
     },
     exit: { opacity: 0, x: -20, transition: { duration: 0.2 } }
   };
-  // --> MODIFICATION END
+
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -384,7 +383,7 @@ const CheckoutPage = ({ user, setUser }) => {
     }
   };
 
-  // --> MODIFICATION START: Replaced basic spinner with modern shimmer skeleton loader
+ 
   if (loading) return (
     <div className="min-h-screen bg-[#f4f2f9] pb-10 font-sans relative overflow-x-hidden">
       
@@ -403,7 +402,7 @@ const CheckoutPage = ({ user, setUser }) => {
       <div className="max-w-md mx-auto md:max-w-3xl px-5 md:px-8 pt-28 relative z-20">
         <div className="grid grid-cols-1 gap-4 md:gap-6">
           
-          {/* Item Card Skeleton */}
+        
           <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm flex items-center gap-4 animate-pulse">
             <div className="w-20 h-20 bg-gray-200 rounded-[1.2rem] shrink-0"></div>
             <div className="flex-1 space-y-3">
@@ -415,7 +414,7 @@ const CheckoutPage = ({ user, setUser }) => {
 
           <div className="space-y-4 md:space-y-6">
             
-            {/* Form Details Skeleton */}
+         
             <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm space-y-5 animate-pulse">
               <div className="flex items-center gap-3 border-b border-gray-50 pb-4">
                 <div className="w-10 h-10 bg-gray-200 rounded-xl"></div>
@@ -432,7 +431,7 @@ const CheckoutPage = ({ user, setUser }) => {
               </div>
             </div>
 
-            {/* Bill Summary Skeleton */}
+         
             <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm animate-pulse">
               <div className="flex items-center gap-3 border-b border-gray-50 pb-4 mb-4">
                 <div className="w-10 h-10 bg-gray-200 rounded-xl"></div>
@@ -463,7 +462,7 @@ const CheckoutPage = ({ user, setUser }) => {
       </div>
     </div>
   );
-  // --> MODIFICATION END
+
 
   if (!item) return <div className="min-h-screen bg-[#f4f2f9] text-gray-900 p-10 text-center font-bold">Item not found.</div>;
 
@@ -499,7 +498,7 @@ const CheckoutPage = ({ user, setUser }) => {
             <p className={`text-purple-200 font-medium transition-all duration-300 overflow-hidden ${
               isScrolled ? 'max-h-0 opacity-0 text-[0px] m-0 p-0' : 'max-h-10 opacity-100 text-sm mt-0.5'
             }`}>
-              {/* --> MODIFICATION START: Update subtitle based on step */}
+           
               {currentStep === 1 ? 'Step 1 of 2' : 'Step 2 of 2'}
        
             </p>
@@ -516,10 +515,10 @@ const CheckoutPage = ({ user, setUser }) => {
 
       <div className="max-w-md mx-auto md:max-w-3xl px-5 md:px-8 pt-28 relative z-20">
         
-        {/* --> MODIFICATION START: Added AnimatePresence to handle step transitions */}
+     
         <AnimatePresence mode="wait">
           
-          {/* STEP 1: Address Selection */}
+     
           {currentStep === 1 && (
             <motion.div 
               key="step1"
@@ -545,7 +544,7 @@ const CheckoutPage = ({ user, setUser }) => {
                       {savedAddresses.map((addr, idx) => (
                         <div 
                           key={idx}
-                          // --> MODIFICATION START: Clear error on address change
+                     
                           onClick={() => { setSelectedAddressIndex(idx); setError(''); }}
               
                           className={`relative p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 ${
@@ -674,7 +673,7 @@ const CheckoutPage = ({ user, setUser }) => {
                             )}
                           </AnimatePresence>
                         </div>
-                        {/* --> MODIFICATION END */}
+                     
                       </div>
 
                       <div className="relative">
@@ -697,7 +696,7 @@ const CheckoutPage = ({ user, setUser }) => {
                 )}
               </div>
 
-              {/* Fixed Bottom Action Bar for Step 1 */}
+            
               <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] z-40 md:relative md:bg-transparent md:border-none md:shadow-none md:p-0">
                 <div className="max-w-md mx-auto md:max-w-3xl">
                   <motion.button 
@@ -714,7 +713,7 @@ const CheckoutPage = ({ user, setUser }) => {
             </motion.div>
           )}
 
-          {/* STEP 2: Summary & Payment */}
+        
           {currentStep === 2 && (
             <motion.div 
               key="step2"
@@ -742,7 +741,7 @@ const CheckoutPage = ({ user, setUser }) => {
                 </div>
               </div>
 
-              {/* Delivery Address Snapshot */}
+       
               <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3">
                   <div className="bg-[#EBE5F7] p-2 rounded-xl text-[#6B46C1] shrink-0 mt-1">
@@ -774,7 +773,7 @@ const CheckoutPage = ({ user, setUser }) => {
                     </span>
                   </div>
 
-                  {/* --> MODIFICATION START: Added detailed fee breakdown */}
+                
                   {shippingCost > 0 && feeBreakdown && !isCalculatingShipping && !error && (
                     <>
                       <div className="flex justify-between items-center text-gray-500 mt-2">
@@ -802,7 +801,7 @@ const CheckoutPage = ({ user, setUser }) => {
 
                   <div className="border-t border-gray-100 pt-4 mt-2 flex justify-between items-center text-lg">
                     <span className="font-bold text-gray-900">Total to Pay</span>
-                    {/* --> MODIFICATION START: Show failed if there is an error */}
+                  
                     <span className="font-black text-[#6B46C1]">
                       {isCalculatingShipping ? '...' : error ? 'Failed' : shippingCost === 0 ? 'FREE' : `₹ ${shippingCost}`}
                     </span>
@@ -852,17 +851,17 @@ const CheckoutPage = ({ user, setUser }) => {
 
               </div>
 
-              {/* Fixed Bottom Action Bar for Step 2 */}
-              <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] z-40 md:relative md:bg-transparent md:border-none md:shadow-none md:p-0">
+            
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] z-40 md:relative md:bg-transparent md:border-none md:shadow-none md:p-0">
                 <div className="max-w-md mx-auto md:max-w-3xl">
                   {hasEnoughCredits ? (
                     <motion.button 
-                      // --> MODIFICATION START: Disable button and animations if there's an error
+                    
                       whileHover={!error ? { scale: 1.01 } : {}}
                       whileTap={!error ? { scale: 0.98 } : {}}
                       onClick={handlePlaceOrder} 
                       disabled={processing || isCalculatingShipping || !!error}
-                      className={`w-full text-white font-bold text-lg py-4 rounded-xl transition-all disabled:opacity-70 disabled:cursor-not-allowed ${
+                      className={`w-full mb-16 text-white font-bold text-lg py-4 rounded-xl transition-all disabled:opacity-70 disabled:cursor-not-allowed ${
                         error 
                           ? 'bg-gray-400 shadow-none' 
                           : 'bg-[#6B46C1] hover:bg-[#5a3aa3] shadow-md shadow-[#6B46C1]/20'
@@ -870,17 +869,17 @@ const CheckoutPage = ({ user, setUser }) => {
                     >
                       {processing ? (
                         <span className="flex items-center justify-center gap-2">
-                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                          <div className="w-5 h-5  border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                           Processing...
                         </span>
                       ) : isCalculatingShipping ? 'Calculating Shipping...' : error ? 'Fix Error to Continue' : shippingCost === 0 ? 'Place Order' : `Pay ₹${shippingCost} & Place Order`}
                     </motion.button>
-                 
+                  
                   ) : (
                     <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
                       <Link 
                         to="/wallet" 
-                        className="w-full bg-[#FFF4D2] hover:bg-[#FFE28A] text-yellow-800 font-bold text-lg py-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm border border-[#FFE28A]/50"
+                        className="w-full mb-16 bg-[#FFF4D2] hover:bg-[#FFE28A] text-yellow-800 font-bold text-lg py-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm border border-[#FFE28A]/50"
                       >
                         <Wallet className="w-5 h-5" /> Get More Credits
                       </Link>
