@@ -14,7 +14,6 @@ const barterRequestSchema = new mongoose.Schema({
   },
   
   message: { type: String },
-
   rejectionReason: { type: String },
 
   requester_accepted: { type: Boolean, default: false },
@@ -39,7 +38,13 @@ const barterRequestSchema = new mongoose.Schema({
     state: { type: String },
     pincode: { type: String }
   },
-  requesterShippingCost: { type: Number, default: 0 },
+  
+  // NEW FIELDS: Requester Shipping Breakdown
+  requesterBaseShippingCost: { type: Number, default: 0 },
+  requesterPlatformFee: { type: Number, default: 0 },
+  requesterGstAmount: { type: Number, default: 0 },
+  requesterShippingCost: { type: Number, default: 0 }, // Total paid by requester
+  
   requester_razorpay_order_id: { type: String },
   requester_razorpay_payment_id: { type: String },
   requesterPaymentStatus: { type: String, enum: ['pending', 'paid', 'refunded'], default: 'pending' },
@@ -63,7 +68,13 @@ const barterRequestSchema = new mongoose.Schema({
     state: { type: String },
     pincode: { type: String }
   },
-  ownerShippingCost: { type: Number, default: 0 },
+  
+  // NEW FIELDS: Owner Shipping Breakdown
+  ownerBaseShippingCost: { type: Number, default: 0 },
+  ownerPlatformFee: { type: Number, default: 0 },
+  ownerGstAmount: { type: Number, default: 0 },
+  ownerShippingCost: { type: Number, default: 0 }, // Total paid by owner
+  
   owner_razorpay_order_id: { type: String },
   owner_razorpay_payment_id: { type: String },
   ownerPaymentStatus: { type: String, enum: ['pending', 'paid', 'refunded'], default: 'pending' },

@@ -20,6 +20,19 @@ const loadRazorpayScript = () => {
   });
 };
 
+// --> MODIFICATION START: Helper to calculate initial fees if using flat rate
+const calculateFrontendFees = (base) => {
+  const platformFee = parseFloat((base * 0.02).toFixed(2));
+  const gstAmount = parseFloat((base * 0.18).toFixed(2));
+  return {
+    baseShipping: base,
+    platformFee,
+    gstAmount,
+    totalShippingCost: base + platformFee + gstAmount
+  };
+};
+// --> MODIFICATION END
+
 const CheckoutPage = ({ user, setUser }) => {
   const { itemId } = useParams();
   const navigate = useNavigate();
@@ -28,6 +41,9 @@ const CheckoutPage = ({ user, setUser }) => {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [shippingCost, setShippingCost] = useState(60); 
+  // --> MODIFICATION START: Added state for fee breakdown
+  const [feeBreakdown, setFeeBreakdown] = useState(null);
+  // --> MODIFICATION END
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   
@@ -74,7 +90,13 @@ const CheckoutPage = ({ user, setUser }) => {
 
         const settingsRes = await axios.get(`${API_URL}/admin/public-settings`);
         if (settingsRes.data.success) {
-          setShippingCost(settingsRes.data.data.flatShippingCost !== undefined ? settingsRes.data.data.flatShippingCost : 60);
+          // --> MODIFICATION START: Calculate initial breakdown for flat rate
+          const baseRate = settingsRes.data.data.flatShippingCost !== undefined ? settingsRes.data.data.flatShippingCost : 60;
+          const fees = calculateFrontendFees(baseRate);
+          setShippingCost(fees.totalShippingCost);
+          setFeeBreakdown(fees);
+          // --> MODIFICATION END
+          
           if (settingsRes.data.data.autoCancelHours) {
             setAutoCancelHours(settingsRes.data.data.autoCancelHours);
           }
@@ -133,12 +155,16 @@ const CheckoutPage = ({ user, setUser }) => {
           
           if (res.data.success) {
             setShippingCost(res.data.shippingCost);
+            // --> MODIFICATION START: Set fee breakdown from backend response
+            setFeeBreakdown(res.data.feeBreakdown);
+            // --> MODIFICATION END
           }
         } catch (err) {
           console.error('Error calculating dynamic shipping:', err);
           setError(err.response?.data?.message || 'Failed to calculate shipping. Please check address or contact support.');
           // --> MODIFICATION START: Set to null instead of 0 on error
           setShippingCost(null);
+          setFeeBreakdown(null);
           // --> MODIFICATION END
         } finally {
           setIsCalculatingShipping(false);
@@ -489,14 +515,33 @@ const CheckoutPage = ({ user, setUser }) => {
                     <Coins className="w-4 h-4 text-yellow-500" /> {itemPrice} Credits
                   </span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span>Shipping Fee {shippingCost > 0 ? '(Pay via Razorpay)' : ''}</span>
-                  {/* --> MODIFICATION START: Show failed if there is an error */}
+
+                {/* --> MODIFICATION START: Added detailed fee breakdown */}
+                {shippingCost > 0 && feeBreakdown && !isCalculatingShipping && !error && (
+                  <>
+                    <div className="flex justify-between items-center text-gray-500 mt-2">
+                      <span>Base Delivery Charge</span>
+                      <span>₹ {feeBreakdown.baseShipping}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-gray-500">
+                      <span>Platform Fee (2%)</span>
+                      <span>₹ {feeBreakdown.platformFee}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-gray-500 pb-2">
+                      <span>GST (18%)</span>
+                      <span>₹ {feeBreakdown.gstAmount}</span>
+                    </div>
+                  </>
+                )}
+
+                <div className="flex justify-between items-center pt-2 border-t border-gray-50">
+                  <span>Total Shipping Fee {shippingCost > 0 ? '(Pay via Razorpay)' : ''}</span>
                   <span className={`flex items-center gap-1 font-bold ${isCalculatingShipping ? 'text-gray-400' : error ? 'text-red-500' : shippingCost === 0 ? 'text-emerald-500' : 'text-gray-900'}`}>
                     {isCalculatingShipping ? 'Calculating...' : error ? 'Failed' : shippingCost === 0 ? 'FREE' : `₹ ${shippingCost}`}
                   </span>
-                  {/* --> MODIFICATION END */}
                 </div>
+                {/* --> MODIFICATION END */}
+
                 <div className="border-t border-gray-100 pt-4 mt-2 flex justify-between items-center text-lg">
                   <span className="font-bold text-gray-900">Total to Pay</span>
                   {/* --> MODIFICATION START: Show failed if there is an error */}

@@ -425,6 +425,17 @@ const OrderDetailsPage = ({ user }) => {
   
   const estimatedInfo = getEstimatedDelivery();
 
+  // FIX: Added formatMoney function
+  const formatMoney = (val) => val ? Number(val).toFixed(2) : '0.00';
+
+  // FIX: Applied formatMoney to all breakdown values
+  const shippingBreakdown = order.baseShippingCost ? {
+    baseShipping: formatMoney(order.baseShippingCost),
+    platformFee: formatMoney(order.platformFee),
+    gstAmount: formatMoney(order.gstAmount),
+    totalShippingCost: formatMoney(order.shippingCost)
+  } : null;
+
   return (
     // ✅ DIV A — outermost wrapper (min-h-screen)
     <div className="min-h-screen bg-[#f4f2f9] pb-24 font-sans relative overflow-x-hidden">

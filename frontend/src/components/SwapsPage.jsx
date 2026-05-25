@@ -4,7 +4,7 @@ import {
   RefreshCw, Check, X, MessageSquare, Package, Eye, AlertCircle, 
   ArrowRightLeft, ChevronLeft, ExternalLink, Truck, Users, MapPin, 
   Home, Hash, Phone, User as UserIcon, Loader2, 
-  Clock, Coins 
+  Clock, Coins, ShoppingBag 
 } from 'lucide-react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -23,6 +23,19 @@ const loadRazorpayScript = () => {
     document.body.appendChild(script);
   });
 };
+
+// --> MODIFICATION START: Helper to calculate initial fees if using flat rate
+const calculateFrontendFees = (base) => {
+  const platformFee = parseFloat((base * 0.02).toFixed(2));
+  const gstAmount = parseFloat((base * 0.18).toFixed(2));
+  return {
+    baseShipping: base,
+    platformFee,
+    gstAmount,
+    totalShippingCost: base + platformFee + gstAmount
+  };
+};
+// --> MODIFICATION END
 
 const REJECT_REASONS = [
   "Item value is too low",
@@ -62,6 +75,9 @@ const SwapsPage = ({ user }) => {
   const savedAddresses = user?.savedAddresses || [];
   const [selectedAddressIndex, setSelectedAddressIndex] = useState(savedAddresses.length > 0 ? 0 : -1);
   const [shippingCost, setShippingCost] = useState(60);
+  // --> MODIFICATION START: Added state for fee breakdown
+  const [feeBreakdown, setFeeBreakdown] = useState(null);
+  // --> MODIFICATION END
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -90,6 +106,13 @@ const SwapsPage = ({ user }) => {
         if (res.data.success) {
           if (res.data.data.autoCancelHours) setAutoCancelHours(res.data.data.autoCancelHours);
           if (res.data.data.auraPenalty !== undefined) setAuraPenalty(res.data.data.auraPenalty);
+          
+          // --> MODIFICATION START: Calculate initial breakdown for flat rate
+          const baseRate = res.data.data.flatShippingCost !== undefined ? res.data.data.flatShippingCost : 60;
+          const fees = calculateFrontendFees(baseRate);
+          setShippingCost(fees.totalShippingCost);
+          setFeeBreakdown(fees);
+          // --> MODIFICATION END
         }
       } catch (err) {
         console.error('Error fetching settings:', err);
@@ -132,10 +155,17 @@ const SwapsPage = ({ user }) => {
           
           if (res.data.success) {
             setShippingCost(res.data.shippingCost);
+            // --> MODIFICATION START: Set fee breakdown from backend response
+            setFeeBreakdown(res.data.feeBreakdown);
+            // --> MODIFICATION END
           }
         } catch (err) {
           console.error('Error calculating dynamic shipping:', err);
           setActionError({ id: 'modal', message: 'Failed to calculate shipping. Check pincode.' });
+          // --> MODIFICATION START: Set to null on error
+          setShippingCost(null);
+          setFeeBreakdown(null);
+          // --> MODIFICATION END
         } finally {
           setIsCalculatingShipping(false);
         }
@@ -804,20 +834,53 @@ const SwapsPage = ({ user }) => {
                     </div>
                   )}
                 </form>
+
+                {/* --> MODIFICATION START: New Fee Summary Box */}
+                <div className="mt-6 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+                  <h3 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    <ShoppingBag className="w-4 h-4 text-[#6B46C1]" /> Fee Summary
+                  </h3>
+                  <div className="space-y-2 text-gray-600 font-medium text-sm">
+                    {feeBreakdown && !isCalculatingShipping && !actionError.id && (
+                      <>
+                        <div className="flex justify-between items-center text-gray-500">
+                          <span>Base Delivery Charge</span>
+                          <span>₹ {feeBreakdown.baseShipping}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-gray-500">
+                          <span>Platform Fee (2%)</span>
+                          <span>₹ {feeBreakdown.platformFee}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-gray-500 pb-2">
+                          <span>GST (18%)</span>
+                          <span>₹ {feeBreakdown.gstAmount}</span>
+                        </div>
+                      </>
+                    )}
+                    <div className="flex justify-between items-center pt-2 border-t border-gray-50 text-gray-900 font-bold">
+                      <span>Total Shipping Fee</span>
+                      <span className={isCalculatingShipping ? 'text-gray-400' : actionError.id ? 'text-red-500' : 'text-[#6B46C1]'}>
+                        {isCalculatingShipping ? 'Calculating...' : actionError.id ? 'Failed' : `₹ ${shippingCost}`}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                {/* --> MODIFICATION END */}
+
               </div>
 
               <div className="p-5 border-t border-slate-100 bg-white">
                 <div className="flex justify-between items-center mb-4">
-                  <span className="font-bold text-gray-600 text-sm">Shipping Fee</span>
+                  <span className="font-bold text-gray-600 text-sm">Total Payable</span>
                   <span className="font-black text-[#6B46C1] text-lg">
-                    {isCalculatingShipping ? <Loader2 className="w-5 h-5 animate-spin" /> : `₹ ${shippingCost}`}
+                    {isCalculatingShipping ? <Loader2 className="w-5 h-5 animate-spin" /> : actionError.id ? 'Failed' : `₹ ${shippingCost}`}
                   </span>
                 </div>
                 <div className="flex gap-3">
              
                   <button 
                     type="submit" form="courier-form"
-                    disabled={processingId === activeSwap?._id || isCalculatingShipping || !hasEnoughCredits}
+                    disabled={processingId === activeSwap?._id || isCalculatingShipping || !hasEnoughCredits || !!actionError.id}
                     className="flex-1 bg-gradient-to-r from-[#6B46C1] to-[#805ad5] text-white rounded-xl font-bold py-3.5 text-[15px] shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none disabled:hover:shadow-none flex justify-center items-center gap-2"
                   >
                     {processingId === activeSwap?._id ? <Loader2 className="w-5 h-5 animate-spin" /> : (!hasEnoughCredits ? 'Insufficient Credits' : 'Pay & Confirm')}

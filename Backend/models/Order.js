@@ -6,7 +6,13 @@ const orderSchema = new mongoose.Schema({
   item: { type: mongoose.Schema.Types.ObjectId, ref: 'Item', required: true },
 
   itemPrice: { type: Number, required: true },      // Credits charged for the item
-  shippingCost: { type: Number, default: 0 },       // Rupees charged for shipping
+  
+  // NEW FIELDS: Shipping Breakdown
+  baseShippingCost: { type: Number, default: 0 },   // Actual delivery charge
+  platformFee: { type: Number, default: 0 },        // 2% of base shipping
+  gstAmount: { type: Number, default: 0 },          // 18% of base shipping
+  shippingCost: { type: Number, default: 0 },       // Total shipping paid (base + platform + GST)
+  
   totalAmount: { type: Number, required: true },    // itemPrice (credits) + shippingCost (rupees) for record
 
   shippingAddress: {
@@ -28,17 +34,14 @@ const orderSchema = new mongoose.Schema({
     state: { type: String, required: true },
     pincode: { type: String, required: true }
   },
-isReadyToDispatch: { type: Boolean, default: false },
+  isReadyToDispatch: { type: Boolean, default: false },
   orderStatus: {
     type: String,
-   
     enum: ['pending', 'processing', 'shipped', 'in_transit', 'delivered', 'cancelled'],
-   
     default: 'pending'
   },
   paymentStatus: {
     type: String,
- 
     enum: ['paid', 'refund_processing', 'refunded', 'refund_failed'], 
     default: 'paid' 
   },
@@ -77,8 +80,6 @@ isReadyToDispatch: { type: Boolean, default: false },
   updated_at: { type: Date, default: Date.now }
 });
 
-
-
 // 1. User App: "My Orders" API ke liye (Instantly load buyer's orders sorted by date)
 orderSchema.index({ buyer: 1, created_at: -1 });
 
@@ -92,15 +93,12 @@ orderSchema.index({ orderStatus: 1, created_at: -1 });
 // 4. Admin Panel: Payment status filter ke liye
 orderSchema.index({ paymentStatus: 1, created_at: -1 });
 
-
 orderSchema.index(
   { 'trackingDetails.awb_code': 1 },
   { partialFilterExpression: { 'trackingDetails.awb_code': { $exists: true, $ne: '' } } }
 );
 
-
 // 6. Razorpay Webhook: Refund process hone par order find karne ke liye
 orderSchema.index({ razorpay_payment_id: 1 });
-
 
 module.exports = mongoose.model('Order', orderSchema);

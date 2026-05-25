@@ -12,6 +12,14 @@ const { checkServiceability, createShiprocketOrder, addPickupLocation, generateA
 const AuraLog = require('../models/AuraLog'); 
 const { refundRazorpayPayment, fetchRazorpayPaymentInfo } = require('./paymentController');
 
+// CHANGES MADE HERE: Helper function to calculate fees
+const calculateFees = (baseShipping) => {
+  const platformFee = parseFloat((baseShipping * 0.02).toFixed(2));
+  const gstAmount = parseFloat((baseShipping * 0.18).toFixed(2));
+  const totalShippingCost = baseShipping + platformFee + gstAmount;
+  return { baseShipping, platformFee, gstAmount, totalShippingCost };
+};
+
 const calculateShippingCost = async (req, res) => {
   try {
     const { itemId, pincode } = req.body;
@@ -20,7 +28,7 @@ const calculateShippingCost = async (req, res) => {
     if (!item) return res.status(404).json({ success: false, message: 'Item not found' });
 
     let setting = await CreditSetting.findOne();
-    let finalCost = 60; // default fallback
+    let baseShipping = 60; // CHANGES MADE HERE: Renamed to baseShipping
 
     if (setting) {
       if (setting.shippingMethod === 'dynamic') {
@@ -30,13 +38,20 @@ const calculateShippingCost = async (req, res) => {
         }
         const weight = item.weight || 0.5;
         const dimensions = item.dimensions || { length: 10, width: 10, height: 10 }; 
-        finalCost = await checkServiceability(pickupPincode, pincode, weight, dimensions);
+        baseShipping = await checkServiceability(pickupPincode, pincode, weight, dimensions);
       } else {
-        finalCost = setting.flatShippingCost !== undefined ? setting.flatShippingCost : 60;
+        baseShipping = setting.flatShippingCost !== undefined ? setting.flatShippingCost : 60;
       }
     }
 
-    res.status(200).json({ success: true, shippingCost: finalCost });
+    // CHANGES MADE HERE: Calculate breakdown and return to frontend
+    const feeDetails = calculateFees(baseShipping);
+
+    res.status(200).json({ 
+      success: true, 
+      shippingCost: feeDetails.totalShippingCost, // The final amount user pays
+      feeBreakdown: feeDetails // Sending the breakdown so frontend can show it nicely
+    });
   } catch (error) {
     console.error('Error calculating shipping:', error);
     res.status(500).json({ success: false, message: error.message || 'Server Error calculating shipping' });
@@ -61,22 +76,26 @@ const createOrder = async (req, res) => {
     }
 
     let setting = await CreditSetting.findOne();
-    let shippingCost = 60; 
+    let baseShipping = 60; // CHANGES MADE HERE: Renamed to baseShipping
 
     if (setting) {
       if (setting.shippingMethod === 'dynamic') {
         const pickupPincode = item.owner.pickupAddress?.pincode;
         const weight = item.weight || 0.5;
         const dimensions = item.dimensions || { length: 10, width: 10, height: 10 };
-        shippingCost = await checkServiceability(pickupPincode, shippingAddress.pincode, weight, dimensions);
+        baseShipping = await checkServiceability(pickupPincode, shippingAddress.pincode, weight, dimensions);
       } else {
-        shippingCost = setting.flatShippingCost !== undefined ? setting.flatShippingCost : 60;
+        baseShipping = setting.flatShippingCost !== undefined ? setting.flatShippingCost : 60;
       }
     }
 
+    // CHANGES MADE HERE: Calculate exact fees
+    const feeDetails = calculateFees(baseShipping);
+    const finalShippingCost = feeDetails.totalShippingCost;
+
     let razorpay_order_id, razorpay_payment_id;
 
-    if (shippingCost > 0) {
+    if (finalShippingCost > 0) {
       if (!paymentDetails || !paymentDetails.razorpay_payment_id) {
         return res.status(400).json({ success: false, message: 'Shipping payment details missing' });
       }
@@ -100,13 +119,15 @@ const createOrder = async (req, res) => {
         return res.status(400).json({ success: false, message: 'Failed to verify payment details with Razorpay.' });
       }
       const actualPaidINR = paymentCheck.data.amount / 100;
-      if (actualPaidINR < shippingCost) {
-        return res.status(400).json({ success: false, message: `Payment manipulation detected. Expected ₹${shippingCost} but received ₹${actualPaidINR}.` });
+      
+      // CHANGES MADE HERE: Check actual payment against new total (Base + Platform + GST)
+      if (actualPaidINR < finalShippingCost) {
+        return res.status(400).json({ success: false, message: `Payment manipulation detected. Expected ₹${finalShippingCost} but received ₹${actualPaidINR}.` });
       }
 
       const newTransaction = new Transaction({
         user: buyerId,
-        amount: shippingCost, 
+        amount: finalShippingCost, // Use final cost here
         razorpay_order_id: razorpay_order_id,
         razorpay_payment_id: razorpay_payment_id,
         razorpay_signature: razorpay_signature,
@@ -156,13 +177,17 @@ const createOrder = async (req, res) => {
     item.status = 'reserved'; 
     await item.save();
 
+    // CHANGES MADE HERE: Save breakdown inside the Order model
     const order = await Order.create({
       buyer: buyerId,
       seller: item.owner._id,
       item: itemId,
       itemPrice: itemPrice,
-      shippingCost: shippingCost,
-      totalAmount: itemPrice + shippingCost, 
+      baseShippingCost: feeDetails.baseShipping,
+      platformFee: feeDetails.platformFee,
+      gstAmount: feeDetails.gstAmount,
+      shippingCost: finalShippingCost, // The full amount paid in rupees
+      totalAmount: itemPrice + finalShippingCost, // Credits + Full Rupees
       shippingAddress: shippingAddress,
       orderStatus: 'pending',
       paymentStatus: 'paid', 

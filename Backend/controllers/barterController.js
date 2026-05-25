@@ -11,6 +11,14 @@ const Transaction = require('../models/Transaction');
 const { refundRazorpayPayment, fetchRazorpayPaymentInfo } = require('./paymentController');
 const { checkServiceability } = require('../utils/shiprocket');
 
+// CHANGES MADE HERE: Added helper function for fee calculation
+const calculateFees = (baseShipping) => {
+  const platformFee = parseFloat((baseShipping * 0.02).toFixed(2));
+  const gstAmount = parseFloat((baseShipping * 0.18).toFixed(2));
+  const totalShippingCost = baseShipping + platformFee + gstAmount;
+  return { baseShipping, platformFee, gstAmount, totalShippingCost };
+};
+
 const createBarterRequest = async (req, res) => {
   try {
     const { requestedItem, offeredItem, receiver, message } = req.body;
@@ -272,7 +280,6 @@ const updateSwapStatus = async (req, res) => {
     }
 
     if (status === 'ACCEPTED') {
-      // NEW CHANGE: Check if both items are still active before allowing the acceptance
       if (barter.item.status !== 'active' || barter.offered_item.status !== 'active') {
         return res.status(400).json({ 
           success: false, 
@@ -292,7 +299,7 @@ const updateSwapStatus = async (req, res) => {
       }
 
       let setting = await CreditSetting.findOne();
-      let finalShippingCost = 60; // Default fallback
+      let baseShipping = 60; // CHANGES MADE HERE: Renamed to baseShipping
 
       if (setting) {
         if (setting.shippingMethod === 'dynamic') {
@@ -305,11 +312,15 @@ const updateSwapStatus = async (req, res) => {
           }
           const weight = barter.offered_item.weight || 0.5;
           const dimensions = barter.offered_item.dimensions || { length: 10, width: 10, height: 10 };
-          finalShippingCost = await checkServiceability(pickupPincode, shippingAddress.pincode, weight, dimensions);
+          baseShipping = await checkServiceability(pickupPincode, shippingAddress.pincode, weight, dimensions);
         } else {
-          finalShippingCost = setting.flatShippingCost !== undefined ? setting.flatShippingCost : 60;
+          baseShipping = setting.flatShippingCost !== undefined ? setting.flatShippingCost : 60;
         }
       }
+
+      // CHANGES MADE HERE: Apply fees and get total
+      const feeDetails = calculateFees(baseShipping);
+      const finalShippingCost = feeDetails.totalShippingCost;
 
       const rzpOrderId = paymentDetails.razorpay_order_id;
       const rzpPaymentId = paymentDetails.razorpay_payment_id;
@@ -330,6 +341,8 @@ const updateSwapStatus = async (req, res) => {
         return res.status(400).json({ success: false, message: 'Failed to verify payment details with Razorpay.' });
       }
       const actualPaidINR = paymentCheck.data.amount / 100;
+      
+      // CHANGES MADE HERE: Check actual payment against the new total (Base + Fees)
       if (actualPaidINR < finalShippingCost) {
         return res.status(400).json({ success: false, message: `Payment manipulation detected. Expected ₹${finalShippingCost} but received ₹${actualPaidINR}.` });
       }
@@ -344,14 +357,18 @@ const updateSwapStatus = async (req, res) => {
         transactionType: 'shipping_fee'
       });
 
-      // NEW CHANGE: Reserve the items immediately so no one else can accept them
       await Item.updateMany(
         { _id: { $in: [barter.item._id, barter.offered_item._id] } },
         { status: 'reserved' }
       );
 
+      // CHANGES MADE HERE: Save breakdown in BarterRequest
       barter.ownerShippingAddress = shippingAddress;
-      barter.ownerShippingCost = finalShippingCost;
+      barter.ownerBaseShippingCost = feeDetails.baseShipping;
+      barter.ownerPlatformFee = feeDetails.platformFee;
+      barter.ownerGstAmount = feeDetails.gstAmount;
+      barter.ownerShippingCost = finalShippingCost; // Total cost paid
+      
       barter.owner_razorpay_order_id = rzpOrderId;
       barter.owner_razorpay_payment_id = rzpPaymentId;
       barter.ownerPaymentStatus = 'paid';
@@ -457,7 +474,7 @@ const completeSwapPayment = async (req, res) => {
     }
 
     let setting = await CreditSetting.findOne();
-    let finalShippingCost = 60; // Default fallback
+    let baseShipping = 60; // CHANGES MADE HERE: Renamed to baseShipping
 
     if (setting) {
       if (setting.shippingMethod === 'dynamic') {
@@ -469,11 +486,15 @@ const completeSwapPayment = async (req, res) => {
         }
         const weight = barter.item.weight || 0.5;
         const dimensions = barter.item.dimensions || { length: 10, width: 10, height: 10 };
-        finalShippingCost = await checkServiceability(pickupPincode, shippingAddress.pincode, weight, dimensions);
+        baseShipping = await checkServiceability(pickupPincode, shippingAddress.pincode, weight, dimensions);
       } else {
-        finalShippingCost = setting.flatShippingCost !== undefined ? setting.flatShippingCost : 60;
+        baseShipping = setting.flatShippingCost !== undefined ? setting.flatShippingCost : 60;
       }
     }
+
+    // CHANGES MADE HERE: Apply fees and get total
+    const feeDetails = calculateFees(baseShipping);
+    const finalShippingCost = feeDetails.totalShippingCost;
 
     const rzpOrderId = paymentDetails.razorpay_order_id;
     const rzpPaymentId = paymentDetails.razorpay_payment_id;
@@ -494,11 +515,12 @@ const completeSwapPayment = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Failed to verify payment details with Razorpay.' });
     }
     const actualPaidINR = paymentCheck.data.amount / 100;
+    
+    // CHANGES MADE HERE: Check actual payment against new total (Base + Fees)
     if (actualPaidINR < finalShippingCost) {
       return res.status(400).json({ success: false, message: `Payment manipulation detected. Expected ₹${finalShippingCost} but received ₹${actualPaidINR}.` });
     }
 
-    // CHANGES MADE HERE: Setup mongoose session using withTransaction
     const session = await mongoose.startSession();
     let ownerDispatchOrder;
     let customError = null;
@@ -524,7 +546,7 @@ const completeSwapPayment = async (req, res) => {
 
           if (!updatedRequester) {
             customError = 'INSUFFICIENT_CREDITS';
-            throw new Error(customError); // This automatically aborts the transaction
+            throw new Error(customError); 
           }
         }
 
@@ -544,6 +566,7 @@ const completeSwapPayment = async (req, res) => {
           { session }
         );
 
+        // CHANGES MADE HERE: Passed the complete fee breakdown to the created orders
         const orders = await Order.create([{
           buyer: barter.requester._id, 
           seller: barter.owner._id, 
@@ -551,8 +574,13 @@ const completeSwapPayment = async (req, res) => {
           orderType: 'barter',
           barterRequestRef: barter._id,
           itemPrice: 0, 
+          
+          baseShippingCost: feeDetails.baseShipping,
+          platformFee: feeDetails.platformFee,
+          gstAmount: feeDetails.gstAmount,
           shippingCost: finalShippingCost,
           totalAmount: finalShippingCost, 
+          
           shippingAddress: shippingAddress,
           orderStatus: 'pending',
           paymentStatus: 'paid', 
@@ -566,8 +594,13 @@ const completeSwapPayment = async (req, res) => {
           orderType: 'barter',
           barterRequestRef: barter._id,
           itemPrice: 0, 
+          
+          baseShippingCost: barter.ownerBaseShippingCost,
+          platformFee: barter.ownerPlatformFee,
+          gstAmount: barter.ownerGstAmount,
           shippingCost: barter.ownerShippingCost,
           totalAmount: barter.ownerShippingCost, 
+          
           shippingAddress: barter.ownerShippingAddress,
           orderStatus: 'pending',
           paymentStatus: 'paid', 
@@ -578,8 +611,13 @@ const completeSwapPayment = async (req, res) => {
 
         ownerDispatchOrder = orders[0];
 
+        // CHANGES MADE HERE: Save requester breakdown in BarterRequest
         barter.requesterShippingAddress = shippingAddress;
-        barter.requesterShippingCost = finalShippingCost;
+        barter.requesterBaseShippingCost = feeDetails.baseShipping;
+        barter.requesterPlatformFee = feeDetails.platformFee;
+        barter.requesterGstAmount = feeDetails.gstAmount;
+        barter.requesterShippingCost = finalShippingCost; // Total cost paid
+        
         barter.requester_razorpay_order_id = rzpOrderId;
         barter.requester_razorpay_payment_id = rzpPaymentId;
         barter.requesterPaymentStatus = 'paid';
@@ -609,13 +647,11 @@ const completeSwapPayment = async (req, res) => {
           message: 'Swap failed. You spent your credits while this was processing. Your shipping fee has been refunded.' 
         });
       }
-      throw dbError; // If it's a real database error, pass it to the main catch block
+      throw dbError; 
     } finally {
-      await session.endSession(); // Ensures the session is always closed
+      await session.endSession(); 
     }
-    // CHANGES END HERE
 
-    // External Notifications out of Transaction
     if (requiredCredits > 0) {
       queueNotification({
         user: barter.requester._id,

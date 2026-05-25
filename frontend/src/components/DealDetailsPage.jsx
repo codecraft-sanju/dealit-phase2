@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { Check, ArrowLeft, MessageSquare, Package, User, ShieldAlert, Phone, Calendar, Copy, Clock, X, AlertCircle } from 'lucide-react';
+import { Check, ArrowLeft, MessageSquare, Package, User, ShieldAlert, Phone, Calendar, Copy, Clock, X, AlertCircle, Truck, Coins, Info } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query'; 
 import { getOptimizedCloudinaryUrl } from './HomePage'; 
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
-// NEW: CountdownTimer for AWAITING_PAYMENT state
+// CountdownTimer for AWAITING_PAYMENT state
 const CountdownTimer = ({ expiresAt }) => {
   const [timeLeft, setTimeLeft] = useState('');
 
@@ -161,6 +161,32 @@ const DealDetailsPage = ({ user }) => {
   const isAccepted = dealStatus === 'ACCEPTED';
   const isAwaitingPayment = dealStatus === 'AWAITING_PAYMENT';
 
+  // --> ADDED: Determine my shipping cost based on role in deal
+  // Backend stores ownerShippingCost and requesterShippingCost (or shippingCost as fallback)
+  const myShippingCost = isRequester
+    ? (deal.requesterShippingCost ?? deal.shippingCost ?? 0)
+    : (deal.ownerShippingCost ?? deal.shippingCost ?? 0);
+
+  const counterpartShippingCost = isRequester
+    ? (deal.ownerShippingCost ?? 0)
+    : (deal.requesterShippingCost ?? 0);
+
+  // FIX: Added formatMoney function
+  const formatMoney = (val) => val ? Number(val).toFixed(2) : '0.00';
+
+  // FIX: Applied formatMoney to all breakdown values
+  const myRawBreakdown = isRequester
+    ? { base: deal.requesterBaseShippingCost, fee: deal.requesterPlatformFee, gst: deal.requesterGstAmount }
+    : { base: deal.ownerBaseShippingCost, fee: deal.ownerPlatformFee, gst: deal.ownerGstAmount };
+
+  const myShippingBreakdown = myRawBreakdown.base ? {
+    baseShipping: formatMoney(myRawBreakdown.base),
+    platformFee: formatMoney(myRawBreakdown.fee),
+    gstAmount: formatMoney(myRawBreakdown.gst),
+    totalShippingCost: formatMoney(myShippingCost)
+  } : null;
+  // --> END FIX
+
   const getStatusConfig = () => {
     switch (dealStatus) {
       case 'ACCEPTED':
@@ -255,7 +281,7 @@ const DealDetailsPage = ({ user }) => {
             {statusDisplay.message}
           </p>
 
-          {/* NEW LOGIC: AWAITING PAYMENT Timer Alert */}
+          {/* AWAITING PAYMENT Timer Alert */}
           {isAwaitingPayment && (
             <div className={`mb-8 ${isRequester ? 'bg-orange-50 border-orange-200' : 'bg-purple-50 border-purple-200'} border p-4 rounded-xl flex items-start justify-center gap-3 shadow-sm`}>
               <Clock className={`w-5 h-5 ${isRequester ? 'text-orange-500' : 'text-purple-500'} shrink-0`} />
@@ -270,6 +296,8 @@ const DealDetailsPage = ({ user }) => {
           )}
 
           <div className="bg-[#fcfbff] rounded-2xl p-5 mb-6 text-left border border-[#f0eaff]">
+
+            {/* Partner Info */}
             <div className="flex items-center gap-3 mb-4 border-b border-gray-100 pb-4">
               <div className="w-12 h-12 bg-[#EBE5F7] rounded-full flex items-center justify-center">
                 {counterpart?.profilePic ? (
@@ -292,6 +320,7 @@ const DealDetailsPage = ({ user }) => {
               )}
             </div>
 
+            {/* Item Cards */}
             <div className="grid grid-cols-2 gap-4 mb-4">
               <Link to={`/item/${counterpartItem?._id}`} className="bg-white border border-gray-100 p-3 rounded-xl shadow-sm flex flex-col hover:border-purple-300 transition-colors group">
                 <p className="text-[10px] text-gray-400 font-bold uppercase mb-2 group-hover:text-purple-500">They are bringing</p>
@@ -318,6 +347,7 @@ const DealDetailsPage = ({ user }) => {
               </Link>
             </div>
 
+            {/* Swap Details & Credits */}
             <div className="bg-white border border-gray-100 p-4 rounded-xl shadow-sm mt-4">
               <h3 className="text-[11px] text-gray-500 font-extrabold uppercase tracking-wider mb-3">Swap Details & Credits</h3>
               <div className="space-y-2 text-sm text-gray-700 font-medium">
@@ -337,7 +367,61 @@ const DealDetailsPage = ({ user }) => {
                 </div>
               </div>
             </div>
-            
+
+            {/* --> ADDED: Shipping Fee Breakdown — shown after deal is accepted or awaiting payment */}
+            {(isAccepted || isAwaitingPayment) && (
+              <div className="bg-white border border-gray-100 p-4 rounded-xl shadow-sm mt-3">
+                <h3 className="text-[11px] text-gray-500 font-extrabold uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <Truck className="w-3.5 h-3.5 text-[#A388E1]" /> Your Shipping Fee Paid
+                </h3>
+
+                {myShippingBreakdown ? (
+                  <div className="space-y-2 text-sm text-gray-600 font-medium">
+                    <div className="flex justify-between items-center text-xs text-gray-500">
+                      <span>Base Delivery Charge</span>
+                      <span>₹ {myShippingBreakdown.baseShipping}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs text-gray-500">
+                      <span>Platform Fee (2%)</span>
+                      <span>₹ {myShippingBreakdown.platformFee}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs text-gray-500 pb-2">
+                      <span>GST (18%)</span>
+                      <span>₹ {myShippingBreakdown.gstAmount}</span>
+                    </div>
+                    <div className="flex justify-between items-center pt-2 border-t border-gray-100 font-bold text-gray-900">
+                      <span>Total Shipping Paid</span>
+                      <span className="text-[#6B46C1]">₹ {myShippingBreakdown.totalShippingCost}</span>
+                    </div>
+
+                    {/* Partner's shipping — only show if accepted and we have the data */}
+                    {isAccepted && counterpartShippingCost > 0 && (
+                      <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between items-center text-xs text-gray-500">
+                        <span className="flex items-center gap-1.5">
+                          <Info className="w-3 h-3 text-gray-400" /> Partner's Shipping Paid
+                        </span>
+                        <span className="font-bold text-gray-700">₹ {formatMoney(counterpartShippingCost)}</span>
+                      </div>
+                    )}
+
+                    <div className="mt-2 pt-2 border-t border-gray-100 flex items-start gap-2">
+                      <Info className="w-3.5 h-3.5 text-[#A388E1] shrink-0 mt-0.5" />
+                      <p className="text-[11px] text-gray-500 leading-snug">
+                        Shipping includes base delivery charge + 2% platform fee + 18% GST. Each party pays their own shipping separately.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-400 font-medium">
+                    {isAwaitingPayment && !isRequester
+                      ? 'Your shipping has been paid. Waiting for partner.'
+                      : 'Shipping fee details will appear once payment is complete.'}
+                  </p>
+                )}
+              </div>
+            )}
+            {/* --> END ADDED */}
+
           </div>
 
           {isAwaitingPayment && isRequester && (
