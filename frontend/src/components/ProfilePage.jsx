@@ -14,7 +14,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
-// ─── CSS Design Tokens (injected once) ──────────────────────────────────────
+
 const GLOBAL_STYLES = `
   :root {
     --r-sm: 12px;
@@ -100,7 +100,7 @@ const GLOBAL_STYLES = `
   }
 `;
 
-// ─── Toast System ─────────────────────────────────────────────────────────────
+
 let _toastSetters = null;
 
 const ToastProvider = () => {
@@ -150,7 +150,7 @@ const toast = {
   info:    (msg, d) => toast._show('info',     msg, d),
 };
 
-// ─── Animation Variants ───────────────────────────────────────────────────────
+
 const pageVariants = {
   hidden: { opacity: 0 },
   show: {
@@ -167,7 +167,7 @@ const itemVariants = {
   }
 };
 
-// ─── Shimmer Skeleton ─────────────────────────────────────────────────────────
+
 const Sk = ({ w = '100%', h = 16, style = {} }) => (
   <div
     className="skeleton-shimmer"
@@ -175,7 +175,7 @@ const Sk = ({ w = '100%', h = 16, style = {} }) => (
   />
 );
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+
 const ProfilePage = ({ user, setUser, onLogout }) => {
   const navigate = useNavigate();
   const [scrollY, setScrollY] = useState(0);
@@ -280,13 +280,13 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    // Optimistic local preview immediately
+   
     const objectUrl = URL.createObjectURL(file);
     setLocalPreview(objectUrl);
     uploadImageMutation.mutate(file);
   };
 
-  // ── Edit Modal ──
+
   const openEditModal = () => {
     setEditForm({
       full_name: profileData?.full_name || '',
@@ -388,20 +388,20 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
     'focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 ' +
     'outline-none transition-all text-sm font-semibold text-gray-800 placeholder:text-gray-400';
 
-  // ─────────────────────────────────────────────────────────────────────────────
+
   return (
     <>
-      {/* Global toast portal */}
+    
       <ToastProvider />
 
-      <div className="min-h-screen bg-[#f2f2f7] pb-28 font-sans relative overflow-x-hidden selection:bg-[#6B46C1]/20">
+      <div className="min-h-screen bg-[#f2f2f7] pb-2 font-sans relative overflow-x-hidden selection:bg-[#6B46C1]/20">
 
-        {/* ── Decorative background ── */}
+      
         <div className="absolute top-0 left-0 w-full h-72 bg-gradient-to-b from-[#6B46C1] via-[#7c52d6] to-transparent z-0 pointer-events-none" />
         <div className="absolute top-10 -left-20 w-80 h-80 bg-[#805ad5] rounded-full mix-blend-multiply filter blur-[100px] opacity-60 z-0 pointer-events-none" />
         <div className="absolute top-20 -right-20 w-80 h-80 bg-[#d53f8c] rounded-full mix-blend-multiply filter blur-[100px] opacity-30 z-0 pointer-events-none" />
 
-        {/* ── Header ── */}
+     
         <header
           style={{ transition: 'var(--transition-smooth)' }}
           className={`fixed top-0 left-0 right-0 z-50 ${

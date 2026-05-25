@@ -63,6 +63,9 @@ const CheckoutPage = ({ user, setUser }) => {
   const [autoCancelHours, setAutoCancelHours] = useState(24);
 
   const [currentStep, setCurrentStep] = useState(1);
+
+  // ✅ NEW: Success modal state
+  const [orderSuccess, setOrderSuccess] = useState(false);
   
   const savedAddresses = user?.savedAddresses || [];
   const [selectedAddressIndex, setSelectedAddressIndex] = useState(savedAddresses.length > 0 ? 0 : -1);
@@ -80,7 +83,6 @@ const CheckoutPage = ({ user, setUser }) => {
 
   const [filteredStates, setFilteredStates] = useState(INDIAN_STATES);
   const [showStateDropdown, setShowStateDropdown] = useState(false);
-
 
   const [error, setError] = useState('');
 
@@ -108,12 +110,10 @@ const CheckoutPage = ({ user, setUser }) => {
 
         const settingsRes = await axios.get(`${API_URL}/admin/public-settings`);
         if (settingsRes.data.success) {
-        
           const baseRate = settingsRes.data.data.flatShippingCost !== undefined ? settingsRes.data.data.flatShippingCost : 60;
           const fees = calculateFrontendFees(baseRate);
           setShippingCost(fees.totalShippingCost);
           setFeeBreakdown(fees);
- 
           
           if (settingsRes.data.data.autoCancelHours) {
             setAutoCancelHours(settingsRes.data.data.autoCancelHours);
@@ -145,7 +145,6 @@ const CheckoutPage = ({ user, setUser }) => {
         pincode: addr.pincode || ''
       });
     } else if (selectedAddressIndex === -1) {
-
       setFormData({
         fullName: user?.full_name || '',
         phone: user?.phone || '',
@@ -173,17 +172,13 @@ const CheckoutPage = ({ user, setUser }) => {
           
           if (res.data.success) {
             setShippingCost(res.data.shippingCost);
-       
             setFeeBreakdown(res.data.feeBreakdown);
-  
           }
         } catch (err) {
           console.error('Error calculating dynamic shipping:', err);
           setError(err.response?.data?.message || 'Failed to calculate shipping. Please check address or contact support.');
- 
           setShippingCost(null);
           setFeeBreakdown(null);
-
         } finally {
           setIsCalculatingShipping(false);
         }
@@ -198,7 +193,6 @@ const CheckoutPage = ({ user, setUser }) => {
   }, [formData.pincode, itemId]);
 
   const handleInputChange = (e) => {
-
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
 
@@ -216,7 +210,6 @@ const CheckoutPage = ({ user, setUser }) => {
     }
     
     if (error) setError('');
-   
   };
 
 
@@ -226,7 +219,6 @@ const CheckoutPage = ({ user, setUser }) => {
     if (error) setError('');
   };
   
-
 
   const handleContinueToSummary = () => {
     if (selectedAddressIndex === -1) {
@@ -275,8 +267,9 @@ const CheckoutPage = ({ user, setUser }) => {
         setUser(updatedUser);
         localStorage.setItem('dealit_user', JSON.stringify(updatedUser));
 
-        alert('Order Placed Successfully! 🎉');
-        navigate('/orders'); 
+        // ✅ SUCCESS MODAL + auto redirect after 2.5s
+        setOrderSuccess(true);
+        setTimeout(() => navigate('/orders'), 2500);
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Order creation failed. Please contact support.');
@@ -368,7 +361,6 @@ const CheckoutPage = ({ user, setUser }) => {
     exit: { opacity: 0, x: -20, transition: { duration: 0.2 } }
   };
 
-
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -405,7 +397,6 @@ const CheckoutPage = ({ user, setUser }) => {
       <div className="max-w-md mx-auto md:max-w-3xl px-5 md:px-8 pt-28 relative z-20">
         <div className="grid grid-cols-1 gap-4 md:gap-6">
           
-        
           <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm flex items-center gap-4 animate-pulse">
             <div className="w-20 h-20 bg-gray-200 rounded-[1.2rem] shrink-0"></div>
             <div className="flex-1 space-y-3">
@@ -417,7 +408,6 @@ const CheckoutPage = ({ user, setUser }) => {
 
           <div className="space-y-4 md:space-y-6">
             
-         
             <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm space-y-5 animate-pulse">
               <div className="flex items-center gap-3 border-b border-gray-50 pb-4">
                 <div className="w-10 h-10 bg-gray-200 rounded-xl"></div>
@@ -434,7 +424,6 @@ const CheckoutPage = ({ user, setUser }) => {
               </div>
             </div>
 
-         
             <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm animate-pulse">
               <div className="flex items-center gap-3 border-b border-gray-50 pb-4 mb-4">
                 <div className="w-10 h-10 bg-gray-200 rounded-xl"></div>
@@ -470,9 +459,81 @@ const CheckoutPage = ({ user, setUser }) => {
   if (!item) return <div className="min-h-screen bg-[#f4f2f9] text-gray-900 p-10 text-center font-bold">Item not found.</div>;
 
   return (
-    
     <div className="min-h-screen bg-[#f4f2f9] pb-24 font-sans relative overflow-x-hidden">
- 
+
+      {/* ✅ ORDER SUCCESS MODAL */}
+      <AnimatePresence>
+        {orderSuccess && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm px-6"
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.8, opacity: 0, y: 20 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+              className="bg-white rounded-3xl p-8 text-center shadow-2xl max-w-sm w-full"
+            >
+              {/* Animated check circle */}
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.15, type: 'spring', stiffness: 400, damping: 20 }}
+                className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-5"
+              >
+                <motion.div
+                  initial={{ scale: 0, rotate: -45 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ delay: 0.25, type: 'spring', stiffness: 400, damping: 18 }}
+                >
+                  <CheckCircle className="w-10 h-10 text-emerald-500" />
+                </motion.div>
+              </motion.div>
+
+              <motion.h2
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="text-2xl font-black text-gray-900 mb-2"
+              >
+                Order Placed! 🎉
+              </motion.h2>
+
+              <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.38 }}
+                className="text-gray-500 font-medium text-sm mb-1"
+              >
+                Your item is confirmed & on its way.
+              </motion.p>
+
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.46 }}
+                className="text-gray-400 text-xs mb-5"
+              >
+                Redirecting to your orders...
+              </motion.p>
+
+              {/* Progress bar */}
+              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: '100%' }}
+                  transition={{ duration: 2.5, ease: 'linear' }}
+                  className="h-full bg-[#6B46C1] rounded-full"
+                />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       
       <header 
         className={`fixed top-0 left-0 right-0 z-50 bg-[#6B46C1] transition-all duration-300 ease-in-out shadow-md ${
@@ -481,9 +542,7 @@ const CheckoutPage = ({ user, setUser }) => {
       >
         <div className="max-w-md mx-auto md:max-w-3xl px-5 md:px-8 flex items-center gap-4 text-white">
           <button 
-       
             onClick={() => currentStep === 2 ? setCurrentStep(1) : navigate(-1)} 
-         
             className={`p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors backdrop-blur-sm border border-white/10 ${
               isScrolled ? 'scale-90' : 'scale-100'
             }`}
@@ -494,16 +553,12 @@ const CheckoutPage = ({ user, setUser }) => {
             <h1 className={`font-bold tracking-wide leading-tight transition-all duration-300 ${
               isScrolled ? 'text-xl' : 'text-2xl'
             }`}>
-              
               {currentStep === 1 ? 'Delivery Address' : 'Review & Pay'}
-            
             </h1>
             <p className={`text-purple-200 font-medium transition-all duration-300 overflow-hidden ${
               isScrolled ? 'max-h-0 opacity-0 text-[0px] m-0 p-0' : 'max-h-10 opacity-100 text-sm mt-0.5'
             }`}>
-           
               {currentStep === 1 ? 'Step 1 of 2' : 'Step 2 of 2'}
-       
             </p>
           </div>
         </div>
@@ -518,10 +573,8 @@ const CheckoutPage = ({ user, setUser }) => {
 
       <div className="max-w-md mx-auto md:max-w-3xl px-5 md:px-8 pt-28 relative z-20">
         
-     
         <AnimatePresence mode="wait">
           
-     
           {currentStep === 1 && (
             <motion.div 
               key="step1"
@@ -547,9 +600,7 @@ const CheckoutPage = ({ user, setUser }) => {
                       {savedAddresses.map((addr, idx) => (
                         <div 
                           key={idx}
-                     
                           onClick={() => { setSelectedAddressIndex(idx); setError(''); }}
-              
                           className={`relative p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 ${
                             selectedAddressIndex === idx 
                               ? 'border-[#6B46C1] bg-[#f8f6ff] shadow-sm' 
@@ -570,9 +621,7 @@ const CheckoutPage = ({ user, setUser }) => {
                       ))}
                       
                       <div 
-                    
                         onClick={() => { setSelectedAddressIndex(-1); setError(''); }}
-                        
                         className={`relative p-4 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all duration-200 min-h-[90px] ${
                           selectedAddressIndex === -1 
                             ? 'border-[#6B46C1] bg-[#f8f6ff] text-[#6B46C1]' 
@@ -628,7 +677,6 @@ const CheckoutPage = ({ user, setUser }) => {
                         <input type="text" name="city" placeholder="City" required value={formData.city} onChange={handleInputChange}
                           className="w-full bg-[#f8f6ff] border border-gray-100 rounded-xl px-4 py-3.5 focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 outline-none transition-all text-gray-800 placeholder-gray-400 font-medium" />
                         
-                        {/* --> MODIFICATION START: Replaced State input with Autocomplete Dropdown */}
                         <div className="relative w-full">
                           <input 
                             type="text" 
@@ -676,7 +724,6 @@ const CheckoutPage = ({ user, setUser }) => {
                             )}
                           </AnimatePresence>
                         </div>
-                     
                       </div>
 
                       <div className="relative">
@@ -744,7 +791,6 @@ const CheckoutPage = ({ user, setUser }) => {
                 </div>
               </div>
 
-       
               <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3">
                   <div className="bg-[#EBE5F7] p-2 rounded-xl text-[#6B46C1] shrink-0 mt-1">
@@ -776,7 +822,6 @@ const CheckoutPage = ({ user, setUser }) => {
                     </span>
                   </div>
 
-                
                   {shippingCost > 0 && feeBreakdown && !isCalculatingShipping && !error && (
                     <>
                       <div className="flex justify-between items-center text-gray-500 mt-2">
@@ -801,14 +846,11 @@ const CheckoutPage = ({ user, setUser }) => {
                     </span>
                   </div>
                   
-
                   <div className="border-t border-gray-100 pt-4 mt-2 flex justify-between items-center text-lg">
                     <span className="font-bold text-gray-900">Total to Pay</span>
-                  
                     <span className="font-black text-[#6B46C1]">
                       {isCalculatingShipping ? '...' : error ? 'Failed' : shippingCost === 0 ? 'FREE' : `₹ ${shippingCost}`}
                     </span>
-              
                   </div>
                 </div>
 
@@ -859,7 +901,6 @@ const CheckoutPage = ({ user, setUser }) => {
                 <div className="max-w-md mx-auto md:max-w-3xl">
                   {hasEnoughCredits ? (
                     <motion.button 
-                    
                       whileHover={!error ? { scale: 1.01 } : {}}
                       whileTap={!error ? { scale: 0.98 } : {}}
                       onClick={handlePlaceOrder} 
@@ -872,7 +913,7 @@ const CheckoutPage = ({ user, setUser }) => {
                     >
                       {processing ? (
                         <span className="flex items-center justify-center gap-2">
-                          <div className="w-5 h-5  border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                           Processing...
                         </span>
                       ) : isCalculatingShipping ? 'Calculating Shipping...' : error ? 'Fix Error to Continue' : shippingCost === 0 ? 'Place Order' : `Pay ₹${shippingCost} & Place Order`}
