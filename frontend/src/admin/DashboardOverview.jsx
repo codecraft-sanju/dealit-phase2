@@ -165,14 +165,10 @@ const DashboardOverview = ({ data }) => {
               </p>
               <p className="text-xs font-bold text-emerald-300 mb-1">₹{financials?.totalRevenue ? financials.totalRevenue.toLocaleString('en-IN') : '0'}</p>
               
-              {/* --> MODIFICATION START: Added detailed financial breakdown for overview tab */}
+              {/* --> MODIFICATION START: Restored to clean look for card height parity */}
               <div className="flex flex-col gap-0.5">
                 <p className="text-[8px] text-gray-400"><span className="text-purple-400 font-semibold">Wallet:</span> ₹{financials?.walletIncome ? financials.walletIncome.toLocaleString('en-IN') : '0'}</p>
-                <p className="text-[8px] text-blue-400 font-semibold mt-1">Shipping Breakdown:</p>
-                <p className="text-[8px] text-gray-500 pl-1.5 border-l border-white/10 ml-1">Base: ₹{financials?.baseShippingIncome ? financials.baseShippingIncome.toLocaleString('en-IN') : '0'}</p>
-                <p className="text-[8px] text-gray-500 pl-1.5 border-l border-white/10 ml-1">Fee (2%): ₹{financials?.totalPlatformFees ? financials.totalPlatformFees.toLocaleString('en-IN') : '0'}</p>
-                <p className="text-[8px] text-gray-500 pl-1.5 border-l border-white/10 ml-1">GST (18%): ₹{financials?.totalGstCollected ? financials.totalGstCollected.toLocaleString('en-IN') : '0'}</p>
-                <p className="text-[8px] text-gray-400 pl-1.5 border-l border-white/10 ml-1 mt-0.5 font-semibold">= Total Ship: ₹{financials?.shippingIncome ? financials.shippingIncome.toLocaleString('en-IN') : '0'}</p>
+                <p className="text-[8px] text-gray-400"><span className="text-blue-400 font-semibold">Ship:</span> ₹{financials?.shippingIncome ? financials.shippingIncome.toLocaleString('en-IN') : '0'}</p>
               </div>
               {/* --> MODIFICATION END */}
 
@@ -232,6 +228,37 @@ const DashboardOverview = ({ data }) => {
           </p>
         </div>
       </div>
+
+      {/* --> MODIFICATION START: Dedicated Shipping & Tax Breakdown Strip */}
+      {financials && financials.shippingIncome > 0 && (
+        <div className="bg-white/[0.02] border border-white/10 rounded-2xl md:rounded-3xl p-4 md:p-5 mb-6 md:mb-8 relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 shadow-lg backdrop-blur-md">
+          <div className="flex items-center gap-3 w-full lg:w-auto">
+            <div className="p-2.5 bg-blue-500/10 rounded-xl border border-blue-500/20 shrink-0">
+              <Package className="w-5 h-5 text-blue-400" />
+            </div>
+            <div>
+              <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-widest">Shipping Revenue Breakdown</p>
+              <h4 className="text-sm md:text-base font-black text-white mt-0.5">Total: ₹{financials.shippingIncome.toLocaleString('en-IN')}</h4>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-3 gap-3 md:gap-6 w-full lg:w-auto mt-2 lg:mt-0">
+            <div className="bg-black/20 rounded-xl p-3 md:p-4 border border-white/5 flex flex-col justify-center">
+              <p className="text-[9px] md:text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-1">Base Price</p>
+              <p className="text-xs md:text-sm font-bold text-gray-200">₹{financials.baseShippingIncome?.toLocaleString('en-IN') || 0}</p>
+            </div>
+            <div className="bg-black/20 rounded-xl p-3 md:p-4 border border-white/5 flex flex-col justify-center">
+              <p className="text-[9px] md:text-[10px] text-purple-400/80 font-bold uppercase tracking-wider mb-1">Fee (2%)</p>
+              <p className="text-xs md:text-sm font-bold text-purple-300">₹{financials.totalPlatformFees?.toLocaleString('en-IN') || 0}</p>
+            </div>
+            <div className="bg-black/20 rounded-xl p-3 md:p-4 border border-white/5 flex flex-col justify-center">
+              <p className="text-[9px] md:text-[10px] text-red-400/80 font-bold uppercase tracking-wider mb-1">GST (18%)</p>
+              <p className="text-xs md:text-sm font-bold text-red-300">₹{financials.totalGstCollected?.toLocaleString('en-IN') || 0}</p>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* --> MODIFICATION END */}
 
       {/* --- Middle Row: Area Chart + Category Donut Chart --- */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8 relative z-10">

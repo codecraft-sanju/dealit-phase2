@@ -922,6 +922,22 @@ const AdminPanel = ({ user }) => {
                               <span className="text-base md:text-lg font-black text-emerald-400 tracking-tight">
                                 ₹{txn.amount}
                               </span>
+                              
+                              {/* --> MODIFICATION START: Per-transaction fee breakdown */}
+                              {txn.transactionType === 'shipping_fee' && txn.amount > 0 && (() => {
+                                const base = Number((txn.amount / 1.20).toFixed(2));
+                                const fee = Number((base * 0.02).toFixed(2));
+                                const gst = Number((txn.amount - base - fee).toFixed(2));
+                                return (
+                                  <div className="mt-1.5 flex flex-col gap-1 border-l-2 border-emerald-500/20 pl-2">
+                                    <span className="text-[8px] text-gray-400 font-medium leading-none">Base: ₹{base}</span>
+                                    <span className="text-[8px] text-gray-400 font-medium leading-none">Fee (2%): ₹{fee}</span>
+                                    <span className="text-[8px] text-gray-400 font-medium leading-none">GST (18%): ₹{gst}</span>
+                                  </div>
+                                );
+                              })()}
+                              {/* --> MODIFICATION END */}
+
                             </td>
                             <td className="p-4 md:p-5">
                               {txn.transactionType === 'shipping_fee' ? (

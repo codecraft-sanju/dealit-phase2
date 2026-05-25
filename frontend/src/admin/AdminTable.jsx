@@ -185,7 +185,29 @@ const AdminTable = ({
                   <>
                     <td className="px-4 md:px-6 py-3 md:py-4">
                       <p className="font-bold text-gray-200 text-xs md:text-sm truncate max-w-[120px] md:max-w-[150px]" title={row.item?.title}>{row.item?.title || 'Unknown Item'}</p>
-                      <p className="text-[9px] md:text-[11px] text-emerald-400 font-bold mt-1">₹{row.totalAmount} Total</p>
+                      
+                      {/* --> MODIFICATION START: Order Shipping Breakdown Display */}
+                      {(() => {
+                        const amount = row.shippingCost || row.totalAmount || 0;
+                        const base = Number((amount / 1.20).toFixed(2));
+                        const fee = Number((base * 0.02).toFixed(2));
+                        const gst = Number((amount - base - fee).toFixed(2));
+                        
+                        return (
+                          <div className="mt-1 flex flex-col gap-1">
+                            <p className="text-[9px] md:text-[11px] text-emerald-400 font-bold leading-none">₹{amount} Total</p>
+                            {amount > 0 && (
+                              <div className="flex flex-col border-l-2 border-emerald-500/20 pl-1.5 ml-0.5 mt-0.5 gap-0.5">
+                                <span className="text-[8px] text-gray-500 leading-none">Base: ₹{base}</span>
+                                <span className="text-[8px] text-gray-500 leading-none">Fee (2%): ₹{fee}</span>
+                                <span className="text-[8px] text-gray-500 leading-none">GST (18%): ₹{gst}</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+                      {/* --> MODIFICATION END */}
+                      
                     </td>
                     <td className="px-4 md:px-6 py-3 md:py-4 hidden md:table-cell">
                       <p className="text-[9px] md:text-[10px] text-gray-400"><span className="font-bold text-blue-400">Buyer:</span> {row.buyer?.full_name}</p>
