@@ -192,7 +192,8 @@ const ItemDetailPage = ({ user }) => {
       }, { withCredentials: true });
       
       setShowModal(false);
-      navigate('/swaps'); 
+      
+     
     } catch (error) {
       console.error('Error Details:', error.response?.data || error);
       

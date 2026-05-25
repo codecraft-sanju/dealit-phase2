@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { X, AlertCircle, Package, Coins, RefreshCw, CheckCircle2 } from 'lucide-react';
-// <-- NAYA CHANGE: framer-motion import kiya animation ke liye -->
+
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { getOptimizedCloudinaryUrl } from '../components/HomePage';
@@ -10,7 +10,7 @@ import ProductCard from '../components/ProductCard';
 const TradeModal = ({
   isOpen,
   onClose,
-  isLoading, // <-- NAYA CHANGE: isLoading prop add kiya loader state handle karne ke liye
+  isLoading, 
   myItems,
   selectedMyItem,
   setSelectedMyItem,
@@ -21,24 +21,24 @@ const TradeModal = ({
   submitting,
   onConfirm
 }) => {
-  // <-- NAYA CHANGE: Purana '!isOpen return null' yahan se hataya aur AnimatePresence ke andar move kiya -->
+ 
   return (
     <AnimatePresence>
       {isOpen && (
         <motion.div 
-          // <-- NAYA CHANGE: Background blur aur fade animation -->
+      
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-[100] flex items-end lg:items-center justify-center bg-slate-900/50 backdrop-blur-sm sm:px-4"
         >
           <motion.div 
-            // <-- NAYA CHANGE: Spring physics ke sath smooth slide aur scale animation -->
+           
             initial={{ y: '100%', opacity: 0.5, scale: 0.95 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: '100%', opacity: 0, scale: 0.95 }}
             transition={{ type: "spring", damping: 25, stiffness: 250 }}
-            // <-- NAYA CHANGE: Height increase ki h-[92vh] for mobile aur lg:h-[88vh] desktop ke liye -->
+           
             className="bg-white w-full max-w-lg rounded-t-[2rem] lg:rounded-[2rem] shadow-2xl overflow-hidden flex flex-col h-[92vh] lg:h-[88vh]"
           >
             
@@ -70,7 +70,7 @@ const TradeModal = ({
                 </div>
               )}
 
-              {/* <-- NAYA CHANGE: Shimmer effect implement kiya loading state ke liye --> */}
+          
               {isLoading ? (
                 <div className="grid grid-cols-2 gap-3 mb-2">
                   {[1, 2, 3, 4].map((index) => (
@@ -95,7 +95,7 @@ const TradeModal = ({
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3 mb-2">
-                  {/* <-- NAYA CHANGE: Trade Summary ko yahan se hatakar bottom fixed footer me move kar diya gaya hai --> */}
+              
                   {myItems?.map(myItem => (
                     <ProductCard
                       key={myItem._id}
@@ -108,7 +108,7 @@ const TradeModal = ({
               )}
             </div>
 
-            {/* <-- NAYA CHANGE: Footer div ko flex-col banaya aur Trade Summary yahan add ki taki wo humesha visible rahe --> */}
+          
             <div className="px-5 pt-4 pb-8 lg:pb-5 border-t border-slate-100 bg-white flex flex-col gap-3 shrink-0 z-10 shadow-[0_-4px_6px_-1px_rgb(0,0,0,0.05)]">
               
               {selectedMyItem && (
