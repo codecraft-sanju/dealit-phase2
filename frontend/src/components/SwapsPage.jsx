@@ -24,18 +24,20 @@ const loadRazorpayScript = () => {
   });
 };
 
-// --> MODIFICATION START: Helper to calculate initial fees if using flat rate
+
 const calculateFrontendFees = (base) => {
   const platformFee = parseFloat((base * 0.02).toFixed(2));
   const gstAmount = parseFloat((base * 0.18).toFixed(2));
+  const totalShippingCost = Math.round(base + platformFee + gstAmount);
+  
   return {
     baseShipping: base,
     platformFee,
     gstAmount,
-    totalShippingCost: base + platformFee + gstAmount
+    totalShippingCost
   };
 };
-// --> MODIFICATION END
+
 
 const REJECT_REASONS = [
   "Item value is too low",

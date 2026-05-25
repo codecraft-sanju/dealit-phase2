@@ -11,13 +11,14 @@ const Transaction = require('../models/Transaction');
 const { refundRazorpayPayment, fetchRazorpayPaymentInfo } = require('./paymentController');
 const { checkServiceability } = require('../utils/shiprocket');
 
-// CHANGES MADE HERE: Added helper function for fee calculation
+
 const calculateFees = (baseShipping) => {
   const platformFee = parseFloat((baseShipping * 0.02).toFixed(2));
   const gstAmount = parseFloat((baseShipping * 0.18).toFixed(2));
-  const totalShippingCost = baseShipping + platformFee + gstAmount;
+  const totalShippingCost = Math.round(baseShipping + platformFee + gstAmount);
   return { baseShipping, platformFee, gstAmount, totalShippingCost };
 };
+
 
 const createBarterRequest = async (req, res) => {
   try {

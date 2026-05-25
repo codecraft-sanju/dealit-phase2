@@ -12,13 +12,15 @@ const { checkServiceability, createShiprocketOrder, addPickupLocation, generateA
 const AuraLog = require('../models/AuraLog'); 
 const { refundRazorpayPayment, fetchRazorpayPaymentInfo } = require('./paymentController');
 
-// CHANGES MADE HERE: Helper function to calculate fees
+
+
 const calculateFees = (baseShipping) => {
   const platformFee = parseFloat((baseShipping * 0.02).toFixed(2));
   const gstAmount = parseFloat((baseShipping * 0.18).toFixed(2));
-  const totalShippingCost = baseShipping + platformFee + gstAmount;
+  const totalShippingCost = Math.round(baseShipping + platformFee + gstAmount);
   return { baseShipping, platformFee, gstAmount, totalShippingCost };
 };
+
 
 const calculateShippingCost = async (req, res) => {
   try {
@@ -28,7 +30,7 @@ const calculateShippingCost = async (req, res) => {
     if (!item) return res.status(404).json({ success: false, message: 'Item not found' });
 
     let setting = await CreditSetting.findOne();
-    let baseShipping = 60; // CHANGES MADE HERE: Renamed to baseShipping
+    let baseShipping = 60; // Renamed to baseShipping
 
     if (setting) {
       if (setting.shippingMethod === 'dynamic') {
