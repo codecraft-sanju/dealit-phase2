@@ -10,9 +10,7 @@ const AuraLog = require('../models/AuraLog');
 const AITrainingLog = require('../models/AITrainingLog');
 const AISetting = require('../models/AISetting');
 
-// CHANGED: Imported queueNotification
 const { queueNotification } = require('../services/queue');
-
 const { refundRazorpayPayment } = require('./paymentController');
 
 const getPendingItems = async (req, res) => {
@@ -25,9 +23,8 @@ const getPendingItems = async (req, res) => {
     let filter = { status: 'pending' };
 
     if (searchQuery) {
-      const searchRegex = new RegExp(searchQuery, 'i'); // 'i' makes it case-insensitive
+      const searchRegex = new RegExp(searchQuery, 'i'); 
       
-      // Find matching users first
       const matchingUsers = await User.find({
         $or: [{ full_name: searchRegex }, { email: searchRegex }]
       }).select('_id');
@@ -68,7 +65,6 @@ const getAllTransactions = async (req, res) => {
     const skip = (page - 1) * limit;
     const searchQuery = req.query.search || '';
 
-    // STRICT FILTER: Only Real Money (Rupees) transactions are allowed
     let filter = {
       transactionType: { $in: ['wallet_recharge', 'shipping_fee', 'shipping_refund'] }
     };
@@ -81,7 +77,6 @@ const getAllTransactions = async (req, res) => {
       }).select('_id');
       const userIds = matchingUsers.map(u => u._id);
 
-      // Combined the search query with the Real Money filter
       filter = {
         $and: [
           { transactionType: { $in: ['wallet_recharge', 'shipping_fee', 'shipping_refund'] } },
@@ -103,7 +98,6 @@ const getAllTransactions = async (req, res) => {
       .skip(skip)
       .limit(limit);
 
-    // In aggregate also, only calculate total for successful Real Money transactions
     const incomeAgg = await Transaction.aggregate([
       { 
         $match: { 
@@ -136,11 +130,24 @@ const getAllTransactions = async (req, res) => {
     const totalRevenue = walletIncome + shippingIncome;
     const netIncome = totalRevenue - totalRefunds;
 
+    // --> MODIFICATION START: Calculate detailed breakdown for Admin Financials
+    // Assuming 2% Platform Fee and 18% GST on Base Shipping (Total = Base * 1.20)
+    const baseShippingIncome = Number((shippingIncome / 1.20).toFixed(2));
+    const totalPlatformFees = Number((baseShippingIncome * 0.02).toFixed(2));
+    // Calculating GST this way ensures it exactly balances the total shipping income without float errors
+    const totalGstCollected = Number((shippingIncome - baseShippingIncome - totalPlatformFees).toFixed(2));
+    // --> MODIFICATION END
+
     res.status(200).json({ 
       success: true, 
       financials: {
         walletIncome: walletIncome,
         shippingIncome: shippingIncome,
+        // --> MODIFICATION START: Exposing breakdown to the Admin response
+        baseShippingIncome: baseShippingIncome,
+        totalPlatformFees: totalPlatformFees,
+        totalGstCollected: totalGstCollected,
+        // --> MODIFICATION END
         totalRevenue: totalRevenue,
         totalRefunds: totalRefunds,
         netIncome: netIncome
@@ -183,14 +190,12 @@ const updateItemStatus = async (req, res) => {
 
     await item.save();
 
-    // BASIC STATUS NOTIFICATION
     if ((status === 'active' && !wasAlreadyActive) || status === 'rejected') {
       const notifTitle = status === 'active' ? 'Item Approved! ✅' : 'Item Rejected ❌';
       const notifMessage = status === 'active' 
         ? `Your item "${item.title}" has been approved and is now live.` 
         : `Your item "${item.title}" has been rejected. Reason: ${item.rejection_reason}`;
       
-      // CHANGED: Replaced await Notification.create with queueNotification and added imageUrl
       queueNotification({
         user: item.owner,
         type: 'SYSTEM',
@@ -200,12 +205,11 @@ const updateItemStatus = async (req, res) => {
       });
     }
 
-    // AURA & SMART CREDIT ASSIGNMENT LOGIC
     if (status === 'active' && !wasAlreadyActive) {
       const user = await User.findById(item.owner);
       
       if (user) {
-        // --- 1. AURA POINTS LOGIC (Admin approve par bhi milega) ---
+
         user.aura_points = (user.aura_points || 0) + 10;
         
         await AuraLog.create({
@@ -215,7 +219,6 @@ const updateItemStatus = async (req, res) => {
           type: "positive"
         });
 
-        // CHANGED: Replaced await Notification.create with queueNotification and added imageUrl
         queueNotification({
           user: user._id,
           type: 'AURA_UPDATE',
@@ -224,7 +227,6 @@ const updateItemStatus = async (req, res) => {
           metadata: { reason: 'item_approved', referenceId: item._id, imageUrl: item.images?.[0] }
         });
 
-        // --- 2. CREDIT SYSTEM LOGIC WITH LIFETIME TRACKER ---
         let setting = await CreditSetting.findOne();
         if (!setting) {
           setting = { isCreditSystemEnabled: true, creditsPerListing: 50, maxListingsRewarded: 3 };
@@ -234,19 +236,16 @@ const updateItemStatus = async (req, res) => {
           let creditsToGive = 0;
           let detailedMessage = '';
 
-          // Admin provided a manual credit amount
           if (awarded_credits !== undefined && awarded_credits !== null && awarded_credits !== '') {
             creditsToGive = Number(awarded_credits);
             detailedMessage = `Admin has manually awarded you ${creditsToGive} credits for your approved item "${item.title}".`;
           } else {
-            // Automated System Logic (Loophole fixed)
             const rewardedCount = user.rewardedListingsCount || 0;
 
             if (rewardedCount < setting.maxListingsRewarded) {
               creditsToGive = setting.creditsPerListing;
               detailedMessage = `You received the standard reward of ${creditsToGive} credits for successfully listing your item "${item.title}".`;
               
-              // Increment lifetime reward counter
               user.rewardedListingsCount = rewardedCount + 1;
             } else {
               creditsToGive = 0;
@@ -254,10 +253,9 @@ const updateItemStatus = async (req, res) => {
             }
           }
 
-          // Apply credits if > 0
           if (creditsToGive > 0) {
             user.account_credits = (user.account_credits || 0) + creditsToGive;
-            // CHANGED: Replaced await Notification.create with queueNotification and added imageUrl
+      
             queueNotification({
               user: item.owner,
               type: 'CREDIT_ADDED',
@@ -266,7 +264,6 @@ const updateItemStatus = async (req, res) => {
               metadata: { referenceId: item._id, amount: creditsToGive, imageUrl: item.images?.[0] }
             });
           } else {
-             // CHANGED: Replaced await Notification.create with queueNotification and added imageUrl
              queueNotification({
               user: item.owner,
               type: 'SYSTEM_ALERT',
@@ -276,8 +273,7 @@ const updateItemStatus = async (req, res) => {
             });
           }
         } else {
-           // Credit system is paused globally
-           // CHANGED: Replaced await Notification.create with queueNotification and added imageUrl
+
            queueNotification({
               user: item.owner,
               type: 'SYSTEM_ALERT',
@@ -287,7 +283,6 @@ const updateItemStatus = async (req, res) => {
             });
         }
         
-        // Save user after all Aura & Credit updates
         await user.save();
       }
     }
@@ -501,7 +496,6 @@ const updateCreditSettings = async (req, res) => {
     
     if (minImagesRequired !== undefined) setting.minImagesRequired = minImagesRequired;
 
-
     if (isDiscountSimulationEnabled !== undefined) setting.isDiscountSimulationEnabled = isDiscountSimulationEnabled;
 
     setting.updated_at = Date.now();
@@ -541,7 +535,7 @@ const getPublicCreditSettings = async (req, res) => {
         auraReward: 50,
         auraPenalty: 50,
         minImagesRequired: 3,
-        isDiscountSimulationEnabled: false // NAYA CHANGE: Default added here
+        isDiscountSimulationEnabled: false 
       };
     }
     res.status(200).json({ success: true, data: setting });
@@ -733,6 +727,12 @@ const getDashboardStats = async (req, res) => {
 
     const totalRevenue = walletIncome + shippingIncome;
     const netIncome = totalRevenue - totalRefunds;
+
+    
+    const baseShippingIncome = Number((shippingIncome / 1.20).toFixed(2));
+    const totalPlatformFees = Number((baseShippingIncome * 0.02).toFixed(2));
+    const totalGstCollected = Number((shippingIncome - baseShippingIncome - totalPlatformFees).toFixed(2));
+  
     
     const filteredCategories = categoryDataRaw.filter(c => c.name);
     const sortedCategories = filteredCategories.sort((a, b) => b.value - a.value);
@@ -753,7 +753,7 @@ const getDashboardStats = async (req, res) => {
         { $match: { 
             status: 'success', 
             created_at: { $gte: sevenDaysAgo },
-            transactionType: { $in: ['wallet_recharge', 'shipping_fee'] } // Graph for positive revenue only
+            transactionType: { $in: ['wallet_recharge', 'shipping_fee'] } 
         } },
         { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$created_at" } }, revenue: { $sum: "$amount" } } }
       ]),
@@ -830,7 +830,12 @@ const getDashboardStats = async (req, res) => {
         orders: { total: totalOrders, delivered: deliveredOrders, pending: pendingOrders, currentMonth: currentMonthOrders },
         financials: {
           walletIncome,
-          shippingIncome,
+          shippingIncome, 
+        
+          baseShippingIncome,
+          totalPlatformFees,
+          totalGstCollected,
+        
           totalRevenue,
           totalRefunds,
           netIncome
@@ -981,7 +986,7 @@ const getAILogs = async (req, res) => {
   }
 };
 
-// NEW: Get current AI settings
+
 const getAISettings = async (req, res) => {
   try {
     let setting = await AISetting.findOne();
@@ -995,10 +1000,10 @@ const getAISettings = async (req, res) => {
   }
 };
 
-// NEW: Update AI settings
+
 const updateAISettings = async (req, res) => {
   try {
-    // CHANGED: Added cleanerInterval and pollingInterval here to extract from request body
+
     const { activeModelId, fallbackModelId, isAutoTrainingEnabled, batchSize, cleanerInterval, pollingInterval } = req.body;
     
     let setting = await AISetting.findOne();
@@ -1010,7 +1015,7 @@ const updateAISettings = async (req, res) => {
     if (fallbackModelId !== undefined) setting.fallbackModelId = fallbackModelId;
     if (isAutoTrainingEnabled !== undefined) setting.isAutoTrainingEnabled = isAutoTrainingEnabled;
     if (batchSize !== undefined) setting.batchSize = batchSize;
-    // CHANGED: Assigned the new intervals to the database record
+  
     if (cleanerInterval !== undefined) setting.cleanerInterval = cleanerInterval;
     if (pollingInterval !== undefined) setting.pollingInterval = pollingInterval;
 
@@ -1028,7 +1033,7 @@ const updateAISettings = async (req, res) => {
   }
 };
 
-// NEW: Get stats for training logs
+
 const getAILogStats = async (req, res) => {
     try {
         const stats = await AITrainingLog.aggregate([

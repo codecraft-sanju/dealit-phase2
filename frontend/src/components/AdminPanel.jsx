@@ -94,7 +94,18 @@ const AdminPanel = ({ user }) => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const [totalIncome, setTotalIncome] = useState(0);
-  const [financials, setFinancials] = useState({ walletIncome: 0, shippingIncome: 0, totalRevenue: 0, totalRefunds: 0, netIncome: 0 });
+  // --> MODIFICATION START: Added detailed breakdown fields to initial state
+  const [financials, setFinancials] = useState({ 
+    walletIncome: 0, 
+    shippingIncome: 0, 
+    baseShippingIncome: 0, 
+    totalPlatformFees: 0, 
+    totalGstCollected: 0, 
+    totalRevenue: 0, 
+    totalRefunds: 0, 
+    netIncome: 0 
+  });
+  // --> MODIFICATION END
 
   // ADDED: AI Log Stats State
   const [aiLogStats, setAiLogStats] = useState({ pending: 0, cleaned: 0, rejected: 0, trained: 0 });
@@ -836,12 +847,18 @@ const AdminPanel = ({ user }) => {
                       <div className="flex-1 min-w-0">
                         <p className="text-[7px] md:text-[9px] text-emerald-400/70 font-bold uppercase tracking-wider mb-0.5 truncate">Total In</p>
                         <p className="text-[10px] sm:text-xs md:text-sm font-bold text-emerald-300 truncate leading-none mb-1">₹{financials.totalRevenue ? financials.totalRevenue.toLocaleString('en-IN') : '0'}</p>
+                        {/* --> MODIFICATION START: Added detailed financial breakdown for transactions tab */}
                         <div className="flex flex-col gap-0.5">
                           <p className="text-[7px] md:text-[8px] text-gray-400 truncate leading-none"><span className="text-purple-400 font-semibold">Wallet:</span> ₹{financials.walletIncome ? financials.walletIncome.toLocaleString('en-IN') : '0'}</p>
-                          <p className="text-[7px] md:text-[8px] text-gray-400 truncate leading-none"><span className="text-blue-400 font-semibold">Ship:</span> ₹{financials.shippingIncome ? financials.shippingIncome.toLocaleString('en-IN') : '0'}</p>
+                          <p className="text-[7px] md:text-[8px] text-blue-400 font-semibold mt-1">Shipping Breakdown:</p>
+                          <p className="text-[7px] md:text-[8px] text-gray-500 pl-1.5 border-l border-white/10 ml-1 truncate leading-none">Base: ₹{financials.baseShippingIncome ? financials.baseShippingIncome.toLocaleString('en-IN') : '0'}</p>
+                          <p className="text-[7px] md:text-[8px] text-gray-500 pl-1.5 border-l border-white/10 ml-1 truncate leading-none">Fee (2%): ₹{financials.totalPlatformFees ? financials.totalPlatformFees.toLocaleString('en-IN') : '0'}</p>
+                          <p className="text-[7px] md:text-[8px] text-gray-500 pl-1.5 border-l border-white/10 ml-1 truncate leading-none">GST (18%): ₹{financials.totalGstCollected ? financials.totalGstCollected.toLocaleString('en-IN') : '0'}</p>
+                          <p className="text-[7px] md:text-[8px] text-gray-300 pl-1.5 border-l border-white/10 ml-1 mt-0.5 truncate leading-none font-semibold">= Total Ship: ₹{financials.shippingIncome ? financials.shippingIncome.toLocaleString('en-IN') : '0'}</p>
                         </div>
+                        {/* --> MODIFICATION END */}
                       </div>
-                      <div className="w-px h-8 md:h-12 bg-emerald-500/20 shrink-0"></div>
+                      <div className="w-px self-stretch bg-emerald-500/20 shrink-0"></div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[7px] md:text-[9px] text-red-400/70 font-bold uppercase tracking-wider mb-0.5 truncate">Refunds Out</p>
                         <p className="text-[10px] sm:text-xs md:text-sm font-bold text-red-300 truncate leading-none">₹{financials.totalRefunds ? financials.totalRefunds.toLocaleString('en-IN') : '0'}</p>

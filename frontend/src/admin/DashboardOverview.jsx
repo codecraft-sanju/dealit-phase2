@@ -10,7 +10,6 @@ import {
 const COLORS = ['#34d399', '#c084fc', '#60a5fa', '#fbbf24', '#f43f5e', '#0ea5e9'];
 const API_BASE = import.meta.env.VITE_BACKEND_API || 'http://localhost:5000';
 
-// --- Time Formatting Helper Function ---
 const timeAgo = (dateInput) => {
   if (!dateInput) return '';
   const date = new Date(dateInput);
@@ -88,7 +87,7 @@ const DashboardOverview = ({ data }) => {
     financials,
     recentUsers, 
     performanceData = [], 
-    categoryData = [],    
+    categoryData = [],   
     recentActivity = []   
   } = data;
   
@@ -165,12 +164,20 @@ const DashboardOverview = ({ data }) => {
                 <TrendingUp className="w-2.5 h-2.5" /> Total In
               </p>
               <p className="text-xs font-bold text-emerald-300 mb-1">₹{financials?.totalRevenue ? financials.totalRevenue.toLocaleString('en-IN') : '0'}</p>
+              
+              {/* --> MODIFICATION START: Added detailed financial breakdown for overview tab */}
               <div className="flex flex-col gap-0.5">
                 <p className="text-[8px] text-gray-400"><span className="text-purple-400 font-semibold">Wallet:</span> ₹{financials?.walletIncome ? financials.walletIncome.toLocaleString('en-IN') : '0'}</p>
-                <p className="text-[8px] text-gray-400"><span className="text-blue-400 font-semibold">Ship:</span> ₹{financials?.shippingIncome ? financials.shippingIncome.toLocaleString('en-IN') : '0'}</p>
+                <p className="text-[8px] text-blue-400 font-semibold mt-1">Shipping Breakdown:</p>
+                <p className="text-[8px] text-gray-500 pl-1.5 border-l border-white/10 ml-1">Base: ₹{financials?.baseShippingIncome ? financials.baseShippingIncome.toLocaleString('en-IN') : '0'}</p>
+                <p className="text-[8px] text-gray-500 pl-1.5 border-l border-white/10 ml-1">Fee (2%): ₹{financials?.totalPlatformFees ? financials.totalPlatformFees.toLocaleString('en-IN') : '0'}</p>
+                <p className="text-[8px] text-gray-500 pl-1.5 border-l border-white/10 ml-1">GST (18%): ₹{financials?.totalGstCollected ? financials.totalGstCollected.toLocaleString('en-IN') : '0'}</p>
+                <p className="text-[8px] text-gray-400 pl-1.5 border-l border-white/10 ml-1 mt-0.5 font-semibold">= Total Ship: ₹{financials?.shippingIncome ? financials.shippingIncome.toLocaleString('en-IN') : '0'}</p>
               </div>
+              {/* --> MODIFICATION END */}
+
             </div>
-            <div className="w-px h-10 bg-emerald-500/20"></div>
+            <div className="w-px self-stretch bg-emerald-500/20"></div>
             <div className="flex-1 self-start">
               <p className="text-[8px] md:text-[9px] text-red-400/70 font-bold uppercase tracking-wider mb-0.5 flex items-center gap-1">
                 <TrendingDown className="w-2.5 h-2.5" /> Refunds
