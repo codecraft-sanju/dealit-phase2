@@ -508,11 +508,13 @@ export default function App() {
   }, []);
 
   const scrollToSection = (id) => {
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
     setIsMenuOpen(false);
+    setTimeout(() => {
+      const element = document.getElementById(id);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 150);
   };
 
   const handleSubscribe = (e) => {
@@ -532,30 +534,39 @@ export default function App() {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0a0514]/80 backdrop-blur-xl border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
-            <div 
+            <motion.div 
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               className="flex items-center gap-2 cursor-pointer"
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             >
               <img src="/logo.png" alt="Dealit Logo" className="w-10 h-10 object-contain drop-shadow-[0_0_15px_rgba(168,85,247,0.4)]" />
               <span className="text-2xl font-extrabold tracking-tight text-white">Dealit</span>
-            </div>
+            </motion.div>
 
             <div className="hidden md:flex items-center gap-8">
-              <button onClick={() => scrollToSection('features')} className="text-sm font-medium text-gray-300 hover:text-white transition-colors">Features</button>
-              <button onClick={() => scrollToSection('how-it-works')} className="text-sm font-medium text-gray-300 hover:text-white transition-colors">How it Works</button>
-              <button onClick={() => scrollToSection('contact')} className="text-sm font-medium text-gray-300 hover:text-white transition-colors">Contact</button>
-              <a href="mailto:dealit.info@gmail.com" className="px-5 py-2.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-full text-sm font-semibold transition-all">
+              <motion.button whileHover={{ scale: 1.05, color: "#fff" }} whileTap={{ scale: 0.95 }} onClick={() => scrollToSection('features')} className="text-sm font-medium text-gray-300 transition-colors">Features</motion.button>
+              <motion.button whileHover={{ scale: 1.05, color: "#fff" }} whileTap={{ scale: 0.95 }} onClick={() => scrollToSection('how-it-works')} className="text-sm font-medium text-gray-300 transition-colors">How it Works</motion.button>
+              <motion.button whileHover={{ scale: 1.05, color: "#fff" }} whileTap={{ scale: 0.95 }} onClick={() => scrollToSection('contact')} className="text-sm font-medium text-gray-300 transition-colors">Contact</motion.button>
+              <motion.a 
+                whileHover={{ scale: 1.05, backgroundColor: "rgba(255,255,255,0.2)" }}
+                whileTap={{ scale: 0.95 }}
+                href="mailto:dealit.info@gmail.com" 
+                className="px-5 py-2.5 bg-white/10 border border-white/20 rounded-full text-sm font-semibold transition-colors"
+              >
                 Partner with us
-              </a>
+              </motion.a>
             </div>
 
             <div className="md:hidden flex items-center">
-              <button 
+              <motion.button 
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 className="text-gray-300 hover:text-white p-2 focus:outline-none"
               >
                 {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-              </button>
+              </motion.button>
             </div>
           </div>
         </div>
@@ -581,12 +592,13 @@ export default function App() {
         </AnimatePresence>
       </nav>
 
-      <main className="relative z-10 pt-32 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto flex flex-col items-center text-center">
+      <main className="relative z-10 pt-32 pb-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto flex flex-col items-center text-center">
         
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6 }}
+          whileHover={{ scale: 1.05, y: -2 }}
+          transition={{ duration: 0.4 }}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-purple-500/30 mb-8 cursor-pointer hover:bg-white/10 transition-colors"
         >
           <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
@@ -620,8 +632,13 @@ export default function App() {
               key={unit}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 + index * 0.1, duration: 0.5 }}
-              className="flex flex-col items-center justify-center bg-[#150a28]/40 backdrop-blur-xl border border-purple-500/20 rounded-3xl p-6 md:p-8 shadow-[0_8px_32px_rgba(0,0,0,0.3)] hover:border-purple-500/40 transition-colors"
+              whileHover={{ y: -8, scale: 1.02, borderColor: "rgba(168,85,247,0.5)" }}
+              transition={{ 
+                delay: 0.4 + index * 0.1, 
+                duration: 0.5,
+                whileHover: { duration: 0.2 } 
+              }}
+              className="flex flex-col items-center justify-center bg-[#150a28]/40 backdrop-blur-xl border border-purple-500/20 rounded-3xl p-6 md:p-8 shadow-[0_8px_32px_rgba(0,0,0,0.3)] transition-colors cursor-default"
             >
               <span className="text-5xl md:text-7xl font-black tabular-nums text-transparent bg-clip-text bg-gradient-to-b from-white to-purple-300">
                 {value.toString().padStart(2, "0")}
@@ -638,7 +655,7 @@ export default function App() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.8, duration: 0.5 }}
-          className="w-full max-w-md mx-auto mb-32 scroll-mt-32"
+          className="w-full max-w-md mx-auto mb-20 scroll-mt-32"
         >
           {isSubscribed ? (
             <motion.div 
@@ -652,7 +669,7 @@ export default function App() {
               Awesome! We'll notify you on launch.
             </motion.div>
           ) : (
-            <form onSubmit={handleSubscribe} className="relative flex items-center w-full">
+            <form onSubmit={handleSubscribe} className="relative flex items-center w-full group">
               <input 
                 type="email" 
                 value={email}
@@ -661,13 +678,21 @@ export default function App() {
                 required
                 className="w-full bg-[#150a28]/60 backdrop-blur-md border border-white/10 text-white placeholder-gray-400 px-6 py-4 rounded-full outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all pr-40"
               />
-              <button 
+              <motion.button 
                 type="submit" 
-                className="absolute right-2 px-6 py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 rounded-full font-bold text-sm shadow-[0_0_20px_rgba(168,85,247,0.3)] flex items-center gap-2 transition-transform hover:scale-105 active:scale-95"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="absolute right-2 px-6 py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 rounded-full font-bold text-sm shadow-[0_0_20px_rgba(168,85,247,0.3)] flex items-center gap-2"
               >
                 Notify Me
-                <ArrowRight size={16} />
-              </button>
+                <motion.div
+                  initial={{ x: 0 }}
+                  whileHover={{ x: 3 }}
+                  transition={{ type: "spring", stiffness: 400 }}
+                >
+                  <ArrowRight size={16} />
+                </motion.div>
+              </motion.button>
             </form>
           )}
         </motion.div>
@@ -678,7 +703,7 @@ export default function App() {
           whileInView={{ opacity: 1 }}
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.8 }}
-          className="w-full max-w-5xl mb-32 scroll-mt-24"
+          className="w-full max-w-5xl mb-20 scroll-mt-24"
         >
           <div className="flex flex-col items-center mb-12">
             <span className="text-purple-400 font-semibold tracking-wider uppercase text-sm mb-2">Process</span>
@@ -688,23 +713,26 @@ export default function App() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
             <div className="hidden md:block absolute top-1/2 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-purple-500/30 to-transparent -translate-y-1/2 z-0" />
             
-            <div className="relative z-10 flex flex-col items-center p-6 bg-[#0a0514]">
-              <div className="w-16 h-16 bg-[#150a28] border border-purple-500/30 rounded-full flex items-center justify-center text-2xl font-black text-purple-400 mb-6 shadow-[0_0_30px_rgba(168,85,247,0.15)]">1</div>
-              <h3 className="text-xl font-bold mb-3">List an Item</h3>
-              <p className="text-sm text-gray-400 text-center">Upload details of unused products you want to exchange or sell.</p>
-            </div>
-            
-            <div className="relative z-10 flex flex-col items-center p-6 bg-[#0a0514]">
-              <div className="w-16 h-16 bg-[#150a28] border border-blue-500/30 rounded-full flex items-center justify-center text-2xl font-black text-blue-400 mb-6 shadow-[0_0_30px_rgba(59,130,246,0.15)]">2</div>
-              <h3 className="text-xl font-bold mb-3">Find a Match</h3>
-              <p className="text-sm text-gray-400 text-center">Browse categories or use smart matching to find exactly what you need.</p>
-            </div>
-            
-            <div className="relative z-10 flex flex-col items-center p-6 bg-[#0a0514]">
-              <div className="w-16 h-16 bg-[#150a28] border border-purple-500/30 rounded-full flex items-center justify-center text-2xl font-black text-purple-400 mb-6 shadow-[0_0_30px_rgba(168,85,247,0.15)]">3</div>
-              <h3 className="text-xl font-bold mb-3">Barter or Buy</h3>
-              <p className="text-sm text-gray-400 text-center">Exchange directly or use Dealit wallet credits to complete the order securely.</p>
-            </div>
+            {[
+              { num: 1, title: "List an Item", desc: "Upload details of unused products you want to exchange or sell.", color: "purple" },
+              { num: 2, title: "Find a Match", desc: "Browse categories or use smart matching to find exactly what you need.", color: "blue" },
+              { num: 3, title: "Barter or Buy", desc: "Exchange directly or use Dealit wallet credits to complete the order securely.", color: "purple" }
+            ].map((step, index) => (
+              <motion.div 
+                key={index}
+                whileHover={{ y: -5 }}
+                className="relative z-10 flex flex-col items-center p-6 bg-[#0a0514] rounded-2xl group cursor-default"
+              >
+                <motion.div 
+                  className={`w-16 h-16 bg-[#150a28] border ${step.color === 'purple' ? 'border-purple-500/30 text-purple-400 shadow-[0_0_30px_rgba(168,85,247,0.15)]' : 'border-blue-500/30 text-blue-400 shadow-[0_0_30px_rgba(59,130,246,0.15)]'} rounded-full flex items-center justify-center text-2xl font-black mb-6 transition-colors`}
+                  whileHover={{ scale: 1.1, rotate: 5 }}
+                >
+                  {step.num}
+                </motion.div>
+                <h3 className="text-xl font-bold mb-3">{step.title}</h3>
+                <p className="text-sm text-gray-400 text-center">{step.desc}</p>
+              </motion.div>
+            ))}
           </div>
         </motion.div>
 
@@ -722,44 +750,61 @@ export default function App() {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 text-left">
-            <div className="bg-white/5 border border-white/10 p-6 rounded-3xl hover:bg-white/10 transition-colors group">
-              <div className="w-12 h-12 bg-purple-500/20 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+            <motion.div 
+              whileHover={{ y: -8, backgroundColor: "rgba(255,255,255,0.08)" }}
+              className="bg-white/5 border border-white/10 p-6 rounded-3xl transition-colors group cursor-default"
+            >
+              <div className="w-12 h-12 bg-purple-500/20 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-3 transition-transform">
                 <RefreshCcw size={24} className="text-purple-400" />
               </div>
               <h3 className="text-xl font-bold mb-3">Barter System</h3>
               <p className="text-sm text-gray-400 leading-relaxed">Exchange your unused items directly with other users. Smart matching makes finding the right deal effortless.</p>
-            </div>
+            </motion.div>
 
-            <div className="bg-white/5 border border-white/10 p-6 rounded-3xl hover:bg-white/10 transition-colors group">
-              <div className="w-12 h-12 bg-blue-500/20 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+            <motion.div 
+              whileHover={{ y: -8, backgroundColor: "rgba(255,255,255,0.08)" }}
+              className="bg-white/5 border border-white/10 p-6 rounded-3xl transition-colors group cursor-default"
+            >
+              <div className="w-12 h-12 bg-blue-500/20 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:-rotate-3 transition-transform">
                 <ShoppingCart size={24} className="text-blue-400" />
               </div>
               <h3 className="text-xl font-bold mb-3">Order with Credits</h3>
               <p className="text-sm text-gray-400 leading-relaxed">Don't have an item to exchange? Use your Dealit credits to buy what you want instantly.</p>
-            </div>
+            </motion.div>
 
-            <div className="bg-white/5 border border-white/10 p-6 rounded-3xl hover:bg-white/10 transition-colors group">
-              <div className="w-12 h-12 bg-purple-500/20 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+            <motion.div 
+              whileHover={{ y: -8, backgroundColor: "rgba(255,255,255,0.08)" }}
+              className="bg-white/5 border border-white/10 p-6 rounded-3xl transition-colors group cursor-default"
+            >
+              <div className="w-12 h-12 bg-purple-500/20 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-3 transition-transform">
                 <Wallet size={24} className="text-purple-400" />
               </div>
               <h3 className="text-xl font-bold mb-3">Secure Wallet</h3>
               <p className="text-sm text-gray-400 leading-relaxed">Manage your credits and transactions safely. Every new user gets free credits to start their journey.</p>
-            </div>
+            </motion.div>
 
-            <div className="bg-white/5 border border-white/10 p-6 rounded-3xl hover:bg-white/10 transition-colors group">
-              <div className="w-12 h-12 bg-blue-500/20 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+            <motion.div 
+              whileHover={{ y: -8, backgroundColor: "rgba(255,255,255,0.08)" }}
+              className="bg-white/5 border border-white/10 p-6 rounded-3xl transition-colors group cursor-default"
+            >
+              <div className="w-12 h-12 bg-blue-500/20 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:-rotate-3 transition-transform">
                 <ShieldCheck size={24} className="text-blue-400" />
               </div>
               <h3 className="text-xl font-bold mb-3">100% Secure</h3>
               <p className="text-sm text-gray-400 leading-relaxed">Verified profiles, safe pickups, and secure payments ensure your peace of mind on every transaction.</p>
-            </div>
+            </motion.div>
           </div>
         </motion.div>
 
       </main>
 
-      <footer className="relative z-10 border-t border-white/10 bg-[#0a0514]/50 py-10 text-center mt-20 flex flex-col items-center">
-        <img src="/logo.png" alt="Dealit Logo" className="w-8 h-8 opacity-50 mb-4 grayscale" />
+      <footer className="relative z-10 border-t border-white/10 bg-[#0a0514]/50 py-8 text-center mt-10 flex flex-col items-center">
+        <motion.img 
+          whileHover={{ opacity: 0.8, scale: 1.1 }}
+          src="/logo.png" 
+          alt="Dealit Logo" 
+          className="w-8 h-8 opacity-50 mb-4 grayscale hover:grayscale-0 transition-all cursor-pointer" 
+        />
         <p className="text-sm text-gray-500">© 2026 Dealit. All rights reserved. Launching in India.</p>
       </footer>
       
