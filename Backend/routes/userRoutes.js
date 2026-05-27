@@ -18,9 +18,8 @@ const {
   getWishlist,
   claimWelcomeBonus,
   deleteUserProfile,
- 
-  getUserStats
-
+  getUserStats,
+  getRandomAvatars 
 } = require('../controllers/userController');
 
 
@@ -60,6 +59,8 @@ router.post('/claim-bonus', protect, claimWelcomeBonus);
 
 router.get('/stats', protect, getUserStats);
 
+
+router.get('/random-avatars', getRandomAvatars);
 
 router.get('/aura', protect, getUserAura);
 router.get('/aura/history', protect, getAuraHistory);

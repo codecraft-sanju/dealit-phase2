@@ -741,6 +741,32 @@ const deleteUserProfile = async (req, res) => {
   }
 };
 
+// MODIFIED: Added function to fetch 5 random users for the avatar display
+const getRandomAvatars = async (req, res) => {
+  try {
+    const randomUsers = await User.aggregate([
+      { $match: { isDeleted: { $ne: true } } },
+      { $sample: { size: 5 } },
+      { $project: { profilePic: 1, full_name: 1 } }
+    ]);
+
+    const avatars = randomUsers.map((u, i) => {
+      // Return user profile pic if exists, else fallback to ui-avatars
+      if (u.profilePic) return u.profilePic;
+      return `https://ui-avatars.com/api/?name=${encodeURIComponent(u.full_name || 'User')}&background=A388E1&color=fff&size=40`;
+    });
+
+    // Handle edge case if less than 5 users in the entire database
+    while(avatars.length < 5) {
+       avatars.push(`https://ui-avatars.com/api/?name=U${avatars.length}&background=A388E1&color=fff&size=40`);
+    }
+
+    res.status(200).json({ success: true, data: avatars });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server Error fetching avatars' });
+  }
+};
+
 module.exports = {
   registerUser,
   verifyOtp, 
@@ -756,5 +782,6 @@ module.exports = {
   getWishlist,
   claimWelcomeBonus,
   deleteUserProfile ,
-  getUserStats
+  getUserStats,
+  getRandomAvatars 
 };

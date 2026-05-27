@@ -141,6 +141,16 @@ const HomePage = ({ user, setUser }) => {
     },
   });
 
+  // MODIFIED: Fetch 5 random avatars from backend
+  const { data: randomAvatars = [] } = useQuery({
+    queryKey: ['randomAvatars'],
+    queryFn: async () => {
+      const response = await axios.get(`${API_URL}/users/random-avatars`);
+      return response.data.data;
+    },
+    staleTime: 0, 
+  });
+
   const claimBonusMutation = useMutation({
     mutationFn: async () => {
       return axios.post(`${API_URL}/users/claim-bonus`, {}, { withCredentials: true });
@@ -421,7 +431,6 @@ const HomePage = ({ user, setUser }) => {
 
       </div>
 
-      {/* *** MODIFIED: Updated Categories Section for fluid pill design *** */}
       {/* --- Categories Section --- */}
       <motion.div variants={itemVariants} className="px-4 pt-1.5 pb-0 relative z-10">
         <div className="flex gap-2.5 overflow-x-auto hide-scrollbar items-center pb-3 pt-1">
@@ -454,8 +463,6 @@ const HomePage = ({ user, setUser }) => {
             <>
               {categories
                 .filter((cat) => {
-                  // Changed: Ensure we only show categories that have items. 
-                  // Checks itemCount, itemsCount, count, or totalItems. If undefined, falls back to true to avoid breaking if backend doesn't support counting yet.
                   const count = cat.itemCount ?? cat.itemsCount ?? cat.count ?? cat.totalItems;
                   if (count !== undefined) return count > 0;
                   return true;
@@ -610,19 +617,29 @@ const HomePage = ({ user, setUser }) => {
 
             <div className="flex items-center gap-1.5">
               <div className="flex -space-x-1.5 hover:space-x-0 transition-all duration-300 cursor-pointer">
-                {DUMMY_AVATARS.map((src, i) => (
-                  <motion.img
-                    whileHover={{ y: -5, scale: 1.1, zIndex: 20 }}
-                    key={i}
-                    src={src}
-                    alt={`user-${i}`}
-                    className="w-5 h-5 rounded-full border-2 border-white object-cover shadow-[0_2px_5px_rgba(0,0,0,0.1)] relative z-0"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = `https://ui-avatars.com/api/?name=U${i}&background=A388E1&color=fff&size=40`;
-                    }}
-                  />
-                ))}
+                
+                {/* --- MODIFIED: Overriding initials with dummy faces --- */}
+                {(randomAvatars.length > 0 ? randomAvatars : DUMMY_AVATARS).map((src, i) => {
+                  
+                  // Agar url ui-avatars.com se aa raha hai (initials), toh usko reject karke cute DUMMY_AVATARS face laga do.
+                  const finalSrc = (src && src.includes('ui-avatars.com')) ? DUMMY_AVATARS[i % DUMMY_AVATARS.length] : src;
+
+                  return (
+                    <motion.img
+                      whileHover={{ y: -5, scale: 1.1, zIndex: 20 }}
+                      key={i}
+                      src={finalSrc}
+                      alt={`user-${i}`}
+                      className="w-5 h-5 rounded-full border-2 border-white object-cover shadow-[0_2px_5px_rgba(0,0,0,0.1)] relative z-0 bg-white"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        // Error aane par bhi cute faces hi show karega
+                        e.target.src = DUMMY_AVATARS[i % DUMMY_AVATARS.length];
+                      }}
+                    />
+                  );
+                })}
+
               </div>
               <p className="text-[9px] text-gray-500 font-bold">
                 people are already trading
