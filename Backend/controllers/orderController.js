@@ -12,7 +12,9 @@ const { checkServiceability, createShiprocketOrder, addPickupLocation, generateA
 const AuraLog = require('../models/AuraLog'); 
 const { refundRazorpayPayment, fetchRazorpayPaymentInfo } = require('./paymentController');
 
-
+// ---> WHATSAPP MODIFICATION START
+const { sendWhatsAppMessage } = require('../services/whatsappService');
+// ---> WHATSAPP MODIFICATION END
 
 const calculateFees = (baseShipping) => {
   const platformFee = parseFloat((baseShipping * 0.02).toFixed(2));
@@ -65,7 +67,9 @@ const createOrder = async (req, res) => {
     const { itemId, shippingAddress, paymentDetails } = req.body;
     const buyerId = req.user._id;
 
-    const item = await Item.findById(itemId).populate('owner', 'pickupAddress');
+    // ---> WHATSAPP MODIFICATION START (Added 'phone' to populate)
+    const item = await Item.findById(itemId).populate('owner', 'pickupAddress phone');
+    // ---> WHATSAPP MODIFICATION END
 
     if (!item) {
       return res.status(404).json({ success: false, message: 'Item not found' });
@@ -220,6 +224,15 @@ const createOrder = async (req, res) => {
       metadata: { referenceId: order._id, imageUrl: item.images?.[0] }
     });
 
+    // ---> WHATSAPP MODIFICATION START
+    if (buyer && buyer.phone) {
+        sendWhatsAppMessage(buyer.phone, 'order_confirmed');
+    }
+    if (item.owner && item.owner.phone) {
+        sendWhatsAppMessage(item.owner.phone, 'new_order_alert');
+    }
+    // ---> WHATSAPP MODIFICATION END
+
     res.status(201).json({
       success: true,
       message: 'Order placed successfully! Please wait for the seller to dispatch the item.',
@@ -359,6 +372,12 @@ const updateOrderStatus = async (req, res) => {
           message: `The order has been cancelled. Reason: ${order.cancellationReason}. Your ${order.itemPrice} credits have been refunded.`,
           metadata: { amount: order.itemPrice, reason: 'order_refund', referenceId: order._id, imageUrl: order.item?.images?.[0] }
         });
+
+        // ---> WHATSAPP MODIFICATION START
+        if (buyer && buyer.phone) {
+            sendWhatsAppMessage(buyer.phone, 'order_cancelled_refunded');
+        }
+        // ---> WHATSAPP MODIFICATION END
         
         const seller = await User.findByIdAndUpdate(order.seller, [
           {
@@ -432,6 +451,13 @@ const updateOrderStatus = async (req, res) => {
              message: `The partner cancelled their side of the deal. Your shipping fee of ₹${partnerOrder.shippingCost} has been refunded.`,
              metadata: { referenceId: partnerOrder._id }
            });
+
+           // ---> WHATSAPP MODIFICATION START
+           const partnerBuyer = await User.findById(partnerOrder.buyer);
+           if (partnerBuyer && partnerBuyer.phone) {
+               sendWhatsAppMessage(partnerBuyer.phone, 'barter_deal_collapsed');
+           }
+           // ---> WHATSAPP MODIFICATION END
         }
 
         const barterReq = await BarterRequest.findOneAndUpdate(
@@ -630,6 +656,14 @@ const dispatchOrder = async (req, res) => {
                 metadata: { referenceId: partnerOrder._id, imageUrl: partnerOrder.item.images?.[0] }
             });
 
+            if (order.item && order.item.owner && order.item.owner.phone) {
+                sendWhatsAppMessage(order.item.owner.phone, 'pickup_scheduled');
+            }
+            if (partnerOrder.item && partnerOrder.item.owner && partnerOrder.item.owner.phone) {
+                sendWhatsAppMessage(partnerOrder.item.owner.phone, 'pickup_scheduled');
+            }
+          
+
             return res.status(200).json({
                 success: true,
                 message: 'Both parties are ready! Orders dispatched successfully. Shiprocket pickup scheduled.',
@@ -694,9 +728,6 @@ const dispatchOrder = async (req, res) => {
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-
-// ... (previous imports and functions stay exactly the same)
-
 const getShippingLabel = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -721,17 +752,16 @@ const getShippingLabel = async (req, res) => {
            await order.save();
        } catch (awbError) {
            const errMsg = (awbError.message || '').toLowerCase();
-           // Changed: Removed Regex parsing.
-           // If error implies AWB is already assigned, fetch it via API
+  
            if (errMsg.includes('reassign') || errMsg.includes('17 hour') || errMsg.includes('already') || errMsg.includes('assigned')) {
                let recoveredAwb = null;
                
                if (order.trackingDetails.shiprocket_order_id) {
                    try {
-                       // Direct API fetch instead of regex parsing
+                   
                        const srDetails = await getShiprocketOrderDetails(order.trackingDetails.shiprocket_order_id);
                        
-                       // Modified to match the actual return structure of getShiprocketOrderDetails in shiprocket.js
+                     
                        if (srDetails && srDetails.awb_code) {
                            recoveredAwb = srDetails.awb_code;
                        }
@@ -970,6 +1000,12 @@ const autoCancelOverdueOrders = async () => {
             message: `The seller failed to dispatch your order on time. Your ${order.itemPrice} credits have been refunded.`,
             metadata: { amount: order.itemPrice, reason: 'auto_cancel_refund', referenceId: order._id, imageUrl: order.item?.images?.[0] }
           });
+
+        
+          if (order.buyer && order.buyer.phone) {
+              sendWhatsAppMessage(order.buyer.phone, 'order_cancelled_refunded');
+          }
+         
 
           await AuraLog.create({
             user: sellerId,

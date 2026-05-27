@@ -14,7 +14,6 @@ const API_URL = `${API_BASE}/api`;
 const isWebView = typeof window !== 'undefined' && window.ReactNativeWebView;
 /* ---------------------------------------------------------- */
 
-/* ── Workaround for Vite/Webpack default export issue ── */
 const LottieComponent = Lottie && Lottie.default ? Lottie.default : Lottie;
 
 const calculateStrength = (pass) => {
@@ -28,7 +27,6 @@ const calculateStrength = (pass) => {
   return score;
 };
 
-/* ── Floating-label input ── */
 const FloatInput = ({ icon: Icon, label, name, type = 'text', value, onChange, required, maxLength, inputMode, autoCapitalize, autoCorrect, style }) => {
   const [focused, setFocused] = useState(false);
   const [showPass, setShowPass] = useState(false);
@@ -65,7 +63,6 @@ const FloatInput = ({ icon: Icon, label, name, type = 'text', value, onChange, r
   );
 };
 
-/* ── OTP Input (6 boxes) ── */
 const OtpInput = ({ value, onChange }) => {
   const digits = Array.from({ length: 6 }, (_, i) => value[i] || '');
 
@@ -111,7 +108,6 @@ const OtpInput = ({ value, onChange }) => {
   );
 };
 
-/* ── Main Component ── */
 const AuthPage = ({ setUser, defaultMode = 'login' }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -189,7 +185,16 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
     }
   });
 
-  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+  // ---> MODIFICATION START
+  const handleChange = (e) => {
+    if (e.target.name === 'phone') {
+      const numericValue = e.target.value.replace(/\D/g, '');
+      setFormData({ ...formData, phone: numericValue });
+    } else {
+      setFormData({ ...formData, [e.target.name]: e.target.value });
+    }
+  };
+  // ---> MODIFICATION END
 
   const handleModeSwitch = (mode) => {
     setIsSignUpMode(mode === 'signup');
@@ -261,6 +266,14 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
 
   const handleSignup = async (e) => {
     e.preventDefault();
+    
+    // ---> MODIFICATION START
+    if (formData.phone && formData.phone.length !== 10) {
+      setError('Phone number must be exactly 10 digits.');
+      return;
+    }
+    // ---> MODIFICATION END
+    
     setError(''); setLoading(true);
     try {
       const res = await axios.post(`${API_URL}/users/register`, formData, { withCredentials: true });
@@ -302,7 +315,6 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
 
   return (
     <div className="aw-root">
-      {/* Animated background orbs */}
       <div className="aw-bg">
         <div className="aw-orb aw-orb1" />
         <div className="aw-orb aw-orb2" />
@@ -310,12 +322,10 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
         <div className="aw-noise" />
       </div>
 
-      {/* ── DESKTOP LAYOUT ── */}
       <div className={`aw-desk ${isSignUpMode ? 'is-signup' : ''}`}>
         <div className="aw-card">
           <div className="aw-forms">
 
-            {/* LOGIN */}
             <div className="aw-form-pane login-pane">
               <div className="aw-form-scroll admin-scroll">
                 <div className="aw-brand">
@@ -362,7 +372,6 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
               </div>
             </div>
 
-            {/* SIGNUP / OTP */}
             <div className="aw-form-pane signup-pane">
               <div className="aw-form-scroll admin-scroll">
                 <div className="aw-brand">
@@ -417,9 +426,11 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                           </button>
                         </div>
                       </div>
-
-                      <FloatInput icon={Phone} label="Phone number" name="phone" value={formData.phone} onChange={handleChange} inputMode="tel" />
                       
+                      {/* ---> MODIFICATION START */}
+                      <FloatInput icon={Phone} label="Phone number (10 digits)" name="phone" value={formData.phone} onChange={handleChange} inputMode="numeric" maxLength={10} />
+                      {/* ---> MODIFICATION END */}
+
                       <div className="aw-form-row">
                         <FloatInput icon={MapPin} label="City" name="city" value={formData.city} onChange={handleChange} />
                         {appSettings.isReferralSystemEnabled && (
@@ -584,8 +595,10 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                         </div>
                       </div>
 
-                      <FloatInput icon={Phone} label="Phone number" name="phone" value={formData.phone} onChange={handleChange} inputMode="tel" />
-                      
+                      {/* ---> MODIFICATION START */}
+                      <FloatInput icon={Phone} label="Phone number (10 digits)" name="phone" value={formData.phone} onChange={handleChange} inputMode="numeric" maxLength={10} />
+                      {/* ---> MODIFICATION END */}
+
                       <div className="aw-form-row">
                         <FloatInput icon={MapPin} label="City" name="city" value={formData.city} onChange={handleChange} />
                         {appSettings.isReferralSystemEnabled && (

@@ -464,7 +464,8 @@ const updateCreditSettings = async (req, res) => {
       auraReward,
       auraPenalty,
       minImagesRequired,
-      isDiscountSimulationEnabled 
+      isDiscountSimulationEnabled ,
+      isWhatsAppNotificationEnabled
     } = req.body;
     
     let setting = await CreditSetting.findOne();
@@ -517,7 +518,7 @@ const getPublicCreditSettings = async (req, res) => {
   try {
   
     let setting = await CreditSetting.findOne().select(
-      'isReferralSystemEnabled referralRewardCredits maxAllowedListings maxReferralLimit milestoneReferralReward isWelcomeBonusEnabled welcomeBonusAmount shippingMethod flatShippingCost autoCancelHours auraReward auraPenalty minImagesRequired isDiscountSimulationEnabled'
+      'isReferralSystemEnabled referralRewardCredits maxAllowedListings maxReferralLimit milestoneReferralReward isWelcomeBonusEnabled welcomeBonusAmount shippingMethod flatShippingCost autoCancelHours auraReward auraPenalty minImagesRequired isDiscountSimulationEnabled isWhatsAppNotificationEnabled'
     );
     
     if (!setting) {
@@ -535,7 +536,8 @@ const getPublicCreditSettings = async (req, res) => {
         auraReward: 50,
         auraPenalty: 50,
         minImagesRequired: 3,
-        isDiscountSimulationEnabled: false 
+        isDiscountSimulationEnabled: false ,
+        isWhatsAppNotificationEnabled: true
       };
     }
     res.status(200).json({ success: true, data: setting });

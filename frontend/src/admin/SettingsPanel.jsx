@@ -1,5 +1,6 @@
+// SettingsPanel.jsx
 import React from 'react';
-import { Coins, ToggleRight, ToggleLeft, Package, List, Gift, Users, Target, Truck, Zap, IndianRupee, Clock, AlertTriangle, Settings, Image as ImageIcon, Bot, Cpu, Database } from 'lucide-react';
+import { Coins, ToggleRight, ToggleLeft, Package, List, Gift, Users, Target, Truck, Zap, IndianRupee, Clock, AlertTriangle, Settings, Image as ImageIcon, Bot, Cpu, Database, MessageSquare } from 'lucide-react';
 
 const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, aiSettings, setAiSettings, handleSaveSettings, updating }) => {
   
@@ -15,7 +16,7 @@ const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, aiSetting
         return { title: 'Shipping Rules', sub: 'Set flat rates or dynamic APIs' };
       case 'settings-orders': 
         return { title: 'Order & Aura', sub: 'Manage automated limits and penalties' };
-     
+      
       case 'settings-ai': 
         return { title: 'AI Training Controls', sub: 'Manage models and automated learning batches' };
       default: 
@@ -370,84 +371,104 @@ const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, aiSetting
 
           {/* ===================== TAB 4: ORDERS & AURA ===================== */}
           {activeTab === 'settings-orders' && (
-            <div className="bg-white/[0.02] p-5 md:p-6 sm:p-8 rounded-2xl md:rounded-3xl border border-white/5 flex flex-col justify-between animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="mb-5 md:mb-6">
-                <p className="font-bold text-white text-base md:text-lg tracking-tight">Order Management</p>
-                <p className="text-[10px] md:text-xs text-gray-400 mt-0.5 md:mt-1 max-w-md leading-relaxed">Configure automated rules and aura points for orders on the platform.</p>
+            <div className="space-y-5 md:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              
+              {/* ---> WHATSAPP MODIFICATION START */}
+              <div className="bg-white/[0.02] p-4 md:p-6 rounded-2xl border border-emerald-500/20 flex items-center justify-between cursor-pointer hover:bg-white/[0.04] transition-colors gap-3 md:gap-4 shadow-[0_0_20px_rgba(16,185,129,0.05)]" onClick={() => setCreditSettings({ ...creditSettings, isWhatsAppNotificationEnabled: !creditSettings.isWhatsAppNotificationEnabled })}>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <MessageSquare className="w-4 h-4 text-emerald-400" />
+                    <p className="font-bold text-emerald-100 text-base md:text-lg tracking-tight">Enable WhatsApp Alerts</p>
+                  </div>
+                  <p className="text-[10px] md:text-xs text-gray-400 max-w-md leading-relaxed">Send real-time WhatsApp messages to buyers and sellers for order confirmations, deal locks, and pickups.</p>
+                </div>
+                {creditSettings.isWhatsAppNotificationEnabled ? (
+                  <ToggleRight className="w-10 h-10 md:w-14 md:h-14 text-emerald-400 drop-shadow-[0_0_10px_rgba(16,185,129,0.4)] shrink-0" />
+                ) : (
+                  <ToggleLeft className="w-10 h-10 md:w-14 md:h-14 text-gray-600 shrink-0" />
+                )}
               </div>
+              {/* ---> WHATSAPP MODIFICATION END */}
 
-              <div className="bg-white/[0.01] p-4 md:p-6 rounded-xl md:rounded-2xl border border-white/5 shadow-inner">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6">
-                  
-                  {/* Auto-Cancel Timer */}
-                  <div className="space-y-2 md:space-y-3">
-                    <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                      <Clock className="w-3.5 h-3.5 text-gray-400" /> Auto-Cancel Timer
-                    </label>
-                    <div className="relative group">
-                      <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
-                        <span className="text-gray-400 text-xs font-bold group-focus-within:text-white transition-colors">Hr</span>
+              <div className="bg-white/[0.02] p-5 md:p-6 sm:p-8 rounded-2xl md:rounded-3xl border border-white/5 flex flex-col justify-between">
+                <div className="mb-5 md:mb-6">
+                  <p className="font-bold text-white text-base md:text-lg tracking-tight">Order Management</p>
+                  <p className="text-[10px] md:text-xs text-gray-400 mt-0.5 md:mt-1 max-w-md leading-relaxed">Configure automated rules and aura points for orders on the platform.</p>
+                </div>
+
+                <div className="bg-white/[0.01] p-4 md:p-6 rounded-xl md:rounded-2xl border border-white/5 shadow-inner">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6">
+                    
+                    {/* Auto-Cancel Timer */}
+                    <div className="space-y-2 md:space-y-3">
+                      <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <Clock className="w-3.5 h-3.5 text-gray-400" /> Auto-Cancel Timer
+                      </label>
+                      <div className="relative group">
+                        <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
+                          <span className="text-gray-400 text-xs font-bold group-focus-within:text-white transition-colors">Hr</span>
+                        </div>
+                        <input 
+                          type="number" 
+                          required 
+                          min="1" 
+                          value={creditSettings.autoCancelHours !== undefined ? creditSettings.autoCancelHours : 24} 
+                          onChange={(e) => setCreditSettings({...creditSettings, autoCancelHours: Number(e.target.value)})} 
+                          className="w-full bg-black/20 border border-white/10 rounded-xl pl-10 md:pl-12 pr-3 md:pr-4 py-3 md:py-3.5 text-white text-xs md:text-sm font-bold focus:outline-none focus:border-white/50 focus:bg-black/40 transition-all shadow-inner" 
+                        />
                       </div>
-                      <input 
-                        type="number" 
-                        required 
-                        min="1" 
-                        value={creditSettings.autoCancelHours !== undefined ? creditSettings.autoCancelHours : 24} 
-                        onChange={(e) => setCreditSettings({...creditSettings, autoCancelHours: Number(e.target.value)})} 
-                        className="w-full bg-black/20 border border-white/10 rounded-xl pl-10 md:pl-12 pr-3 md:pr-4 py-3 md:py-3.5 text-white text-xs md:text-sm font-bold focus:outline-none focus:border-white/50 focus:bg-black/40 transition-all shadow-inner" 
-                      />
+                      <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider mt-1.5 md:mt-2 leading-relaxed">
+                        Pending orders older than this will be auto-cancelled.
+                      </p>
                     </div>
-                    <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider mt-1.5 md:mt-2 leading-relaxed">
-                      Pending orders older than this will be auto-cancelled.
-                    </p>
-                  </div>
 
-                  {/* Delivery Reward */}
-                  <div className="space-y-2 md:space-y-3">
-                    <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                      <Target className="w-3.5 h-3.5 text-emerald-400" /> Delivery Reward (Aura)
-                    </label>
-                    <div className="relative group">
-                      <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
-                        <span className="text-emerald-500 text-xs font-bold group-focus-within:text-emerald-400 transition-colors">+</span>
+                    {/* Delivery Reward */}
+                    <div className="space-y-2 md:space-y-3">
+                      <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <Target className="w-3.5 h-3.5 text-emerald-400" /> Delivery Reward (Aura)
+                      </label>
+                      <div className="relative group">
+                        <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
+                          <span className="text-emerald-500 text-xs font-bold group-focus-within:text-emerald-400 transition-colors">+</span>
+                        </div>
+                        <input 
+                          type="number" 
+                          required 
+                          min="0" 
+                          value={creditSettings.auraReward !== undefined ? creditSettings.auraReward : 50} 
+                          onChange={(e) => setCreditSettings({...creditSettings, auraReward: Number(e.target.value)})} 
+                          className="w-full bg-black/20 border border-emerald-500/10 rounded-xl pl-10 md:pl-12 pr-3 md:pr-4 py-3 md:py-3.5 text-emerald-100 text-xs md:text-sm font-bold focus:outline-none focus:border-emerald-500/50 focus:bg-emerald-900/10 transition-all shadow-inner" 
+                        />
                       </div>
-                      <input 
-                        type="number" 
-                        required 
-                        min="0" 
-                        value={creditSettings.auraReward !== undefined ? creditSettings.auraReward : 50} 
-                        onChange={(e) => setCreditSettings({...creditSettings, auraReward: Number(e.target.value)})} 
-                        className="w-full bg-black/20 border border-emerald-500/10 rounded-xl pl-10 md:pl-12 pr-3 md:pr-4 py-3 md:py-3.5 text-emerald-100 text-xs md:text-sm font-bold focus:outline-none focus:border-emerald-500/50 focus:bg-emerald-900/10 transition-all shadow-inner" 
-                      />
+                      <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider mt-1.5 md:mt-2 leading-relaxed">
+                        Aura points awarded to seller on successful delivery.
+                      </p>
                     </div>
-                    <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider mt-1.5 md:mt-2 leading-relaxed">
-                      Aura points awarded to seller on successful delivery.
-                    </p>
-                  </div>
 
-                  {/* Cancel Penalty */}
-                  <div className="space-y-2 md:space-y-3">
-                    <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                      <AlertTriangle className="w-3.5 h-3.5 text-red-400" /> Cancel Penalty (Aura)
-                    </label>
-                    <div className="relative group">
-                      <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
-                        <span className="text-red-500 text-xs font-bold group-focus-within:text-red-400 transition-colors">-</span>
+                    {/* Cancel Penalty */}
+                    <div className="space-y-2 md:space-y-3">
+                      <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <AlertTriangle className="w-3.5 h-3.5 text-red-400" /> Cancel Penalty (Aura)
+                      </label>
+                      <div className="relative group">
+                        <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
+                          <span className="text-red-500 text-xs font-bold group-focus-within:text-red-400 transition-colors">-</span>
+                        </div>
+                        <input 
+                          type="number" 
+                          required 
+                          min="0" 
+                          value={creditSettings.auraPenalty !== undefined ? creditSettings.auraPenalty : 50} 
+                          onChange={(e) => setCreditSettings({...creditSettings, auraPenalty: Number(e.target.value)})} 
+                          className="w-full bg-black/20 border border-red-500/10 rounded-xl pl-10 md:pl-12 pr-3 md:pr-4 py-3 md:py-3.5 text-red-100 text-xs md:text-sm font-bold focus:outline-none focus:border-red-500/50 focus:bg-red-900/10 transition-all shadow-inner" 
+                        />
                       </div>
-                      <input 
-                        type="number" 
-                        required 
-                        min="0" 
-                        value={creditSettings.auraPenalty !== undefined ? creditSettings.auraPenalty : 50} 
-                        onChange={(e) => setCreditSettings({...creditSettings, auraPenalty: Number(e.target.value)})} 
-                        className="w-full bg-black/20 border border-red-500/10 rounded-xl pl-10 md:pl-12 pr-3 md:pr-4 py-3 md:py-3.5 text-red-100 text-xs md:text-sm font-bold focus:outline-none focus:border-red-500/50 focus:bg-red-900/10 transition-all shadow-inner" 
-                      />
+                      <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider mt-1.5 md:mt-2 leading-relaxed">
+                        Aura points deducted for late dispatch or cancellation.
+                      </p>
                     </div>
-                    <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider mt-1.5 md:mt-2 leading-relaxed">
-                      Aura points deducted for late dispatch or cancellation.
-                    </p>
-                  </div>
 
+                  </div>
                 </div>
               </div>
             </div>
