@@ -1,6 +1,6 @@
 // SettingsPanel.jsx
 import React from 'react';
-import { Coins, ToggleRight, ToggleLeft, Package, List, Gift, Users, Target, Truck, Zap, IndianRupee, Clock, AlertTriangle, Settings, Image as ImageIcon, Bot, Cpu, Database, MessageSquare } from 'lucide-react';
+import { Coins, ToggleRight, ToggleLeft, Package, List, Gift, Users, Target, Truck, Zap, IndianRupee, Clock, AlertTriangle, Settings, Image as ImageIcon, Bot, Cpu, Database, MessageSquare, Mail } from 'lucide-react';
 
 const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, aiSettings, setAiSettings, handleSaveSettings, updating }) => {
   
@@ -373,22 +373,41 @@ const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, aiSetting
           {activeTab === 'settings-orders' && (
             <div className="space-y-5 md:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               
-              {/* ---> WHATSAPP MODIFICATION START */}
-              <div className="bg-white/[0.02] p-4 md:p-6 rounded-2xl border border-emerald-500/20 flex items-center justify-between cursor-pointer hover:bg-white/[0.04] transition-colors gap-3 md:gap-4 shadow-[0_0_20px_rgba(16,185,129,0.05)]" onClick={() => setCreditSettings({ ...creditSettings, isWhatsAppNotificationEnabled: !creditSettings.isWhatsAppNotificationEnabled })}>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <MessageSquare className="w-4 h-4 text-emerald-400" />
-                    <p className="font-bold text-emerald-100 text-base md:text-lg tracking-tight">Enable WhatsApp Alerts</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+                {/* ---> WHATSAPP MODIFICATION START */}
+                <div className="bg-white/[0.02] p-4 md:p-6 rounded-2xl border border-emerald-500/20 flex flex-col sm:flex-row sm:items-center justify-between cursor-pointer hover:bg-white/[0.04] transition-colors gap-3 md:gap-4 shadow-[0_0_20px_rgba(16,185,129,0.05)]" onClick={() => setCreditSettings({ ...creditSettings, isWhatsAppNotificationEnabled: !creditSettings.isWhatsAppNotificationEnabled })}>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <MessageSquare className="w-4 h-4 text-emerald-400" />
+                      <p className="font-bold text-emerald-100 text-base md:text-lg tracking-tight">WhatsApp Alerts</p>
+                    </div>
+                    <p className="text-[10px] md:text-xs text-gray-400 max-w-md leading-relaxed">Send real-time WhatsApp updates for deals.</p>
                   </div>
-                  <p className="text-[10px] md:text-xs text-gray-400 max-w-md leading-relaxed">Send real-time WhatsApp messages to buyers and sellers for order confirmations, deal locks, and pickups.</p>
+                  {creditSettings.isWhatsAppNotificationEnabled ? (
+                    <ToggleRight className="w-10 h-10 md:w-14 md:h-14 text-emerald-400 drop-shadow-[0_0_10px_rgba(16,185,129,0.4)] shrink-0" />
+                  ) : (
+                    <ToggleLeft className="w-10 h-10 md:w-14 md:h-14 text-gray-600 shrink-0" />
+                  )}
                 </div>
-                {creditSettings.isWhatsAppNotificationEnabled ? (
-                  <ToggleRight className="w-10 h-10 md:w-14 md:h-14 text-emerald-400 drop-shadow-[0_0_10px_rgba(16,185,129,0.4)] shrink-0" />
-                ) : (
-                  <ToggleLeft className="w-10 h-10 md:w-14 md:h-14 text-gray-600 shrink-0" />
-                )}
+                {/* ---> WHATSAPP MODIFICATION END */}
+
+                {/* ---> EMAIL MODIFICATION START */}
+                <div className="bg-white/[0.02] p-4 md:p-6 rounded-2xl border border-blue-500/20 flex flex-col sm:flex-row sm:items-center justify-between cursor-pointer hover:bg-white/[0.04] transition-colors gap-3 md:gap-4 shadow-[0_0_20px_rgba(59,130,246,0.05)] mt-4 md:mt-0" onClick={() => setCreditSettings({ ...creditSettings, isEmailNotificationEnabled: !creditSettings.isEmailNotificationEnabled })}>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Mail className="w-4 h-4 text-blue-400" />
+                      <p className="font-bold text-blue-100 text-base md:text-lg tracking-tight">Email Alerts</p>
+                    </div>
+                    <p className="text-[10px] md:text-xs text-gray-400 max-w-md leading-relaxed">Send automated emails for order notifications and updates.</p>
+                  </div>
+                  {creditSettings.isEmailNotificationEnabled ? (
+                    <ToggleRight className="w-10 h-10 md:w-14 md:h-14 text-blue-400 drop-shadow-[0_0_10px_rgba(59,130,246,0.4)] shrink-0" />
+                  ) : (
+                    <ToggleLeft className="w-10 h-10 md:w-14 md:h-14 text-gray-600 shrink-0" />
+                  )}
+                </div>
+                {/* ---> EMAIL MODIFICATION END */}
               </div>
-              {/* ---> WHATSAPP MODIFICATION END */}
 
               <div className="bg-white/[0.02] p-5 md:p-6 sm:p-8 rounded-2xl md:rounded-3xl border border-white/5 flex flex-col justify-between">
                 <div className="mb-5 md:mb-6">

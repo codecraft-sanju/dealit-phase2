@@ -10,6 +10,7 @@ const creditSettingSchema = new mongoose.Schema({
   minImagesRequired: { type: Number, default: 3 },
   isDiscountSimulationEnabled: { type: Boolean, default: false },
   isWhatsAppNotificationEnabled: { type: Boolean, default: true },
+  isEmailNotificationEnabled: { type: Boolean, default: true },
   shippingMethod: { 
     type: String, 
     enum: ['flat', 'dynamic'], 

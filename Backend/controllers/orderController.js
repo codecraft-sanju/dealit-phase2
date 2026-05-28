@@ -15,6 +15,7 @@ const { refundRazorpayPayment, fetchRazorpayPaymentInfo } = require('./paymentCo
 // ---> WHATSAPP MODIFICATION START
 const { sendWhatsAppMessage } = require('../services/whatsappService');
 // ---> WHATSAPP MODIFICATION END
+const sendEmail = require('../utils/sendEmail');
 
 const calculateFees = (baseShipping) => {
   const platformFee = parseFloat((baseShipping * 0.02).toFixed(2));
@@ -68,7 +69,7 @@ const createOrder = async (req, res) => {
     const buyerId = req.user._id;
 
     // ---> WHATSAPP MODIFICATION START (Added 'phone' to populate)
-    const item = await Item.findById(itemId).populate('owner', 'pickupAddress phone');
+    const item = await Item.findById(itemId).populate('owner', 'pickupAddress phone email');
     // ---> WHATSAPP MODIFICATION END
 
     if (!item) {
@@ -224,14 +225,20 @@ const createOrder = async (req, res) => {
       metadata: { referenceId: order._id, imageUrl: item.images?.[0] }
     });
 
-    // ---> WHATSAPP MODIFICATION START
+    // ---> WHATSAPP & EMAIL MODIFICATION START
     if (buyer && buyer.phone) {
         sendWhatsAppMessage(buyer.phone, 'order_confirmed');
+    }
+    if (buyer && buyer.email) {
+        sendEmail({ email: buyer.email, subject: 'Order Confirmed! 🛒', message: `You have successfully purchased "${item.title}". ${itemPrice} credits were deducted.`, isNotification: true });
     }
     if (item.owner && item.owner.phone) {
         sendWhatsAppMessage(item.owner.phone, 'new_order_alert');
     }
-    // ---> WHATSAPP MODIFICATION END
+    if (item.owner && item.owner.email) {
+        sendEmail({ email: item.owner.email, subject: 'New Order Received! 🎉', message: `Someone has purchased your item "${item.title}". Please pack the item!`, isNotification: true });
+    }
+    // ---> WHATSAPP & EMAIL MODIFICATION END
 
     res.status(201).json({
       success: true,
@@ -373,11 +380,14 @@ const updateOrderStatus = async (req, res) => {
           metadata: { amount: order.itemPrice, reason: 'order_refund', referenceId: order._id, imageUrl: order.item?.images?.[0] }
         });
 
-        // ---> WHATSAPP MODIFICATION START
+        // ---> WHATSAPP & EMAIL MODIFICATION START
         if (buyer && buyer.phone) {
             sendWhatsAppMessage(buyer.phone, 'order_cancelled_refunded');
         }
-        // ---> WHATSAPP MODIFICATION END
+        if (buyer && buyer.email) {
+            sendEmail({ email: buyer.email, subject: 'Order Cancelled & Refunded 🔄', message: `The order has been cancelled. Reason: ${order.cancellationReason}. Your ${order.itemPrice} credits have been refunded.`, isNotification: true });
+        }
+        // ---> WHATSAPP & EMAIL MODIFICATION END
         
         const seller = await User.findByIdAndUpdate(order.seller, [
           {
@@ -452,12 +462,15 @@ const updateOrderStatus = async (req, res) => {
              metadata: { referenceId: partnerOrder._id }
            });
 
-           // ---> WHATSAPP MODIFICATION START
+           // ---> WHATSAPP & EMAIL MODIFICATION START
            const partnerBuyer = await User.findById(partnerOrder.buyer);
            if (partnerBuyer && partnerBuyer.phone) {
                sendWhatsAppMessage(partnerBuyer.phone, 'barter_deal_collapsed');
            }
-           // ---> WHATSAPP MODIFICATION END
+           if (partnerBuyer && partnerBuyer.email) {
+               sendEmail({ email: partnerBuyer.email, subject: 'Barter Deal Collapsed 🚫', message: `The partner cancelled their side of the deal. Your shipping fee of ₹${partnerOrder.shippingCost} has been refunded.`, isNotification: true });
+           }
+           // ---> WHATSAPP & EMAIL MODIFICATION END
         }
 
         const barterReq = await BarterRequest.findOneAndUpdate(
@@ -656,13 +669,20 @@ const dispatchOrder = async (req, res) => {
                 metadata: { referenceId: partnerOrder._id, imageUrl: partnerOrder.item.images?.[0] }
             });
 
+            // ---> WHATSAPP & EMAIL MODIFICATION START
             if (order.item && order.item.owner && order.item.owner.phone) {
                 sendWhatsAppMessage(order.item.owner.phone, 'pickup_scheduled');
+            }
+            if (order.item && order.item.owner && order.item.owner.email) {
+                sendEmail({ email: order.item.owner.email, subject: 'Both Ready! Pickup Scheduled 🚚', message: `Your partner is also ready! We have scheduled your pickup with Shiprocket.`, isNotification: true });
             }
             if (partnerOrder.item && partnerOrder.item.owner && partnerOrder.item.owner.phone) {
                 sendWhatsAppMessage(partnerOrder.item.owner.phone, 'pickup_scheduled');
             }
-          
+            if (partnerOrder.item && partnerOrder.item.owner && partnerOrder.item.owner.email) {
+                sendEmail({ email: partnerOrder.item.owner.email, subject: 'Both Ready! Pickup Scheduled 🚚', message: `Your partner is also ready! We have scheduled your pickup with Shiprocket.`, isNotification: true });
+            }
+            // ---> WHATSAPP & EMAIL MODIFICATION END
 
             return res.status(200).json({
                 success: true,
@@ -1001,10 +1021,13 @@ const autoCancelOverdueOrders = async () => {
             metadata: { amount: order.itemPrice, reason: 'auto_cancel_refund', referenceId: order._id, imageUrl: order.item?.images?.[0] }
           });
 
-        
           if (order.buyer && order.buyer.phone) {
               sendWhatsAppMessage(order.buyer.phone, 'order_cancelled_refunded');
           }
+          if (order.buyer && order.buyer.email) {
+              sendEmail({ email: order.buyer.email, subject: 'Order Auto-Cancelled & Refunded 🔄', message: `The seller failed to dispatch your order on time. Your ${order.itemPrice} credits have been refunded.`, isNotification: true });
+          }
+         
          
 
           await AuraLog.create({

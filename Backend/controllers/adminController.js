@@ -465,7 +465,9 @@ const updateCreditSettings = async (req, res) => {
       auraPenalty,
       minImagesRequired,
       isDiscountSimulationEnabled ,
-      isWhatsAppNotificationEnabled
+      isWhatsAppNotificationEnabled,
+    
+      isEmailNotificationEnabled
     } = req.body;
     
     let setting = await CreditSetting.findOne();
@@ -498,6 +500,10 @@ const updateCreditSettings = async (req, res) => {
     if (minImagesRequired !== undefined) setting.minImagesRequired = minImagesRequired;
 
     if (isDiscountSimulationEnabled !== undefined) setting.isDiscountSimulationEnabled = isDiscountSimulationEnabled;
+    if (isWhatsAppNotificationEnabled !== undefined) setting.isWhatsAppNotificationEnabled = isWhatsAppNotificationEnabled;
+    
+ 
+    if (isEmailNotificationEnabled !== undefined) setting.isEmailNotificationEnabled = isEmailNotificationEnabled;
 
     setting.updated_at = Date.now();
 
@@ -516,9 +522,8 @@ const updateCreditSettings = async (req, res) => {
 
 const getPublicCreditSettings = async (req, res) => {
   try {
-  
     let setting = await CreditSetting.findOne().select(
-      'isReferralSystemEnabled referralRewardCredits maxAllowedListings maxReferralLimit milestoneReferralReward isWelcomeBonusEnabled welcomeBonusAmount shippingMethod flatShippingCost autoCancelHours auraReward auraPenalty minImagesRequired isDiscountSimulationEnabled isWhatsAppNotificationEnabled'
+      'isReferralSystemEnabled referralRewardCredits maxAllowedListings maxReferralLimit milestoneReferralReward isWelcomeBonusEnabled welcomeBonusAmount shippingMethod flatShippingCost autoCancelHours auraReward auraPenalty minImagesRequired isDiscountSimulationEnabled isWhatsAppNotificationEnabled isEmailNotificationEnabled'
     );
     
     if (!setting) {
@@ -537,7 +542,8 @@ const getPublicCreditSettings = async (req, res) => {
         auraPenalty: 50,
         minImagesRequired: 3,
         isDiscountSimulationEnabled: false ,
-        isWhatsAppNotificationEnabled: true
+        isWhatsAppNotificationEnabled: true,
+        isEmailNotificationEnabled: true
       };
     }
     res.status(200).json({ success: true, data: setting });

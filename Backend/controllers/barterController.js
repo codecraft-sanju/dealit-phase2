@@ -10,10 +10,8 @@ const Order = require('../models/Order');
 const Transaction = require('../models/Transaction');
 const { refundRazorpayPayment, fetchRazorpayPaymentInfo } = require('./paymentController');
 const { checkServiceability } = require('../utils/shiprocket');
-
-// ---> WHATSAPP MODIFICATION START
 const { sendWhatsAppMessage } = require('../services/whatsappService');
-// ---> WHATSAPP MODIFICATION END
+const sendEmail = require('../utils/sendEmail');
 
 const calculateFees = (baseShipping) => {
   const platformFee = parseFloat((baseShipping * 0.02).toFixed(2));
@@ -104,12 +102,20 @@ const createBarterRequest = async (req, res) => {
       metadata: { reason: 'new_offer', referenceId: savedRequest._id, imageUrl: targetItem.images?.[0] }
     });
 
-    // ---> WHATSAPP MODIFICATION START
+    // ---> WHATSAPP & EMAIL MODIFICATION START
     const targetOwner = await User.findById(targetOwnerId);
     if (targetOwner && targetOwner.phone) {
         sendWhatsAppMessage(targetOwner.phone, 'new_trade_offer');
     }
-    // ---> WHATSAPP MODIFICATION END
+    if (targetOwner && targetOwner.email) {
+        sendEmail({
+            email: targetOwner.email,
+            subject: 'New Trade Offer! 🤝',
+            message: `A new offer has been received for your item "${targetItem.title}". Check your dashboard to view it.`,
+            isNotification: true
+        });
+    }
+    // ---> WHATSAPP & EMAIL MODIFICATION END
 
     res.status(201).json({ success: true, data: savedRequest });
   } catch (error) {
@@ -394,11 +400,19 @@ const updateSwapStatus = async (req, res) => {
         metadata: { reason: 'payment_pending', referenceId: barter._id, imageUrl: barter.item?.images?.[0] }
       });
 
-      // ---> WHATSAPP MODIFICATION START
+      // ---> WHATSAPP & EMAIL MODIFICATION START
       if (barter.requester && barter.requester.phone) {
         sendWhatsAppMessage(barter.requester.phone, 'action_required_payment');
       }
-      // ---> WHATSAPP MODIFICATION END
+      if (barter.requester && barter.requester.email) {
+        sendEmail({
+            email: barter.requester.email,
+            subject: 'Action Required! ⏳',
+            message: `${barter.owner.full_name} has accepted your swap and paid their shipping. Pay your shipping cost within 24 hours to confirm the deal.`,
+            isNotification: true
+        });
+      }
+      // ---> WHATSAPP & EMAIL MODIFICATION END
 
   } else if (status === 'REJECTED') {
    
@@ -686,11 +700,19 @@ const completeSwapPayment = async (req, res) => {
       metadata: { referenceId: ownerDispatchOrder._id, imageUrl: barter.item?.images?.[0] }
     });
 
-   
+    // ---> WHATSAPP & EMAIL MODIFICATION START
     if (barter.owner && barter.owner.phone) {
         sendWhatsAppMessage(barter.owner.phone, 'deal_locked');
     }
-  
+    if (barter.owner && barter.owner.email) {
+        sendEmail({
+            email: barter.owner.email,
+            subject: 'Deal Locked! 📦',
+            message: `${barter.requester.full_name} has paid their shipping. Both orders are placed! Pack your item for dispatch.`,
+            isNotification: true
+        });
+    }
+    // ---> WHATSAPP & EMAIL MODIFICATION END
 
     res.status(200).json({ 
       success: true, 
@@ -755,14 +777,20 @@ const autoCancelOverdueBarters = async () => {
           metadata: { referenceId: barter._id, imageUrl: barter.item?.images?.[0] }
         });
 
-       
+    
         if (barter.owner && barter.owner.phone) {
             sendWhatsAppMessage(barter.owner.phone, 'swap_cancelled_refunded');
+        }
+        if (barter.owner && barter.owner.email) {
+            sendEmail({ email: barter.owner.email, subject: 'Swap Cancelled & Refunded 🚫', message: `The requester didn't pay within 24 hours. The swap is cancelled and your shipping fee of ₹${barter.ownerShippingCost} has been refunded.`, isNotification: true });
         }
         if (barter.requester && barter.requester.phone) {
             sendWhatsAppMessage(barter.requester.phone, 'swap_timeout');
         }
-     
+        if (barter.requester && barter.requester.email) {
+            sendEmail({ email: barter.requester.email, subject: 'Swap Timeout ⏰', message: `You didn't complete the shipping payment in 24 hours. The swap request has been cancelled.`, isNotification: true });
+        }
+       
 
       } catch (innerError) {
         console.error(`Failed to auto-cancel AWAITING_PAYMENT barter ${barter._id}:`, innerError);
@@ -785,7 +813,7 @@ const autoCancelOverdueBarters = async () => {
         request.updated_at = now;
         await request.save();
 
-     
+      
         queueNotification({
           user: request.requester,
           type: 'TRADE_ALERT',
@@ -900,13 +928,20 @@ const autoCancelIncompleteDispatches = async () => {
                             metadata: { referenceId: barter._id }
                         });
 
-                       
+               
                         if (barter.owner && barter.owner.phone) {
                             sendWhatsAppMessage(barter.owner.phone, 'barter_cancelled_refunded');
+                        }
+                        if (barter.owner && barter.owner.email) {
+                            sendEmail({ email: barter.owner.email, subject: 'Barter Cancelled & Refunded 🚫', message: 'The deal collapsed because dispatch was not confirmed within 24 hours. Your shipping fee has been refunded.', isNotification: true });
                         }
                         if (barter.requester && barter.requester.phone) {
                             sendWhatsAppMessage(barter.requester.phone, 'barter_cancelled_refunded');
                         }
+                        if (barter.requester && barter.requester.email) {
+                            sendEmail({ email: barter.requester.email, subject: 'Barter Cancelled & Refunded 🚫', message: 'The deal collapsed because dispatch was not confirmed within 24 hours. Your shipping fee has been refunded.', isNotification: true });
+                        }
+                       
                         
                     }
                 }

@@ -148,7 +148,8 @@ const AdminPanel = ({ user }) => {
     auraPenalty: 50,
     minImagesRequired: 3,
     isDiscountSimulationEnabled: false,
-    isWhatsAppNotificationEnabled: true
+    isWhatsAppNotificationEnabled: true,
+    isEmailNotificationEnabled: true
   });
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
