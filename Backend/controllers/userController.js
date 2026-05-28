@@ -741,7 +741,7 @@ const deleteUserProfile = async (req, res) => {
   }
 };
 
-// MODIFIED: Added function to fetch 5 random users for the avatar display
+
 const getRandomAvatars = async (req, res) => {
   try {
     const randomUsers = await User.aggregate([

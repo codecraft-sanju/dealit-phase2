@@ -441,12 +441,17 @@ function App() {
 
       await axios.post(`${API_URL}/users/logout`, {}, { withCredentials: true });
       setUser(null);
-    
       localStorage.removeItem('dealit_user');
       localStorage.removeItem('dealit_token'); 
       
       queryClient.clear(); 
       
+     
+      if (window.ReactNativeWebView) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'LOGOUT_REQUEST' }));
+      }
+    
+
     } catch (error) {
       console.error('Error logging out:', error);
     }
@@ -465,4 +470,3 @@ function App() {
 }
 
 export default App;
-

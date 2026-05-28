@@ -10,7 +10,7 @@ const getUserNotifications = async (req, res) => {
 
     const total = await Notification.countDocuments({ user: req.user._id });
 
-    //  Added .lean() for faster read performance
+  
     const notifications = await Notification.find({ user: req.user._id })
       .sort({ created_at: -1 })
       .skip(skip)
