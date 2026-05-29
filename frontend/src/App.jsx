@@ -248,37 +248,6 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // NEW: Catch native Expo Push Token from React Native WebView
-  useEffect(() => {
-    const handleMessage = async (event) => {
-      try {
-        let data = event.data;
-        if (typeof data === 'string') {
-          data = JSON.parse(data);
-        }
-
-        if (data.type === 'EXPO_PUSH_TOKEN' && data.token && user) {
-          console.log("Received Expo token from native app, saving to backend...");
-          await axios.post(`${API_URL}/notifications/subscribe`, {
-            endpoint: data.token,
-            type: 'expo', 
-            keys: null // Expo doesn't use p256dh/auth keys
-          }, { withCredentials: true });
-        }
-      } catch (error) {
-        // Ignore JSON parse errors from non-app messages
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    document.addEventListener('message', handleMessage); // For some Android WebViews
-
-    return () => {
-      window.removeEventListener('message', handleMessage);
-      document.removeEventListener('message', handleMessage);
-    };
-  }, [user]); // Re-run if user logs in to attach token to the correct user
-
   // NEW: Catch Route Changes from React Native (When notification is clicked)
   useEffect(() => {
     const handleRouteMessage = (event) => {

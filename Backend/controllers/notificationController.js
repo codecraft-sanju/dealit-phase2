@@ -79,7 +79,8 @@ const markAllAsRead = async (req, res) => {
 
 const subscribePush = async (req, res) => {
   try {
-    const { endpoint, keys, expirationTime } = req.body;
+  
+    const { endpoint, keys, expirationTime, type } = req.body;
     
     await PushSubscription.findOneAndUpdate(
       { endpoint: endpoint },
@@ -87,7 +88,8 @@ const subscribePush = async (req, res) => {
         user: req.user._id,
         endpoint: endpoint,
         keys: keys,
-        expirationTime: expirationTime
+        expirationTime: expirationTime,
+        type: type || 'web'
       },
       { upsert: true, new: true }
     );

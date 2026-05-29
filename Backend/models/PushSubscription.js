@@ -6,7 +6,11 @@ const pushSubscriptionSchema = new mongoose.Schema({
     ref: 'User', 
     required: true 
   },
-
+  type: {  
+    type: String,
+    enum: ['web', 'expo'],
+    default: 'web'
+  },
   endpoint: { 
     type: String,
     required: true 
@@ -16,8 +20,8 @@ const pushSubscriptionSchema = new mongoose.Schema({
     default: null
   },
   keys: {
-    p256dh: { type: String }, //Removed required: true for Expo compatibility
-    auth: { type: String }    // Removed required: true for Expo compatibility
+    p256dh: { type: String },
+    auth: { type: String }    
   },
   created_at: { 
     type: Date, 
