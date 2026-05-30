@@ -64,6 +64,21 @@ const createBarterRequest = async (req, res) => {
       });
     }
 
+ 
+    const activeOffersCount = await BarterRequest.countDocuments({
+      requester: req.user._id,
+      offered_item: offeredItem,
+      status: { $in: ['PENDING', 'ACCEPTED', 'AWAITING_PAYMENT'] }
+    });
+
+    if (activeOffersCount >= 3) {
+      return res.status(400).json({
+        success: false,
+        message: 'You have already offered this item to 3 users. Please wait for them to respond or cancel a pending request before making a new offer.'
+      });
+    }
+  
+
     const currentUser = await User.findById(req.user._id);
     
     const targetValue = targetItem.estimated_value || 0;
@@ -102,7 +117,6 @@ const createBarterRequest = async (req, res) => {
       metadata: { reason: 'new_offer', referenceId: savedRequest._id, imageUrl: targetItem.images?.[0] }
     });
 
-    // ---> WHATSAPP & EMAIL MODIFICATION START
     const targetOwner = await User.findById(targetOwnerId);
     if (targetOwner && targetOwner.phone) {
         sendWhatsAppMessage(targetOwner.phone, 'new_trade_offer');
@@ -115,7 +129,7 @@ const createBarterRequest = async (req, res) => {
             isNotification: true
         });
     }
-    // ---> WHATSAPP & EMAIL MODIFICATION END
+  
 
     res.status(201).json({ success: true, data: savedRequest });
   } catch (error) {

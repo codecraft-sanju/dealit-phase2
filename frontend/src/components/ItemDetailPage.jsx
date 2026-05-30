@@ -9,7 +9,6 @@ import axios from 'axios';
 import ProductCard from './ProductCard'; 
 
 import { getOptimizedCloudinaryUrl } from './HomePage';
-
 import TradeModal from '../TradeModal/TradeModal';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
@@ -34,16 +33,16 @@ const ItemDetailPage = ({ user }) => {
   
   const [loadingMyItems, setLoadingMyItems] = useState(false); 
 
+  // ---> SUCCESS POPUP STATE
+  const [popupState, setPopupState] = useState('hidden'); 
+
   // Gallery States
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollRef = useRef(null);
 
   // Wishlist States
   const [isWishlisted, setIsWishlisted] = useState(false);
-  
-  // -> CHANGES START HERE: Replaced toggling state with debounce ref
   const debounceTimerRef = useRef(null);
-  // -> CHANGES END HERE
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -54,7 +53,6 @@ const ItemDetailPage = ({ user }) => {
         const response = await axios.get(`${API_URL}/items/${id}`);
         setItem(response.data.data);
 
-        // Fetch User Profile to check if item is in wishlist
         if (user) {
           const profileRes = await axios.get(`${API_URL}/users/profile`, { withCredentials: true });
           if (profileRes.data.success && profileRes.data.data.wishlist) {
@@ -125,14 +123,12 @@ const ItemDetailPage = ({ user }) => {
     }
   };
 
-  // Toggle Wishlist Handler
   const handleToggleWishlist = () => {
     if (!user) {
       navigate('/login');
       return;
     }
 
-    // -> CHANGES START HERE: Optimistic UI & Debouncing logic
     const newWishlistState = !isWishlisted;
     setIsWishlisted(newWishlistState);
 
@@ -156,7 +152,6 @@ const ItemDetailPage = ({ user }) => {
         setIsWishlisted(!newWishlistState);
       }
     }, 500); 
-    // -> CHANGES END HERE
   };
 
   const handleOpenBarterModal = async () => {
@@ -175,7 +170,6 @@ const ItemDetailPage = ({ user }) => {
     } catch (error) {
       console.error('Error fetching your items:', error);
     } finally {
-    
       setLoadingMyItems(false); 
     }
   };
@@ -193,7 +187,13 @@ const ItemDetailPage = ({ user }) => {
       
       setShowModal(false);
       
-     
+      // TRIGGER SEAMLESS ANIMATION
+      setPopupState('loading');
+      
+      setTimeout(() => {
+        setPopupState('success');
+      }, 1500);
+      
     } catch (error) {
       console.error('Error Details:', error.response?.data || error);
       
@@ -208,6 +208,12 @@ const ItemDetailPage = ({ user }) => {
     }
   };
 
+  // ---> NEW: Navigate exactly to Sent Swaps Tab
+  const handleCloseSuccessPopup = () => {
+    setPopupState('hidden');
+    navigate('/swaps?tab=sent'); 
+  };
+
   const handleBuyNow = () => {
     if (!user) {
       navigate('/login');
@@ -218,23 +224,16 @@ const ItemDetailPage = ({ user }) => {
 
 
   if (loading) {
-    // ... Keeping shimmer loading UI exactly as is ...
     return (
       <div className="max-w-7xl mx-auto bg-white min-h-screen pb-[150px] md:pb-32 lg:pb-12 font-sans animate-pulse lg:pt-10 lg:px-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-12 items-start">
-          
-          {/* Left Column Shimmer (Image & Details) */}
           <div className="lg:col-span-7 w-full mx-auto space-y-6 px-5 lg:px-0 mt-6 lg:mt-0">
             <div className="w-full aspect-square bg-slate-100 lg:rounded-[2rem] rounded-xl mb-4"></div>
-            
-            {/* Thumbnails Shimmer */}
             <div className="hidden lg:flex gap-3 overflow-x-hidden">
               {[1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="w-20 h-20 bg-slate-100 rounded-xl flex-shrink-0"></div>
               ))}
             </div>
-            
-            {/* Description Box Shimmer */}
             <div className="hidden lg:block bg-white rounded-3xl p-7 border border-slate-100 mt-6">
               <div className="h-6 bg-slate-100 rounded-md w-1/3 mb-4"></div>
               <div className="space-y-3">
@@ -246,10 +245,7 @@ const ItemDetailPage = ({ user }) => {
             </div>
           </div>
 
-          {/* Right Column Shimmer (Info & Actions) */}
           <div className="lg:col-span-5 flex flex-col px-5 lg:px-0 pt-6 lg:pt-0">
-            
-            {/* Title & Icons Shimmer */}
             <div className="flex justify-between items-start mb-6">
               <div className="h-8 bg-slate-100 rounded-lg w-2/3"></div>
               <div className="flex gap-2">
@@ -257,8 +253,6 @@ const ItemDetailPage = ({ user }) => {
                 <div className="w-10 h-10 bg-slate-100 rounded-full"></div>
               </div>
             </div>
-
-            {/* Price/Credits Shimmer */}
             <div className="flex items-center gap-4 pb-6 border-b border-slate-100 mb-6">
               <div className="w-12 h-12 bg-slate-100 rounded-full"></div>
               <div className="space-y-2">
@@ -266,15 +260,11 @@ const ItemDetailPage = ({ user }) => {
                 <div className="h-8 bg-slate-100 rounded-md w-32"></div>
               </div>
             </div>
-
-            {/* Grid Attributes Shimmer */}
             <div className="grid grid-cols-2 gap-3 mb-6">
               <div className="bg-slate-50 border border-slate-100 rounded-2xl h-20"></div>
               <div className="bg-slate-50 border border-slate-100 rounded-2xl h-20"></div>
               <div className="bg-slate-50 border border-slate-100 rounded-2xl h-20 col-span-2"></div>
             </div>
-
-            {/* Owner Details Shimmer */}
             <div className="bg-slate-50 border border-slate-100 rounded-2xl h-20 mb-6 flex items-center p-4 gap-4">
               <div className="w-12 h-12 bg-slate-200 rounded-full shrink-0"></div>
               <div className="space-y-2 w-full">
@@ -282,15 +272,12 @@ const ItemDetailPage = ({ user }) => {
                 <div className="h-4 bg-slate-200 rounded-md w-1/2"></div>
               </div>
             </div>
-            
-            {/* Mobile Description Shimmer */}
             <div className="block lg:hidden space-y-3 mt-4">
               <div className="h-4 bg-slate-100 rounded-md w-1/3 mb-4"></div>
               <div className="h-3 bg-slate-100 rounded-md w-full"></div>
               <div className="h-3 bg-slate-100 rounded-md w-full"></div>
               <div className="h-3 bg-slate-100 rounded-md w-5/6"></div>
             </div>
-
           </div>
         </div>
       </div>
@@ -324,35 +311,22 @@ const ItemDetailPage = ({ user }) => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-12 items-start lg:pt-10 lg:px-6">
         
         <div className="lg:col-span-7 w-full mx-auto space-y-6">
-          
           <div className="relative w-full aspect-square bg-[#f8f9fb] lg:rounded-[2rem] overflow-hidden border-b lg:border border-slate-100 shadow-sm group">
-            
-            {/* NAYA CHANGE: Added Discount Badge on Image Corner */}
             {item.discount_percentage && (
               <span className="absolute top-4 left-4 z-20 text-[11px] lg:text-xs font-black text-white bg-[#FF4747] px-2.5 py-1 rounded-md shadow-md tracking-wider">
                 {item.discount_percentage}% OFF
               </span>
             )}
-
             {item.images && item.images.length > 1 && (
               <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-3 py-1.5 rounded-full lg:hidden z-10 tracking-widest shadow-sm">
                 {activeIndex + 1} / {item.images.length}
               </div>
             )}
-
-            <div 
-              ref={scrollRef}
-              onScroll={handleScroll}
-              className="flex w-full h-full overflow-x-auto snap-x snap-mandatory hide-scrollbar scroll-smooth relative"
-            >
+            <div ref={scrollRef} onScroll={handleScroll} className="flex w-full h-full overflow-x-auto snap-x snap-mandatory hide-scrollbar scroll-smooth relative">
               {item.images && item.images.length > 0 ? (
                 item.images.map((img, idx) => (
                   <div key={idx} className="w-full h-full flex-shrink-0 snap-center relative">
-                    <img 
-                      src={getOptimizedCloudinaryUrl(img)} 
-                      alt={`${item.title} ${idx + 1}`} 
-                      className="w-full h-full object-cover drop-shadow-sm" 
-                    />
+                    <img src={getOptimizedCloudinaryUrl(img)} alt={`${item.title} ${idx + 1}`} className="w-full h-full object-cover drop-shadow-sm" />
                   </div>
                 ))
               ) : (
@@ -361,14 +335,10 @@ const ItemDetailPage = ({ user }) => {
                 </div>
               )}
             </div>
-
             {item.images && item.images.length > 1 && (
               <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 lg:hidden z-10">
                 {item.images.map((_, idx) => (
-                  <div 
-                    key={idx} 
-                    className={`h-1.5 rounded-full transition-all duration-300 shadow-sm ${activeIndex === idx ? 'w-5 bg-[#6B46C1]' : 'w-1.5 bg-slate-300/80'}`} 
-                  />
+                  <div key={idx} className={`h-1.5 rounded-full transition-all duration-300 shadow-sm ${activeIndex === idx ? 'w-5 bg-[#6B46C1]' : 'w-1.5 bg-slate-300/80'}`} />
                 ))}
               </div>
             )}
@@ -377,11 +347,7 @@ const ItemDetailPage = ({ user }) => {
           {item.images && item.images.length > 1 && (
             <div className="flex gap-3 overflow-x-auto hide-scrollbar px-4 lg:px-0 mt-4 lg:mt-0 pb-2">
               {item.images.map((img, idx) => (
-                <button 
-                  key={idx}
-                  onClick={() => handleThumbnailClick(idx)}
-                  className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all bg-[#f8f9fb] ${activeIndex === idx ? 'border-[#6B46C1] shadow-sm scale-[0.98]' : 'border-slate-100 hover:border-slate-300'}`}
-                >
+                <button key={idx} onClick={() => handleThumbnailClick(idx)} className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all bg-[#f8f9fb] ${activeIndex === idx ? 'border-[#6B46C1] shadow-sm scale-[0.98]' : 'border-slate-100 hover:border-slate-300'}`}>
                   <img src={getOptimizedCloudinaryUrl(img)} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover mix-blend-multiply" />
                 </button>
               ))}
@@ -397,33 +363,21 @@ const ItemDetailPage = ({ user }) => {
             </p>
           </div>
         </div>
-
    
         <div className="lg:col-span-5 flex flex-col h-full px-5 lg:px-0 pt-6 lg:pt-0 pb-2 lg:pb-0 lg:sticky lg:top-24">
-          
           <div className="mb-6">
             <div className="flex justify-between items-start mb-4">
               <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 leading-tight tracking-tight pr-4">
                 {item.title}
               </h1>
-              
               <div className="flex items-center gap-2 shrink-0">
-                {/* -> CHANGES START HERE: Removed disabled={togglingWishlist} */}
-                <button 
-                  onClick={handleToggleWishlist} 
-                  className="flex w-10 h-10 bg-slate-50 hover:bg-red-50 border border-slate-100 shadow-sm rounded-full items-center justify-center transition-colors active:scale-95 group"
-                >
+                <button onClick={handleToggleWishlist} className="flex w-10 h-10 bg-slate-50 hover:bg-red-50 border border-slate-100 shadow-sm rounded-full items-center justify-center transition-colors active:scale-95 group">
                   <Heart className={`w-4 h-4 transition-colors ${isWishlisted ? 'fill-red-500 text-red-500' : 'text-slate-400 group-hover:text-red-500'}`} />
                 </button>
-                {/* -> CHANGES END HERE */}
-                <button 
-                  onClick={handleShare} 
-                  className="flex w-10 h-10 bg-slate-50 hover:bg-slate-100 border border-slate-100 shadow-sm rounded-full items-center justify-center text-[#6B46C1] transition-colors active:scale-95"
-                >
+                <button onClick={handleShare} className="flex w-10 h-10 bg-slate-50 hover:bg-slate-100 border border-slate-100 shadow-sm rounded-full items-center justify-center text-[#6B46C1] transition-colors active:scale-95">
                   <Share2 className="w-4 h-4" />
                 </button>
               </div>
-
             </div>
 
             <div className="flex items-center gap-2 pb-6 border-b border-slate-100">
@@ -434,7 +388,6 @@ const ItemDetailPage = ({ user }) => {
                 <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest leading-none mb-1">Dealit Value</p>
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-black text-slate-900 tracking-tighter">{targetValue}</span>
-                  {/* NAYA CHANGE: Show original cut price next to the current value */}
                   {item.original_value && (
                     <span className="text-lg text-slate-400 line-through font-medium">
                       {item.original_value}
@@ -477,7 +430,6 @@ const ItemDetailPage = ({ user }) => {
               <p className="text-sm font-bold text-slate-900 line-clamp-1">{item.owner?.full_name || 'Dealit User'}</p>
             </div>
           </div>
-
    
           <div className="block lg:hidden mb-2 relative">
             <h3 className="text-sm font-bold text-slate-900 mb-2">Description</h3>
@@ -490,13 +442,11 @@ const ItemDetailPage = ({ user }) => {
       </div>
 
       {(!loadingRelated && relatedItems.length > 0) && (
-   
         <div className="mt-4 lg:mt-16 pt-6 lg:pt-12 border-t border-slate-100 px-5 lg:px-6 mb-8 lg:mb-10">
           <div className="flex items-center gap-2 mb-6">
             <TrendingUp className="w-5 h-5 text-[#6B46C1]" />
             <h2 className="text-xl lg:text-2xl font-black text-slate-900">More items you might like</h2>
           </div>
-          
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {relatedItems.map(relItem => (
               <ProductCard key={relItem._id} item={relItem} />
@@ -505,7 +455,6 @@ const ItemDetailPage = ({ user }) => {
         </div>
       )}
       {loadingRelated && (
-  
         <div className="mt-4 lg:mt-16 pt-6 lg:pt-12 border-t border-slate-100 px-5 lg:px-6 mb-8 lg:mb-10 animate-pulse">
            <div className="h-6 w-48 bg-slate-200 rounded-lg mb-6"></div>
            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -514,7 +463,6 @@ const ItemDetailPage = ({ user }) => {
         </div>
       )}
 
-    
       <div className="fixed bottom-[calc(60px+env(safe-area-inset-bottom))] md:bottom-0 left-0 right-0 z-40 pointer-events-none lg:static lg:mt-auto px-4 lg:px-0">
         <div className="pointer-events-auto max-w-lg mx-auto lg:max-w-full">
           {user && item?.owner?._id && (item.owner._id === user._id || item.owner._id === user.id) ? (
@@ -552,6 +500,77 @@ const ItemDetailPage = ({ user }) => {
           </div>
         </div>
       </div>
+
+      {/* ---> 🔥 VIDEO-STYLE SEAMLESS ANIMATED POPUP 🔥 <--- */}
+      {popupState !== 'hidden' && (
+        <div 
+          className="fixed inset-0 z-[110] flex items-center justify-center px-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300"
+          onClick={popupState === 'success' ? handleCloseSuccessPopup : undefined} 
+        >
+          <div 
+            className="bg-white rounded-[2.5rem] p-8 sm:p-10 max-w-sm w-full text-center shadow-2xl relative overflow-hidden group"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {popupState === 'success' && (
+              <button 
+                onClick={handleCloseSuccessPopup}
+                className="absolute top-5 right-5 w-8 h-8 flex items-center justify-center bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-slate-700 rounded-full transition-colors z-20 animate-in fade-in"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
+
+            {/* SEAMLESS MORPHING CIRCLE */}
+            <div 
+              className={`relative w-24 h-24 mx-auto mb-6 flex items-center justify-center rounded-full transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${
+                popupState === 'success' ? 'bg-[#10B981] scale-110 shadow-[0_0_30px_rgba(16,185,129,0.4)]' : 'bg-[#EBE5F7] scale-100'
+              }`}
+            >
+              {/* 1. Purple Dashed Spinner (Only visible when loading) */}
+              <svg 
+                className={`absolute w-12 h-12 text-[#6B46C1] transition-all duration-300 ${
+                  popupState === 'success' ? 'opacity-0 scale-50 rotate-90' : 'opacity-100 scale-100 animate-spin'
+                }`} 
+                viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+              >
+                <path d="M12 2V6M12 18V22M6 12H2M22 12H18M4.92893 4.92893L7.75736 7.75736M16.2426 16.2426L19.0711 19.0711M4.92893 19.0711L7.75736 16.2426M16.2426 7.75736L19.0711 4.92893" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+
+              {/* 2. White Checkmark (Pops in smoothly on success) */}
+              <svg 
+                className={`absolute w-12 h-12 text-white transition-all duration-500 delay-150 ${
+                  popupState === 'success' ? 'opacity-100 scale-100' : 'opacity-0 scale-50'
+                }`} 
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+              >
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </div>
+
+            {/* DYNAMIC TEXT */}
+            <h3 className="text-2xl sm:text-3xl font-black text-slate-900 mb-2 tracking-tight">
+              {popupState === 'loading' ? 'Sending Offer...' : 'Offer Sent!'}
+            </h3>
+            
+            <p className={`text-slate-500 text-sm sm:text-base leading-relaxed font-medium px-2 transition-all duration-300 ${popupState === 'success' ? 'mb-8' : 'mb-4'}`}>
+              {popupState === 'loading' 
+                ? 'Please wait a moment while we process your request securely.' 
+                : 'Your barter offer is locked in. We\'ll notify you the moment the owner responds. 🚀'}
+            </p>
+
+            {/* ACTION BUTTON (Slides in smoothly) */}
+            <div className={`transition-all duration-500 ${popupState === 'success' ? 'opacity-100 translate-y-0 h-auto' : 'opacity-0 translate-y-4 h-0 overflow-hidden pointer-events-none'}`}>
+              <button
+                onClick={handleCloseSuccessPopup}
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl transition-all shadow-lg active:scale-95 mt-2"
+              >
+                Track Sent Request
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
 
       <TradeModal 
         isOpen={showModal}
