@@ -1,3 +1,4 @@
+// CheckoutPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
@@ -10,7 +11,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
-
 const INDIAN_STATES = [
   "Andaman and Nicobar Islands", "Andhra Pradesh", "Arunachal Pradesh", "Assam", 
   "Bihar", "Chandigarh", "Chhattisgarh", "Dadra and Nagar Haveli and Daman and Diu", 
@@ -21,7 +21,6 @@ const INDIAN_STATES = [
   "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal"
 ];
 
-
 const loadRazorpayScript = () => {
   return new Promise((resolve) => {
     const script = document.createElement('script');
@@ -31,7 +30,6 @@ const loadRazorpayScript = () => {
     document.body.appendChild(script);
   });
 };
-
 
 const calculateFrontendFees = (base) => {
   const platformFee = parseFloat((base * 0.02).toFixed(2));
@@ -45,7 +43,6 @@ const calculateFrontendFees = (base) => {
   };
 };
 
-
 const CheckoutPage = ({ user, setUser }) => {
   const { itemId } = useParams();
   const navigate = useNavigate();
@@ -54,17 +51,11 @@ const CheckoutPage = ({ user, setUser }) => {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [shippingCost, setShippingCost] = useState(60); 
-  
   const [feeBreakdown, setFeeBreakdown] = useState(null);
-  
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  
   const [autoCancelHours, setAutoCancelHours] = useState(24);
-
   const [currentStep, setCurrentStep] = useState(1);
-
-  // ✅ NEW: Success modal state
   const [orderSuccess, setOrderSuccess] = useState(false);
   
   const savedAddresses = user?.savedAddresses || [];
@@ -83,7 +74,6 @@ const CheckoutPage = ({ user, setUser }) => {
 
   const [filteredStates, setFilteredStates] = useState(INDIAN_STATES);
   const [showStateDropdown, setShowStateDropdown] = useState(false);
-
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -94,12 +84,10 @@ const CheckoutPage = ({ user, setUser }) => {
         setIsScrolled(false);
       }
     };
-
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  
   useEffect(() => {
     const fetchCheckoutData = async () => {
       try {
@@ -126,11 +114,9 @@ const CheckoutPage = ({ user, setUser }) => {
         setLoading(false);
       }
     };
-
     fetchCheckoutData();
   }, [itemId]);
 
- 
   useEffect(() => {
     if (selectedAddressIndex >= 0 && savedAddresses[selectedAddressIndex]) {
       const addr = savedAddresses[selectedAddressIndex];
@@ -156,8 +142,7 @@ const CheckoutPage = ({ user, setUser }) => {
         pincode: ''
       });
     }
-  }, [selectedAddressIndex]);
-
+  }, [selectedAddressIndex, user]);
 
   useEffect(() => {
     const fetchDynamicShippingCost = async () => {
@@ -208,10 +193,8 @@ const CheckoutPage = ({ user, setUser }) => {
     if (selectedAddressIndex !== -1) {
       setSelectedAddressIndex(-1);
     }
-    
     if (error) setError('');
   };
-
 
   const handleStateSelect = (stateName) => {
     setFormData({ ...formData, state: stateName });
@@ -219,7 +202,6 @@ const CheckoutPage = ({ user, setUser }) => {
     if (error) setError('');
   };
   
-
   const handleContinueToSummary = () => {
     if (selectedAddressIndex === -1) {
       if (!formData.fullName || !formData.phone || !formData.houseNo || !formData.areaStreet || !formData.city || !formData.state || !formData.pincode) {
@@ -239,7 +221,6 @@ const CheckoutPage = ({ user, setUser }) => {
     setCurrentStep(2);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
- 
 
   const itemPrice = item?.estimated_value || 0;
   const hasEnoughCredits = user?.account_credits >= itemPrice;
@@ -267,13 +248,11 @@ const CheckoutPage = ({ user, setUser }) => {
         setUser(updatedUser);
         localStorage.setItem('dealit_user', JSON.stringify(updatedUser));
 
-        // ✅ SUCCESS MODAL + auto redirect after 2.5s
         setOrderSuccess(true);
         setTimeout(() => navigate('/orders'), 2500);
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Order creation failed. Please contact support.');
-    } finally {
       setProcessing(false);
     }
   };
@@ -330,9 +309,7 @@ const CheckoutPage = ({ user, setUser }) => {
           email: user?.email || '',
           contact: formData.phone || user?.phone || '',
         },
-        theme: {
-          color: '#6B46C1',
-        },
+        theme: { color: '#6B46C1' },
       };
 
       const paymentObject = new window.Razorpay(options);
@@ -343,45 +320,20 @@ const CheckoutPage = ({ user, setUser }) => {
       });
 
       paymentObject.open();
-
     } catch (err) {
       setError(err.response?.data?.message || 'Something went wrong while initiating payment.');
       setProcessing(false);
     }
   };
 
-
   const stepVariants = {
     hidden: { opacity: 0, x: 20 },
-    visible: { 
-      opacity: 1, 
-      x: 0, 
-      transition: { type: 'spring', stiffness: 300, damping: 24 } 
-    },
+    visible: { opacity: 1, x: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } },
     exit: { opacity: 0, x: -20, transition: { duration: 0.2 } }
   };
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.08, delayChildren: 0.1 }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
-      y: 0, 
-      transition: { type: 'spring', stiffness: 300, damping: 24 } 
-    }
-  };
-
- 
   if (loading) return (
     <div className="min-h-screen bg-[#f4f2f9] pb-10 font-sans relative overflow-x-hidden">
-      
       <header className="fixed top-0 left-0 right-0 z-50 bg-[#6B46C1] py-5 shadow-md">
         <div className="max-w-md mx-auto md:max-w-3xl px-5 md:px-8 flex items-center gap-4">
           <div className="w-10 h-10 bg-white/20 rounded-full animate-pulse border border-white/10 shrink-0"></div>
@@ -391,12 +343,9 @@ const CheckoutPage = ({ user, setUser }) => {
           </div>
         </div>
       </header>
-
       <div className="absolute top-0 left-0 right-0 bg-[#6B46C1] h-48 rounded-b-[2rem] z-0 animate-pulse" />
-
       <div className="max-w-md mx-auto md:max-w-3xl px-5 md:px-8 pt-28 relative z-20">
         <div className="grid grid-cols-1 gap-4 md:gap-6">
-          
           <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm flex items-center gap-4 animate-pulse">
             <div className="w-20 h-20 bg-gray-200 rounded-[1.2rem] shrink-0"></div>
             <div className="flex-1 space-y-3">
@@ -405,9 +354,7 @@ const CheckoutPage = ({ user, setUser }) => {
               <div className="h-8 w-28 bg-gray-200 rounded-full mt-2"></div>
             </div>
           </div>
-
           <div className="space-y-4 md:space-y-6">
-            
             <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm space-y-5 animate-pulse">
               <div className="flex items-center gap-3 border-b border-gray-50 pb-4">
                 <div className="w-10 h-10 bg-gray-200 rounded-xl"></div>
@@ -416,52 +363,23 @@ const CheckoutPage = ({ user, setUser }) => {
               <div className="space-y-4">
                 <div className="h-14 w-full bg-gray-200 rounded-xl"></div>
                 <div className="h-14 w-full bg-gray-200 rounded-xl"></div>
-                <div className="h-14 w-full bg-gray-200 rounded-xl"></div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="h-14 w-full bg-gray-200 rounded-xl"></div>
                   <div className="h-14 w-full bg-gray-200 rounded-xl"></div>
                 </div>
               </div>
             </div>
-
-            <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm animate-pulse">
-              <div className="flex items-center gap-3 border-b border-gray-50 pb-4 mb-4">
-                <div className="w-10 h-10 bg-gray-200 rounded-xl"></div>
-                <div className="h-6 w-32 bg-gray-200 rounded"></div>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <div className="h-4 w-40 bg-gray-200 rounded"></div>
-                  <div className="h-4 w-24 bg-gray-200 rounded"></div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <div className="h-4 w-32 bg-gray-200 rounded"></div>
-                  <div className="h-4 w-20 bg-gray-200 rounded"></div>
-                </div>
-                
-                <div className="border-t border-gray-100 pt-4 mt-2 flex justify-between items-center">
-                  <div className="h-6 w-28 bg-gray-200 rounded"></div>
-                  <div className="h-6 w-24 bg-gray-200 rounded"></div>
-                </div>
-
-                <div className="h-14 w-full bg-gray-200 rounded-xl mt-6"></div>
-              </div>
-            </div>
-
           </div>
         </div>
       </div>
     </div>
   );
 
-
   if (!item) return <div className="min-h-screen bg-[#f4f2f9] text-gray-900 p-10 text-center font-bold">Item not found.</div>;
 
   return (
     <div className="min-h-screen bg-[#f4f2f9] pb-24 font-sans relative overflow-x-hidden">
-
-      {/* ✅ ORDER SUCCESS MODAL */}
+      {/* ORDER SUCCESS MODAL */}
       <AnimatePresence>
         {orderSuccess && (
           <motion.div
@@ -477,7 +395,6 @@ const CheckoutPage = ({ user, setUser }) => {
               transition={{ type: 'spring', stiffness: 300, damping: 24 }}
               className="bg-white rounded-3xl p-8 text-center shadow-2xl max-w-sm w-full"
             >
-              {/* Animated check circle */}
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
@@ -520,7 +437,6 @@ const CheckoutPage = ({ user, setUser }) => {
                 Redirecting to your orders...
               </motion.p>
 
-              {/* Progress bar */}
               <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
@@ -534,7 +450,6 @@ const CheckoutPage = ({ user, setUser }) => {
         )}
       </AnimatePresence>
 
-      
       <header 
         className={`fixed top-0 left-0 right-0 z-50 bg-[#6B46C1] transition-all duration-300 ease-in-out shadow-md ${
           isScrolled ? 'py-3' : 'py-5'
@@ -572,9 +487,7 @@ const CheckoutPage = ({ user, setUser }) => {
       />
 
       <div className="max-w-md mx-auto md:max-w-3xl px-5 md:px-8 pt-28 relative z-20">
-        
         <AnimatePresence mode="wait">
-          
           {currentStep === 1 && (
             <motion.div 
               key="step1"
@@ -746,7 +659,6 @@ const CheckoutPage = ({ user, setUser }) => {
                 )}
               </div>
 
-            
               <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] z-40 md:relative md:bg-transparent md:border-none md:shadow-none md:p-0">
                 <div className="max-w-md mx-auto md:max-w-3xl">
                   <motion.button 
@@ -763,7 +675,6 @@ const CheckoutPage = ({ user, setUser }) => {
             </motion.div>
           )}
 
-        
           {currentStep === 2 && (
             <motion.div 
               key="step2"
@@ -893,10 +804,8 @@ const CheckoutPage = ({ user, setUser }) => {
                     </>
                   )}
                 </div>
-
               </div>
 
-            
             <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] z-40 md:relative md:bg-transparent md:border-none md:shadow-none md:p-0">
                 <div className="max-w-md mx-auto md:max-w-3xl">
                   {hasEnoughCredits ? (
@@ -935,8 +844,6 @@ const CheckoutPage = ({ user, setUser }) => {
             </motion.div>
           )}
         </AnimatePresence>
-      
-
       </div>
     </div>
   );

@@ -49,7 +49,7 @@ const calculateShippingCost = async (req, res) => {
       }
     }
 
-    // CHANGES MADE HERE: Calculate breakdown and return to frontend
+    // Calculate breakdown and return to frontend
     const feeDetails = calculateFees(baseShipping);
 
     res.status(200).json({ 
@@ -83,7 +83,7 @@ const createOrder = async (req, res) => {
     }
 
     let setting = await CreditSetting.findOne();
-    let baseShipping = 60; // CHANGES MADE HERE: Renamed to baseShipping
+    let baseShipping = 60; 
 
     if (setting) {
       if (setting.shippingMethod === 'dynamic') {
@@ -96,7 +96,6 @@ const createOrder = async (req, res) => {
       }
     }
 
-    // CHANGES MADE HERE: Calculate exact fees
     const feeDetails = calculateFees(baseShipping);
     const finalShippingCost = feeDetails.totalShippingCost;
 
@@ -127,7 +126,6 @@ const createOrder = async (req, res) => {
       }
       const actualPaidINR = paymentCheck.data.amount / 100;
       
-      // CHANGES MADE HERE: Check actual payment against new total (Base + Platform + GST)
       if (actualPaidINR < finalShippingCost) {
         return res.status(400).json({ success: false, message: `Payment manipulation detected. Expected ₹${finalShippingCost} but received ₹${actualPaidINR}.` });
       }
@@ -184,7 +182,6 @@ const createOrder = async (req, res) => {
     item.status = 'reserved'; 
     await item.save();
 
-    // CHANGES MADE HERE: Save breakdown inside the Order model
     const order = await Order.create({
       buyer: buyerId,
       seller: item.owner._id,
@@ -479,15 +476,20 @@ const updateOrderStatus = async (req, res) => {
         ).populate('item offered_item');
 
         if (barterReq) {
-           const reqValue = barterReq.item?.estimated_value || 0;
-           const offValue = barterReq.offered_item?.estimated_value || 0;
-           const diff = Math.max(0, reqValue - offValue);
+           // CHANGES MADE HERE: Fix for "Refund Logic Mismatch" Loophole
+           // Finding the exact amount paid from the created orders to refund accurately
+           let diffToRefund = 0;
+           if (order.buyer.toString() === barterReq.requester.toString()) {
+               diffToRefund = order.itemPrice;
+           } else if (partnerOrder && partnerOrder.buyer.toString() === barterReq.requester.toString()) {
+               diffToRefund = partnerOrder.itemPrice;
+           }
            
-           if (diff > 0) {
-             await User.findByIdAndUpdate(barterReq.requester, { $inc: { account_credits: diff } });
+           if (diffToRefund > 0) {
+             await User.findByIdAndUpdate(barterReq.requester, { $inc: { account_credits: diffToRefund } });
              await Transaction.create({
                 user: barterReq.requester,
-                amount: diff,
+                amount: diffToRefund,
                 status: 'success',
                 transactionType: 'order_refund'
              });
@@ -1027,8 +1029,8 @@ const autoCancelOverdueOrders = async () => {
           if (order.buyer && order.buyer.email) {
               sendEmail({ email: order.buyer.email, subject: 'Order Auto-Cancelled & Refunded 🔄', message: `The seller failed to dispatch your order on time. Your ${order.itemPrice} credits have been refunded.`, isNotification: true });
           }
-         
-         
+          
+          
 
           await AuraLog.create({
             user: sellerId,

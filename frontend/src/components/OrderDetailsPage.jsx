@@ -1,3 +1,4 @@
+// OrderDetailsPage.jsx
 import React, { useState, useEffect } from 'react';
 import { ShoppingBag, Truck, CheckCircle, Clock, MapPin, Phone, User, ArrowLeft, Coins, Package, ExternalLink, X, FileText, Loader2, AlertCircle, Info, ChevronRight, RefreshCcw, Calendar } from 'lucide-react'; 
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
@@ -425,11 +426,9 @@ const OrderDetailsPage = ({ user }) => {
   
   const estimatedInfo = getEstimatedDelivery();
 
-  // FIX: Added formatMoney function
   const formatMoney = (val) => val ? Number(val).toFixed(2) : '0.00';
 
-  // FIX: Applied formatMoney to all breakdown values
-  const shippingBreakdown = order.baseShippingCost ? {
+  const shippingBreakdown = order.baseShippingCost != null ? {
     baseShipping: formatMoney(order.baseShippingCost),
     platformFee: formatMoney(order.platformFee),
     gstAmount: formatMoney(order.gstAmount),
@@ -437,7 +436,6 @@ const OrderDetailsPage = ({ user }) => {
   } : null;
 
   return (
-    // ✅ DIV A — outermost wrapper (min-h-screen)
     <div className="min-h-screen bg-[#f4f2f9] pb-24 font-sans relative overflow-x-hidden">
       
       <header 
@@ -476,12 +474,10 @@ const OrderDetailsPage = ({ user }) => {
         className="absolute top-0 left-0 right-0 bg-[#6B46C1] h-40 rounded-b-[2rem] z-0"
       />
 
-      {/* ✅ DIV B — content wrapper (max-w-md) */}
       <div className="max-w-md mx-auto md:max-w-4xl px-4 md:px-8 pt-28 relative z-20">
         
         <OrderTrackingStepper currentStatus={order.orderStatus} />
         
-        {/* ✅ DIV C — main white card */}
         <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm p-5 md:p-6 mb-6">
 
           {/* Order Info Header */}
@@ -582,6 +578,52 @@ const OrderDetailsPage = ({ user }) => {
                 <p className="text-sm font-bold text-gray-500 mt-2.5 flex items-center gap-2" title="Partially hidden to protect buyer privacy">
                   <Phone className="w-3.5 h-3.5 text-gray-400" /> +91 ******{order.shippingAddress?.phone?.slice(-4) || '••••'}
                 </p>
+              )}
+            </div>
+          </div>
+
+          {/* Payment Summary / Fee Breakdown */}
+          <div className="mt-6 bg-white p-5 rounded-2xl border border-[#e9d8ff] shadow-sm">
+            <h4 className="text-[11px] font-bold text-[#6B46C1] uppercase tracking-widest mb-3 flex items-center gap-2">
+              <Coins className="w-3.5 h-3.5" /> Payment Summary
+            </h4>
+            <div className="space-y-2 text-sm text-gray-600 font-medium">
+              <div className="flex justify-between items-center text-xs text-gray-500 mb-1">
+                <span>Item Value</span>
+                <span className="font-bold text-gray-700">{order.itemPrice} Credits</span>
+              </div>
+              
+              {shippingBreakdown ? (
+                <>
+                  <div className="flex justify-between items-center text-xs text-gray-500">
+                    <span>Base Delivery Charge</span>
+                    <span>₹ {shippingBreakdown.baseShipping}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs text-gray-500">
+                    <span>Platform Fee (2%)</span>
+                    <span>₹ {shippingBreakdown.platformFee}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs text-gray-500 pb-2">
+                    <span>GST (18%)</span>
+                    <span>₹ {shippingBreakdown.gstAmount}</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-[#e9d8ff] font-bold text-gray-900">
+                    <span>Total Shipping {userType === 'purchases' ? 'Paid' : ''}</span>
+                    <span className="text-[#6B46C1]">₹ {shippingBreakdown.totalShippingCost}</span>
+                  </div>
+                </>
+              ) : (
+                order.shippingCost > 0 ? (
+                  <div className="flex justify-between items-center pt-2 border-t border-[#e9d8ff] font-bold text-gray-900">
+                    <span>Total Shipping {userType === 'purchases' ? 'Paid' : ''}</span>
+                    <span className="text-[#6B46C1]">₹ {order.shippingCost}</span>
+                  </div>
+                ) : (
+                  <div className="flex justify-between items-center pt-2 border-t border-[#e9d8ff] font-bold text-emerald-600">
+                    <span>Shipping</span>
+                    <span>Free</span>
+                  </div>
+                )
               )}
             </div>
           </div>
@@ -869,10 +911,7 @@ const OrderDetailsPage = ({ user }) => {
           )}
 
         </div>
-        {/* ✅ /DIV C — closes white card */}
-
       </div>
-      {/* ✅ /DIV B — closes max-w-md content wrapper */}
 
       {/* Dispatch Modal */}
       {showDispatchModal && (

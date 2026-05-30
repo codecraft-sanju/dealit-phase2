@@ -317,6 +317,19 @@ const updateSwapStatus = async (req, res) => {
         });
       }
 
+     
+      const targetValue = barter.item.estimated_value || 0;
+      const offeredValue = barter.offered_item.estimated_value || 0;
+      const requiredCreditsToCheck = Math.max(0, targetValue - offeredValue);
+
+      const requesterUser = await User.findById(barter.requester._id);
+      if (requesterUser.account_credits < requiredCreditsToCheck) {
+        return res.status(400).json({ 
+          success: false, 
+          message: `The requester no longer has enough credits (${requiredCreditsToCheck} needed). This swap cannot be accepted.` 
+        });
+      }
+
       if (!shippingAddress || !shippingAddress.fullName || !shippingAddress.phone || !shippingAddress.houseNo || !shippingAddress.areaStreet || !shippingAddress.city || !shippingAddress.state || !shippingAddress.pincode) {
         return res.status(400).json({ 
           success: false, 
@@ -329,7 +342,7 @@ const updateSwapStatus = async (req, res) => {
       }
 
       let setting = await CreditSetting.findOne();
-      let baseShipping = 60; // CHANGES MADE HERE: Renamed to baseShipping
+      let baseShipping = 60; // Renamed to baseShipping
 
       if (setting) {
         if (setting.shippingMethod === 'dynamic') {
@@ -348,7 +361,6 @@ const updateSwapStatus = async (req, res) => {
         }
       }
 
-      // CHANGES MADE HERE: Apply fees and get total
       const feeDetails = calculateFees(baseShipping);
       const finalShippingCost = feeDetails.totalShippingCost;
 
@@ -372,7 +384,6 @@ const updateSwapStatus = async (req, res) => {
       }
       const actualPaidINR = paymentCheck.data.amount / 100;
       
-      // CHANGES MADE HERE: Check actual payment against the new total (Base + Fees)
       if (actualPaidINR < finalShippingCost) {
         return res.status(400).json({ success: false, message: `Payment manipulation detected. Expected ₹${finalShippingCost} but received ₹${actualPaidINR}.` });
       }
@@ -392,7 +403,6 @@ const updateSwapStatus = async (req, res) => {
         { status: 'reserved' }
       );
 
-      // CHANGES MADE HERE: Save breakdown in BarterRequest
       barter.ownerShippingAddress = shippingAddress;
       barter.ownerBaseShippingCost = feeDetails.baseShipping;
       barter.ownerPlatformFee = feeDetails.platformFee;
@@ -426,7 +436,7 @@ const updateSwapStatus = async (req, res) => {
             isNotification: true
         });
       }
-      // ---> WHATSAPP & EMAIL MODIFICATION END
+     
 
   } else if (status === 'REJECTED') {
    
@@ -518,7 +528,7 @@ const completeSwapPayment = async (req, res) => {
     }
 
     let setting = await CreditSetting.findOne();
-    let baseShipping = 60; // CHANGES MADE HERE: Renamed to baseShipping
+    let baseShipping = 60;
 
     if (setting) {
       if (setting.shippingMethod === 'dynamic') {
@@ -536,7 +546,6 @@ const completeSwapPayment = async (req, res) => {
       }
     }
 
-    // CHANGES MADE HERE: Apply fees and get total
     const feeDetails = calculateFees(baseShipping);
     const finalShippingCost = feeDetails.totalShippingCost;
 
@@ -560,7 +569,6 @@ const completeSwapPayment = async (req, res) => {
     }
     const actualPaidINR = paymentCheck.data.amount / 100;
     
-    // CHANGES MADE HERE: Check actual payment against new total (Base + Fees)
     if (actualPaidINR < finalShippingCost) {
       return res.status(400).json({ success: false, message: `Payment manipulation detected. Expected ₹${finalShippingCost} but received ₹${actualPaidINR}.` });
     }
@@ -610,14 +618,17 @@ const completeSwapPayment = async (req, res) => {
           { session }
         );
 
-        // CHANGES MADE HERE: Passed the complete fee breakdown to the created orders
+        // CHANGES MADE HERE: Fix for Ghost Credits Loophole. Calculated diff and assigned correctly to orders.
+        const reqToOwnerDiff = Math.max(0, targetValue - offeredValue);
+        const ownerToReqDiff = Math.max(0, offeredValue - targetValue);
+
         const orders = await Order.create([{
           buyer: barter.requester._id, 
           seller: barter.owner._id, 
           item: barter.item._id, 
           orderType: 'barter',
           barterRequestRef: barter._id,
-          itemPrice: 0, 
+          itemPrice: reqToOwnerDiff, // Fixed: Assiging the difference so seller gets it
           
           baseShippingCost: feeDetails.baseShipping,
           platformFee: feeDetails.platformFee,
@@ -637,7 +648,7 @@ const completeSwapPayment = async (req, res) => {
           item: barter.offered_item._id, 
           orderType: 'barter',
           barterRequestRef: barter._id,
-          itemPrice: 0, 
+          itemPrice: ownerToReqDiff, // Fixed: Keeping this dynamic based on value difference
           
           baseShippingCost: barter.ownerBaseShippingCost,
           platformFee: barter.ownerPlatformFee,
@@ -774,6 +785,12 @@ const autoCancelOverdueBarters = async () => {
         barter.updated_at = now;
         await barter.save();
 
+        // CHANGES MADE HERE: Fix for "Items Stuck in Reserved" Loophole
+        await Item.updateMany(
+          { _id: { $in: [barter.item._id, barter.offered_item._id] } },
+          { status: 'active' }
+        );
+
         queueNotification({
           user: barter.owner._id,
           type: 'SYSTEM',
@@ -804,7 +821,7 @@ const autoCancelOverdueBarters = async () => {
         if (barter.requester && barter.requester.email) {
             sendEmail({ email: barter.requester.email, subject: 'Swap Timeout ⏰', message: `You didn't complete the shipping payment in 24 hours. The swap request has been cancelled.`, isNotification: true });
         }
-       
+        
 
       } catch (innerError) {
         console.error(`Failed to auto-cancel AWAITING_PAYMENT barter ${barter._id}:`, innerError);
@@ -827,7 +844,7 @@ const autoCancelOverdueBarters = async () => {
         request.updated_at = now;
         await request.save();
 
-      
+        
         queueNotification({
           user: request.requester,
           type: 'TRADE_ALERT',
@@ -836,7 +853,7 @@ const autoCancelOverdueBarters = async () => {
           metadata: { reason: 'auto_cancel_barter', referenceId: request._id, imageUrl: request.item?.images?.[0] }
         });
 
-      
+        
         queueNotification({
           user: request.owner,
           type: 'TRADE_ALERT',
@@ -912,15 +929,16 @@ const autoCancelIncompleteDispatches = async () => {
                     );
 
                     if (lockedBarter) { 
-                        const targetValue = barter.item?.estimated_value || 0;
-                        const offeredValue = barter.offered_item?.estimated_value || 0;
-                        const diff = Math.max(0, targetValue - offeredValue);
+                        // CHANGES MADE HERE: Fix for "Refund Logic Mismatch" Loophole
+                        // Calculating from the actual order paid amount, not dynamic value diff.
+                        const requesterOrder = orders.find(o => o.buyer.toString() === barter.requester._id.toString());
+                        const diffToRefund = requesterOrder ? requesterOrder.itemPrice : 0;
                         
-                        if (diff > 0) {
-                             await User.findByIdAndUpdate(barter.requester._id, { $inc: { account_credits: diff } });
+                        if (diffToRefund > 0) {
+                             await User.findByIdAndUpdate(barter.requester._id, { $inc: { account_credits: diffToRefund } });
                              await Transaction.create({
                                 user: barter.requester._id,
-                                amount: diff,
+                                amount: diffToRefund,
                                 status: 'success',
                                 transactionType: 'order_refund'
                              });
@@ -942,7 +960,7 @@ const autoCancelIncompleteDispatches = async () => {
                             metadata: { referenceId: barter._id }
                         });
 
-               
+                
                         if (barter.owner && barter.owner.phone) {
                             sendWhatsAppMessage(barter.owner.phone, 'barter_cancelled_refunded');
                         }

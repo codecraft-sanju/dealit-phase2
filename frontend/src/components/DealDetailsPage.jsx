@@ -1,3 +1,4 @@
+// DealDetailsPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
@@ -161,8 +162,7 @@ const DealDetailsPage = ({ user }) => {
   const isAccepted = dealStatus === 'ACCEPTED';
   const isAwaitingPayment = dealStatus === 'AWAITING_PAYMENT';
 
-  // --> ADDED: Determine my shipping cost based on role in deal
-  // Backend stores ownerShippingCost and requesterShippingCost (or shippingCost as fallback)
+  // Determine my shipping cost based on role in deal
   const myShippingCost = isRequester
     ? (deal.requesterShippingCost ?? deal.shippingCost ?? 0)
     : (deal.ownerShippingCost ?? deal.shippingCost ?? 0);
@@ -171,21 +171,24 @@ const DealDetailsPage = ({ user }) => {
     ? (deal.ownerShippingCost ?? 0)
     : (deal.requesterShippingCost ?? 0);
 
-  // FIX: Added formatMoney function
   const formatMoney = (val) => val ? Number(val).toFixed(2) : '0.00';
 
-  // FIX: Applied formatMoney to all breakdown values
   const myRawBreakdown = isRequester
     ? { base: deal.requesterBaseShippingCost, fee: deal.requesterPlatformFee, gst: deal.requesterGstAmount }
     : { base: deal.ownerBaseShippingCost, fee: deal.ownerPlatformFee, gst: deal.ownerGstAmount };
 
-  const myShippingBreakdown = myRawBreakdown.base ? {
+  // FIX: Properly checking for null/undefined instead of truthy to allow 0 base rate
+  const myShippingBreakdown = myRawBreakdown.base != null ? {
     baseShipping: formatMoney(myRawBreakdown.base),
     platformFee: formatMoney(myRawBreakdown.fee),
     gstAmount: formatMoney(myRawBreakdown.gst),
     totalShippingCost: formatMoney(myShippingCost)
   } : null;
-  // --> END FIX
+
+  // FIX: Calculate actual credits deducted based on estimated values
+  const counterpartVal = counterpartItem?.estimated_value || 0;
+  const myVal = myItem?.estimated_value || 0;
+  const calculatedDeduction = Math.max(0, counterpartVal - myVal);
 
   const getStatusConfig = () => {
     switch (dealStatus) {
@@ -353,22 +356,22 @@ const DealDetailsPage = ({ user }) => {
               <div className="space-y-2 text-sm text-gray-700 font-medium">
                 <div className="flex justify-between items-center">
                   <span className="truncate pr-2">Value of {myItem?.title || 'Item'}:</span>
-                  <span className="whitespace-nowrap font-bold">{myItem?.estimated_value || 0} 🪙</span>
+                  <span className="whitespace-nowrap font-bold">{myVal} 🪙</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="truncate pr-2">Value of {counterpartItem?.title || 'Item'}:</span>
-                  <span className="whitespace-nowrap font-bold">{counterpartItem?.estimated_value || 0} 🪙</span>
+                  <span className="whitespace-nowrap font-bold">{counterpartVal} 🪙</span>
                 </div>
                 <div className="flex justify-between items-center border-t border-gray-100 pt-2 mt-2">
                   <span>Wallet Deduction:</span>
                   <span className={`font-bold ${isAccepted ? 'text-red-500' : 'text-gray-400'}`}>
-                    {isAccepted ? `-${deal.credits_deducted || 0}` : 'Pending'} 🪙
+                    {isAccepted ? `-${calculatedDeduction}` : 'Pending'} 🪙
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* --> ADDED: Shipping Fee Breakdown — shown after deal is accepted or awaiting payment */}
+            {/* Shipping Fee Breakdown */}
             {(isAccepted || isAwaitingPayment) && (
               <div className="bg-white border border-gray-100 p-4 rounded-xl shadow-sm mt-3">
                 <h3 className="text-[11px] text-gray-500 font-extrabold uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -394,7 +397,7 @@ const DealDetailsPage = ({ user }) => {
                       <span className="text-[#6B46C1]">₹ {myShippingBreakdown.totalShippingCost}</span>
                     </div>
 
-                    {/* Partner's shipping — only show if accepted and we have the data */}
+                    {/* Partner's shipping */}
                     {isAccepted && counterpartShippingCost > 0 && (
                       <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between items-center text-xs text-gray-500">
                         <span className="flex items-center gap-1.5">
@@ -420,7 +423,6 @@ const DealDetailsPage = ({ user }) => {
                 )}
               </div>
             )}
-            {/* --> END ADDED */}
 
           </div>
 
