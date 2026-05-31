@@ -1,12 +1,15 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Package, Coins } from 'lucide-react';
+import axios from 'axios'; // NAYA CHANGE: Axios import kiya API call ke liye
 
 import { getOptimizedCloudinaryUrl } from './HomePage';
 
+const API_BASE = import.meta.env.VITE_BACKEND_API;
+const API_URL = `${API_BASE}/api`;
+
 const ProductCard = ({ item, isLoading, className = '', onClick, isSelected }) => {
   
-  // NAYA CHANGE: ID ko array me save karne ki ninja technique (0 milliseconds impact)
   const handleRecordView = () => {
     if (!item || !item._id) return;
     
@@ -14,18 +17,22 @@ const ProductCard = ({ item, isLoading, className = '', onClick, isSelected }) =
       const existingData = localStorage.getItem('dealit_recently_viewed_ids');
       let viewedIds = existingData ? JSON.parse(existingData) : [];
       
-      // Agar pehle se ID hai toh purani jagah se hatao
       viewedIds = viewedIds.filter(id => id !== item._id);
-      
-      // Nayi ID ko list me sabse aage (top) par dalo
       viewedIds.unshift(item._id);
       
-      // Sirf maximum 20 items ki history rakho taaki storage full na ho
       if (viewedIds.length > 20) {
         viewedIds = viewedIds.slice(0, 20);
       }
       
       localStorage.setItem('dealit_recently_viewed_ids', JSON.stringify(viewedIds));
+
+      // NAYA CHANGE: Silent Cross-Device Sync (Database me update karega bina loading dikhaye)
+      const token = localStorage.getItem('dealit_token');
+      if (token) {
+        axios.post(`${API_URL}/users/recently-viewed/sync`, { viewedIds })
+          .catch(() => {}); // Error aaye toh ignore kar dega, UI block nahi hoga
+      }
+
     } catch (error) {
       console.error("Failed to save view history", error);
     }
@@ -62,7 +69,6 @@ const ProductCard = ({ item, isLoading, className = '', onClick, isSelected }) =
   const cardContent = (
     <>
       <div className="relative w-full aspect-square flex items-center justify-center mb-3 bg-white/40 rounded-xl overflow-hidden">
-        {/* NAYA CHANGE: Moved discount badge to top corner of image */}
         {item.discount_percentage && (
           <span className="absolute top-2 left-2 z-10 text-[9px] font-black text-white bg-[#FF4747] px-1.5 py-0.5 rounded shadow-sm">
             {item.discount_percentage}% OFF
@@ -94,7 +100,6 @@ const ProductCard = ({ item, isLoading, className = '', onClick, isSelected }) =
             )}
           </div>
           
-          {/* CATEGORY SECTION */}
           <div className="flex flex-col items-end gap-1">
             {item.category && (
               <span className="text-[9px] font-medium text-[#A388E1] bg-[#EBE5F7] px-1.5 py-0.5 rounded-md truncate max-w-[65px]">

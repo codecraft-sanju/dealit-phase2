@@ -766,6 +766,57 @@ const getRandomAvatars = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server Error fetching avatars' });
   }
 };
+const syncRecentlyViewed = async (req, res) => {
+  try {
+    const { viewedIds } = req.body;
+    
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ success: false, message: 'Not authorized' });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+  
+    let combined = [...(viewedIds || []), ...user.recently_viewed.map(id => id.toString())];
+    
+    // Duplicates hatao
+    combined = [...new Set(combined)];
+    
+    // Max 20 items ki limit lagao
+    if (combined.length > 20) {
+      combined = combined.slice(0, 20);
+    }
+
+    user.recently_viewed = combined;
+    await user.save();
+
+    res.status(200).json({ success: true, data: combined });
+  } catch (error) {
+    console.error('Error syncing recently viewed:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+
+const clearRecentlyViewed = async (req, res) => {
+  try {
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ success: false, message: 'Not authorized' });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (user) {
+      user.recently_viewed = [];
+      await user.save();
+    }
+
+    res.status(200).json({ success: true, message: 'History cleared' });
+  } catch (error) {
+    console.error('Error clearing recently viewed:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
 
 module.exports = {
   registerUser,
@@ -783,5 +834,7 @@ module.exports = {
   claimWelcomeBonus,
   deleteUserProfile ,
   getUserStats,
-  getRandomAvatars 
+  getRandomAvatars ,
+  syncRecentlyViewed, 
+  clearRecentlyViewed
 };

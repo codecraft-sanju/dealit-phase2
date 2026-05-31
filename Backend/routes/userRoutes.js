@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-
 const rateLimit = require('express-rate-limit');
 
 const { 
@@ -19,12 +18,11 @@ const {
   claimWelcomeBonus,
   deleteUserProfile,
   getUserStats,
-  getRandomAvatars 
+  getRandomAvatars,
+  syncRecentlyViewed, 
+  clearRecentlyViewed 
 } = require('../controllers/userController');
-
-
 const { getUserAura, getLeaderboard, getAuraHistory } = require('../controllers/auraLogController');
-
 const { protect } = require('../middleware/authMiddleware');
 
 const authLimiter = rateLimit({
@@ -55,12 +53,12 @@ router.put('/profile-pic', protect, updateProfilePic);
 router.post('/wishlist/:itemId', protect, toggleWishlist);
 router.get('/wishlist', protect, getWishlist);
 router.post('/claim-bonus', protect, claimWelcomeBonus);
-
-
 router.get('/stats', protect, getUserStats);
-
-
 router.get('/random-avatars', getRandomAvatars);
+
+
+router.post('/recently-viewed/sync', protect, syncRecentlyViewed);
+router.delete('/recently-viewed/clear', protect, clearRecentlyViewed);
 
 router.get('/aura', protect, getUserAura);
 router.get('/aura/history', protect, getAuraHistory);

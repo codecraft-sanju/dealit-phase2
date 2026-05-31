@@ -15,7 +15,8 @@ const userSchema = new mongoose.Schema({
   },
   profilePic: { type: String, default: '' },
   wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item' }],
-  
+  recently_viewed: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item' }],
+
   pickupAddress: {
     houseNo: { 
       type: String,
@@ -33,10 +34,7 @@ const userSchema = new mongoose.Schema({
     pincode: { type: String }
   },
   
-unreadNotificationsCount: { 
-  type: Number, 
-  default: 0 
-},
+  unreadNotificationsCount: { type: Number, default: 0 },
 
   savedAddresses: [{
     fullName: { type: String },
@@ -53,8 +51,6 @@ unreadNotificationsCount: {
   aura_points: { type: Number, default: 100 }, 
   
   listedProductsCount: { type: Number, default: 0 },
-  
- 
   rewardedListingsCount: { type: Number, default: 0 },
   
   hasClaimedWelcomeBonus: { type: Boolean, default: false },
