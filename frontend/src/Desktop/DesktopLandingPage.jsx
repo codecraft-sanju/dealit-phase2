@@ -544,7 +544,7 @@ const DesktopLandingPage = ({ onLoginClick }) => {
                   </div>
                 </MagneticElement>
 
-                <MagneticElement as="a" href="#">
+                <MagneticElement as="a" href="https://play.google.com/store/apps/details?id=com.sanjay.dealit&pcampaignid=web_share">
                   <div className="flex items-center gap-3 px-5 py-2 rounded-xl transition-all group relative overflow-hidden border interactive hover:shadow-[0_0_20px_rgba(163,136,225,0.2)]" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--panel-bg)' }}>
                     <div className="absolute inset-0 bg-gradient-to-tr from-[var(--text-main)] to-transparent opacity-0 group-hover:opacity-5 transition-opacity duration-500"></div>
                     <svg viewBox="0 0 512 512" className="w-5 h-5 group-hover:scale-110 transition-transform duration-500" style={{ color: 'var(--text-main)' }} fill="currentColor"><path d="M325.3 234.3L104.6 13l280.8 161.2-60.1 60.1zM47 0C34 6.8 25.3 19.2 25.3 35.3v441.3c0 16.1 8.7 28.5 21.7 35.3l256.6-256L47 0zm425.2 225.6l-58.9-34.1-65.7 64.5 65.7 64.5 60.1-34.1c18-14.3 18-46.5-1.2-60.8zM104.6 499l280.8-161.2-60.1-60.1L104.6 499z"/></svg>
@@ -709,7 +709,7 @@ const DesktopLandingPage = ({ onLoginClick }) => {
                         </div>
                       </MagneticElement>
 
-                      <MagneticElement as="a" href="#">
+                      <MagneticElement as="a" href="https://play.google.com/store/apps/details?id=com.sanjay.dealit&pcampaignid=web_share">
                         <div className="flex items-center gap-3 px-5 py-2.5 rounded-xl transition-all group relative overflow-hidden border interactive" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--panel-bg)' }}>
                           <div className="absolute inset-0 bg-gradient-to-tr from-[var(--text-main)] to-transparent opacity-0 group-hover:opacity-5 transition-opacity duration-500"></div>
                           <svg viewBox="0 0 512 512" className="w-5 h-5 group-hover:scale-110 transition-transform duration-500" style={{ color: 'var(--text-main)' }} fill="currentColor"><path d="M325.3 234.3L104.6 13l280.8 161.2-60.1 60.1zM47 0C34 6.8 25.3 19.2 25.3 35.3v441.3c0 16.1 8.7 28.5 21.7 35.3l256.6-256L47 0zm425.2 225.6l-58.9-34.1-65.7 64.5 65.7 64.5 60.1-34.1c18-14.3 18-46.5-1.2-60.8zM104.6 499l280.8-161.2-60.1-60.1L104.6 499z"/></svg>

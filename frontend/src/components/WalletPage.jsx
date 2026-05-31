@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
-import { ArrowLeft, Wallet, Coins, CreditCard, ChevronRight, Check, MoreHorizontal, Plus, Package, Sparkles, Copy, Users, Target, Share2, History, ArrowDownLeft, XCircle, Clock, X, Truck, Filter, List, Loader2, RefreshCcw } from 'lucide-react';
+import { ArrowLeft, Wallet, Coins, CreditCard, ChevronRight, Check, MoreHorizontal, Plus, Package, Sparkles, Copy, Users, Target, Share2, History, ArrowDownLeft, XCircle, Clock, X, Truck, Filter, List, Loader2, RefreshCcw, Zap } from 'lucide-react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import CoinCelebration from './CoinCelebration';
@@ -16,6 +16,31 @@ const loadRazorpayScript = () => {
     script.onerror = () => resolve(false);
     document.body.appendChild(script);
   });
+};
+
+/* --- ADDED: Credit Packs Data --- */
+const CREDIT_PACKS = [
+  { id: 'starter', price: 49, credits: 50, label: 'Starter', bonus: '+1 Bonus' },
+  { id: 'popular', price: 99, credits: 110, label: 'Most Popular', bonus: '+11 Bonus', highlight: true },
+  { id: 'pro', price: 199, credits: 250, label: 'Best Value', bonus: '+51 Bonus' }
+];
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 15, scale: 0.95 },
+  show: { 
+    opacity: 1, 
+    y: 0, 
+    scale: 1,
+    transition: { type: "spring", stiffness: 300, damping: 24 }
+  }
 };
 
 const WalletPage = ({ user, setUser }) => {
@@ -156,8 +181,9 @@ const WalletPage = ({ user, setUser }) => {
     }
   };
 
-  const handlePayment = async (amount) => {
-    if (!amount || amount <= 0) return;
+  /* --- MODIFIED: Updated function arguments to accept packId and optional amount --- */
+  const handlePayment = async (packId, amount = null) => {
+    if (packId === 'custom' && (!amount || amount < 10)) return;
     setProcessing(true);
 
     const isScriptLoaded = await loadRazorpayScript();
@@ -170,7 +196,11 @@ const WalletPage = ({ user, setUser }) => {
     try {
       const orderResponse = await axios.post(
         `${API_URL}/payment/create-order`, 
-        { amount },
+        /* --- MODIFIED: Sending packId and customAmount to the backend --- */
+        { 
+          packId: packId,
+          customAmount: amount 
+        },
         { withCredentials: true }
       );
 
@@ -181,7 +211,7 @@ const WalletPage = ({ user, setUser }) => {
         amount: orderData.amount, 
         currency: orderData.currency,
         name: 'Dealit',
-        description: `Add ${amount} Credits to Wallet`,
+        description: `Add Credits to Wallet`,
         order_id: orderData.id,
         handler: async function (response) {
           try {
@@ -196,19 +226,24 @@ const WalletPage = ({ user, setUser }) => {
             );
 
             if (verifyResponse.data.success) {
+              const updatedUser = verifyResponse.data.user;
+              
+              /* --- MODIFIED: Calculate actual added amount directly from the validated backend response --- */
+              const actualAddedAmount = updatedUser.account_credits - profileData.account_credits;
+
               setProfileData((prev) => ({
                 ...prev,
-                account_credits: prev.account_credits + amount
+                account_credits: updatedUser.account_credits
               }));
               
-              const updatedUser = verifyResponse.data.user;
               setUser(updatedUser);
               localStorage.setItem('dealit_user', JSON.stringify(updatedUser));
               
               setCustomAmount('');
               setShowPaymentForm(false);
               
-              setAddedAmount(amount);
+              /* --- MODIFIED: Set the celebration amount using the actual backend calculation --- */
+              setAddedAmount(actualAddedAmount);
               setShowCelebration(true);
               
               setTimeout(() => {
@@ -246,9 +281,10 @@ const WalletPage = ({ user, setUser }) => {
     }
   };
 
+  /* --- MODIFIED: Pass 'custom' identifier and the custom amount --- */
   const handleCustomSubmit = (e) => {
     e.preventDefault();
-    handlePayment(Number(customAmount));
+    handlePayment('custom', Number(customAmount));
   };
 
   if (!user) return <Navigate to="/login" />;
@@ -415,6 +451,161 @@ const WalletPage = ({ user, setUser }) => {
               </div>
             )}
 
+            {/* --- MODIFIED: Buy Credits Section is now above List Items --- */}
+            <div className="bg-[#F8F6FF] rounded-3xl p-5 relative overflow-hidden mb-4 border border-[#EBE5F7] hover:shadow-md transition-shadow">
+              <div className="w-full relative z-10">
+                <h3 className="font-bold text-gray-900 mb-1">Buy Credits</h3>
+                <p className="text-xs text-gray-500 font-medium mb-4 w-2/3">
+                  Get credits instantly by buying them with real money.
+                </p>
+                
+                <div className="flex flex-row items-center gap-3">
+                  <button 
+                    onClick={() => setShowPaymentForm(!showPaymentForm)}
+                    className={`px-5 py-2.5 rounded-full text-sm font-bold inline-flex items-center gap-1.5 transition-all duration-300 relative overflow-hidden group ${
+                      showPaymentForm 
+                      ? 'bg-white border border-gray-200 text-gray-700 shadow-sm hover:bg-gray-50'
+                      : 'bg-gradient-to-r from-[#A388E1] to-[#805ad5] text-white shadow-[0_4px_12px_rgba(163,136,225,0.3)] hover:shadow-[0_6px_15px_rgba(163,136,225,0.4)] hover:-translate-y-0.5'
+                    }`}
+                  >
+                    {!showPaymentForm && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-20deg] animate-[glare_3s_infinite_ease-in-out]"></div>}
+                    <Coins className="w-4 h-4 relative z-10" /> 
+                    <span className="relative z-10">{showPaymentForm ? 'Cancel' : 'Add Credits'}</span>
+                  </button>
+                  <button 
+                    onClick={openHistoryModal} 
+                    className="bg-white border border-[#EBE5F7] text-[#A388E1] px-5 py-2.5 rounded-full text-sm font-bold inline-flex items-center gap-1.5 shadow-sm hover:bg-[#F0ECF9] hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 active:scale-95"
+                  >
+                    <History className="w-4 h-4" /> History
+                  </button>
+                </div>
+              </div>
+
+              {/* Added: Premium Credit Packs Display */}
+              <AnimatePresence>
+                {showPaymentForm && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                    animate={{ opacity: 1, height: 'auto', marginTop: 24 }}
+                    exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                    className="relative z-10 overflow-hidden"
+                  >
+                    <div className="pt-5 border-t border-[#EBE5F7] space-y-6">
+                      
+                      <motion.div 
+                        variants={containerVariants}
+                        initial="hidden"
+                        animate="show"
+                        className="grid grid-cols-3 gap-3"
+                      >
+                        {CREDIT_PACKS.map((pack) => (
+                          <motion.button
+                            key={pack.id}
+                            variants={itemVariants}
+                            whileHover={{ y: -4, scale: 1.02 }}
+                            whileTap={{ scale: 0.95 }}
+                            disabled={processing}
+                            /* --- MODIFIED: Added 'group' class to trigger hover animations for the internal token --- */
+                            onClick={() => handlePayment(pack.id)}
+                            className={`relative pt-4 pb-3 px-2 rounded-2xl flex flex-col items-center justify-center text-center transition-shadow duration-300 group ${
+                              pack.highlight 
+                                ? 'bg-gradient-to-br from-[#A388E1] via-[#8c67d6] to-[#6b46c1] text-white shadow-[0_8px_20px_rgba(163,136,225,0.4)] ring-2 ring-[#A388E1]/50 border-none' 
+                                : 'bg-white border-2 border-gray-100 hover:border-[#A388E1]/30 hover:shadow-md'
+                            }`}
+                          >
+                            {pack.highlight && (
+                              <div className="absolute -top-3 bg-gradient-to-r from-[#FFE28A] to-[#F59E0B] text-yellow-900 text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-md flex items-center gap-1">
+                                <Zap className="w-3 h-3 fill-yellow-900" /> Popular
+                              </div>
+                            )}
+                            
+                            {/* --- MODIFIED: Replaced generic Coins icon with a 3D premium token --- */}
+                            <div className={`relative mb-2 flex items-center justify-center transition-transform duration-300 group-hover:scale-110 ${pack.highlight ? 'w-10 h-10' : 'w-8 h-8'}`}>
+                              <div className="absolute inset-0 rounded-full shadow-[0_4px_10px_rgba(217,119,6,0.4),inset_0_-2px_4px_rgba(146,64,14,0.6),inset_0_2px_3px_rgba(255,255,255,0.9)] border border-[#FEF08A] bg-gradient-to-br from-[#FEF08A] via-[#F59E0B] to-[#92400E] flex items-center justify-center overflow-hidden">
+                                <div className="absolute inset-[2px] rounded-full border-[0.5px] border-[#92400E]/50 bg-gradient-to-tl from-[#FEF08A]/20 via-transparent to-[#D97706]/40 flex items-center justify-center shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)]">
+                                  <span className={`font-black text-[#78350F] tracking-tighter drop-shadow-[0_1px_1px_rgba(255,255,255,0.7)] ${pack.highlight ? 'text-xs' : 'text-[10px]'}`}>Cr</span>
+                                </div>
+                                <div className="absolute top-0 left-[-150%] w-full h-full bg-gradient-to-r from-transparent via-white/60 to-transparent skew-x-[-25deg] group-hover:animate-[glare_1.5s_ease-in-out]"></div>
+                              </div>
+                            </div>
+                            {/* --- END MODIFIED --- */}
+                            
+                            <div className="flex items-baseline gap-0.5 mb-1">
+                              <span className={`text-xl font-black leading-none tracking-tight ${pack.highlight ? 'text-white' : 'text-gray-900'}`}>
+                                {pack.credits}
+                              </span>
+                            </div>
+                            
+                            <span className={`text-[9px] font-bold uppercase tracking-wider mb-3 ${pack.highlight ? 'text-purple-200' : 'text-gray-400'}`}>
+                              Credits
+                            </span>
+                            
+                            <div className={`mt-auto py-1.5 px-3 rounded-xl text-xs font-black w-full transition-colors ${
+                              pack.highlight 
+                                ? 'bg-white/20 text-white backdrop-blur-sm border border-white/10' 
+                                : 'bg-gray-50 text-gray-700 group-hover:bg-[#F8F6FF] group-hover:text-[#6B46C1]'
+                            }`}>
+                              ₹{pack.price}
+                            </div>
+                            
+                            <div className={`absolute -bottom-2.5 px-2.5 py-0.5 rounded-md text-[9px] font-black tracking-wide shadow-sm flex items-center gap-1 ${
+                              pack.highlight 
+                                ? 'bg-[#FFE28A] text-yellow-900 border border-yellow-400' 
+                                : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            }`}>
+                              {pack.highlight && <Sparkles className="w-2.5 h-2.5 text-yellow-700" />}
+                              {pack.bonus}
+                            </div>
+                          </motion.button>
+                        ))}
+                      </motion.div>
+
+                      <div className="flex items-center gap-3 pt-2">
+                        <div className="h-px bg-gradient-to-r from-transparent via-[#EBE5F7] to-[#EBE5F7] flex-1"></div>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-[#F8F6FF] px-2">OR CUSTOM AMOUNT</span>
+                        <div className="h-px bg-gradient-to-r from-[#EBE5F7] via-[#EBE5F7] to-transparent flex-1"></div>
+                      </div>
+
+                      <form onSubmit={handleCustomSubmit} className="relative">
+                        <div className="flex gap-2 items-center bg-white p-1.5 rounded-2xl border border-gray-200 shadow-sm focus-within:border-[#A388E1] focus-within:ring-2 focus-within:ring-[#A388E1]/20 transition-all">
+                          <div className="relative flex-1 flex items-center">
+                            <span className="pl-4 text-gray-500 font-bold text-lg">₹</span>
+                            <input 
+                              type="number" 
+                              min="10"
+                              required
+                              value={customAmount}
+                              onChange={(e) => setCustomAmount(e.target.value)}
+                              placeholder="Amount (Min ₹10)"
+                              className="w-full bg-transparent pl-2 pr-3 py-2 text-sm focus:outline-none font-bold text-gray-900 placeholder:text-gray-400"
+                              disabled={processing}
+                            />
+                          </div>
+                          <button 
+                            type="submit"
+                            disabled={!customAmount || customAmount < 10 || processing}
+                            className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 flex items-center justify-center gap-1 relative overflow-hidden ${
+                              !customAmount || customAmount < 10 || processing
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : 'bg-gray-900 text-white hover:bg-black hover:shadow-md hover:-translate-y-0.5'
+                            }`}
+                          >
+                            <span className="relative z-10">{processing ? 'Processing...' : 'Pay Now'}</span> 
+                            {!processing && <ChevronRight className="w-4 h-4 relative z-10" />}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              {/* --- END MODIFIED --- */}
+
+              <div className="absolute right-[-10px] top-[10px] w-24 h-24 bg-[#EBE5F7] rounded-full opacity-50 flex items-center justify-center pointer-events-none">
+                <CreditCard className="w-10 h-10 text-[#A388E1]" />
+              </div>
+            </div>
+
             <div className="bg-[#F8F6FF] rounded-3xl p-5 relative overflow-hidden mb-4 border border-[#EBE5F7] hover:shadow-md transition-shadow">
               <h3 className="font-bold text-gray-900 mb-3">List Items to Earn Credits</h3>
               <ul className="space-y-2 mb-5 w-2/3 relative z-10">
@@ -434,72 +625,6 @@ const WalletPage = ({ user, setUser }) => {
               
               <div className="absolute right-[-10px] bottom-[-10px] w-28 h-28 bg-[#EBE5F7] rounded-full opacity-50 flex items-center justify-center">
                 <Wallet className="w-12 h-12 text-[#A388E1]" />
-              </div>
-            </div>
-
-            <div className="bg-[#F8F6FF] rounded-3xl p-5 relative overflow-hidden mb-4 border border-[#EBE5F7] hover:shadow-md transition-shadow">
-              <div className="w-full relative z-10">
-                <h3 className="font-bold text-gray-900 mb-1">Buy Credits</h3>
-                <p className="text-xs text-gray-500 font-medium mb-4 w-2/3">
-                  Get credits instantly by buying them with real money.
-                </p>
-                <div className="inline-block bg-white border border-[#EBE5F7] px-3 py-1.5 rounded-full text-xs font-bold text-gray-700 shadow-sm mb-4">
-                  ₹ 1 = 1 credit
-                </div>
-                
-                <div className="flex flex-row items-center gap-3">
-                  <button 
-                    onClick={() => setShowPaymentForm(!showPaymentForm)}
-                    className="bg-gradient-to-r from-[#A388E1] to-[#805ad5] text-white px-5 py-2.5 rounded-full text-sm font-bold inline-flex items-center gap-1.5 shadow-[0_4px_12px_rgba(163,136,225,0.3)] hover:shadow-[0_6px_15px_rgba(163,136,225,0.4)] hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden group"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-20deg] animate-[glare_3s_infinite_ease-in-out]"></div>
-                    <Coins className="w-4 h-4 relative z-10" /> <span className="relative z-10">Add Credits</span>
-                  </button>
-                  <button 
-                    onClick={openHistoryModal} 
-                    className="bg-white border border-[#EBE5F7] text-[#A388E1] px-5 py-2.5 rounded-full text-sm font-bold inline-flex items-center gap-1.5 shadow-sm hover:bg-[#F0ECF9] hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 active:scale-95"
-                  >
-                    <History className="w-4 h-4" /> History
-                  </button>
-                </div>
-              </div>
-
-              {showPaymentForm && (
-                <form onSubmit={handleCustomSubmit} className="mt-5 pt-5 border-t border-[#EBE5F7] relative z-10 animate-in slide-in-from-top-2 duration-300">
-                  <div className="flex gap-2 items-center">
-                    <div className="relative flex-1">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold">₹</span>
-                      <input 
-                        type="number" 
-                        min="10"
-                        required
-                        value={customAmount}
-                        onChange={(e) => setCustomAmount(e.target.value)}
-                        placeholder="Amount (Min 10)"
-                        className="w-full bg-white border border-gray-200 rounded-xl pl-8 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#A388E1] font-bold shadow-inner"
-                        disabled={processing}
-                      />
-                    </div>
-                    <button 
-                      type="submit"
-                      disabled={!customAmount || customAmount < 10 || processing}
-                      className={`px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center justify-center gap-1 relative overflow-hidden ${
-                        !customAmount || customAmount < 10 || processing
-                          ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                          : 'bg-gradient-to-r from-[#FFE28A] to-[#FFD75E] text-yellow-900 hover:shadow-[0_4px_12px_rgba(250,204,21,0.3)] hover:-translate-y-0.5'
-                      }`}
-                    >
-                      {!(!customAmount || customAmount < 10 || processing) && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent skew-x-[-20deg] animate-[glare_2s_infinite_ease-in-out]"></div>
-                      )}
-                      <span className="relative z-10">{processing ? '...' : 'Pay'}</span> <ChevronRight className="w-4 h-4 relative z-10" />
-                    </button>
-                  </div>
-                </form>
-              )}
-
-              <div className="absolute right-[-10px] top-[10px] w-24 h-24 bg-[#EBE5F7] rounded-full opacity-50 flex items-center justify-center pointer-events-none">
-                <CreditCard className="w-10 h-10 text-[#A388E1]" />
               </div>
             </div>
 

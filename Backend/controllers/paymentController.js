@@ -12,6 +12,12 @@ const razorpayInstance = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
+/* MODIFIED: Added CREDIT_PACKS constant for secure backend pricing */
+const CREDIT_PACKS = {
+  'starter': { price: 49, credits: 50 },
+  'popular': { price: 99, credits: 110 },
+  'pro': { price: 199, credits: 250 }
+};
 
 const verifyRazorpayConnection = () => {
   if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
@@ -23,11 +29,10 @@ const verifyRazorpayConnection = () => {
   }
 };
 
-
 const refundRazorpayPayment = async (paymentId, amount) => {
   try {
     const refund = await razorpayInstance.payments.refund(paymentId, {
-      amount: amount * 100, // paise me convert kiya
+      amount: amount * 100, 
       speed: 'optimum'
     });
     return { success: true, data: refund };
@@ -49,20 +54,37 @@ const fetchRazorpayPaymentInfo = async (paymentId) => {
 };
 /* --- NAYA CHANGE END --- */
 
+/* MODIFIED: createOrder function to handle packId and customAmount safely */
 const createOrder = async (req, res) => {
   try {
-    const { amount } = req.body; 
+    const { packId, customAmount, amount } = req.body; 
 
-    if (!amount) {
-      return res.status(400).json({ success: false, message: 'Amount is required' });
+    let amountToCharge = 0;
+    let creditsToAward = 0;
+
+    if (packId === 'custom') {
+      if (!customAmount || customAmount < 10) {
+        return res.status(400).json({ success: false, message: 'Invalid custom amount' });
+      }
+      amountToCharge = customAmount;
+      creditsToAward = customAmount;
+    } else if (CREDIT_PACKS[packId]) {
+      amountToCharge = CREDIT_PACKS[packId].price;
+      creditsToAward = CREDIT_PACKS[packId].credits;
+    } else if (amount) {
+      amountToCharge = amount;
+      creditsToAward = amount;
+    } else {
+      return res.status(400).json({ success: false, message: 'Invalid pack selected or amount missing' });
     }
 
     const options = {
-      amount: amount * 100, 
+      amount: amountToCharge * 100, 
       currency: 'INR',
       receipt: `receipt_order_${Date.now()}`,
       notes: {
-        userId: req.user._id.toString()
+        userId: req.user._id.toString(),
+        creditsToAward: creditsToAward.toString()
       }
     };
 
@@ -78,6 +100,7 @@ const createOrder = async (req, res) => {
   }
 };
 
+/* MODIFIED: verifyPayment function to read exact credits from order notes */
 const verifyPayment = async (req, res) => {
   try {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
@@ -110,6 +133,9 @@ const verifyPayment = async (req, res) => {
       }
 
       const actualAmountInINR = orderDetails.amount / 100; 
+      const creditsToAdd = orderDetails.notes && orderDetails.notes.creditsToAward 
+                           ? parseInt(orderDetails.notes.creditsToAward) 
+                           : actualAmountInINR;
 
     
       const newTransaction = new Transaction({
@@ -123,19 +149,17 @@ const verifyPayment = async (req, res) => {
       });
       await newTransaction.save();
 
-      // User ke credits update karna
       const updatedUser = await User.findByIdAndUpdate(
         userId,
-        { $inc: { account_credits: actualAmountInINR } }, 
+        { $inc: { account_credits: creditsToAdd } }, 
         { new: true }
       ).select('-password'); 
 
-      // Yaha image url nahi chahiye kyunki ye direct wallet recharge hai
       queueNotification({
         user: userId,
         type: 'CREDIT_ADDED',
         title: 'Wallet Recharged! 💳',
-        message: `₹${actualAmountInINR} credits have been successfully added to your account.`,
+        message: `${creditsToAdd} credits have been successfully added to your account.`,
         metadata: { 
           amount: actualAmountInINR, 
           reason: 'wallet_recharge',
@@ -157,6 +181,7 @@ const verifyPayment = async (req, res) => {
   }
 };
 
+/* MODIFIED: razorpayWebhook to apply correct bonus credits in background */
 const razorpayWebhook = async (req, res) => {
   try {
     const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
@@ -180,6 +205,10 @@ const razorpayWebhook = async (req, res) => {
       const actualAmountInINR = paymentEntity.amount / 100;
       const userId = paymentEntity.notes ? paymentEntity.notes.userId : null;
       
+      const creditsToAdd = paymentEntity.notes && paymentEntity.notes.creditsToAward 
+                           ? parseInt(paymentEntity.notes.creditsToAward) 
+                           : actualAmountInINR;
+      
       const existingTransaction = await Transaction.findOne({ razorpay_payment_id: paymentId });
       
       if (!existingTransaction && userId) {
@@ -196,7 +225,7 @@ const razorpayWebhook = async (req, res) => {
 
          await User.findByIdAndUpdate(
            userId,
-           { $inc: { account_credits: actualAmountInINR } }
+           { $inc: { account_credits: creditsToAdd } }
          );
 
         
@@ -204,7 +233,7 @@ const razorpayWebhook = async (req, res) => {
            user: userId,
            type: 'CREDIT_ADDED',
            title: 'Wallet Recharged! ',
-           message: `₹${actualAmountInINR} credits have been successfully added to your account.`,
+           message: `${creditsToAdd} credits have been successfully added to your account.`,
            metadata: { 
              amount: actualAmountInINR, 
              reason: 'wallet_recharge',
