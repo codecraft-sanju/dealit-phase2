@@ -10,7 +10,6 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
 
-
 const smartLazy = (importFunc) => {
   return lazy(() =>
     importFunc().catch((error) => {
@@ -59,7 +58,7 @@ const EditItemPage = smartLazy(() => import('./components/EditItemPage'));
 
 const FloatingAIAssistant = smartLazy(() => import('./ai/FloatingAIAssistant'));
 const AiChatPage = smartLazy(() => import('./ai/AiChatPage'));
-
+const RecentlyViewedPage = smartLazy(() => import('./components/RecentlyViewedPage'));
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -72,8 +71,6 @@ const queryClient = new QueryClient({
     },
   },
 });
-
-
 
 const ZeroPriceAlert = ({ user, onCheckComplete }) => {
   const [show, setShow] = useState(false);
@@ -194,7 +191,6 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
   const [hasZeroPriceIssue, setHasZeroPriceIssue] = useState(null);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth > 1024);
 
-
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js')
@@ -207,7 +203,6 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
     }
   }, []);
   
-
   useEffect(() => {
     const reqInterceptor = axios.interceptors.request.use(
       (config) => {
@@ -239,7 +234,6 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
     };
   }, [navigate, handleLogout]);
 
-
   useEffect(() => {
     const handleResize = () => {
       setIsDesktop(window.innerWidth > 1024);
@@ -248,7 +242,6 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // NEW: Catch Route Changes from React Native (When notification is clicked)
   useEffect(() => {
     const handleRouteMessage = (event) => {
       try {
@@ -262,7 +255,7 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
           navigate(data.url);
         }
       } catch (e) {
-         // ignore
+     
       }
     };
 
@@ -279,7 +272,6 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
   const hideNavbarRoutes = ['/login', '/signup', '/forgot-password'];
   const shouldShowBottomNav = !hideNavbarRoutes.includes(location.pathname) && !location.pathname.startsWith('/admin') && !isAiChatRoute;
   
-
   const publicDesktopRoutes = ['/login', '/privacy', '/terms', '/refund-policy', '/cancellation-policy'];
 
   if (isDesktop && !location.pathname.startsWith('/admin') && !publicDesktopRoutes.includes(location.pathname) && !isAiChatRoute) {
@@ -291,22 +283,18 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
     );
   }
 
-
   return (
     <div className={`min-h-screen bg-gray-900 font-sans selection:bg-emerald-500/30 ${shouldShowBottomNav ? 'pb-16 md:pb-0' : ''}`}> 
       <ZeroPriceAlert user={user} onCheckComplete={setHasZeroPriceIssue} />
       
       <Suspense fallback={null}>
-        
         <PromoAlert user={user} setUser={setUser} hasZeroPriceIssue={hasZeroPriceIssue} />
         <IosInstallPopup />
       </Suspense>
       
       <main>
         <Suspense fallback={<PremiumLoader />}>
-          
           {user && !isAiChatRoute && <FloatingAIAssistant user={user} />}
-          
           
           <Routes>
             <Route path="/" element={
@@ -320,10 +308,8 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
             <Route path="/signup" element={user ? <Navigate to="/" replace /> : <AuthPage defaultMode="signup" setUser={setUser} />} />
             <Route path="/forgot-password" element={user ? <Navigate to="/" replace /> : <ForgotPasswordPage setUser={setUser} />} />
           
-          
             <Route path="/profile" element={user ? <ProfilePage user={user} setUser={setUser} onLogout={handleLogout} /> : <Navigate to="/login" />} />
             
-          
             <Route path="/dashboard" element={user ? <DashboardPage user={user} setUser={setUser} /> : <Navigate to="/login" />} />
             
             <Route path="/edit-item/:id" element={user ? <EditItemPage /> : <Navigate to="/login" />} />
@@ -333,22 +319,20 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/refund-policy" element={<RefundPolicyPage />} />
             <Route path="/cancellation-policy" element={<CancellationPolicyPage />} />
-    <Route path="/offers" element={user ? <OffersPage user={user} /> : <Navigate to="/login" />} /> 
+            <Route path="/offers" element={user ? <OffersPage user={user} /> : <Navigate to="/login" />} /> 
 
-          <Route 
-  path="/admin" 
-  element={
-    <Suspense fallback={<PremiumLoader />}>
-      <AdminPanel user={user} />
-    </Suspense>
-  } 
-/>
+            <Route 
+              path="/admin" 
+              element={
+                <Suspense fallback={<PremiumLoader />}>
+                  <AdminPanel user={user} />
+                </Suspense>
+              } 
+            />
             <Route path="/checkout/:itemId" element={user ? <CheckoutPage user={user} setUser={setUser} /> : <Navigate to="/login" />} />
             
-          
             <Route path="/orders" element={user ? <OrdersPage user={user} /> : <Navigate to="/login" />} />
             <Route path="/order/:orderId" element={user ? <OrderDetailsPage user={user} /> : <Navigate to="/login" />} />
-            
             
             <Route path="/add-item" element={user ? <AddItemPage user={user} setUser={setUser} /> : <Navigate to="/login" />} />
             <Route path="/delete-account" element={user ? <DeleteAccountPage user={user} /> : <Navigate to="/login" />} />
@@ -371,6 +355,7 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
             <Route path="/help-support" element={user ? <HelpSupportPage /> : <Navigate to="/login" />} />
             <Route path="/ai-chat" element={user ? <AiChatPage user={user} /> : <Navigate to="/login" />} />
             <Route path="/ai-chat/:sessionId" element={user ? <AiChatPage user={user} /> : <Navigate to="/login" />} />
+            <Route path="/recently-viewed" element={<RecentlyViewedPage />} />
             
             <Route path="*" element={<div className="text-white text-center mt-20 text-xl">404 - Page Not Found</div>} />
           </Routes>
@@ -388,39 +373,28 @@ function App() {
     return savedUser ? JSON.parse(savedUser) : null;
   });
 
-  
   const handleLogout = useCallback(async () => {
     try {
-      
       if ('serviceWorker' in navigator && 'PushManager' in window) {
         try {
           const registration = await navigator.serviceWorker.ready;
           const subscription = await registration.pushManager.getSubscription();
           if (subscription) {
-            
             await axios.post(`${API_URL}/notifications/unsubscribe`, { endpoint: subscription.endpoint }, { withCredentials: true });
-          
             await subscription.unsubscribe();
           }
         } catch (pushErr) {
           console.error('Error clearing push subscription on logout:', pushErr);
         }
       }
-    
-
       await axios.post(`${API_URL}/users/logout`, {}, { withCredentials: true });
       setUser(null);
       localStorage.removeItem('dealit_user');
       localStorage.removeItem('dealit_token'); 
-      
       queryClient.clear(); 
-      
-     
       if (window.ReactNativeWebView) {
         window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'LOGOUT_REQUEST' }));
       }
-    
-
     } catch (error) {
       console.error('Error logging out:', error);
     }

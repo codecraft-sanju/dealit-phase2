@@ -464,6 +464,49 @@ const getExploreData = async (req, res) => {
   }
 };
 
+
+const getItemsByIds = async (req, res) => {
+  try {
+    const { itemIds } = req.body; // Frontend se IDs ka array aayega
+
+    if (!itemIds || !Array.isArray(itemIds) || itemIds.length === 0) {
+      return res.status(200).json({ success: true, count: 0, data: [] });
+    }
+
+    // Security & Error Prevention: Sirf valid MongoDB IDs ko filter karo
+    const validIds = itemIds.filter(id => mongoose.Types.ObjectId.isValid(id));
+
+    if (validIds.length === 0) {
+      return res.status(200).json({ success: true, count: 0, data: [] });
+    }
+
+    // Ek hi query me saare items fetch kar lo (Super Fast)
+    const items = await Item.find({
+      _id: { $in: validIds },
+      status: 'active'
+    }).populate('owner', 'full_name city email');
+
+    const setting = await CreditSetting.findOne();
+    let modifiedItems = items.map(item => applyDiscountSimulation(item, setting?.isDiscountSimulationEnabled || false));
+    const orderedItems = [];
+    validIds.forEach(id => {
+      const found = modifiedItems.find(item => item._id.toString() === id);
+      if (found) {
+        orderedItems.push(found);
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      count: orderedItems.length,
+      data: orderedItems
+    });
+  } catch (error) {
+    console.error('Error fetching batch items:', error);
+    res.status(500).json({ success: false, message: 'Server Error while fetching recently viewed items' });
+  }
+};
+
 module.exports = {
   createItem,
   getItems,
@@ -473,5 +516,6 @@ module.exports = {
   deleteItem,
   searchItems,
   getRelatedItems,
-  getExploreData
+  getExploreData,
+  getItemsByIds
 };

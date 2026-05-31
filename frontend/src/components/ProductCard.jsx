@@ -5,6 +5,32 @@ import { Package, Coins } from 'lucide-react';
 import { getOptimizedCloudinaryUrl } from './HomePage';
 
 const ProductCard = ({ item, isLoading, className = '', onClick, isSelected }) => {
+  
+  // NAYA CHANGE: ID ko array me save karne ki ninja technique (0 milliseconds impact)
+  const handleRecordView = () => {
+    if (!item || !item._id) return;
+    
+    try {
+      const existingData = localStorage.getItem('dealit_recently_viewed_ids');
+      let viewedIds = existingData ? JSON.parse(existingData) : [];
+      
+      // Agar pehle se ID hai toh purani jagah se hatao
+      viewedIds = viewedIds.filter(id => id !== item._id);
+      
+      // Nayi ID ko list me sabse aage (top) par dalo
+      viewedIds.unshift(item._id);
+      
+      // Sirf maximum 20 items ki history rakho taaki storage full na ho
+      if (viewedIds.length > 20) {
+        viewedIds = viewedIds.slice(0, 20);
+      }
+      
+      localStorage.setItem('dealit_recently_viewed_ids', JSON.stringify(viewedIds));
+    } catch (error) {
+      console.error("Failed to save view history", error);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className={`bg-[#F8F6FF] rounded-2xl p-2.5 relative block border border-gray-50 animate-pulse ${className}`}>
@@ -85,7 +111,10 @@ const ProductCard = ({ item, isLoading, className = '', onClick, isSelected }) =
   if (onClick) {
     return (
       <div 
-        onClick={() => onClick(item._id)} 
+        onClick={() => {
+          handleRecordView(); 
+          onClick(item._id);
+        }} 
         className={`cursor-pointer ${combinedClasses}`}
       >
         {cardContent}
@@ -96,6 +125,7 @@ const ProductCard = ({ item, isLoading, className = '', onClick, isSelected }) =
   return (
     <Link 
       to={`/item/${item._id}`} 
+      onClick={handleRecordView} 
       className={combinedClasses}
     >
       {cardContent}
