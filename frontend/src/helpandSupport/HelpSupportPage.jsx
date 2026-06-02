@@ -172,7 +172,7 @@ const HelpSupportPage = () => {
                 variants={itemVariants}
                 whileHover={{ y: -4, scale: 1.01 }}
                 whileTap={{ scale: 0.98 }}
-                href="https://wa.me/910000000000" // Replace with actual WhatsApp link
+                href="https://wa.me/919619649668"
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="bg-white rounded-[1.5rem] p-5 border border-gray-100/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] flex flex-col group relative overflow-hidden"
