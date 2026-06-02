@@ -185,7 +185,7 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
     }
   });
 
-  // ---> MODIFICATION START
+
   const handleChange = (e) => {
     if (e.target.name === 'phone') {
       const numericValue = e.target.value.replace(/\D/g, '');
@@ -194,7 +194,7 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
       setFormData({ ...formData, [e.target.name]: e.target.value });
     }
   };
-  // ---> MODIFICATION END
+ 
 
   const handleModeSwitch = (mode) => {
     setIsSignUpMode(mode === 'signup');
@@ -267,12 +267,12 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
   const handleSignup = async (e) => {
     e.preventDefault();
     
-    // ---> MODIFICATION START
+   
     if (formData.phone && formData.phone.length !== 10) {
       setError('Phone number must be exactly 10 digits.');
       return;
     }
-    // ---> MODIFICATION END
+   
     
     setError(''); setLoading(true);
     try {
@@ -427,9 +427,9 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                         </div>
                       </div>
                       
-                      {/* ---> MODIFICATION START */}
+                   
                       <FloatInput icon={Phone} label="Phone number (10 digits)" name="phone" value={formData.phone} onChange={handleChange} inputMode="numeric" maxLength={10} />
-                      {/* ---> MODIFICATION END */}
+                 
 
                       <div className="aw-form-row">
                         <FloatInput icon={MapPin} label="City" name="city" value={formData.city} onChange={handleChange} />
