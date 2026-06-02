@@ -35,6 +35,18 @@ const userSchema = new mongoose.Schema({
   },
   
   unreadNotificationsCount: { type: Number, default: 0 },
+  aiChatTokensUsed: {
+  type: Number,
+  default: 0
+},
+aiVoiceTokensUsed: {
+  type: Number,
+  default: 0
+},
+lastAITokenReset: {
+  type: Date,
+  default: null
+},
 
   savedAddresses: [{
     fullName: { type: String },

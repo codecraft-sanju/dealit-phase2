@@ -17,6 +17,7 @@ const AISetting = require('../models/AISetting');
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
+// Anti-Spam: Prevents users from holding the 'Enter' key and DDOSing the AI.
 const aiChatLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 15,
@@ -26,19 +27,50 @@ const aiChatLimiter = rateLimit({
   }
 });
 
-// Added: Voice limiter for 24 hours
-const voiceLimiter = rateLimit({
-  windowMs: 24 * 60 * 60 * 1000,
-  max: 10,
-  message: { 
-    success: false, 
-    errorCode: 'DAILY_VOICE_LIMIT_REACHED', 
-    message: 'Daily premium voice limit reached. Using standard voice.' 
-  },
-  keyGenerator: (req) => {
-   return req.user ? req.user._id.toString() : 'anonymous';
+// --- NEW: Database-Backed Daily AI Token Logic ---
+const checkAndConsumeAIToken = async (userId, type) => {
+  const user = await User.findById(userId);
+  if (!user) return false;
+
+  const now = new Date();
+  const lastReset = user.lastAITokenReset || new Date(0);
+  
+  // Check if it is a new day (UTC)
+  const isNewDay = now.getUTCFullYear() !== lastReset.getUTCFullYear() ||
+                   now.getUTCMonth() !== lastReset.getUTCMonth() ||
+                   now.getUTCDate() !== lastReset.getUTCDate();
+
+  let updates = {};
+  
+  if (isNewDay) {
+    updates.lastAITokenReset = now;
+    updates.aiChatTokensUsed = 0;
+    updates.aiVoiceTokensUsed = 0;
   }
-});
+  const DAILY_CHAT_LIMIT = 10; 
+  const DAILY_VOICE_LIMIT = 7; 
+
+  if (type === 'chat') {
+    const currentChatUsed = isNewDay ? 0 : (user.aiChatTokensUsed || 0);
+    if (currentChatUsed >= DAILY_CHAT_LIMIT) {
+      if (isNewDay) await User.findByIdAndUpdate(userId, { $set: updates });
+      return false; // Limit Reached
+    }
+    updates.aiChatTokensUsed = currentChatUsed + 1;
+  } 
+  else if (type === 'voice') {
+    const currentVoiceUsed = isNewDay ? 0 : (user.aiVoiceTokensUsed || 0);
+    if (currentVoiceUsed >= DAILY_VOICE_LIMIT) {
+      if (isNewDay) await User.findByIdAndUpdate(userId, { $set: updates });
+      return false; // Limit Reached
+    }
+    updates.aiVoiceTokensUsed = currentVoiceUsed + 1;
+  }
+
+  // Save the new token counts
+  await User.findByIdAndUpdate(userId, { $set: updates });
+  return true;
+};
 
 const generateItemDescription = async (req, res) => {
   try {
@@ -52,38 +84,22 @@ const generateItemDescription = async (req, res) => {
     }
 
     const prompt = prompts.generateItemDescriptionPrompt(title, category, condition);
-
     console.log("[AI] Requesting description from Groq...");
 
     const chatCompletion = await groq.chat.completions.create({
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-     model: "llama-3.1-8b-instant",
+      messages: [{ role: "user", content: prompt }],
+      model: "llama-3.1-8b-instant",
     });
 
     const generatedText = chatCompletion.choices[0]?.message?.content;
-
-    if (!generatedText) {
-      throw new Error("Empty response from Groq.");
-    }
+    if (!generatedText) throw new Error("Empty response from Groq.");
 
     console.log("[AI] Success! Description generated.");
-
-    res.status(200).json({ 
-      success: true, 
-      description: generatedText.trim() 
-    });
+    res.status(200).json({ success: true, description: generatedText.trim() });
 
   } catch (error) {
     console.error("AI Error (Groq):", error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to generate description' 
-    });
+    res.status(500).json({ success: false, message: 'Failed to generate description' });
   }
 };
 
@@ -92,14 +108,10 @@ const analyzeImages = async (req, res) => {
     const { imageUrls } = req.body;
 
     if (!imageUrls || !Array.isArray(imageUrls) || imageUrls.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Please provide at least one image URL.' 
-      });
+      return res.status(400).json({ success: false, message: 'Please provide at least one image URL.' });
     }
 
     console.log(`[AI Vision] Fetching ${imageUrls.length} images for Gemini...`);
-
     const promptText = prompts.analyzeImagesPrompt;
 
     const imagePartsRaw = await Promise.all(
@@ -119,17 +131,9 @@ const analyzeImages = async (req, res) => {
     );
 
     const imageParts = imagePartsRaw.filter(part => part !== null);
+    if (imageParts.length === 0) throw new Error("Could not fetch any images due to network timeout or invalid URLs.");
 
-    if (imageParts.length === 0) {
-      throw new Error("Could not fetch any images due to network timeout or invalid URLs.");
-    }
-
-    const geminiModels = [
-      "gemini-flash-latest",
-      "gemini-1.5-flash",
-      "gemini-1.5-pro"
-    ];
-
+    const geminiModels = ["gemini-flash-latest", "gemini-1.5-flash", "gemini-1.5-pro"];
     const responseSchema = {
       type: SchemaType.OBJECT,
       properties: {
@@ -148,10 +152,7 @@ const analyzeImages = async (req, res) => {
       try {
         const model = genAI.getGenerativeModel({ 
           model: modelName,
-          generationConfig: { 
-            responseMimeType: "application/json",
-            responseSchema: responseSchema
-          }
+          generationConfig: { responseMimeType: "application/json", responseSchema: responseSchema }
         });
         
         const result = await model.generateContent([promptText, ...imageParts]);
@@ -168,15 +169,12 @@ const analyzeImages = async (req, res) => {
       }
     }
 
-    if (!generatedText) {
-      throw new Error("All Gemini Vision models failed or are not found.");
-    }
+    if (!generatedText) throw new Error("All Gemini Vision models failed or are not found.");
 
     let parsedData;
     try {
       parsedData = JSON.parse(generatedText);
     } catch (parseError) {
-      console.error("AI Response was:", generatedText);
       throw new Error("AI did not return valid JSON object.");
     }
     
@@ -191,10 +189,7 @@ const analyzeImages = async (req, res) => {
 
   } catch (error) {
     console.error("AI Vision Error (Gemini):", error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to analyze images with AI.' 
-    });
+    res.status(500).json({ success: false, message: 'Failed to analyze images with AI.' });
   }
 };
 
@@ -241,9 +236,7 @@ const deleteChatSession = async (req, res) => {
   try {
     const userId = req.user._id;
     const { sessionId } = req.params;
-
     await AIChat.findOneAndDelete({ _id: sessionId, user: userId });
-
     res.status(200).json({ success: true, message: 'Chat deleted successfully' });
   } catch (error) {
     console.error('Delete Chat Error:', error);
@@ -255,7 +248,6 @@ const deleteAllChatSessions = async (req, res) => {
   try {
     const userId = req.user._id;
     await AIChat.deleteMany({ user: userId });
-
     res.status(200).json({ success: true, message: 'All chat sessions deleted successfully' });
   } catch (error) {
     console.error('Delete All Chats Error:', error);
@@ -264,7 +256,6 @@ const deleteAllChatSessions = async (req, res) => {
 };
 
 const processChat = async (req, res) => {
-
   let isClientDisconnected = false;
   const abortController = new AbortController();
 
@@ -274,9 +265,17 @@ const processChat = async (req, res) => {
   });
 
   try {
-    // CHANGED: Added chatMode to destructuring to get it from the frontend request
     const { message, sessionId, isSmartContextEnabled, chatMode } = req.body;
     const userId = req.user._id;
+
+    // --- 1. EARLY TOKEN CHECK ---
+    const hasTokens = await checkAndConsumeAIToken(userId, 'chat');
+    if (!hasTokens) {
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.write(`data: ${JSON.stringify({ content: "\n\n⚠️ **Daily Limit Reached:** You have exhausted your AI Chat tokens for today. Please return tomorrow to chat more!" })}\n\n`);
+      res.write('data: [DONE]\n\n');
+      return res.end();
+    }
 
     let user, chatDoc;
     let myItems = [], recentOrders = [], activeSwaps = [], recentTransactions = [], incomingOffers = [], pendingDispatches = [];
@@ -303,7 +302,6 @@ const processChat = async (req, res) => {
         return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // CHANGED: Passing the chatMode to the prompt generator
     let systemPrompt = prompts.getBaseSystemPrompt(user, chatMode);
 
     if (isSmartContextEnabled !== false) {
@@ -317,9 +315,6 @@ const processChat = async (req, res) => {
 
       if (myItems.length === 0) {
         actionableSuggestions.push("User has zero items listed. Warmly suggest they look around their house for unused items to list, explaining how they can trade them or earn credits.");
-      }
-      if (user.profilePic === undefined || !user.profilePic) {
-        
       }
       if (user.isVerified !== undefined && !user.isVerified) {
         actionableSuggestions.push("User account is not verified. Suggest they complete the verification process to get a trusted badge.");
@@ -352,7 +347,6 @@ const processChat = async (req, res) => {
     ];
 
     let chatCompletion;
-
     let aiConfig = await AISetting.findOne();
     if (!aiConfig) {
       aiConfig = await AISetting.create({});
@@ -377,10 +371,7 @@ const processChat = async (req, res) => {
       }, { signal: abortController.signal });
     }
     
-    if (isClientDisconnected) {
-      console.log("[AI] Client disconnected before stream started. Aborting.");
-      return; 
-    }
+    if (isClientDisconnected) return; 
 
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -405,11 +396,7 @@ const processChat = async (req, res) => {
 
     try {
       for await (const chunk of chatCompletion) {
-        if (isClientDisconnected) {
-          console.log("[AI] Client disconnected during stream. Breaking loop to save resources.");
-          break;
-        }
-        
+        if (isClientDisconnected) break;
         const content = chunk.choices[0]?.delta?.content || '';
         if (content) {
           fullBotReply += content;
@@ -434,9 +421,8 @@ const processChat = async (req, res) => {
           system_prompt: systemPrompt,
           user_message: message,
           ai_response: cleanReply,
-          status: 'pending' //  Ensure your AITrainingLog schema has this field now
+          status: 'pending' 
         });
-        console.log("[AI Data] Q&A pair silently saved for training!");
       } catch (logError) {
         console.error("Silent data collection failed:", logError);
       }
@@ -466,6 +452,16 @@ const synthesizeVoice = async (req, res) => {
     const { text, voicePref } = req.body;
     if (!text) {
       return res.status(400).json({ success: false, message: 'Text is required' });
+    }
+
+    // --- 1. EARLY TOKEN CHECK ---
+    const hasTokens = await checkAndConsumeAIToken(req.user._id, 'voice');
+    if (!hasTokens) {
+      return res.status(429).json({ 
+        success: false, 
+        errorCode: 'DAILY_VOICE_LIMIT_REACHED', 
+        message: 'Daily premium voice limit reached. Using standard voice.' 
+      });
     }
 
     const MALE_VOICE_ID = 'pNInz6obpgDQGcFmaJgB';
@@ -500,7 +496,6 @@ const synthesizeVoice = async (req, res) => {
     res.setHeader('Content-Type', 'audio/mpeg');
     response.data.pipe(res);
   } catch (error) {
-    
     let errorCode = 'SERVER_ERROR';
     let statusCode = 500;
 
@@ -525,7 +520,6 @@ const synthesizeVoice = async (req, res) => {
     }
     
     if (!res.headersSent) {
-      
       res.status(statusCode).json({ 
         success: false, 
         errorCode: errorCode,
@@ -544,6 +538,5 @@ module.exports = {
   deleteAllChatSessions, 
   processChat,
   aiChatLimiter,
-  voiceLimiter, 
   synthesizeVoice
 };

@@ -5,12 +5,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import confetti from 'canvas-confetti';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
-// CHANGED: Added GeneratingLoader component and its styles based on your design
 const GeneratingLoader = () => (
   <>
     <style>
@@ -41,9 +39,6 @@ const GeneratingLoader = () => (
           color: white;
           border-radius: 50%;
           background-color: transparent;
-          -webkit-user-select: none;
-          -moz-user-select: none;
-          -ms-user-select: none;
           user-select: none;
         }
         .loader-circle {
@@ -58,26 +53,11 @@ const GeneratingLoader = () => (
           z-index: 0;
         }
         @keyframes loader-combined {
-          0% {
-            transform: rotate(90deg);
-            box-shadow: 0 6px 12px 0 #38bdf8 inset, 0 12px 18px 0 #005dff inset, 0 36px 36px 0 #1e40af inset, 0 0 3px 1.2px rgba(56, 189, 248, 0.3), 0 0 6px 1.8px rgba(0, 93, 255, 0.2);
-          }
-          25% {
-            transform: rotate(180deg);
-            box-shadow: 0 6px 12px 0 #0099ff inset, 0 12px 18px 0 #38bdf8 inset, 0 36px 36px 0 #005dff inset, 0 0 6px 2.4px rgba(56, 189, 248, 0.3), 0 0 12px 3.6px rgba(0, 93, 255, 0.2), 0 0 18px 6px rgba(30, 64, 175, 0.15);
-          }
-          50% {
-            transform: rotate(270deg);
-            box-shadow: 0 6px 12px 0 #60a5fa inset, 0 12px 6px 0 #0284c7 inset, 0 24px 36px 0 #005dff inset, 0 0 3px 1.2px rgba(56, 189, 248, 0.3), 0 0 6px 1.8px rgba(0, 93, 255, 0.2);
-          }
-          75% {
-            transform: rotate(360deg);
-            box-shadow: 0 6px 12px 0 #3b82f6 inset, 0 12px 18px 0 #0ea5e9 inset, 0 36px 36px 0 #2563eb inset, 0 0 6px 2.4px rgba(56, 189, 248, 0.3), 0 0 12px 3.6px rgba(0, 93, 255, 0.2), 0 0 18px 6px rgba(30, 64, 175, 0.15);
-          }
-          100% {
-            transform: rotate(450deg);
-            box-shadow: 0 6px 12px 0 #4dc8fd inset, 0 12px 18px 0 #005dff inset, 0 36px 36px 0 #1e40af inset, 0 0 3px 1.2px rgba(56, 189, 248, 0.3), 0 0 6px 1.8px rgba(0, 93, 255, 0.2);
-          }
+          0% { transform: rotate(90deg); box-shadow: 0 6px 12px 0 #38bdf8 inset, 0 12px 18px 0 #005dff inset, 0 36px 36px 0 #1e40af inset, 0 0 3px 1.2px rgba(56, 189, 248, 0.3), 0 0 6px 1.8px rgba(0, 93, 255, 0.2); }
+          25% { transform: rotate(180deg); box-shadow: 0 6px 12px 0 #0099ff inset, 0 12px 18px 0 #38bdf8 inset, 0 36px 36px 0 #005dff inset, 0 0 6px 2.4px rgba(56, 189, 248, 0.3), 0 0 12px 3.6px rgba(0, 93, 255, 0.2), 0 0 18px 6px rgba(30, 64, 175, 0.15); }
+          50% { transform: rotate(270deg); box-shadow: 0 6px 12px 0 #60a5fa inset, 0 12px 6px 0 #0284c7 inset, 0 24px 36px 0 #005dff inset, 0 0 3px 1.2px rgba(56, 189, 248, 0.3), 0 0 6px 1.8px rgba(0, 93, 255, 0.2); }
+          75% { transform: rotate(360deg); box-shadow: 0 6px 12px 0 #3b82f6 inset, 0 12px 18px 0 #0ea5e9 inset, 0 36px 36px 0 #2563eb inset, 0 0 6px 2.4px rgba(56, 189, 248, 0.3), 0 0 12px 3.6px rgba(0, 93, 255, 0.2), 0 0 18px 6px rgba(30, 64, 175, 0.15); }
+          100% { transform: rotate(450deg); box-shadow: 0 6px 12px 0 #4dc8fd inset, 0 12px 18px 0 #005dff inset, 0 36px 36px 0 #1e40af inset, 0 0 3px 1.2px rgba(56, 189, 248, 0.3), 0 0 6px 1.8px rgba(0, 93, 255, 0.2); }
         }
         .loader-letter {
           display: inline-block;
@@ -85,8 +65,6 @@ const GeneratingLoader = () => (
           transform: translateY(0);
           animation: loader-letter-anim 2.4s infinite;
           z-index: 1;
-          border-radius: 50ch;
-          border: none;
         }
         .loader-letter:nth-child(1) { animation-delay: 0s; }
         .loader-letter:nth-child(2) { animation-delay: 0.1s; }
@@ -102,36 +80,18 @@ const GeneratingLoader = () => (
         .loader-letter:nth-child(12) { animation-delay: 1.1s; }
         .loader-letter:nth-child(13) { animation-delay: 1.2s; }
         @keyframes loader-letter-anim {
-          0%, 100% {
-            opacity: 0.4;
-            transform: translateY(0);
-          }
-          20% {
-            opacity: 1;
-            text-shadow: #f8fcff 0 0 5px;
-          }
-          40% {
-            opacity: 0.7;
-            transform: translateY(0);
-          }
+          0%, 100% { opacity: 0.4; transform: translateY(0); }
+          20% { opacity: 1; text-shadow: #f8fcff 0 0 5px; }
+          40% { opacity: 0.7; transform: translateY(0); }
         }
       `}
     </style>
     <div className="custom-loader-container">
       <div className="loader-wrapper">
-        <span className="loader-letter">G</span>
-        <span className="loader-letter">e</span>
-        <span className="loader-letter">n</span>
-        <span className="loader-letter">e</span>
-        <span className="loader-letter">r</span>
-        <span className="loader-letter">a</span>
-        <span className="loader-letter">t</span>
-        <span className="loader-letter">i</span>
-        <span className="loader-letter">n</span>
-        <span className="loader-letter">g</span>
-        <span className="loader-letter">.</span>
-        <span className="loader-letter">.</span>
-        <span className="loader-letter">.</span>
+        <span className="loader-letter">G</span><span className="loader-letter">e</span><span className="loader-letter">n</span>
+        <span className="loader-letter">e</span><span className="loader-letter">r</span><span className="loader-letter">a</span>
+        <span className="loader-letter">t</span><span className="loader-letter">i</span><span className="loader-letter">n</span>
+        <span className="loader-letter">g</span><span className="loader-letter">.</span><span className="loader-letter">.</span><span className="loader-letter">.</span>
         <div className="loader-circle"></div>
       </div>
     </div>
@@ -142,90 +102,28 @@ const TypingLoader = () => (
   <>
     <style>
       {`
-        .typing-loader-wrapper {
-          position: relative;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: inherit;
-          user-select: none;
-          gap: 10px;
-          font-weight: 500;
-        }
-        .typing-loader {
-          width: 20px;
-          height: 20px;
-          aspect-ratio: 1 / 1;
-          border-radius: 50%;
-          background-color: transparent;
-          animation: typing-loader-rotate 1.5s linear infinite;
-          z-index: 0;
-        }
+        .typing-loader-wrapper { position: relative; display: flex; align-items: center; justify-content: center; color: inherit; gap: 10px; font-weight: 500; }
+        .typing-loader { width: 20px; height: 20px; border-radius: 50%; animation: typing-loader-rotate 1.5s linear infinite; }
         @keyframes typing-loader-rotate {
-          0% {
-            transform: rotate(90deg);
-            box-shadow: 0 1px 1px 0 #fff inset, 0 3px 5px 0 #ff5f9f inset, 0 4px 4px 0 #0693ff inset;
-          }
-          50% {
-            transform: rotate(270deg);
-            background: #7c0911;
-            box-shadow: 0 1px 1px 0 #fff inset, 0 3px 5px 0 #d60a47 inset, 0 4px 4px 0 #fbef19 inset;
-          }
-          100% {
-            transform: rotate(450deg);
-            box-shadow: 0 1px 1px 0 #fff inset, 0 3px 5px 0 #ff5f9f inset, 0 4px 4px 0 #28a9ff inset;
-          }
+          0% { transform: rotate(90deg); box-shadow: 0 1px 1px 0 #fff inset, 0 3px 5px 0 #ff5f9f inset, 0 4px 4px 0 #0693ff inset; }
+          50% { transform: rotate(270deg); background: #7c0911; box-shadow: 0 1px 1px 0 #fff inset, 0 3px 5px 0 #d60a47 inset, 0 4px 4px 0 #fbef19 inset; }
+          100% { transform: rotate(450deg); box-shadow: 0 1px 1px 0 #fff inset, 0 3px 5px 0 #ff5f9f inset, 0 4px 4px 0 #28a9ff inset; }
         }
-        .typing-letter-wrapper {
-          display: flex;
-          gap: 1px;
-        }
-        .typing-loader-letter {
-          display: inline-block;
-          opacity: 0.4;
-          transform: translateY(0);
-          animation: typing-loader-letter-anim 2s infinite;
-          z-index: 1;
-          border-radius: 50ch;
-          border: none;
-        }
-        .typing-loader-letter:nth-child(1) { animation-delay: 0s; }
-        .typing-loader-letter:nth-child(2) { animation-delay: 0.1s; }
-        .typing-loader-letter:nth-child(3) { animation-delay: 0.2s; }
-        .typing-loader-letter:nth-child(4) { animation-delay: 0.3s; }
-        .typing-loader-letter:nth-child(5) { animation-delay: 0.4s; }
-        .typing-loader-letter:nth-child(6) { animation-delay: 0.5s; }
-        .typing-loader-letter:nth-child(7) { animation-delay: 0.6s; }
-        .typing-loader-letter:nth-child(8) { animation-delay: 0.7s; }
+        .typing-loader-letter { display: inline-block; opacity: 0.4; animation: typing-loader-letter-anim 2s infinite; }
+        .typing-loader-letter:nth-child(1) { animation-delay: 0s; } .typing-loader-letter:nth-child(2) { animation-delay: 0.1s; }
+        .typing-loader-letter:nth-child(3) { animation-delay: 0.2s; } .typing-loader-letter:nth-child(4) { animation-delay: 0.3s; }
+        .typing-loader-letter:nth-child(5) { animation-delay: 0.4s; } .typing-loader-letter:nth-child(6) { animation-delay: 0.5s; }
+        .typing-loader-letter:nth-child(7) { animation-delay: 0.6s; } .typing-loader-letter:nth-child(8) { animation-delay: 0.7s; }
         .typing-loader-letter:nth-child(9) { animation-delay: 0.8s; }
-        @keyframes typing-loader-letter-anim {
-          0%, 100% {
-            opacity: 0.4;
-            transform: translateY(0);
-          }
-          20% {
-            opacity: 1;
-            transform: scale(1.15);
-          }
-          40% {
-            opacity: 0.7;
-            transform: translateY(0);
-          }
-        }
+        @keyframes typing-loader-letter-anim { 0%, 100% { opacity: 0.4; transform: scale(1); } 20% { opacity: 1; transform: scale(1.15); } 40% { opacity: 0.7; transform: scale(1); } }
       `}
     </style>
     <div className="typing-loader-wrapper h-6 px-1">
       <div className="typing-loader"></div>
-      <div className="typing-letter-wrapper">
-        <span className="typing-loader-letter">S</span>
-        <span className="typing-loader-letter">e</span>
-        <span className="typing-loader-letter">a</span>
-        <span className="typing-loader-letter">r</span>
-        <span className="typing-loader-letter">c</span>
-        <span className="typing-loader-letter">h</span>
-        <span className="typing-loader-letter">i</span>
-        <span className="typing-loader-letter">n</span>
-        <span className="typing-loader-letter">g</span>
+      <div className="flex gap-[1px]">
+        <span className="typing-loader-letter">S</span><span className="typing-loader-letter">e</span><span className="typing-loader-letter">a</span>
+        <span className="typing-loader-letter">r</span><span className="typing-loader-letter">c</span><span className="typing-loader-letter">h</span>
+        <span className="typing-loader-letter">i</span><span className="typing-loader-letter">n</span><span className="typing-loader-letter">g</span>
       </div>
     </div>
   </>
@@ -245,60 +143,25 @@ const SoundWave = () => (
 );
 
 const BotMessage = ({ content, animated, onComplete }) => {
-  const cleanContent = useMemo(() => content.replace(/(\*\*)?\[ANIMATION_[123]\](\*\*)?/g, ''), [content]);
-  const [displayedText, setDisplayedText] = useState(animated ? '' : cleanContent);
-  
-  const triggered1 = useRef(false);
-  const triggered2 = useRef(false);
-  const triggered3 = useRef(false);
-  
-  useEffect(() => {
-    if (content.includes('[ANIMATION_1]') && !triggered1.current) {
-      triggered1.current = true;
-      confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 }, colors: ['#A388E1', '#10B981', '#FBBF24', '#EF4444'], zIndex: 99999 });
-    }
-    if (content.includes('[ANIMATION_2]') && !triggered2.current) {
-      triggered2.current = true;
-      const duration = 3 * 1000;
-      const animationEnd = Date.now() + duration;
-      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 99999 };
-      const interval = setInterval(function() {
-        const timeLeft = animationEnd - Date.now();
-        if (timeLeft <= 0) return clearInterval(interval);
-        const particleCount = 50 * (timeLeft / duration);
-        confetti({ ...defaults, particleCount, origin: { x: Math.random() * (0.3 - 0.1) + 0.1, y: Math.random() - 0.2 } });
-        confetti({ ...defaults, particleCount, origin: { x: Math.random() * (0.9 - 0.7) + 0.7, y: Math.random() - 0.2 } });
-      }, 250);
-    }
-    if (content.includes('[ANIMATION_3]') && !triggered3.current) {
-      triggered3.current = true;
-      const end = Date.now() + 3 * 1000;
-      const colors = ['#A388E1', '#ffffff'];
-      (function frame() {
-        confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: colors, zIndex: 99999 });
-        confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: colors, zIndex: 99999 });
-        if (Date.now() < end) requestAnimationFrame(frame);
-      }());
-    }
-  }, [content]);
+  const [displayedText, setDisplayedText] = useState(animated ? '' : content);
   
   useEffect(() => {
     if (!animated) {
-      setDisplayedText(cleanContent);
+      setDisplayedText(content);
       return;
     }
     
     let i = 0;
     const interval = setInterval(() => {
-      setDisplayedText(cleanContent.slice(0, i + 1));
+      setDisplayedText(content.slice(0, i + 1));
       i++;
-      if (i >= cleanContent.length) {
+      if (i >= content.length) {
         clearInterval(interval);
         if (onComplete) onComplete();
       }
     }, 15);
     return () => clearInterval(interval);
-  }, [cleanContent, animated]);
+  }, [content, animated]);
   
   return (
     <div className="break-words leading-relaxed text-sm">
@@ -367,7 +230,6 @@ const AiChatPage = ({ user }) => {
     return saved !== null ? JSON.parse(saved) : true;
   });
 
-  // CHANGED: Added chatMode state linked to localStorage
   const [chatMode, setChatMode] = useState(() => localStorage.getItem('dealit_ai_mode') || 'dealit');
 
   const [voiceState, setVoiceState] = useState('idle');
@@ -398,16 +260,10 @@ const AiChatPage = ({ user }) => {
   }, []);
 
   useEffect(() => {
-    if (window.speechSynthesis) {
-      window.speechSynthesis.onvoiceschanged = () => {};
-    }
+    if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = () => {};
     return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-      if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
+      if (abortControllerRef.current) abortControllerRef.current.abort();
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
@@ -415,11 +271,8 @@ const AiChatPage = ({ user }) => {
     };
   }, []);
 
-  // Sync mode if changed from other tabs/pages
   useEffect(() => {
-    const syncMode = () => {
-      setChatMode(localStorage.getItem('dealit_ai_mode') || 'dealit');
-    };
+    const syncMode = () => setChatMode(localStorage.getItem('dealit_ai_mode') || 'dealit');
     window.addEventListener('storage', syncMode);
     return () => window.removeEventListener('storage', syncMode);
   }, []);
@@ -451,10 +304,7 @@ const AiChatPage = ({ user }) => {
   }, [messages, isLoading, voiceState]);
   
   useEffect(() => {
-    const handleResizeSidebar = () => {
-      if (window.innerWidth > 768) setIsSidebarOpen(true);
-      else setIsSidebarOpen(false);
-    };
+    const handleResizeSidebar = () => setIsSidebarOpen(window.innerWidth > 768);
     window.addEventListener('resize', handleResizeSidebar);
     return () => window.removeEventListener('resize', handleResizeSidebar);
   }, []);
@@ -466,9 +316,7 @@ const AiChatPage = ({ user }) => {
         headers: { Authorization: `Bearer ${token}` },
         withCredentials: true
       });
-      if (res.data.success) {
-        setSessions(res.data.sessions);
-      }
+      if (res.data.success) setSessions(res.data.sessions);
     } catch (error) {
       console.error('Failed to load chat sessions:', error);
     }
@@ -509,7 +357,6 @@ const AiChatPage = ({ user }) => {
           navigate('/ai-chat', { replace: true });
         }
       } catch (error) {
-        console.error('Failed to load chat history:', error);
         navigate('/ai-chat', { replace: true });
       } finally {
         setIsLoading(false);
@@ -522,12 +369,7 @@ const AiChatPage = ({ user }) => {
     setCurrentSessionId(null);
     setIsLoading(false);
     setMessages([
-      { 
-        id: Date.now().toString(), 
-        role: 'bot', 
-        content: `Welcome to Dealit AI, ${user?.full_name?.split(' ')[0] || 'friend'}. How can I assist you with your trades today?`, 
-        animated: true 
-      }
+      { id: Date.now().toString(), role: 'bot', content: `Welcome to Dealit AI, ${user?.full_name?.split(' ')[0] || 'friend'}. How can I assist you with your trades today?`, animated: true }
     ]);
     navigate('/ai-chat', { replace: true });
     window.history.pushState(null, '', '/ai-chat');
@@ -551,12 +393,8 @@ const AiChatPage = ({ user }) => {
         headers: { Authorization: `Bearer ${token}` },
         withCredentials: true
       });
-      
       setSessions(prev => prev.filter(s => s._id !== id));
-      
-      if (routeSessionId === id || currentSessionId === id) {
-        handleNewChat();
-      }
+      if (routeSessionId === id || currentSessionId === id) handleNewChat();
     } catch (error) {
       console.error('Error deleting session:', error);
     }
@@ -569,7 +407,6 @@ const AiChatPage = ({ user }) => {
         headers: { Authorization: `Bearer ${token}` },
         withCredentials: true
       });
-      
       setSessions([]); 
       setIsSettingsOpen(false); 
       handleNewChat(); 
@@ -599,7 +436,6 @@ const AiChatPage = ({ user }) => {
     utterance.onstart = () => setVoiceState('speaking');
     utterance.onend = () => setVoiceState('idle');
     utterance.onerror = (e) => {
-      console.error('Native TTS Error:', e);
       setVoiceState('idle');
     };
     window.speechSynthesis.speak(utterance);
@@ -607,26 +443,20 @@ const AiChatPage = ({ user }) => {
 
   const speakText = async (text) => {
     if (!text) return;
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
+    if (audioRef.current) audioRef.current.pause();
     const textToSpeak = text.replace(/[*_#`]/g, '');
     const currentVoicePref = typeof voicePref !== 'undefined' ? voicePref : (localStorage.getItem('dealit_ai_voice_pref') || 'female');
     
     setVoiceState('generating_audio');
     try {
       const token = localStorage.getItem('dealit_token');
-      
       const response = await fetch(`${API_URL}/ai/synthesize-voice`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ 
-          text: textToSpeak,
-          voicePref: currentVoicePref 
-        })
+        body: JSON.stringify({ text: textToSpeak, voicePref: currentVoicePref })
       });
 
       if (!response.ok) {
@@ -653,7 +483,6 @@ const AiChatPage = ({ user }) => {
       setVoiceState('speaking');
       await audio.play();
     } catch (error) {
-      console.warn('Premium voice failed, falling back to native browser voice:', error.message);
       fallbackToNativeSpeech(textToSpeak, currentVoicePref);
     }
   };
@@ -679,7 +508,6 @@ const AiChatPage = ({ user }) => {
           'Authorization': `Bearer ${token}`
         },
         credentials: 'include',
-        // CHANGED: Added chatMode to API payload
         body: JSON.stringify({ 
           message: userMessage,
           sessionId: currentSessionId,
@@ -688,7 +516,17 @@ const AiChatPage = ({ user }) => {
         }),
         signal: abortControllerRef.current.signal
       });
-      if (!response.ok) throw new Error('Network response was not ok');
+
+      // ADDED: Better limit error handling
+      if (!response.ok) {
+        let errorMessage = 'Voice chat failed.';
+        try {
+          const errData = await response.json();
+          errorMessage = errData.reply || errData.message || errorMessage;
+        } catch (e) {}
+        throw new Error(errorMessage);
+      }
+
       const reader = response.body.getReader();
       const decoder = new TextDecoder("utf-8");
       let botReply = "";
@@ -702,12 +540,8 @@ const AiChatPage = ({ user }) => {
             const dataStr = line.replace('data: ', '');
             if (dataStr === '[DONE]') {
               setTimeout(() => {
-                const cleanReplyText = botReply.replace(/(\*\*)?\[ANIMATION_[123]\](\*\*)?/g, '');
-                if (cleanReplyText.trim()) {
-                  speakText(cleanReplyText);
-                } else {
-                  setVoiceState('idle');
-                }
+                if (botReply.trim()) speakText(botReply);
+                else setVoiceState('idle');
               }, 300);
               break;
             }
@@ -724,8 +558,8 @@ const AiChatPage = ({ user }) => {
       }
     } catch (error) {
       if (error.name === 'AbortError') return;
-      console.error('AI Voice Error:', error);
       setVoiceState('idle');
+      alert(`Voice Error: ${error.message}`);
     }
   };
   
@@ -736,28 +570,16 @@ const AiChatPage = ({ user }) => {
       return;
     }
     
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
+    if (audioRef.current) audioRef.current.pause();
     const recognition = new SpeechRecognition();
     recognition.lang = 'en-IN';
-    
     recognition.onstart = () => setVoiceState('listening');
-    
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
       processVoiceMessage(transcript);
     };
-    
-    recognition.onerror = (e) => {
-      console.error('Speech recognition error:', e);
-      setVoiceState('idle');
-    };
-    
-    recognition.onend = () => {
-      setVoiceState(prev => prev === 'listening' ? 'idle' : prev);
-    };
-    
+    recognition.onerror = (e) => setVoiceState('idle');
+    recognition.onend = () => setVoiceState(prev => prev === 'listening' ? 'idle' : prev);
     recognition.start();
   };
   
@@ -766,19 +588,14 @@ const AiChatPage = ({ user }) => {
       audioRef.current.pause();
       audioRef.current = null;
     }
-    if (window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
     if (abortControllerRef.current) abortControllerRef.current.abort();
     setVoiceState('idle');
   };
   
   const processMessage = async (userMessage) => {
     if (!userMessage.trim()) return;
-    
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
+    if (abortControllerRef.current) abortControllerRef.current.abort();
     abortControllerRef.current = new AbortController();
     const newMessages = [...messages, { id: Date.now(), role: 'user', content: userMessage }];
     setMessages(newMessages);
@@ -803,7 +620,6 @@ const AiChatPage = ({ user }) => {
           'Authorization': `Bearer ${token}`
         },
         credentials: 'include',
-        // CHANGED: Added chatMode to API payload
         body: JSON.stringify({ 
           message: userMessage,
           sessionId: currentSessionId,
@@ -812,9 +628,17 @@ const AiChatPage = ({ user }) => {
         }),
         signal: abortControllerRef.current.signal
       });
+
+      // ADDED: Parse error json on rate limits
       if (!response.ok) {
-        throw new Error('Network response was not ok');
+        let errorMessage = 'Server connection failed.';
+        try {
+          const errData = await response.json();
+          errorMessage = errData.reply || errData.message || errorMessage;
+        } catch (e) {}
+        throw new Error(errorMessage);
       }
+
       const reader = response.body.getReader();
       const decoder = new TextDecoder("utf-8");
       let botReply = "";
@@ -830,18 +654,12 @@ const AiChatPage = ({ user }) => {
             const dataStr = line.replace('data: ', '');
             if (dataStr === '[DONE]') {
               setTimeout(() => {
-                const cleanReplyText = botReply.replace(/(\*\*)?\[ANIMATION_[123]\](\*\*)?/g, '');
-                setMessages((prev) =>
-                  prev.map((msg) =>
-                    msg.id === botMessageId ? { ...msg, content: cleanReplyText } : msg
-                  )
-                );
+                setMessages((prev) => prev.map((msg) => msg.id === botMessageId ? { ...msg, content: botReply } : msg));
               }, 1000);
               break;
             }
             try {
               const parsed = JSON.parse(dataStr);
-              
               if (parsed.type === 'session_id') {
                 setCurrentSessionId(parsed.sessionId);
                 navigate(`/ai-chat/${parsed.sessionId}`, { replace: true });
@@ -849,53 +667,31 @@ const AiChatPage = ({ user }) => {
                 continue;
               }
               botReply += parsed.content;
-              
-              setMessages((prev) =>
-                prev.map((msg) =>
-                  msg.id === botMessageId ? { ...msg, content: botReply } : msg
-                )
-              );
-            } catch (e) {
-            }
+              setMessages((prev) => prev.map((msg) => msg.id === botMessageId ? { ...msg, content: botReply } : msg));
+            } catch (e) {}
           }
         }
       }
     } catch (error) {
       if (error.name === 'AbortError') return;
-      console.error('AI Chat Error:', error);
       setIsLoading(false);
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === botMessageId ? { ...msg, content: 'Server connection failed. Please try again later.' } : msg
-        )
-      );
+      setMessages((prev) => prev.map((msg) => msg.id === botMessageId ? { ...msg, content: `⚠️ ${error.message}` } : msg));
     }
   };
   
   const handleMinimize = () => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
     localStorage.setItem('dealit_open_floating_ai', 'true');
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
-    if (window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
-    if (window.history.state && window.history.state.idx > 0) {
-      navigate(-1); 
-    } else {
-      navigate('/'); 
-    }
+    if (audioRef.current) audioRef.current.pause();
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    if (window.history.state && window.history.state.idx > 0) navigate(-1); 
+    else navigate('/'); 
   };
   
   const handleClose = () => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
-    if (window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
+    if (audioRef.current) audioRef.current.pause();
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
     navigate('/');
   };
 
@@ -910,338 +706,191 @@ const AiChatPage = ({ user }) => {
       className="fixed top-0 left-0 right-0 flex bg-gray-900 z-50 overflow-hidden overscroll-none"
       style={{ height: viewportHeight }}
     >
-      
       {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 md:hidden" 
-          onClick={() => setIsSidebarOpen(false)}
-        />
+        <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setIsSidebarOpen(false)} />
       )}
       <div className={`fixed md:relative z-50 flex flex-col h-full bg-gray-950 border-r border-gray-800 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-72 translate-x-0' : 'w-72 -translate-x-full md:w-0 md:hidden absolute'}`}>
-        
         <div className="p-3 flex items-center gap-2">
-          <button 
-            onClick={handleNewChat}
-            className="flex-1 flex items-center gap-3 p-3 rounded-xl bg-gray-800/80 hover:bg-gray-800 text-white transition-all border border-gray-700/50 shadow-sm"
-          >
-            <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-full p-1 shadow-inner">
-              <Plus className="w-4 h-4 text-white" />
-            </div>
+          <button onClick={handleNewChat} className="flex-1 flex items-center gap-3 p-3 rounded-xl bg-gray-800/80 hover:bg-gray-800 text-white transition-all border border-gray-700/50 shadow-sm">
+            <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-full p-1 shadow-inner"><Plus className="w-4 h-4 text-white" /></div>
             <span className="font-semibold text-sm">New Chat</span>
           </button>
-          <button 
-            onClick={() => setIsSidebarOpen(false)}
-            className="md:hidden p-3 bg-gray-800 hover:bg-gray-700 rounded-xl text-gray-400 hover:text-white transition-colors border border-gray-700/50"
-          >
+          <button onClick={() => setIsSidebarOpen(false)} className="md:hidden p-3 bg-gray-800 hover:bg-gray-700 rounded-xl text-gray-400 hover:text-white transition-colors border border-gray-700/50">
             <X className="w-5 h-5" />
           </button>
         </div>
         <div className="flex-1 overflow-y-auto px-3 py-2 scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent">
           <div className="text-xs font-bold tracking-wider text-gray-500 mb-3 px-2 uppercase">Recent Chats</div>
-          
           <div className="space-y-1">
             {sessions.map(session => (
-              <div 
-                key={session._id}
-                onClick={() => selectSession(session._id)}
-                className={`group flex items-center justify-between w-full p-2.5 rounded-lg cursor-pointer transition-colors border ${
-                  routeSessionId === session._id || currentSessionId === session._id 
-                    ? 'bg-gray-800/80 text-gray-200 border-gray-700/50' 
-                    : 'hover:bg-gray-800/50 text-gray-400 hover:text-gray-200 border-transparent'
-                }`}
-              >
+              <div key={session._id} onClick={() => selectSession(session._id)} className={`group flex items-center justify-between w-full p-2.5 rounded-lg cursor-pointer transition-colors border ${routeSessionId === session._id || currentSessionId === session._id ? 'bg-gray-800/80 text-gray-200 border-gray-700/50' : 'hover:bg-gray-800/50 text-gray-400 hover:text-gray-200 border-transparent'}`}>
                 <div className="flex items-center gap-3 overflow-hidden">
                   <MessageSquare className="w-4 h-4 flex-shrink-0" />
                   <span className="truncate text-sm font-medium text-left">{session.title || 'Chat Session'}</span>
                 </div>
-                <button 
-                  onClick={(e) => deleteSession(e, session._id)}
-                  className="p-1 text-gray-500 hover:bg-red-500/20 hover:text-red-400 rounded transition-all"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                <button onClick={(e) => deleteSession(e, session._id)} className="p-1 text-gray-500 hover:bg-red-500/20 hover:text-red-400 rounded transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
               </div>
             ))}
-            {sessions.length === 0 && (
-               <p className="text-xs text-gray-600 text-center mt-4">No recent chats found.</p>
-            )}
+            {sessions.length === 0 && <p className="text-xs text-gray-600 text-center mt-4">No recent chats found.</p>}
           </div>
         </div>
         <div className="p-3 border-t border-gray-800/80 space-y-1 bg-gray-950 flex-shrink-0">
-          <button 
-            onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-            className={`flex items-center justify-between w-full p-2.5 rounded-lg transition-colors ${isSettingsOpen ? 'bg-gray-800/80 text-white' : 'hover:bg-gray-800/50 text-gray-400 hover:text-gray-200'}`}
-          >
-            <div className="flex items-center gap-3">
-              <Settings className="w-5 h-5" />
-              <span className="text-sm font-medium">Settings</span>
-            </div>
-            <motion.div animate={{ rotate: isSettingsOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
-              <ChevronDown className="w-4 h-4" />
-            </motion.div>
+          <button onClick={() => setIsSettingsOpen(!isSettingsOpen)} className={`flex items-center justify-between w-full p-2.5 rounded-lg transition-colors ${isSettingsOpen ? 'bg-gray-800/80 text-white' : 'hover:bg-gray-800/50 text-gray-400 hover:text-gray-200'}`}>
+            <div className="flex items-center gap-3"><Settings className="w-5 h-5" /><span className="text-sm font-medium">Settings</span></div>
+            <motion.div animate={{ rotate: isSettingsOpen ? 180 : 0 }} transition={{ duration: 0.2 }}><ChevronDown className="w-4 h-4" /></motion.div>
           </button>
           <AnimatePresence>
             {isSettingsOpen && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
+              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                 <div className="p-3 mx-1 mb-1 mt-1 bg-gray-900 border border-gray-700/50 rounded-xl space-y-4">
-                  {/* CHANGED: Added Mode Toggle Switch */}
                   <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-white">AI Mode</p>
-                      <p className="text-xs text-gray-400 mt-0.5 capitalize">{chatMode === 'dealit' ? 'Dealit Strict' : 'General AI'}</p>
-                    </div>
+                    <div><p className="text-sm font-medium text-white">AI Mode</p><p className="text-xs text-gray-400 mt-0.5 capitalize">{chatMode === 'dealit' ? 'Dealit Strict' : 'General AI'}</p></div>
                     <label className="relative inline-flex items-center cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        className="sr-only peer" 
-                        checked={chatMode === 'general'}
-                        onChange={handleToggleMode}
-                      />
+                      <input type="checkbox" className="sr-only peer" checked={chatMode === 'general'} onChange={handleToggleMode} />
                       <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
                     </label>
                   </div>
-
                   <div className="flex items-center justify-between pt-3 border-t border-gray-800/80">
-                    <div>
-                      <p className="text-sm font-medium text-white">Smart Context</p>
-                      <p className="text-xs text-gray-400 mt-0.5">Read inventory</p>
-                    </div>
+                    <div><p className="text-sm font-medium text-white">Smart Context</p><p className="text-xs text-gray-400 mt-0.5">Read inventory</p></div>
                     <label className="relative inline-flex items-center cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        className="sr-only peer" 
-                        checked={isSmartContextEnabled}
-                        onChange={handleToggleContext}
-                      />
+                      <input type="checkbox" className="sr-only peer" checked={isSmartContextEnabled} onChange={handleToggleContext} />
                       <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
                     </label>
                   </div>
-
                   <div className="flex items-center justify-between pt-3 border-t border-gray-800/80">
-                    <div>
-                      <p className="text-sm font-medium text-white">AI Voice</p>
-                      <p className="text-xs text-gray-400 mt-0.5 capitalize">{voicePref} Voice</p>
-                    </div>
-                    <button
-                      onClick={handleToggleVoicePref}
-                      className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-600 transition-colors"
-                    >
-                      <User className="w-4 h-4 text-purple-400" />
-                    </button>
+                    <div><p className="text-sm font-medium text-white">AI Voice</p><p className="text-xs text-gray-400 mt-0.5 capitalize">{voicePref} Voice</p></div>
+                    <button onClick={handleToggleVoicePref} className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-600 transition-colors"><User className="w-4 h-4 text-purple-400" /></button>
                   </div>
                   <div className="pt-3 border-t border-gray-800/80">
-                    <button 
-                      onClick={() => {
-                        if(window.confirm("Are you sure you want to clear all your chat history? This action cannot be undone.")) {
-                          deleteAllSessions();
-                        }
-                      }}
-                      className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors border border-red-500/20 text-xs font-semibold shadow-inner"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Clear All Chats
-                    </button>
+                    <button onClick={() => { if(window.confirm("Are you sure you want to clear all your chat history? This action cannot be undone.")) { deleteAllSessions(); } }} className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors border border-red-500/20 text-xs font-semibold shadow-inner"><Trash2 className="w-4 h-4" />Clear All Chats</button>
                   </div>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
-          <button onClick={() => navigate('/help-support')} className="flex items-center gap-3 w-full p-2.5 rounded-lg hover:bg-gray-800/50 text-gray-400 hover:text-gray-200 transition-colors">
-            <HelpCircle className="w-5 h-5" />
-            <span className="text-sm font-medium">Help & FAQ</span>
-          </button>
+          <button onClick={() => navigate('/help-support')} className="flex items-center gap-3 w-full p-2.5 rounded-lg hover:bg-gray-800/50 text-gray-400 hover:text-gray-200 transition-colors"><HelpCircle className="w-5 h-5" /><span className="text-sm font-medium">Help & FAQ</span></button>
         </div>
       </div>
       <div className="flex-1 flex flex-col min-w-0 h-full relative bg-gray-900">
         
         <div className="bg-gray-800/80 backdrop-blur-md border-b border-purple-500/20 p-4 flex items-center justify-between shadow-sm shadow-purple-900/10 z-10 shrink-0">
           <div className="flex items-center gap-3">
-            <button 
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 bg-gray-900 hover:bg-gray-700 rounded-lg text-gray-300 transition-colors mr-1"
-              title="Toggle Sidebar"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-            
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500/20 to-emerald-500/10 flex items-center justify-center border border-purple-500/30 shadow-[0_0_15px_rgba(163,136,225,0.2)] hidden sm:flex">
-              <Bot className="w-6 h-6 text-purple-400" />
-            </div>
-            
+            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 bg-gray-900 hover:bg-gray-700 rounded-lg text-gray-300 transition-colors mr-1" title="Toggle Sidebar"><Menu className="w-5 h-5" /></button>
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500/20 to-emerald-500/10 flex items-center justify-center border border-purple-500/30 shadow-[0_0_15px_rgba(163,136,225,0.2)] hidden sm:flex"><Bot className="w-6 h-6 text-purple-400" /></div>
             <div>
               <h1 className="text-white font-bold text-lg leading-tight tracking-wide">Dealit AI</h1>
-              <p className="text-emerald-400 text-xs font-medium flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                Always here to help
-              </p>
+              <p className="text-emerald-400 text-xs font-medium flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>Always here to help</p>
             </div>
           </div>
-          
           <div className="flex items-center gap-2">
-            <button 
-              onClick={handleMinimize}
-              className="p-2 bg-gray-900 hover:bg-gray-700 rounded-lg text-gray-300 transition-colors"
-              title="Minimize to Widget"
-            >
-              <Minimize2 className="w-5 h-5" />
-            </button>
-            <button 
-              onClick={handleClose}
-              className="p-2 bg-gray-900 hover:bg-red-500/20 hover:text-red-400 rounded-lg text-gray-300 transition-colors"
-              title="Close Full Chat"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <button onClick={handleMinimize} className="p-2 bg-gray-900 hover:bg-gray-700 rounded-lg text-gray-300 transition-colors" title="Minimize to Widget"><Minimize2 className="w-5 h-5" /></button>
+            <button onClick={handleClose} className="p-2 bg-gray-900 hover:bg-red-500/20 hover:text-red-400 rounded-lg text-gray-300 transition-colors" title="Close Full Chat"><X className="w-5 h-5" /></button>
           </div>
         </div>
         
-        <div className="flex-1 overflow-y-auto p-4 space-y-6 container mx-auto max-w-3xl scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent relative">
-          
-          {isLoading && messages.length === 0 ? (
-            <GeneratingLoader />
-          ) : (
-            messages.map((msg) => (
-              <motion.div 
-                initial={msg.animated ? { opacity: 0, y: 10, scale: 0.98 } : { opacity: 1, y: 0, scale: 1 }} 
-                animate={{ opacity: 1, y: 0, scale: 1 }} 
-                transition={{ duration: 0.3 }}
-                key={msg.id} 
-                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-5 py-3.5 text-sm ${
-                    msg.role === 'user'
-                      ? 'bg-gradient-to-br from-purple-600 to-purple-500 text-white rounded-tr-sm shadow-lg shadow-purple-500/20 break-words whitespace-pre-wrap'
-                      : 'bg-gray-800 text-gray-200 border border-gray-700 rounded-tl-sm shadow-md'
-                  }`}
-                >
-                  {msg.role === 'bot' ? (
-                    msg.content ? (
-                      <BotMessage 
-                        content={msg.content} 
-                        animated={msg.animated} 
-                        onComplete={() => markAsAnimated(msg.id)} 
-                      />
-                    ) : (
-                      <TypingLoader />
-                    )
-                  ) : (
-                    msg.content
-                  )}
-                </div>
-              </motion.div>
-            ))
-          )}
-
-          {/* --- INLINE VOICE UI --- */}
+        {voiceState !== 'idle' ? (
           <AnimatePresence>
-            {voiceState !== 'idle' && (
-              <motion.div 
-                initial={{ opacity: 0, y: 20, scale: 0.95 }} 
-                animate={{ opacity: 1, y: 0, scale: 1 }} 
-                exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                className="flex justify-center w-full my-4"
-              >
-                <div className="bg-gradient-to-b from-gray-800 to-gray-900 border border-purple-500/30 rounded-[2rem] p-6 shadow-lg flex flex-col items-center w-[90%] max-w-sm text-center relative overflow-hidden">
-                  <div className="relative flex items-center justify-center w-16 h-16 mb-4">
-                    {voiceState === 'listening' && (
-                      <div className="absolute inset-0 rounded-full bg-red-500/20 animate-ping" />
-                    )}
-                    {voiceState === 'speaking' && (
-                      <div className="absolute inset-0 rounded-full bg-purple-500/20 animate-pulse" />
-                    )}
-                    {voiceState === 'generating_audio' && (
-                      <div className="absolute inset-0 rounded-full bg-blue-500/20 animate-pulse" />
-                    )}
-                    <div className="z-10 w-12 h-12 bg-gray-950 rounded-full flex items-center justify-center shadow-inner border border-gray-700">
-                      {voiceState === 'listening'
-                        ? <Mic className="w-5 h-5 text-red-400 animate-pulse" />
-                        : <Bot className="w-5 h-5 text-purple-400" />
-                      }
-                    </div>
-                  </div>
-
-                  <h4 className="text-sm font-bold text-white mb-2">
-                    {voiceState === 'listening' && 'Listening to you...'}
-                    {voiceState === 'thinking' && 'Analyzing...'}
-                    {voiceState === 'generating_audio' && 'Preparing voice...'}
-                    {voiceState === 'speaking' && (isPremiumVoiceLimited ? 'Speaking (Standard Voice)...' : 'Speaking...')}
-                  </h4>
-                  
-                  {voiceState === 'speaking' && isPremiumVoiceLimited && (
-                    <span className="text-[10px] text-amber-400 font-medium px-2 py-0.5 bg-amber-500/10 border border-amber-500/20 rounded-full mb-2 animate-pulse">
-                      Daily Premium Limit Reached
-                    </span>
-                  )}
-                  
-                  <div className="h-8 flex items-center justify-center w-full">
-                    {voiceState === 'listening' && (
-                      <div className="flex gap-1.5">
-                        <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-bounce"></span>
-                        <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
-                        <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
-                      </div>
-                    )}
-                    {(voiceState === 'thinking' || voiceState === 'generating_audio') && <TypingLoader />}
-                    {voiceState === 'speaking' && <SoundWave />}
-                  </div>
-                  
-                  <button onClick={cancelVoiceMode} className="mt-4 px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-full transition-colors border border-gray-600 text-xs font-semibold flex items-center gap-2">
-                    <X className="w-3.5 h-3.5" /> Stop
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-          <div ref={messagesEndRef} />
-        </div>
-        <div className="shrink-0 bg-gray-900 pb-safe">
-          {messages.length <= 1 && !isLoading && voiceState === 'idle' && (
-            <div className="container mx-auto max-w-3xl px-4 pb-3 flex flex-wrap gap-2 justify-center">
-              {SUGGESTIONS.map((text, i) => (
-                <button
-                  key={i}
-                  onClick={() => processMessage(text)}
-                  className="flex items-center gap-1.5 bg-gray-800/80 border border-purple-500/30 text-gray-300 text-xs font-medium px-4 py-2 rounded-full hover:bg-purple-500/20 hover:text-white hover:border-purple-500/50 transition-all shadow-sm"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                  {text}
-                </button>
-              ))}
-            </div>
-          )}
-          <div className="bg-gray-800/50 backdrop-blur-sm border-t border-purple-500/20 p-4 container mx-auto max-w-3xl">
-            <form onSubmit={handleSendMessage} className="relative flex items-center">
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask Dealit AI..."
-                className="w-full bg-gray-900 border border-gray-700 rounded-full py-4 pl-6 pr-24 text-base md:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-inner"
-              />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }} 
+              animate={{ opacity: 1, scale: 1 }} 
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="flex-1 flex flex-col items-center justify-center w-full h-full relative overflow-hidden bg-gray-900"
+            >
+              <div className={`absolute inset-0 transition-opacity duration-700 opacity-20 ${voiceState === 'listening' ? 'bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-red-500/40 via-gray-900 to-gray-900' : voiceState === 'speaking' ? 'bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-500/40 via-gray-900 to-gray-900' : 'bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-500/40 via-gray-900 to-gray-900'}`} />
               
-              <button
-                type="button"
-                onClick={handleMicClick}
-                className={`absolute right-14 w-10 h-10 flex items-center justify-center rounded-full transition-all ${voiceState === 'listening' ? 'bg-red-500/20 text-red-500 animate-pulse' : 'text-gray-400 hover:text-purple-400'}`}
-              >
-                <Mic className="w-5 h-5" />
-              </button>
-              <button
-                type="submit"
-                disabled={isLoading || !input.trim()}
-                className="absolute right-2 w-10 h-10 flex items-center justify-center bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-400 hover:to-purple-500 text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-purple-500/30"
-              >
-                <Send className="w-5 h-5 ml-1" />
-              </button>
-            </form>
-          </div>
-        </div>
+              <div className="z-10 flex flex-col items-center w-full max-w-md px-6 text-center">
+                <div className="relative flex items-center justify-center w-32 h-32 mb-8">
+                  {voiceState === 'listening' && (
+                    <div className="absolute inset-0 rounded-full bg-red-500/30 animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite]" />
+                  )}
+                  {voiceState === 'speaking' && (
+                    <div className="absolute inset-0 rounded-full bg-purple-500/30 animate-pulse" />
+                  )}
+                  {voiceState === 'generating_audio' && (
+                    <div className="absolute inset-0 rounded-full bg-blue-500/30 animate-pulse" />
+                  )}
+                  <div className="z-10 w-24 h-24 bg-gray-950 rounded-full flex items-center justify-center shadow-inner border border-gray-700">
+                    {voiceState === 'listening' ? <Mic className="w-10 h-10 text-red-400 animate-pulse" /> : <Bot className="w-10 h-10 text-purple-400" />}
+                  </div>
+                </div>
+
+                <h2 className="text-2xl font-bold text-white mb-3">
+                  {voiceState === 'listening' && 'Listening to you...'}
+                  {voiceState === 'thinking' && 'Analyzing...'}
+                  {voiceState === 'generating_audio' && 'Preparing voice...'}
+                  {voiceState === 'speaking' && (isPremiumVoiceLimited ? 'Speaking (Standard Voice)...' : 'Speaking...')}
+                </h2>
+                
+                {voiceState === 'speaking' && isPremiumVoiceLimited && (
+                  <span className="text-xs text-amber-400 font-medium px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full mb-4 animate-pulse">
+                    Daily Premium Limit Reached
+                  </span>
+                )}
+                
+                <div className="h-12 flex items-center justify-center w-full mb-10">
+                  {voiceState === 'listening' && (
+                    <div className="flex gap-2.5">
+                      <span className="w-2.5 h-2.5 bg-red-400 rounded-full animate-bounce"></span>
+                      <span className="w-2.5 h-2.5 bg-red-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
+                      <span className="w-2.5 h-2.5 bg-red-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
+                    </div>
+                  )}
+                  {(voiceState === 'thinking' || voiceState === 'generating_audio') && <TypingLoader />}
+                  {voiceState === 'speaking' && <SoundWave />}
+                </div>
+                
+                <button onClick={cancelVoiceMode} className="px-8 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-full transition-all border border-red-500/30 text-sm font-semibold flex items-center justify-center gap-2 hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(239,68,68,0.2)] w-48 mx-auto">
+                  <X className="w-5 h-5" /> Stop Listening
+                </button>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+        ) : (
+          <>
+            <div className="flex-1 overflow-y-auto p-4 space-y-6 container mx-auto max-w-3xl scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent relative">
+              {isLoading && messages.length === 0 ? (
+                <GeneratingLoader />
+              ) : (
+                messages.map((msg) => (
+                  <motion.div 
+                    initial={msg.animated ? { opacity: 0, y: 10, scale: 0.98 } : { opacity: 1, y: 0, scale: 1 }} 
+                    animate={{ opacity: 1, y: 0, scale: 1 }} 
+                    transition={{ duration: 0.3 }}
+                    key={msg.id} 
+                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-5 py-3.5 text-sm ${msg.role === 'user' ? 'bg-gradient-to-br from-purple-600 to-purple-500 text-white rounded-tr-sm shadow-lg shadow-purple-500/20 break-words whitespace-pre-wrap' : 'bg-gray-800 text-gray-200 border border-gray-700 rounded-tl-sm shadow-md'}`}>
+                      {msg.role === 'bot' ? (msg.content ? <BotMessage content={msg.content} animated={msg.animated} onComplete={() => markAsAnimated(msg.id)} /> : <TypingLoader />) : msg.content}
+                    </div>
+                  </motion.div>
+                ))
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+            <div className="shrink-0 bg-gray-900 pb-safe">
+              {messages.length <= 1 && !isLoading && (
+                <div className="container mx-auto max-w-3xl px-4 pb-3 flex flex-wrap gap-2 justify-center">
+                  {SUGGESTIONS.map((text, i) => (
+                    <button key={i} onClick={() => processMessage(text)} className="flex items-center gap-1.5 bg-gray-800/80 border border-purple-500/30 text-gray-300 text-xs font-medium px-4 py-2 rounded-full hover:bg-purple-500/20 hover:text-white hover:border-purple-500/50 transition-all shadow-sm">
+                      <Sparkles className="w-3.5 h-3.5 text-purple-400" />{text}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="bg-gray-800/50 backdrop-blur-sm border-t border-purple-500/20 p-4 container mx-auto max-w-3xl">
+                <form onSubmit={handleSendMessage} className="relative flex items-center">
+                  <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask Dealit AI..." className="w-full bg-gray-900 border border-gray-700 rounded-full py-4 pl-6 pr-24 text-base md:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-inner" />
+                  <button type="button" onClick={handleMicClick} className="absolute right-14 w-10 h-10 flex items-center justify-center rounded-full transition-all text-gray-400 hover:text-purple-400">
+                    <Mic className="w-5 h-5" />
+                  </button>
+                  <button type="submit" disabled={isLoading || !input.trim()} className="absolute right-2 w-10 h-10 flex items-center justify-center bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-400 hover:to-purple-500 text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-purple-500/30">
+                    <Send className="w-5 h-5 ml-1" />
+                  </button>
+                </form>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

@@ -1,11 +1,10 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Bot, Sparkles, Maximize2, Minimize2, Mic, User } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import confetti from 'canvas-confetti';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -32,60 +31,25 @@ const SoundWave = () => (
 );
 
 const BotMessage = ({ content, animated, onComplete }) => {
-  const cleanContent = useMemo(() => content.replace(/(\*\*)?\[ANIMATION_[123]\](\*\*)?/g, ''), [content]);
-  const [displayedText, setDisplayedText] = useState(animated ? '' : cleanContent);
-  
-  const triggered1 = useRef(false);
-  const triggered2 = useRef(false);
-  const triggered3 = useRef(false);
-  
-  useEffect(() => {
-    if (content.includes('[ANIMATION_1]') && !triggered1.current) {
-      triggered1.current = true;
-      confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 }, colors: ['#A388E1', '#10B981', '#FBBF24', '#EF4444'], zIndex: 99999 });
-    }
-    if (content.includes('[ANIMATION_2]') && !triggered2.current) {
-      triggered2.current = true;
-      const duration = 3 * 1000;
-      const animationEnd = Date.now() + duration;
-      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 99999 };
-      const interval = setInterval(function() {
-        const timeLeft = animationEnd - Date.now();
-        if (timeLeft <= 0) return clearInterval(interval);
-        const particleCount = 50 * (timeLeft / duration);
-        confetti({ ...defaults, particleCount, origin: { x: Math.random() * (0.3 - 0.1) + 0.1, y: Math.random() - 0.2 } });
-        confetti({ ...defaults, particleCount, origin: { x: Math.random() * (0.9 - 0.7) + 0.7, y: Math.random() - 0.2 } });
-      }, 250);
-    }
-    if (content.includes('[ANIMATION_3]') && !triggered3.current) {
-      triggered3.current = true;
-      const end = Date.now() + 3 * 1000;
-      const colors = ['#A388E1', '#ffffff'];
-      (function frame() {
-        confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: colors, zIndex: 99999 });
-        confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: colors, zIndex: 99999 });
-        if (Date.now() < end) requestAnimationFrame(frame);
-      }());
-    }
-  }, [content]);
+  const [displayedText, setDisplayedText] = useState(animated ? '' : content);
   
   useEffect(() => {
     if (!animated) {
-      setDisplayedText(cleanContent);
+      setDisplayedText(content);
       return;
     }
     
     let i = 0;
     const interval = setInterval(() => {
-      setDisplayedText(cleanContent.slice(0, i + 1));
+      setDisplayedText(content.slice(0, i + 1));
       i++;
-      if (i >= cleanContent.length) {
+      if (i >= content.length) {
         clearInterval(interval);
         if (onComplete) onComplete();
       }
     }, 15);
     return () => clearInterval(interval);
-  }, [cleanContent, animated]);
+  }, [content, animated]);
   
   return (
     <div className="break-words leading-relaxed text-sm">
@@ -151,7 +115,6 @@ const FloatingAIAssistant = ({ user }) => {
   const [voiceState, setVoiceState] = useState('idle');
   const [isPremiumVoiceLimited, setIsPremiumVoiceLimited] = useState(false);
 
-  // CHANGED: Added chatMode state linked to localStorage
   const [chatMode, setChatMode] = useState(() => localStorage.getItem('dealit_ai_mode') || 'dealit');
   
   const messagesEndRef = useRef(null);
@@ -160,16 +123,10 @@ const FloatingAIAssistant = ({ user }) => {
   const [buttonState, setButtonState] = useState('bot');
   
   useEffect(() => {
-    if (window.speechSynthesis) {
-      window.speechSynthesis.onvoiceschanged = () => {};
-    }
+    if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = () => {};
     return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-      if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
+      if (abortControllerRef.current) abortControllerRef.current.abort();
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
@@ -192,22 +149,17 @@ const FloatingAIAssistant = ({ user }) => {
   };
   
   useEffect(() => {
-    if (isOpen) scrollToBottom();
+    if (isOpen && voiceState === 'idle') scrollToBottom();
   }, [messages, isOpen, isLoading, voiceState]);
   
   useEffect(() => {
     if (isOpen) return;
-    const interval = setInterval(() => {
-      setButtonState((prev) => (prev === 'bot' ? 'text' : 'bot'));
-    }, 2500);
+    const interval = setInterval(() => setButtonState((prev) => (prev === 'bot' ? 'text' : 'bot')), 2500);
     return () => clearInterval(interval);
   }, [isOpen]);
 
-  // Sync mode if changed from other tabs/pages
   useEffect(() => {
-    const syncMode = () => {
-      setChatMode(localStorage.getItem('dealit_ai_mode') || 'dealit');
-    };
+    const syncMode = () => setChatMode(localStorage.getItem('dealit_ai_mode') || 'dealit');
     window.addEventListener('storage', syncMode);
     return () => window.removeEventListener('storage', syncMode);
   }, []);
@@ -231,42 +183,31 @@ const FloatingAIAssistant = ({ user }) => {
     const utterance = new SpeechSynthesisUtterance(text);
     const voices = window.speechSynthesis.getVoices();
     if (voices.length > 0) {
-      const preferredVoice = voices.find(v => 
-        pref === 'female' ? v.name.toLowerCase().includes('female') : v.name.toLowerCase().includes('male')
-      );
+      const preferredVoice = voices.find(v => pref === 'female' ? v.name.toLowerCase().includes('female') : v.name.toLowerCase().includes('male'));
       if (preferredVoice) utterance.voice = preferredVoice;
     }
     utterance.onstart = () => setVoiceState('speaking');
     utterance.onend = () => setVoiceState('idle');
-    utterance.onerror = (e) => {
-      console.error('Native TTS Error:', e);
-      setVoiceState('idle');
-    };
+    utterance.onerror = (e) => setVoiceState('idle');
     window.speechSynthesis.speak(utterance);
   };
 
   const speakText = async (text) => {
     if (!text) return;
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
+    if (audioRef.current) audioRef.current.pause();
     const voicePref = localStorage.getItem('dealit_ai_voice_pref') || 'female';
     const textToSpeak = text.replace(/[*_#`]/g, '');
 
     setVoiceState('generating_audio');
     try {
       const token = localStorage.getItem('dealit_token');
-      
       const response = await fetch(`${API_URL}/ai/synthesize-voice`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ 
-          text: textToSpeak,
-          voicePref: voicePref 
-        })
+        body: JSON.stringify({ text: textToSpeak, voicePref: voicePref })
       });
 
       if (!response.ok) {
@@ -282,19 +223,12 @@ const FloatingAIAssistant = ({ user }) => {
       const audio = new Audio(audioUrl);
       
       audioRef.current = audio;
-      audio.onended = () => {
-        setVoiceState('idle');
-        URL.revokeObjectURL(audioUrl);
-      };
-      audio.onerror = () => {
-        setVoiceState('idle');
-        URL.revokeObjectURL(audioUrl);
-      };
+      audio.onended = () => { setVoiceState('idle'); URL.revokeObjectURL(audioUrl); };
+      audio.onerror = () => { setVoiceState('idle'); URL.revokeObjectURL(audioUrl); };
       
       setVoiceState('speaking');
       await audio.play();
     } catch (error) {
-      console.warn('Premium voice failed, falling back to native browser voice:', error.message);
       fallbackToNativeSpeech(textToSpeak, voicePref);
     }
   };
@@ -304,7 +238,6 @@ const FloatingAIAssistant = ({ user }) => {
       setVoiceState('idle');
       return;
     }
-    
     if (abortControllerRef.current) abortControllerRef.current.abort();
     abortControllerRef.current = new AbortController();
     setVoiceState('thinking');
@@ -315,21 +248,22 @@ const FloatingAIAssistant = ({ user }) => {
       
       const response = await fetch(`${API_URL}/ai/chat`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         credentials: 'include',
-        // CHANGED: Added chatMode to API payload
-        body: JSON.stringify({ 
-          message: userMessage,
-          sessionId: currentSessionId,
-          isSmartContextEnabled,
-          chatMode 
-        }),
+        body: JSON.stringify({ message: userMessage, sessionId: currentSessionId, isSmartContextEnabled, chatMode }),
         signal: abortControllerRef.current.signal
       });
-      if (!response.ok) throw new Error('Network response was not ok');
+
+      // ADDED: Better limit error handling
+      if (!response.ok) {
+        let errorMessage = 'Voice chat failed.';
+        try {
+          const errData = await response.json();
+          errorMessage = errData.reply || errData.message || errorMessage;
+        } catch (e) {}
+        throw new Error(errorMessage);
+      }
+
       const reader = response.body.getReader();
       const decoder = new TextDecoder("utf-8");
       let botReply = "";
@@ -343,21 +277,14 @@ const FloatingAIAssistant = ({ user }) => {
             const dataStr = line.replace('data: ', '');
             if (dataStr === '[DONE]') {
               setTimeout(() => {
-                const cleanReplyText = botReply.replace(/(\*\*)?\[ANIMATION_[123]\](\*\*)?/g, '');
-                if (cleanReplyText.trim()) {
-                  speakText(cleanReplyText);
-                } else {
-                  setVoiceState('idle');
-                }
+                if (botReply.trim()) speakText(botReply);
+                else setVoiceState('idle');
               }, 300);
               break;
             }
             try {
               const parsed = JSON.parse(dataStr);
-              if (parsed.type === 'session_id') {
-                setCurrentSessionId(parsed.sessionId);
-                continue;
-              }
+              if (parsed.type === 'session_id') { setCurrentSessionId(parsed.sessionId); continue; }
               botReply += parsed.content;
             } catch (e) {}
           }
@@ -365,61 +292,37 @@ const FloatingAIAssistant = ({ user }) => {
       }
     } catch (error) {
       if (error.name === 'AbortError') return;
-      console.error('AI Voice Error:', error);
       setVoiceState('idle');
+      alert(`Voice Error: ${error.message}`);
     }
   };
   
   const handleMicClick = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert("Your browser does not support voice input.");
-      return;
-    }
-    
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
+    if (!SpeechRecognition) { alert("Your browser does not support voice input."); return; }
+    if (audioRef.current) audioRef.current.pause();
     const recognition = new SpeechRecognition();
     recognition.lang = 'en-IN';
-    
     recognition.onstart = () => setVoiceState('listening');
-    
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
       processVoiceMessage(transcript);
     };
-    
-    recognition.onerror = (e) => {
-      console.error('Speech recognition error:', e);
-      setVoiceState('idle');
-    };
-    
-    recognition.onend = () => {
-      setVoiceState(prev => prev === 'listening' ? 'idle' : prev);
-    };
-    
+    recognition.onerror = (e) => setVoiceState('idle');
+    recognition.onend = () => setVoiceState(prev => prev === 'listening' ? 'idle' : prev);
     recognition.start();
   };
   
   const cancelVoiceMode = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
-    if (window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
     if (abortControllerRef.current) abortControllerRef.current.abort();
     setVoiceState('idle');
   };
   
   const processMessage = async (userMessage) => {
     if (!userMessage.trim()) return;
-    
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
+    if (abortControllerRef.current) abortControllerRef.current.abort();
     abortControllerRef.current = new AbortController();
     const newMessages = [...messages, { id: Date.now(), role: 'user', content: userMessage }];
     setMessages(newMessages);
@@ -427,10 +330,7 @@ const FloatingAIAssistant = ({ user }) => {
     setIsLoading(true);
     
     const botMessageId = Date.now() + 1;
-    setMessages((prev) => [
-      ...prev,
-      { id: botMessageId, role: 'bot', content: '', animated: false }
-    ]);
+    setMessages((prev) => [...prev, { id: botMessageId, role: 'bot', content: '', animated: false }]);
     
     try {
       const token = localStorage.getItem('dealit_token');
@@ -439,23 +339,22 @@ const FloatingAIAssistant = ({ user }) => {
       
       const response = await fetch(`${API_URL}/ai/chat`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         credentials: 'include',
-        // CHANGED: Added chatMode to API payload
-        body: JSON.stringify({ 
-          message: userMessage,
-          sessionId: currentSessionId,
-          isSmartContextEnabled,
-          chatMode 
-        }),
+        body: JSON.stringify({ message: userMessage, sessionId: currentSessionId, isSmartContextEnabled, chatMode }),
         signal: abortControllerRef.current.signal
       });
+
+      // ADDED: Parse error json on rate limits
       if (!response.ok) {
-        throw new Error('Network response was not ok');
+        let errorMessage = 'Server connection failed.';
+        try {
+          const errData = await response.json();
+          errorMessage = errData.reply || errData.message || errorMessage;
+        } catch (e) {}
+        throw new Error(errorMessage);
       }
+
       const reader = response.body.getReader();
       const decoder = new TextDecoder("utf-8");
       let botReply = "";
@@ -470,42 +369,22 @@ const FloatingAIAssistant = ({ user }) => {
           if (line.startsWith('data: ')) {
             const dataStr = line.replace('data: ', '');
             if (dataStr === '[DONE]') {
-              setTimeout(() => {
-                const cleanReplyText = botReply.replace(/(\*\*)?\[ANIMATION_[123]\](\*\*)?/g, '');
-                setMessages((prev) =>
-                  prev.map((msg) =>
-                    msg.id === botMessageId ? { ...msg, content: cleanReplyText } : msg
-                  )
-                );
-              }, 1000);
+              setTimeout(() => setMessages((prev) => prev.map((msg) => msg.id === botMessageId ? { ...msg, content: botReply } : msg)), 1000);
               break;
             }
             try {
               const parsed = JSON.parse(dataStr);
-              if (parsed.type === 'session_id') {
-                setCurrentSessionId(parsed.sessionId);
-                continue;
-              }
+              if (parsed.type === 'session_id') { setCurrentSessionId(parsed.sessionId); continue; }
               botReply += parsed.content;
-              
-              setMessages((prev) =>
-                prev.map((msg) =>
-                  msg.id === botMessageId ? { ...msg, content: botReply } : msg
-                )
-              );
+              setMessages((prev) => prev.map((msg) => msg.id === botMessageId ? { ...msg, content: botReply } : msg));
             } catch (e) {}
           }
         }
       }
     } catch (error) {
       if (error.name === 'AbortError') return;
-      console.error('AI Chat Error:', error);
       setIsLoading(false);
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === botMessageId ? { ...msg, content: 'Sorry, I am having trouble connecting to the server right now.' } : msg
-        )
-      );
+      setMessages((prev) => prev.map((msg) => msg.id === botMessageId ? { ...msg, content: `⚠️ ${error.message}` } : msg));
     }
   };
   
@@ -517,23 +396,16 @@ const FloatingAIAssistant = ({ user }) => {
   
   const handleClose = () => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
-    if (window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
+    if (audioRef.current) audioRef.current.pause();
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
     setIsOpen(false);
   };
   
   const handleMaximize = () => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
     handleClose();
-    if(currentSessionId) {
-      navigate(`/ai-chat/${currentSessionId}`);
-    } else {
-      navigate('/ai-chat');
-    }
+    if(currentSessionId) navigate(`/ai-chat/${currentSessionId}`);
+    else navigate('/ai-chat');
   };
   
   return (
@@ -555,7 +427,6 @@ const FloatingAIAssistant = ({ user }) => {
                 </div>
                 <div>
                   <h3 className="text-white font-bold text-sm tracking-wide">Dealit AI</h3>
-                  {/* CHANGED: Added Mode Badge next to Online indicator */}
                   <div className="flex items-center gap-2 mt-0.5">
                     <p className="text-emerald-400 text-[10px] font-medium flex items-center gap-1">
                       <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -572,167 +443,111 @@ const FloatingAIAssistant = ({ user }) => {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={handleMaximize}
-                  className="text-gray-400 hover:text-white transition-colors bg-gray-700/30 hover:bg-gray-700 p-1.5 rounded-full"
-                  title="Open Full App"
-                >
-                  <Maximize2 className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={handleClose}
-                  className="text-gray-400 hover:text-white transition-colors bg-gray-700/30 hover:bg-gray-700 p-1.5 rounded-full"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+                <button onClick={handleMaximize} className="text-gray-400 hover:text-white transition-colors bg-gray-700/30 hover:bg-gray-700 p-1.5 rounded-full" title="Open Full App"><Maximize2 className="w-4 h-4" /></button>
+                <button onClick={handleClose} className="text-gray-400 hover:text-white transition-colors bg-gray-700/30 hover:bg-gray-700 p-1.5 rounded-full"><X className="w-4 h-4" /></button>
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-5 scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent">
-              {messages.map((msg) => (
+            
+            {/* CHANGED: FULL SCREEN VOICE UI TAKEOVER */}
+            {voiceState !== 'idle' ? (
+              <AnimatePresence>
                 <motion.div 
-                  initial={msg.animated ? { opacity: 0, y: 10, scale: 0.98 } : { opacity: 1, y: 0, scale: 1 }} 
-                  animate={{ opacity: 1, y: 0, scale: 1 }} 
-                  transition={{ duration: 0.3 }}
-                  key={msg.id} 
-                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  initial={{ opacity: 0, scale: 0.95 }} 
+                  animate={{ opacity: 1, scale: 1 }} 
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="flex-1 flex flex-col items-center justify-center w-full h-full relative overflow-hidden bg-gray-900"
                 >
-                  <div
-                    className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm ${
-                      msg.role === 'user'
-                        ? 'bg-gradient-to-br from-purple-600 to-purple-500 text-white rounded-tr-sm shadow-md shadow-purple-500/20 break-words whitespace-pre-wrap'
-                        : 'bg-gray-800 text-gray-200 border border-gray-700 rounded-tl-sm shadow-sm'
-                    }`}
-                  >
-                    {msg.role === 'bot' ? (
-                      msg.content ? (
-                        <BotMessage 
-                          content={msg.content} 
-                          animated={msg.animated} 
-                          onComplete={() => markAsAnimated(msg.id)} 
-                        />
-                      ) : (
-                        <TypingLoader />
-                      )
-                    ) : (
-                      msg.content
+                  <div className={`absolute inset-0 transition-opacity duration-700 opacity-20 ${voiceState === 'listening' ? 'bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-red-500/40 via-gray-900 to-gray-900' : voiceState === 'speaking' ? 'bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-500/40 via-gray-900 to-gray-900' : 'bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-500/40 via-gray-900 to-gray-900'}`} />
+                  
+                  <div className="z-10 flex flex-col items-center w-full px-6 text-center">
+                    <div className="relative flex items-center justify-center w-28 h-28 mb-6">
+                      {voiceState === 'listening' && (
+                        <div className="absolute inset-0 rounded-full bg-red-500/30 animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite]" />
+                      )}
+                      {voiceState === 'speaking' && (
+                        <div className="absolute inset-0 rounded-full bg-purple-500/30 animate-pulse" />
+                      )}
+                      {voiceState === 'generating_audio' && (
+                        <div className="absolute inset-0 rounded-full bg-blue-500/30 animate-pulse" />
+                      )}
+                      <div className="z-10 w-20 h-20 bg-gray-950 rounded-full flex items-center justify-center shadow-inner border border-gray-700">
+                        {voiceState === 'listening' ? <Mic className="w-8 h-8 text-red-400 animate-pulse" /> : <Bot className="w-8 h-8 text-purple-400" />}
+                      </div>
+                    </div>
+
+                    <h2 className="text-xl font-bold text-white mb-2">
+                      {voiceState === 'listening' && 'Listening to you...'}
+                      {voiceState === 'thinking' && 'Analyzing...'}
+                      {voiceState === 'generating_audio' && 'Preparing voice...'}
+                      {voiceState === 'speaking' && (isPremiumVoiceLimited ? 'Speaking (Standard Voice)...' : 'Speaking...')}
+                    </h2>
+                    
+                    {voiceState === 'speaking' && isPremiumVoiceLimited && (
+                      <span className="text-[10px] text-amber-400 font-medium px-2 py-0.5 bg-amber-500/10 border border-amber-500/20 rounded-full mb-3 animate-pulse">
+                        Daily Premium Limit Reached
+                      </span>
                     )}
+                    
+                    <div className="h-10 flex items-center justify-center w-full mb-8">
+                      {voiceState === 'listening' && (
+                        <div className="flex gap-2">
+                          <span className="w-2 h-2 bg-red-400 rounded-full animate-bounce"></span>
+                          <span className="w-2 h-2 bg-red-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
+                          <span className="w-2 h-2 bg-red-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
+                        </div>
+                      )}
+                      {(voiceState === 'thinking' || voiceState === 'generating_audio') && <TypingLoader />}
+                      {voiceState === 'speaking' && <SoundWave />}
+                    </div>
+                    
+                    <button onClick={cancelVoiceMode} className="px-6 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-full transition-all border border-red-500/30 text-xs font-semibold flex items-center justify-center gap-2 hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+                      <X className="w-4 h-4" /> Stop Listening
+                    </button>
                   </div>
                 </motion.div>
-              ))}
-
-              {/* --- INLINE VOICE UI --- */}
-              <AnimatePresence>
-                {voiceState !== 'idle' && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 20, scale: 0.95 }} 
-                    animate={{ opacity: 1, y: 0, scale: 1 }} 
-                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    className="flex justify-center w-full my-4"
-                  >
-                    <div className="bg-gradient-to-b from-gray-800 to-gray-900 border border-purple-500/30 rounded-[2rem] p-6 shadow-lg flex flex-col items-center w-[90%] text-center relative overflow-hidden">
-                      <div className="relative flex items-center justify-center w-16 h-16 mb-4">
-                        {voiceState === 'listening' && (
-                          <div className="absolute inset-0 rounded-full bg-red-500/20 animate-ping" />
-                        )}
-                        {voiceState === 'speaking' && (
-                          <div className="absolute inset-0 rounded-full bg-purple-500/20 animate-pulse" />
-                        )}
-                        {voiceState === 'generating_audio' && (
-                          <div className="absolute inset-0 rounded-full bg-blue-500/20 animate-pulse" />
-                        )}
-                        <div className="z-10 w-12 h-12 bg-gray-950 rounded-full flex items-center justify-center shadow-inner border border-gray-700">
-                          {voiceState === 'listening'
-                            ? <Mic className="w-5 h-5 text-red-400 animate-pulse" />
-                            : <Bot className="w-5 h-5 text-purple-400" />
-                          }
-                        </div>
-                      </div>
-
-                      <h4 className="text-sm font-bold text-white mb-2">
-                        {voiceState === 'listening' && 'Listening to you...'}
-                        {voiceState === 'thinking' && 'Analyzing...'}
-                        {voiceState === 'generating_audio' && 'Preparing voice...'}
-                        {voiceState === 'speaking' && (isPremiumVoiceLimited ? 'Speaking (Standard Voice)...' : 'Speaking...')}
-                      </h4>
-
-                      {voiceState === 'speaking' && isPremiumVoiceLimited && (
-                        <span className="text-[10px] text-amber-400 font-medium px-2 py-0.5 bg-amber-500/10 border border-amber-500/20 rounded-full mb-2 animate-pulse">
-                          Daily Premium Limit Reached
-                        </span>
-                      )}
-                      
-                      <div className="h-8 flex items-center justify-center w-full">
-                        {voiceState === 'listening' && (
-                          <div className="flex gap-1.5">
-                            <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-bounce"></span>
-                            <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
-                            <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
-                          </div>
-                        )}
-                        {(voiceState === 'thinking' || voiceState === 'generating_audio') && <TypingLoader />}
-                        {voiceState === 'speaking' && <SoundWave />}
-                      </div>
-                      
-                      <button onClick={cancelVoiceMode} className="mt-4 px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-full transition-colors border border-gray-600 text-xs font-semibold flex items-center gap-2">
-                        <X className="w-3.5 h-3.5" /> Stop
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
               </AnimatePresence>
-              <div ref={messagesEndRef} />
-            </div>
-            {messages.length <= 1 && !isLoading && voiceState === 'idle' && (
-              <div className="px-3 pb-2 flex gap-2 overflow-x-auto scrollbar-hide shrink-0">
-                {SUGGESTIONS.map((text, i) => (
-                  <button
-                    key={i}
-                    onClick={() => {
-                      processMessage(text);
-                    }}
-                    className="whitespace-nowrap flex items-center gap-1.5 bg-gray-800 border border-purple-500/30 text-gray-300 text-[11px] font-medium px-3 py-1.5 rounded-full hover:bg-purple-500/20 hover:text-white hover:border-purple-500/50 transition-all flex-shrink-0"
-                  >
-                    <Sparkles className="w-3 h-3 text-purple-400" />
-                    {text}
-                  </button>
-                ))}
-              </div>
+            ) : (
+              <>
+                <div className="flex-1 overflow-y-auto p-4 space-y-5 scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent">
+                  {messages.map((msg) => (
+                    <motion.div 
+                      initial={msg.animated ? { opacity: 0, y: 10, scale: 0.98 } : { opacity: 1, y: 0, scale: 1 }} 
+                      animate={{ opacity: 1, y: 0, scale: 1 }} 
+                      transition={{ duration: 0.3 }}
+                      key={msg.id} 
+                      className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm ${msg.role === 'user' ? 'bg-gradient-to-br from-purple-600 to-purple-500 text-white rounded-tr-sm shadow-md shadow-purple-500/20 break-words whitespace-pre-wrap' : 'bg-gray-800 text-gray-200 border border-gray-700 rounded-tl-sm shadow-sm'}`}>
+                        {msg.role === 'bot' ? (msg.content ? <BotMessage content={msg.content} animated={msg.animated} onComplete={() => markAsAnimated(msg.id)} /> : <TypingLoader />) : msg.content}
+                      </div>
+                    </motion.div>
+                  ))}
+                  <div ref={messagesEndRef} />
+                </div>
+                {messages.length <= 1 && !isLoading && (
+                  <div className="px-3 pb-2 flex gap-2 overflow-x-auto scrollbar-hide shrink-0">
+                    {SUGGESTIONS.map((text, i) => (
+                      <button key={i} onClick={() => processMessage(text)} className="whitespace-nowrap flex items-center gap-1.5 bg-gray-800 border border-purple-500/30 text-gray-300 text-[11px] font-medium px-3 py-1.5 rounded-full hover:bg-purple-500/20 hover:text-white hover:border-purple-500/50 transition-all flex-shrink-0">
+                        <Sparkles className="w-3 h-3 text-purple-400" />{text}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <form onSubmit={handleSendMessage} className="p-3 bg-gray-800/80 backdrop-blur-sm border-t border-purple-500/20 shrink-0 z-10">
+                  <div className="relative flex items-center">
+                    <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask about items, Aura, rules..." className="w-full bg-gray-900 border border-gray-700 rounded-full py-3 pl-4 pr-20 text-base md:text-sm text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-inner" />
+                    <button type="button" onClick={handleMicClick} className="absolute right-12 w-8 h-8 flex items-center justify-center rounded-full transition-all text-gray-400 hover:text-purple-400"><Mic className="w-4 h-4" /></button>
+                    <button type="submit" disabled={isLoading || !input.trim()} className="absolute right-2 w-8 h-8 flex items-center justify-center bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-400 hover:to-purple-500 text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-transform transform hover:scale-105 active:scale-95 shadow-md shadow-purple-500/30"><Send className="w-3.5 h-3.5 ml-0.5" /></button>
+                  </div>
+                </form>
+              </>
             )}
-            <form onSubmit={handleSendMessage} className="p-3 bg-gray-800/80 backdrop-blur-sm border-t border-purple-500/20 shrink-0 z-10">
-              <div className="relative flex items-center">
-                <input
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Ask about items, Aura, rules..."
-                  className="w-full bg-gray-900 border border-gray-700 rounded-full py-3 pl-4 pr-20 text-base md:text-sm text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-inner"
-                />
-                
-                <button
-                  type="button"
-                  onClick={handleMicClick}
-                  className={`absolute right-12 w-8 h-8 flex items-center justify-center rounded-full transition-all ${voiceState === 'listening' ? 'bg-red-500/20 text-red-500 animate-pulse' : 'text-gray-400 hover:text-purple-400'}`}
-                >
-                  <Mic className="w-4 h-4" />
-                </button>
-                <button
-                  type="submit"
-                  disabled={isLoading || !input.trim()}
-                  className="absolute right-2 w-8 h-8 flex items-center justify-center bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-400 hover:to-purple-500 text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-transform transform hover:scale-105 active:scale-95 shadow-md shadow-purple-500/30"
-                >
-                  <Send className="w-3.5 h-3.5 ml-0.5" />
-                </button>
-              </div>
-            </form>
           </motion.div>
         )}
       </AnimatePresence>
       <motion.button
         animate={isOpen ? { y: 0, scale: 0.9 } : { y: [0, -6, 0], scale: 1 }}
-        transition={{ 
-          y: { repeat: Infinity, duration: 2.5, ease: "easeInOut" },
-          scale: { type: "spring", damping: 20, stiffness: 200 }
-        }}
+        transition={{ y: { repeat: Infinity, duration: 2.5, ease: "easeInOut" }, scale: { type: "spring", damping: 20, stiffness: 200 } }}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setIsOpen(!isOpen)}
@@ -740,17 +555,11 @@ const FloatingAIAssistant = ({ user }) => {
       >
         <AnimatePresence mode="wait">
           {isOpen ? (
-            <motion.div key="close" initial={{ opacity: 0, rotate: -90 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: 90 }} transition={{ duration: 0.2 }}>
-              <X className="w-6 h-6" />
-            </motion.div>
+            <motion.div key="close" initial={{ opacity: 0, rotate: -90 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: 90 }} transition={{ duration: 0.2 }}><X className="w-6 h-6" /></motion.div>
           ) : buttonState === 'bot' ? (
-            <motion.div key="bot" initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.5 }} transition={{ duration: 0.2 }}>
-              <Bot className="w-6 h-6" />
-            </motion.div>
+            <motion.div key="bot" initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.5 }} transition={{ duration: 0.2 }}><Bot className="w-6 h-6" /></motion.div>
           ) : (
-            <motion.div key="ask" initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.5 }} transition={{ duration: 0.2 }} className="flex flex-col items-center justify-center">
-              <span className="text-xs font-black tracking-wider leading-none mt-0.5">Ask?</span>
-            </motion.div>
+            <motion.div key="ask" initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.5 }} transition={{ duration: 0.2 }} className="flex flex-col items-center justify-center"><span className="text-xs font-black tracking-wider leading-none mt-0.5">Ask?</span></motion.div>
           )}
         </AnimatePresence>
       </motion.button>
