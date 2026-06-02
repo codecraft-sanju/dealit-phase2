@@ -10,12 +10,225 @@ import confetti from 'canvas-confetti';
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
+// CHANGED: Added GeneratingLoader component and its styles based on your design
+const GeneratingLoader = () => (
+  <>
+    <style>
+      {`
+        .custom-loader-container {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          z-index: 40;
+          background: linear-gradient(0deg, #1a3379, #0f172a, #000);
+          border-radius: inherit;
+        }
+        .loader-wrapper {
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 180px;
+          height: 180px;
+          font-family: "Inter", sans-serif;
+          font-size: 1.1em;
+          font-weight: 300;
+          color: white;
+          border-radius: 50%;
+          background-color: transparent;
+          -webkit-user-select: none;
+          -moz-user-select: none;
+          -ms-user-select: none;
+          user-select: none;
+        }
+        .loader-circle {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          aspect-ratio: 1 / 1;
+          border-radius: 50%;
+          background-color: transparent;
+          animation: loader-combined 2.3s linear infinite;
+          z-index: 0;
+        }
+        @keyframes loader-combined {
+          0% {
+            transform: rotate(90deg);
+            box-shadow: 0 6px 12px 0 #38bdf8 inset, 0 12px 18px 0 #005dff inset, 0 36px 36px 0 #1e40af inset, 0 0 3px 1.2px rgba(56, 189, 248, 0.3), 0 0 6px 1.8px rgba(0, 93, 255, 0.2);
+          }
+          25% {
+            transform: rotate(180deg);
+            box-shadow: 0 6px 12px 0 #0099ff inset, 0 12px 18px 0 #38bdf8 inset, 0 36px 36px 0 #005dff inset, 0 0 6px 2.4px rgba(56, 189, 248, 0.3), 0 0 12px 3.6px rgba(0, 93, 255, 0.2), 0 0 18px 6px rgba(30, 64, 175, 0.15);
+          }
+          50% {
+            transform: rotate(270deg);
+            box-shadow: 0 6px 12px 0 #60a5fa inset, 0 12px 6px 0 #0284c7 inset, 0 24px 36px 0 #005dff inset, 0 0 3px 1.2px rgba(56, 189, 248, 0.3), 0 0 6px 1.8px rgba(0, 93, 255, 0.2);
+          }
+          75% {
+            transform: rotate(360deg);
+            box-shadow: 0 6px 12px 0 #3b82f6 inset, 0 12px 18px 0 #0ea5e9 inset, 0 36px 36px 0 #2563eb inset, 0 0 6px 2.4px rgba(56, 189, 248, 0.3), 0 0 12px 3.6px rgba(0, 93, 255, 0.2), 0 0 18px 6px rgba(30, 64, 175, 0.15);
+          }
+          100% {
+            transform: rotate(450deg);
+            box-shadow: 0 6px 12px 0 #4dc8fd inset, 0 12px 18px 0 #005dff inset, 0 36px 36px 0 #1e40af inset, 0 0 3px 1.2px rgba(56, 189, 248, 0.3), 0 0 6px 1.8px rgba(0, 93, 255, 0.2);
+          }
+        }
+        .loader-letter {
+          display: inline-block;
+          opacity: 0.4;
+          transform: translateY(0);
+          animation: loader-letter-anim 2.4s infinite;
+          z-index: 1;
+          border-radius: 50ch;
+          border: none;
+        }
+        .loader-letter:nth-child(1) { animation-delay: 0s; }
+        .loader-letter:nth-child(2) { animation-delay: 0.1s; }
+        .loader-letter:nth-child(3) { animation-delay: 0.2s; }
+        .loader-letter:nth-child(4) { animation-delay: 0.3s; }
+        .loader-letter:nth-child(5) { animation-delay: 0.4s; }
+        .loader-letter:nth-child(6) { animation-delay: 0.5s; }
+        .loader-letter:nth-child(7) { animation-delay: 0.6s; }
+        .loader-letter:nth-child(8) { animation-delay: 0.7s; }
+        .loader-letter:nth-child(9) { animation-delay: 0.8s; }
+        .loader-letter:nth-child(10) { animation-delay: 0.9s; }
+        .loader-letter:nth-child(11) { animation-delay: 1s; }
+        .loader-letter:nth-child(12) { animation-delay: 1.1s; }
+        .loader-letter:nth-child(13) { animation-delay: 1.2s; }
+        @keyframes loader-letter-anim {
+          0%, 100% {
+            opacity: 0.4;
+            transform: translateY(0);
+          }
+          20% {
+            opacity: 1;
+            text-shadow: #f8fcff 0 0 5px;
+          }
+          40% {
+            opacity: 0.7;
+            transform: translateY(0);
+          }
+        }
+      `}
+    </style>
+    <div className="custom-loader-container">
+      <div className="loader-wrapper">
+        <span className="loader-letter">G</span>
+        <span className="loader-letter">e</span>
+        <span className="loader-letter">n</span>
+        <span className="loader-letter">e</span>
+        <span className="loader-letter">r</span>
+        <span className="loader-letter">a</span>
+        <span className="loader-letter">t</span>
+        <span className="loader-letter">i</span>
+        <span className="loader-letter">n</span>
+        <span className="loader-letter">g</span>
+        <span className="loader-letter">.</span>
+        <span className="loader-letter">.</span>
+        <span className="loader-letter">.</span>
+        <div className="loader-circle"></div>
+      </div>
+    </div>
+  </>
+);
+
 const TypingLoader = () => (
-  <div className="flex space-x-1.5 items-center h-6 px-1">
-    <motion.div className="w-2 h-2 bg-purple-400 rounded-full" animate={{ y: [0, -6, 0], opacity: [0.5, 1, 0.5] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} />
-    <motion.div className="w-2 h-2 bg-purple-400 rounded-full" animate={{ y: [0, -6, 0], opacity: [0.5, 1, 0.5] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }} />
-    <motion.div className="w-2 h-2 bg-purple-400 rounded-full" animate={{ y: [0, -6, 0], opacity: [0.5, 1, 0.5] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }} />
-  </div>
+  <>
+    <style>
+      {`
+        .typing-loader-wrapper {
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: inherit;
+          user-select: none;
+          gap: 10px;
+          font-weight: 500;
+        }
+        .typing-loader {
+          width: 20px;
+          height: 20px;
+          aspect-ratio: 1 / 1;
+          border-radius: 50%;
+          background-color: transparent;
+          animation: typing-loader-rotate 1.5s linear infinite;
+          z-index: 0;
+        }
+        @keyframes typing-loader-rotate {
+          0% {
+            transform: rotate(90deg);
+            box-shadow: 0 1px 1px 0 #fff inset, 0 3px 5px 0 #ff5f9f inset, 0 4px 4px 0 #0693ff inset;
+          }
+          50% {
+            transform: rotate(270deg);
+            background: #7c0911;
+            box-shadow: 0 1px 1px 0 #fff inset, 0 3px 5px 0 #d60a47 inset, 0 4px 4px 0 #fbef19 inset;
+          }
+          100% {
+            transform: rotate(450deg);
+            box-shadow: 0 1px 1px 0 #fff inset, 0 3px 5px 0 #ff5f9f inset, 0 4px 4px 0 #28a9ff inset;
+          }
+        }
+        .typing-letter-wrapper {
+          display: flex;
+          gap: 1px;
+        }
+        .typing-loader-letter {
+          display: inline-block;
+          opacity: 0.4;
+          transform: translateY(0);
+          animation: typing-loader-letter-anim 2s infinite;
+          z-index: 1;
+          border-radius: 50ch;
+          border: none;
+        }
+        .typing-loader-letter:nth-child(1) { animation-delay: 0s; }
+        .typing-loader-letter:nth-child(2) { animation-delay: 0.1s; }
+        .typing-loader-letter:nth-child(3) { animation-delay: 0.2s; }
+        .typing-loader-letter:nth-child(4) { animation-delay: 0.3s; }
+        .typing-loader-letter:nth-child(5) { animation-delay: 0.4s; }
+        .typing-loader-letter:nth-child(6) { animation-delay: 0.5s; }
+        .typing-loader-letter:nth-child(7) { animation-delay: 0.6s; }
+        .typing-loader-letter:nth-child(8) { animation-delay: 0.7s; }
+        .typing-loader-letter:nth-child(9) { animation-delay: 0.8s; }
+        @keyframes typing-loader-letter-anim {
+          0%, 100% {
+            opacity: 0.4;
+            transform: translateY(0);
+          }
+          20% {
+            opacity: 1;
+            transform: scale(1.15);
+          }
+          40% {
+            opacity: 0.7;
+            transform: translateY(0);
+          }
+        }
+      `}
+    </style>
+    <div className="typing-loader-wrapper h-6 px-1">
+      <div className="typing-loader"></div>
+      <div className="typing-letter-wrapper">
+        <span className="typing-loader-letter">S</span>
+        <span className="typing-loader-letter">e</span>
+        <span className="typing-loader-letter">a</span>
+        <span className="typing-loader-letter">r</span>
+        <span className="typing-loader-letter">c</span>
+        <span className="typing-loader-letter">h</span>
+        <span className="typing-loader-letter">i</span>
+        <span className="typing-loader-letter">n</span>
+        <span className="typing-loader-letter">g</span>
+      </div>
+    </div>
+  </>
 );
 
 const SoundWave = () => (
@@ -659,12 +872,6 @@ const AiChatPage = ({ user }) => {
     }
   };
   
-  const handleSendMessage = (e) => {
-    e.preventDefault();
-    if (voiceState !== 'idle') cancelVoiceMode();
-    processMessage(input);
-  };
-  
   const handleMinimize = () => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
     localStorage.setItem('dealit_open_floating_ai', 'true');
@@ -690,6 +897,12 @@ const AiChatPage = ({ user }) => {
       window.speechSynthesis.cancel();
     }
     navigate('/');
+  };
+
+  const handleSendMessage = (e) => {
+    e.preventDefault();
+    if (voiceState !== 'idle') cancelVoiceMode();
+    processMessage(input);
   };
   
   return (
@@ -886,38 +1099,44 @@ const AiChatPage = ({ user }) => {
             </button>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 space-y-6 container mx-auto max-w-3xl scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent">
-          {messages.map((msg) => (
-            <motion.div 
-              initial={msg.animated ? { opacity: 0, y: 10, scale: 0.98 } : { opacity: 1, y: 0, scale: 1 }} 
-              animate={{ opacity: 1, y: 0, scale: 1 }} 
-              transition={{ duration: 0.3 }}
-              key={msg.id} 
-              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div
-                className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-5 py-3.5 text-sm ${
-                  msg.role === 'user'
-                    ? 'bg-gradient-to-br from-purple-600 to-purple-500 text-white rounded-tr-sm shadow-lg shadow-purple-500/20 break-words whitespace-pre-wrap'
-                    : 'bg-gray-800 text-gray-200 border border-gray-700 rounded-tl-sm shadow-md'
-                }`}
+        
+        <div className="flex-1 overflow-y-auto p-4 space-y-6 container mx-auto max-w-3xl scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent relative">
+          
+          {isLoading && messages.length === 0 ? (
+            <GeneratingLoader />
+          ) : (
+            messages.map((msg) => (
+              <motion.div 
+                initial={msg.animated ? { opacity: 0, y: 10, scale: 0.98 } : { opacity: 1, y: 0, scale: 1 }} 
+                animate={{ opacity: 1, y: 0, scale: 1 }} 
+                transition={{ duration: 0.3 }}
+                key={msg.id} 
+                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                {msg.role === 'bot' ? (
-                  msg.content ? (
-                    <BotMessage 
-                      content={msg.content} 
-                      animated={msg.animated} 
-                      onComplete={() => markAsAnimated(msg.id)} 
-                    />
+                <div
+                  className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-5 py-3.5 text-sm ${
+                    msg.role === 'user'
+                      ? 'bg-gradient-to-br from-purple-600 to-purple-500 text-white rounded-tr-sm shadow-lg shadow-purple-500/20 break-words whitespace-pre-wrap'
+                      : 'bg-gray-800 text-gray-200 border border-gray-700 rounded-tl-sm shadow-md'
+                  }`}
+                >
+                  {msg.role === 'bot' ? (
+                    msg.content ? (
+                      <BotMessage 
+                        content={msg.content} 
+                        animated={msg.animated} 
+                        onComplete={() => markAsAnimated(msg.id)} 
+                      />
+                    ) : (
+                      <TypingLoader />
+                    )
                   ) : (
-                    <TypingLoader />
-                  )
-                ) : (
-                  msg.content
-                )}
-              </div>
-            </motion.div>
-          ))}
+                    msg.content
+                  )}
+                </div>
+              </motion.div>
+            ))
+          )}
 
           {/* --- INLINE VOICE UI --- */}
           <AnimatePresence>
