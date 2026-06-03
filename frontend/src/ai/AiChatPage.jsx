@@ -11,7 +11,6 @@ import Lightfall from './Lightfall';
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
-/* CHANGED HERE: Added your custom button styles (fold removed as requested) */
 const MagicButtonStyles = () => (
   <style>
     {`
@@ -671,7 +670,7 @@ const AiChatPage = ({ user }) => {
     }
   };
   
- const handleMicClick = () => {
+  const handleMicClick = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       alert("Your browser does not support voice input.");
@@ -924,178 +923,180 @@ const AiChatPage = ({ user }) => {
             <button onClick={handleClose} className="p-2 bg-gray-900 hover:bg-red-500/20 hover:text-red-400 rounded-lg text-gray-300 transition-colors" title="Close Full Chat"><X className="w-5 h-5" /></button>
           </div>
         </div>
-        
-        {voiceState !== 'idle' ? (
-          <AnimatePresence>
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }} 
-              animate={{ opacity: 1, scale: 1 }} 
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="flex-1 flex flex-col items-center justify-center w-full h-full relative overflow-hidden bg-gray-900"
-            >
-              <div className="absolute inset-0 z-0 opacity-40 mix-blend-screen transition-all duration-700 pointer-events-none">
-                <Lightfall
-                  colors={getLightfallConfig(voiceState).colors}
-                  backgroundColor="#000000"
-                  speed={getLightfallConfig(voiceState).speed}
-                  zoom={getLightfallConfig(voiceState).zoom}
-                  glow={1.2}
-                  twinkle={1.5}
-                  mouseInteraction={true}
-                />
-              </div>
-              
-              <div className="z-10 flex flex-col items-center w-full max-w-md px-6 text-center">
-                <div className="relative flex items-center justify-center w-32 h-32 mb-8">
-                  {voiceState === 'listening' && (
-                    <div className="absolute inset-0 rounded-full bg-red-500/30 animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite]" />
-                  )}
-                  {voiceState === 'speaking' && (
-                    <div className="absolute inset-0 rounded-full bg-purple-500/30 animate-pulse" />
-                  )}
-                  {voiceState === 'generating_audio' && (
-                    <div className="absolute inset-0 rounded-full bg-blue-500/30 animate-pulse" />
-                  )}
-                  <div className="z-10 w-24 h-24 bg-gray-950/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-inner border border-gray-700">
-                    {voiceState === 'listening' ? <Mic className="w-10 h-10 text-red-400 animate-pulse" /> : <Bot className="w-10 h-10 text-purple-400" />}
-                  </div>
-                </div>
 
-                <h2 className="text-2xl font-bold text-white mb-3 drop-shadow-md">
-                  {voiceState === 'listening' && 'Listening to you...'}
-                  {voiceState === 'thinking' && 'Analyzing...'}
-                  {voiceState === 'generating_audio' && 'Preparing voice...'}
-                  {voiceState === 'speaking' && (isPremiumVoiceLimited ? 'Speaking (Standard Voice)...' : 'Speaking...')}
-                </h2>
+        <div className="relative flex-1 flex flex-col overflow-hidden">
+          {/* Main Chat Content always rendered now */}
+          <div className={`flex-1 overflow-y-auto p-4 space-y-6 container mx-auto max-w-3xl scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent relative ${!hasStartedChat && 'flex flex-col items-center justify-center'}`}>
+            {isLoading && messages.length === 0 ? (
+              <GeneratingLoader />
+            ) : !hasStartedChat ? (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+                className="flex flex-col items-center justify-center text-center w-full max-w-lg mx-auto"
+              >
+                <motion.div 
+                  initial={{ scale: 0.8, rotate: -10 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.2 }}
+                  className="w-24 h-24 mb-6 rounded-full bg-gradient-to-br from-purple-600/20 to-emerald-500/20 flex items-center justify-center border border-purple-500/40 shadow-[0_0_40px_rgba(163,136,225,0.15)] relative"
+                >
+                  <div className="absolute inset-0 rounded-full border border-purple-400/30 animate-[spin_10s_linear_infinite]" />
+                  <Bot className="w-12 h-12 text-purple-400 drop-shadow-[0_0_10px_rgba(163,136,225,0.5)]" />
+                </motion.div>
+                <motion.h2 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.4 }}
+                  className="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-emerald-400 to-purple-400 mb-3"
+                >
+                  Welcome to Dealit AI{user?.full_name ? `, ${user.full_name.split(' ')[0]}` : ''}!
+                </motion.h2>
+                <motion.p 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.5, delay: 0.6 }}
+                  className="text-gray-400 text-sm md:text-base mb-8 max-w-md"
+                >
+                  Your personal assistant for trades, credits, and navigating the Dealit marketplace. How can I help you today?
+                </motion.p>
                 
-                {voiceState === 'speaking' && isPremiumVoiceLimited && (
-                  <span className="text-xs text-amber-400 font-medium px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full mb-4 animate-pulse">
-                    Daily Premium Limit Reached
-                  </span>
-                )}
-                
-                <div className="h-12 flex items-center justify-center w-full mb-10">
-                  {voiceState === 'listening' && (
-                    <div className="flex gap-2.5">
-                      <span className="w-2.5 h-2.5 bg-red-400 rounded-full animate-bounce"></span>
-                      <span className="w-2.5 h-2.5 bg-red-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
-                      <span className="w-2.5 h-2.5 bg-red-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
-                    </div>
-                  )}
-                  {(voiceState === 'thinking' || voiceState === 'generating_audio') && <TypingLoader />}
-                  {voiceState === 'speaking' && <SoundWave />}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
+                  {SUGGESTIONS.map((text, i) => (
+                    <motion.button 
+                      key={i} 
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4, delay: 0.7 + (i * 0.1) }}
+                      onClick={() => processMessage(text)} 
+                      className="flex items-center gap-3 bg-gray-800/60 border border-gray-700/50 text-gray-300 text-sm font-medium p-4 rounded-xl hover:bg-purple-500/10 hover:text-white hover:border-purple-500/40 transition-all text-left shadow-sm group"
+                    >
+                      <div className="p-2 rounded-lg bg-gray-900 group-hover:bg-purple-500/20 transition-colors">
+                        <Sparkles className="w-4 h-4 text-purple-400" />
+                      </div>
+                      {text}
+                    </motion.button>
+                  ))}
                 </div>
-                
-                {/* CHANGED HERE: Replaced Stop Listening button with custom magic button */}
-                <button type="button" onClick={cancelVoiceMode} className="magic-btn text-sm w-48 mx-auto shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+              </motion.div>
+            ) : (
+              messages.map((msg) => (
+                <motion.div 
+                  initial={msg.animated ? { opacity: 0, y: 10, scale: 0.98 } : { opacity: 1, y: 0, scale: 1 }} 
+                  animate={{ opacity: 1, y: 0, scale: 1 }} 
+                  transition={{ duration: 0.3 }}
+                  key={msg.id} 
+                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-5 py-3.5 text-sm ${msg.role === 'user' ? 'bg-gradient-to-br from-purple-600 to-purple-500 text-white rounded-tr-sm shadow-lg shadow-purple-500/20 break-words whitespace-pre-wrap' : 'bg-gray-800 text-gray-200 border border-gray-700 rounded-tl-sm shadow-md'}`}>
+                    {msg.role === 'bot' ? (msg.content ? <BotMessage content={msg.content} animated={msg.animated} onComplete={() => markAsAnimated(msg.id)} /> : <TypingLoader />) : msg.content}
+                  </div>
+                </motion.div>
+              ))
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+          
+          {/* Main Input Form always rendered */}
+          <div className="shrink-0 bg-gray-900 pb-safe z-10 relative">
+            <div className="bg-gray-800/50 backdrop-blur-sm border-t border-purple-500/20 p-4 container mx-auto max-w-3xl">
+              <form onSubmit={handleSendMessage} className="relative flex items-center">
+                <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask Dealit AI..." className="w-full bg-gray-900 border border-gray-700 rounded-full py-4 pl-6 pr-24 text-base md:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-inner" />
+                <button type="button" onClick={handleMicClick} className="absolute right-14 w-10 h-10 flex items-center justify-center rounded-full transition-all text-gray-400 hover:text-purple-400">
+                  <Mic className="w-5 h-5" />
+                </button>
+
+                <button type="submit" disabled={isLoading || !input.trim()} className="magic-btn absolute right-2 w-10 h-10 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-purple-500/30" style={{ '--round': '9999px', padding: 0 }}>
                   <div className="magic-points_wrapper">
                     {[...Array(10)].map((_, i) => <i key={i} className="point"></i>)}
                   </div>
                   <span className="magic-inner">
-                    <X className="w-5 h-5 icon" fill="none" strokeWidth="2.5" /> Stop Listening
+                    <Send className="w-5 h-5 ml-1 icon" fill="none" strokeWidth="2.5" />
                   </span>
                 </button>
-
-              </div>
-            </motion.div>
-          </AnimatePresence>
-        ) : (
-          <>
-            <div className={`flex-1 overflow-y-auto p-4 space-y-6 container mx-auto max-w-3xl scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent relative ${!hasStartedChat && 'flex flex-col items-center justify-center'}`}>
-              {isLoading && messages.length === 0 ? (
-                <GeneratingLoader />
-              ) : !hasStartedChat ? (
-                <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, ease: "easeOut" }}
-                  className="flex flex-col items-center justify-center text-center w-full max-w-lg mx-auto"
-                >
-                  <motion.div 
-                    initial={{ scale: 0.8, rotate: -10 }}
-                    animate={{ scale: 1, rotate: 0 }}
-                    transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.2 }}
-                    className="w-24 h-24 mb-6 rounded-full bg-gradient-to-br from-purple-600/20 to-emerald-500/20 flex items-center justify-center border border-purple-500/40 shadow-[0_0_40px_rgba(163,136,225,0.15)] relative"
-                  >
-                    <div className="absolute inset-0 rounded-full border border-purple-400/30 animate-[spin_10s_linear_infinite]" />
-                    <Bot className="w-12 h-12 text-purple-400 drop-shadow-[0_0_10px_rgba(163,136,225,0.5)]" />
-                  </motion.div>
-                  <motion.h2 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.4 }}
-                    className="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-emerald-400 to-purple-400 mb-3"
-                  >
-                    Welcome to Dealit AI{user?.full_name ? `, ${user.full_name.split(' ')[0]}` : ''}!
-                  </motion.h2>
-                  <motion.p 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.5, delay: 0.6 }}
-                    className="text-gray-400 text-sm md:text-base mb-8 max-w-md"
-                  >
-                    Your personal assistant for trades, credits, and navigating the Dealit marketplace. How can I help you today?
-                  </motion.p>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
-                    {SUGGESTIONS.map((text, i) => (
-                      <motion.button 
-                        key={i} 
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.4, delay: 0.7 + (i * 0.1) }}
-                        onClick={() => processMessage(text)} 
-                        className="flex items-center gap-3 bg-gray-800/60 border border-gray-700/50 text-gray-300 text-sm font-medium p-4 rounded-xl hover:bg-purple-500/10 hover:text-white hover:border-purple-500/40 transition-all text-left shadow-sm group"
-                      >
-                        <div className="p-2 rounded-lg bg-gray-900 group-hover:bg-purple-500/20 transition-colors">
-                          <Sparkles className="w-4 h-4 text-purple-400" />
-                        </div>
-                        {text}
-                      </motion.button>
-                    ))}
-                  </div>
-                </motion.div>
-              ) : (
-                messages.map((msg) => (
-                  <motion.div 
-                    initial={msg.animated ? { opacity: 0, y: 10, scale: 0.98 } : { opacity: 1, y: 0, scale: 1 }} 
-                    animate={{ opacity: 1, y: 0, scale: 1 }} 
-                    transition={{ duration: 0.3 }}
-                    key={msg.id} 
-                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-5 py-3.5 text-sm ${msg.role === 'user' ? 'bg-gradient-to-br from-purple-600 to-purple-500 text-white rounded-tr-sm shadow-lg shadow-purple-500/20 break-words whitespace-pre-wrap' : 'bg-gray-800 text-gray-200 border border-gray-700 rounded-tl-sm shadow-md'}`}>
-                      {msg.role === 'bot' ? (msg.content ? <BotMessage content={msg.content} animated={msg.animated} onComplete={() => markAsAnimated(msg.id)} /> : <TypingLoader />) : msg.content}
-                    </div>
-                  </motion.div>
-                ))
-              )}
-              <div ref={messagesEndRef} />
+              </form>
             </div>
-            
-            <div className="shrink-0 bg-gray-900 pb-safe">
-              <div className="bg-gray-800/50 backdrop-blur-sm border-t border-purple-500/20 p-4 container mx-auto max-w-3xl">
-                <form onSubmit={handleSendMessage} className="relative flex items-center">
-                  <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask Dealit AI..." className="w-full bg-gray-900 border border-gray-700 rounded-full py-4 pl-6 pr-24 text-base md:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-inner" />
-                  <button type="button" onClick={handleMicClick} className="absolute right-14 w-10 h-10 flex items-center justify-center rounded-full transition-all text-gray-400 hover:text-purple-400">
-                    <Mic className="w-5 h-5" />
-                  </button>
+          </div>
 
-                  {/* CHANGED HERE: Replaced Send button with custom magic button */}
-                  <button type="submit" disabled={isLoading || !input.trim()} className="magic-btn absolute right-2 w-10 h-10 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-purple-500/30" style={{ '--round': '9999px', padding: 0 }}>
+          {/* Voice Overlay conditionally rendered OVER the chat */}
+          <AnimatePresence>
+            {voiceState !== 'idle' && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }} 
+                animate={{ opacity: 1, scale: 1 }} 
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="absolute inset-0 z-50 flex flex-col items-center justify-center w-full h-full overflow-hidden bg-gray-900/85 backdrop-blur-md"
+              >
+                <div className="absolute inset-0 z-0 opacity-40 mix-blend-screen transition-all duration-700 pointer-events-none">
+                  <Lightfall
+                    colors={getLightfallConfig(voiceState).colors}
+                    backgroundColor="#000000"
+                    speed={getLightfallConfig(voiceState).speed}
+                    zoom={getLightfallConfig(voiceState).zoom}
+                    glow={1.2}
+                    twinkle={1.5}
+                    mouseInteraction={true}
+                  />
+                </div>
+                
+                <div className="z-10 flex flex-col items-center w-full max-w-md px-6 text-center">
+                  <div className="relative flex items-center justify-center w-32 h-32 mb-8">
+                    {voiceState === 'listening' && (
+                      <div className="absolute inset-0 rounded-full bg-red-500/30 animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite]" />
+                    )}
+                    {voiceState === 'speaking' && (
+                      <div className="absolute inset-0 rounded-full bg-purple-500/30 animate-pulse" />
+                    )}
+                    {voiceState === 'generating_audio' && (
+                      <div className="absolute inset-0 rounded-full bg-blue-500/30 animate-pulse" />
+                    )}
+                    <div className="z-10 w-24 h-24 bg-gray-950/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-inner border border-gray-700">
+                      {voiceState === 'listening' ? <Mic className="w-10 h-10 text-red-400 animate-pulse" /> : <Bot className="w-10 h-10 text-purple-400" />}
+                    </div>
+                  </div>
+
+                  <h2 className="text-2xl font-bold text-white mb-3 drop-shadow-md">
+                    {voiceState === 'listening' && 'Listening to you...'}
+                    {voiceState === 'thinking' && 'Analyzing...'}
+                    {voiceState === 'generating_audio' && 'Preparing voice...'}
+                    {voiceState === 'speaking' && (isPremiumVoiceLimited ? 'Speaking (Standard Voice)...' : 'Speaking...')}
+                  </h2>
+                  
+                  {voiceState === 'speaking' && isPremiumVoiceLimited && (
+                    <span className="text-xs text-amber-400 font-medium px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full mb-4 animate-pulse">
+                      Daily Premium Limit Reached
+                    </span>
+                  )}
+                  
+                  {/* CHANGED HERE: Added text-white so TypingLoader becomes white */}
+                  <div className="h-12 flex items-center justify-center w-full mb-10 text-white drop-shadow-md">
+                    {voiceState === 'listening' && (
+                      <div className="flex gap-2.5">
+                        <span className="w-2.5 h-2.5 bg-red-400 rounded-full animate-bounce"></span>
+                        <span className="w-2.5 h-2.5 bg-red-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
+                        <span className="w-2.5 h-2.5 bg-red-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
+                      </div>
+                    )}
+                    {(voiceState === 'thinking' || voiceState === 'generating_audio') && <TypingLoader />}
+                    {voiceState === 'speaking' && <SoundWave />}
+                  </div>
+                  
+                  <button type="button" onClick={cancelVoiceMode} className="magic-btn text-sm w-48 mx-auto shadow-[0_0_15px_rgba(239,68,68,0.2)]">
                     <div className="magic-points_wrapper">
                       {[...Array(10)].map((_, i) => <i key={i} className="point"></i>)}
                     </div>
                     <span className="magic-inner">
-                      <Send className="w-5 h-5 ml-1 icon" fill="none" strokeWidth="2.5" />
+                      <X className="w-5 h-5 icon" fill="none" strokeWidth="2.5" /> Stop Listening
                     </span>
                   </button>
 
-                </form>
-              </div>
-            </div>
-          </>
-        )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
       </div>
     </div>
   );
