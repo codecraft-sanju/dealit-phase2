@@ -518,7 +518,7 @@ const FloatingAIAssistant = ({ user }) => {
               </AnimatePresence>
             ) : (
               <>
-                <div className={`flex-1 overflow-y-auto p-4 space-y-5 scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent relative ${!hasStartedChat && 'flex flex-col items-center justify-center'}`}>
+                <div className={`flex-1 overflow-y-auto p-3 space-y-4 scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent relative ${!hasStartedChat && 'flex flex-col items-center justify-center'}`}>
                   {!hasStartedChat ? (
                     <motion.div 
                       initial={{ opacity: 0, y: 15 }}
@@ -530,15 +530,15 @@ const FloatingAIAssistant = ({ user }) => {
                         initial={{ scale: 0.8 }}
                         animate={{ scale: 1 }}
                         transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.1 }}
-                        className="w-16 h-16 mb-4 rounded-full bg-gradient-to-br from-purple-600/20 to-emerald-500/20 flex items-center justify-center border border-purple-500/40 relative shadow-[0_0_30px_rgba(163,136,225,0.1)]"
+                        className="w-12 h-12 mb-3 rounded-full bg-gradient-to-br from-purple-600/20 to-emerald-500/20 flex items-center justify-center border border-purple-500/40 relative shadow-[0_0_20px_rgba(163,136,225,0.1)]"
                       >
-                        <Bot className="w-8 h-8 text-purple-400 drop-shadow-[0_0_8px_rgba(163,136,225,0.4)]" />
+                        <Bot className="w-6 h-6 text-purple-400 drop-shadow-[0_0_8px_rgba(163,136,225,0.4)]" />
                       </motion.div>
                       <motion.h2 
                         initial={{ opacity: 0, y: 5 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.4, delay: 0.3 }}
-                        className="text-2xl font-bold text-white mb-2"
+                        className="text-lg font-bold text-white mb-1"
                       >
                         Welcome{user?.full_name ? `, ${user.full_name.split(' ')[0]}` : ''}!
                       </motion.h2>
@@ -546,12 +546,12 @@ const FloatingAIAssistant = ({ user }) => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ duration: 0.4, delay: 0.4 }}
-                        className="text-gray-400 text-xs mb-6 px-4"
+                        className="text-gray-400 text-[11px] mb-4 px-2"
                       >
                         How can I assist you with Dealit today?
                       </motion.p>
                       
-                      <div className="flex flex-col w-full gap-2 px-2">
+                      <div className="flex flex-col w-full gap-1.5 px-1">
                         {SUGGESTIONS.map((text, i) => (
                           <motion.button 
                             key={i} 
@@ -559,13 +559,13 @@ const FloatingAIAssistant = ({ user }) => {
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ duration: 0.3, delay: 0.5 + (i * 0.08) }}
                             onClick={() => processMessage(text)} 
-                            className="flex items-center justify-between bg-gray-800/40 border border-gray-700/50 text-gray-300 text-xs font-medium p-3 rounded-lg hover:bg-purple-500/10 hover:text-white hover:border-purple-500/30 transition-all w-full text-left group"
+                            className="flex items-center justify-between bg-gray-800/40 border border-gray-700/50 text-gray-300 text-[11px] font-medium p-2.5 rounded-lg hover:bg-purple-500/10 hover:text-white hover:border-purple-500/30 transition-all w-full text-left group"
                           >
-                            <span className="flex items-center gap-2">
-                              <Sparkles className="w-3.5 h-3.5 text-purple-400/70 group-hover:text-purple-400 transition-colors" />
+                            <span className="flex items-center gap-1.5">
+                              <Sparkles className="w-3 h-3 text-purple-400/70 group-hover:text-purple-400 transition-colors" />
                               {text}
                             </span>
-                            <ArrowRight className="w-3.5 h-3.5 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-purple-400" />
+                            <ArrowRight className="w-3 h-3 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-purple-400" />
                           </motion.button>
                         ))}
                       </div>
@@ -599,12 +599,22 @@ const FloatingAIAssistant = ({ user }) => {
           </motion.div>
         )}
       </AnimatePresence>
+      
+      {/* CHANGES MADE HERE:
+        Updated onClick to navigate to full screen chat directly if the widget is not already open.
+      */}
       <motion.button
         animate={isOpen ? { y: 0, scale: 0.9 } : { y: [0, -6, 0], scale: 1 }}
         transition={{ y: { repeat: Infinity, duration: 2.5, ease: "easeInOut" }, scale: { type: "spring", damping: 20, stiffness: 200 } }}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          if (isOpen) {
+            setIsOpen(false);
+          } else {
+            navigate(currentSessionId ? `/ai-chat/${currentSessionId}` : '/ai-chat');
+          }
+        }}
         className="w-14 h-14 bg-gradient-to-br from-purple-600 to-purple-500 rounded-full shadow-[0_0_25px_rgba(163,136,225,0.5)] flex items-center justify-center text-white relative z-10 border border-purple-400/30 overflow-hidden"
       >
         <AnimatePresence mode="wait">
