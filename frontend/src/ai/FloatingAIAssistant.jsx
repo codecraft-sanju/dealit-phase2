@@ -6,8 +6,109 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
+import Lightfall from './Lightfall';
+
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
+
+/* CHANGED HERE: Added your custom button styles (fold removed as requested) */
+const MagicButtonStyles = () => (
+  <style>
+    {`
+      .magic-btn {
+        --h-button: auto;
+        --w-button: auto;
+        --round: 0.75rem;
+        cursor: pointer;
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        transition: all 0.25s ease;
+        background: radial-gradient(65.28% 65.28% at 50% 100%, rgba(223, 113, 255, 0.8) 0%, rgba(223, 113, 255, 0) 100%), linear-gradient(0deg, #7a5af8, #7a5af8);
+        border-radius: var(--round);
+        border: none;
+        outline: none;
+        padding: 12px 18px;
+      }
+      .magic-btn::before, .magic-btn::after {
+        content: "";
+        position: absolute;
+        inset: var(--space);
+        transition: all 0.5s ease-in-out;
+        border-radius: calc(var(--round) - var(--space));
+        z-index: 0;
+      }
+      .magic-btn::before {
+        --space: 1px;
+        background: linear-gradient(177.95deg, rgba(255, 255, 255, 0.19) 0%, rgba(255, 255, 255, 0) 100%);
+      }
+      .magic-btn::after {
+        --space: 2px;
+        background: radial-gradient(65.28% 65.28% at 50% 100%, rgba(223, 113, 255, 0.8) 0%, rgba(223, 113, 255, 0) 100%), linear-gradient(0deg, #7a5af8, #7a5af8);
+      }
+      .magic-btn:active { transform: scale(0.95); }
+      .magic-points_wrapper {
+        overflow: hidden;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        position: absolute;
+        z-index: 1;
+      }
+      .magic-points_wrapper .point {
+        bottom: -10px;
+        position: absolute;
+        animation: floating-points infinite ease-in-out;
+        pointer-events: none;
+        width: 2px;
+        height: 2px;
+        background-color: #fff;
+        border-radius: 9999px;
+      }
+      @keyframes floating-points {
+        0% { transform: translateY(0); }
+        85% { opacity: 0; }
+        100% { transform: translateY(-55px); opacity: 0; }
+      }
+      .magic-points_wrapper .point:nth-child(1) { left: 10%; opacity: 1; animation-duration: 2.35s; animation-delay: 0.2s; }
+      .magic-points_wrapper .point:nth-child(2) { left: 30%; opacity: 0.7; animation-duration: 2.5s; animation-delay: 0.5s; }
+      .magic-points_wrapper .point:nth-child(3) { left: 25%; opacity: 0.8; animation-duration: 2.2s; animation-delay: 0.1s; }
+      .magic-points_wrapper .point:nth-child(4) { left: 44%; opacity: 0.6; animation-duration: 2.05s; }
+      .magic-points_wrapper .point:nth-child(5) { left: 50%; opacity: 1; animation-duration: 1.9s; }
+      .magic-points_wrapper .point:nth-child(6) { left: 75%; opacity: 0.5; animation-duration: 1.5s; animation-delay: 1.5s; }
+      .magic-points_wrapper .point:nth-child(7) { left: 88%; opacity: 0.9; animation-duration: 2.2s; animation-delay: 0.2s; }
+      .magic-points_wrapper .point:nth-child(8) { left: 58%; opacity: 0.8; animation-duration: 2.25s; animation-delay: 0.2s; }
+      .magic-points_wrapper .point:nth-child(9) { left: 98%; opacity: 0.6; animation-duration: 2.6s; animation-delay: 0.1s; }
+      .magic-points_wrapper .point:nth-child(10) { left: 65%; opacity: 1; animation-duration: 2.5s; animation-delay: 0.2s; }
+      .magic-inner {
+        z-index: 2;
+        gap: 6px;
+        position: relative;
+        color: white;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 500;
+        transition: color 0.2s ease-in-out;
+      }
+      .magic-inner svg.icon {
+        transition: fill 0.1s linear;
+      }
+      .magic-btn:focus svg.icon { fill: white; }
+      .magic-btn:hover svg.icon {
+        fill: transparent;
+        animation: dasharray 1s linear forwards, filled 0.1s linear forwards 0.95s;
+      }
+      @keyframes dasharray {
+        from { stroke-dasharray: 0 0 0 0; }
+        to { stroke-dasharray: 68 68 0 0; }
+      }
+      @keyframes filled { to { fill: white; } }
+    `}
+  </style>
+);
 
 const TypingLoader = () => (
   <div className="flex space-x-1.5 items-center h-5 px-1">
@@ -418,9 +519,21 @@ const FloatingAIAssistant = ({ user }) => {
     if(currentSessionId) navigate(`/ai-chat/${currentSessionId}`);
     else navigate('/ai-chat');
   };
+
+  const getLightfallConfig = (state) => {
+    switch(state) {
+      case 'listening': 
+        return { colors: ['#f87171', '#ef4444', '#b91c1c'], bg: '#450a0a', speed: 1.5, zoom: 4 };
+      case 'speaking': 
+        return { colors: ['#c084fc', '#a855f7', '#7e22ce'], bg: '#3b0764', speed: 1.2, zoom: 3 };
+      default: 
+        return { colors: ['#60a5fa', '#3b82f6', '#1d4ed8'], bg: '#1e3a8a', speed: 0.8, zoom: 3 };
+    }
+  };
   
   return (
     <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-[60]">
+      <MagicButtonStyles />
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -467,7 +580,17 @@ const FloatingAIAssistant = ({ user }) => {
                   exit={{ opacity: 0, scale: 0.95 }}
                   className="flex-1 flex flex-col items-center justify-center w-full h-full relative overflow-hidden bg-gray-900"
                 >
-                  <div className={`absolute inset-0 transition-opacity duration-700 opacity-20 ${voiceState === 'listening' ? 'bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-red-500/40 via-gray-900 to-gray-900' : voiceState === 'speaking' ? 'bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-500/40 via-gray-900 to-gray-900' : 'bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-500/40 via-gray-900 to-gray-900'}`} />
+                  <div className="absolute inset-0 z-0 opacity-40 mix-blend-screen transition-all duration-700 pointer-events-none">
+                    <Lightfall
+                      colors={getLightfallConfig(voiceState).colors}
+                      backgroundColor="#000000"
+                      speed={getLightfallConfig(voiceState).speed}
+                      zoom={getLightfallConfig(voiceState).zoom}
+                      glow={1.2}
+                      twinkle={1.5}
+                      mouseInteraction={true}
+                    />
+                  </div>
                   
                   <div className="z-10 flex flex-col items-center w-full px-6 text-center">
                     <div className="relative flex items-center justify-center w-28 h-28 mb-6">
@@ -480,12 +603,12 @@ const FloatingAIAssistant = ({ user }) => {
                       {voiceState === 'generating_audio' && (
                         <div className="absolute inset-0 rounded-full bg-blue-500/30 animate-pulse" />
                       )}
-                      <div className="z-10 w-20 h-20 bg-gray-950 rounded-full flex items-center justify-center shadow-inner border border-gray-700">
+                      <div className="z-10 w-20 h-20 bg-gray-950/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-inner border border-gray-700">
                         {voiceState === 'listening' ? <Mic className="w-8 h-8 text-red-400 animate-pulse" /> : <Bot className="w-8 h-8 text-purple-400" />}
                       </div>
                     </div>
 
-                    <h2 className="text-xl font-bold text-white mb-2">
+                    <h2 className="text-xl font-bold text-white mb-2 drop-shadow-md">
                       {voiceState === 'listening' && 'Listening to you...'}
                       {voiceState === 'thinking' && 'Analyzing...'}
                       {voiceState === 'generating_audio' && 'Preparing voice...'}
@@ -510,9 +633,16 @@ const FloatingAIAssistant = ({ user }) => {
                       {voiceState === 'speaking' && <SoundWave />}
                     </div>
                     
-                    <button onClick={cancelVoiceMode} className="px-6 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-full transition-all border border-red-500/30 text-xs font-semibold flex items-center justify-center gap-2 hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
-                      <X className="w-4 h-4" /> Stop Listening
+                    {/* CHANGED HERE: Replaced Stop Listening button with custom magic button */}
+                    <button type="button" onClick={cancelVoiceMode} className="magic-btn text-xs px-6 py-2.5">
+                      <div className="magic-points_wrapper">
+                        {[...Array(10)].map((_, i) => <i key={i} className="point"></i>)}
+                      </div>
+                      <span className="magic-inner">
+                        <X className="w-4 h-4 icon" strokeWidth="2.5" fill="none" /> Stop Listening
+                      </span>
                     </button>
+
                   </div>
                 </motion.div>
               </AnimatePresence>
@@ -591,7 +721,17 @@ const FloatingAIAssistant = ({ user }) => {
                   <div className="relative flex items-center">
                     <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask about items, Aura, rules..." className="w-full bg-gray-900 border border-gray-700 rounded-full py-3 pl-4 pr-20 text-base md:text-sm text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-inner" />
                     <button type="button" onClick={handleMicClick} className="absolute right-12 w-8 h-8 flex items-center justify-center rounded-full transition-all text-gray-400 hover:text-purple-400"><Mic className="w-4 h-4" /></button>
-                    <button type="submit" disabled={isLoading || !input.trim()} className="absolute right-2 w-8 h-8 flex items-center justify-center bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-400 hover:to-purple-500 text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-transform transform hover:scale-105 active:scale-95 shadow-md shadow-purple-500/30"><Send className="w-3.5 h-3.5 ml-0.5" /></button>
+                    
+                    {/* CHANGED HERE: Replaced Send button with custom magic button */}
+                    <button type="submit" disabled={isLoading || !input.trim()} className="magic-btn absolute right-2 w-8 h-8 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-purple-500/30" style={{ '--round': '9999px', padding: 0 }}>
+                      <div className="magic-points_wrapper">
+                        {[...Array(10)].map((_, i) => <i key={i} className="point"></i>)}
+                      </div>
+                      <span className="magic-inner">
+                        <Send className="w-3.5 h-3.5 ml-0.5 icon" fill="none" strokeWidth="2.5" />
+                      </span>
+                    </button>
+                    
                   </div>
                 </form>
               </>
@@ -600,9 +740,6 @@ const FloatingAIAssistant = ({ user }) => {
         )}
       </AnimatePresence>
       
-      {/* CHANGES MADE HERE:
-        Updated onClick to navigate to full screen chat directly if the widget is not already open.
-      */}
       <motion.button
         animate={isOpen ? { y: 0, scale: 0.9 } : { y: [0, -6, 0], scale: 1 }}
         transition={{ y: { repeat: Infinity, duration: 2.5, ease: "easeInOut" }, scale: { type: "spring", damping: 20, stiffness: 200 } }}
