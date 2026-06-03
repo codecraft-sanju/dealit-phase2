@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Bot, Sparkles, Maximize2, Minimize2, Mic, User } from 'lucide-react';
+import { X, Send, Bot, Sparkles, Maximize2, Minimize2, Mic, User, ArrowRight } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
@@ -105,12 +105,11 @@ const FloatingAIAssistant = ({ user }) => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  const [messages, setMessages] = useState([
-    { id: 'init', role: 'bot', content: `Hi ${user?.full_name?.split(' ')[0] || 'there'}! I am Dealit's AI Assistant. How can I help you today?`, animated: true }
-  ]);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState(null);
+  const [hasStartedChat, setHasStartedChat] = useState(false);
 
   const [voiceState, setVoiceState] = useState('idle');
   const [isPremiumVoiceLimited, setIsPremiumVoiceLimited] = useState(false);
@@ -121,7 +120,6 @@ const FloatingAIAssistant = ({ user }) => {
   const abortControllerRef = useRef(null);
   const audioRef = useRef(null);
   const [buttonState, setButtonState] = useState('bot');
-  // FIX: Streaming guard
   const isStreamingRef = useRef(false);
   
   useEffect(() => {
@@ -244,6 +242,8 @@ const FloatingAIAssistant = ({ user }) => {
     abortControllerRef.current = new AbortController();
     setVoiceState('thinking');
     isStreamingRef.current = true;
+    setHasStartedChat(true);
+
     try {
       const token = localStorage.getItem('dealit_token');
       const smartContextStr = localStorage.getItem('dealit_ai_context');
@@ -328,6 +328,8 @@ const FloatingAIAssistant = ({ user }) => {
     if (!userMessage.trim()) return;
     if (abortControllerRef.current) abortControllerRef.current.abort();
     abortControllerRef.current = new AbortController();
+    
+    setHasStartedChat(true);
     const newMessages = [...messages, { id: Date.now(), role: 'user', content: userMessage }];
     setMessages(newMessages);
     setInput('');
@@ -516,31 +518,75 @@ const FloatingAIAssistant = ({ user }) => {
               </AnimatePresence>
             ) : (
               <>
-                <div className="flex-1 overflow-y-auto p-4 space-y-5 scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent">
-                  {messages.map((msg) => (
+                <div className={`flex-1 overflow-y-auto p-4 space-y-5 scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent relative ${!hasStartedChat && 'flex flex-col items-center justify-center'}`}>
+                  {!hasStartedChat ? (
                     <motion.div 
-                      initial={msg.animated ? { opacity: 0, y: 10, scale: 0.98 } : { opacity: 1, y: 0, scale: 1 }} 
-                      animate={{ opacity: 1, y: 0, scale: 1 }} 
-                      transition={{ duration: 0.3 }}
-                      key={msg.id} 
-                      className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.6, ease: "easeOut" }}
+                      className="flex flex-col items-center justify-center text-center w-full"
                     >
-                      <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm ${msg.role === 'user' ? 'bg-gradient-to-br from-purple-600 to-purple-500 text-white rounded-tr-sm shadow-md shadow-purple-500/20 break-words whitespace-pre-wrap' : 'bg-gray-800 text-gray-200 border border-gray-700 rounded-tl-sm shadow-sm'}`}>
-                        {msg.role === 'bot' ? (msg.content ? <BotMessage content={msg.content} animated={msg.animated} onComplete={() => markAsAnimated(msg.id)} /> : <TypingLoader />) : msg.content}
+                      <motion.div 
+                        initial={{ scale: 0.8 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.1 }}
+                        className="w-16 h-16 mb-4 rounded-full bg-gradient-to-br from-purple-600/20 to-emerald-500/20 flex items-center justify-center border border-purple-500/40 relative shadow-[0_0_30px_rgba(163,136,225,0.1)]"
+                      >
+                        <Bot className="w-8 h-8 text-purple-400 drop-shadow-[0_0_8px_rgba(163,136,225,0.4)]" />
+                      </motion.div>
+                      <motion.h2 
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.4, delay: 0.3 }}
+                        className="text-2xl font-bold text-white mb-2"
+                      >
+                        Welcome{user?.full_name ? `, ${user.full_name.split(' ')[0]}` : ''}!
+                      </motion.h2>
+                      <motion.p 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.4, delay: 0.4 }}
+                        className="text-gray-400 text-xs mb-6 px-4"
+                      >
+                        How can I assist you with Dealit today?
+                      </motion.p>
+                      
+                      <div className="flex flex-col w-full gap-2 px-2">
+                        {SUGGESTIONS.map((text, i) => (
+                          <motion.button 
+                            key={i} 
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.3, delay: 0.5 + (i * 0.08) }}
+                            onClick={() => processMessage(text)} 
+                            className="flex items-center justify-between bg-gray-800/40 border border-gray-700/50 text-gray-300 text-xs font-medium p-3 rounded-lg hover:bg-purple-500/10 hover:text-white hover:border-purple-500/30 transition-all w-full text-left group"
+                          >
+                            <span className="flex items-center gap-2">
+                              <Sparkles className="w-3.5 h-3.5 text-purple-400/70 group-hover:text-purple-400 transition-colors" />
+                              {text}
+                            </span>
+                            <ArrowRight className="w-3.5 h-3.5 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-purple-400" />
+                          </motion.button>
+                        ))}
                       </div>
                     </motion.div>
-                  ))}
+                  ) : (
+                    messages.map((msg) => (
+                      <motion.div 
+                        initial={msg.animated ? { opacity: 0, y: 10, scale: 0.98 } : { opacity: 1, y: 0, scale: 1 }} 
+                        animate={{ opacity: 1, y: 0, scale: 1 }} 
+                        transition={{ duration: 0.3 }}
+                        key={msg.id} 
+                        className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm ${msg.role === 'user' ? 'bg-gradient-to-br from-purple-600 to-purple-500 text-white rounded-tr-sm shadow-md shadow-purple-500/20 break-words whitespace-pre-wrap' : 'bg-gray-800 text-gray-200 border border-gray-700 rounded-tl-sm shadow-sm'}`}>
+                          {msg.role === 'bot' ? (msg.content ? <BotMessage content={msg.content} animated={msg.animated} onComplete={() => markAsAnimated(msg.id)} /> : <TypingLoader />) : msg.content}
+                        </div>
+                      </motion.div>
+                    ))
+                  )}
                   <div ref={messagesEndRef} />
                 </div>
-                {messages.length <= 1 && !isLoading && (
-                  <div className="px-3 pb-2 flex gap-2 overflow-x-auto scrollbar-hide shrink-0">
-                    {SUGGESTIONS.map((text, i) => (
-                      <button key={i} onClick={() => processMessage(text)} className="whitespace-nowrap flex items-center gap-1.5 bg-gray-800 border border-purple-500/30 text-gray-300 text-[11px] font-medium px-3 py-1.5 rounded-full hover:bg-purple-500/20 hover:text-white hover:border-purple-500/50 transition-all flex-shrink-0">
-                        <Sparkles className="w-3 h-3 text-purple-400" />{text}
-                      </button>
-                    ))}
-                  </div>
-                )}
                 <form onSubmit={handleSendMessage} className="p-3 bg-gray-800/80 backdrop-blur-sm border-t border-purple-500/20 shrink-0 z-10">
                   <div className="relative flex items-center">
                     <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask about items, Aura, rules..." className="w-full bg-gray-900 border border-gray-700 rounded-full py-3 pl-4 pr-20 text-base md:text-sm text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-inner" />

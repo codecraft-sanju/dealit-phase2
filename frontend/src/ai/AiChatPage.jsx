@@ -218,6 +218,7 @@ const AiChatPage = ({ user }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false); 
+  const [hasStartedChat, setHasStartedChat] = useState(false);
   
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 768);
   const [sessions, setSessions] = useState([]);
@@ -239,7 +240,6 @@ const AiChatPage = ({ user }) => {
   const abortControllerRef = useRef(null);
   const messagesEndRef = useRef(null);
   const audioRef = useRef(null);
-  // FIX: Added streaming guard to prevent loadHistory from wiping local message state!
   const isStreamingRef = useRef(false);
   
   useEffect(() => {
@@ -330,12 +330,11 @@ const AiChatPage = ({ user }) => {
   
   useEffect(() => {
     const loadHistory = async () => {
-      if (isStreamingRef.current) return; // Prevent overwriting during active response stream
+      if (isStreamingRef.current) return;
       
       if (!routeSessionId) {
-        setMessages([
-          { id: 'init', role: 'bot', content: `Welcome to Dealit AI, ${user?.full_name?.split(' ')[0] || 'friend'}. How can I assist you with your trades today?`, animated: true }
-        ]);
+        setMessages([]);
+        setHasStartedChat(false);
         setCurrentSessionId(null);
         setIsLoading(false);
         return;
@@ -356,6 +355,7 @@ const AiChatPage = ({ user }) => {
             animated: false 
           }));
           setMessages(formattedHistory);
+          setHasStartedChat(true);
           setCurrentSessionId(res.data.sessionId);
         } else {
           navigate('/ai-chat', { replace: true });
@@ -372,9 +372,8 @@ const AiChatPage = ({ user }) => {
   const handleNewChat = () => {
     setCurrentSessionId(null);
     setIsLoading(false);
-    setMessages([
-      { id: Date.now().toString(), role: 'bot', content: `Welcome to Dealit AI, ${user?.full_name?.split(' ')[0] || 'friend'}. How can I assist you with your trades today?`, animated: true }
-    ]);
+    setHasStartedChat(false);
+    setMessages([]);
     navigate('/ai-chat', { replace: true });
     window.history.pushState(null, '', '/ai-chat');
     if (window.innerWidth <= 768) setIsSidebarOpen(false); 
@@ -501,6 +500,8 @@ const AiChatPage = ({ user }) => {
     abortControllerRef.current = new AbortController();
     setVoiceState('thinking');
     isStreamingRef.current = true;
+    setHasStartedChat(true);
+
     try {
       const token = localStorage.getItem('dealit_token');
       const smartContextStr = localStorage.getItem('dealit_ai_context');
@@ -603,6 +604,8 @@ const AiChatPage = ({ user }) => {
     if (!userMessage.trim()) return;
     if (abortControllerRef.current) abortControllerRef.current.abort();
     abortControllerRef.current = new AbortController();
+    
+    setHasStartedChat(true);
     const newMessages = [...messages, { id: Date.now(), role: 'user', content: userMessage }];
     setMessages(newMessages);
     setInput('');
@@ -856,9 +859,60 @@ const AiChatPage = ({ user }) => {
           </AnimatePresence>
         ) : (
           <>
-            <div className="flex-1 overflow-y-auto p-4 space-y-6 container mx-auto max-w-3xl scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent relative">
+            <div className={`flex-1 overflow-y-auto p-4 space-y-6 container mx-auto max-w-3xl scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent relative ${!hasStartedChat && 'flex flex-col items-center justify-center'}`}>
               {isLoading && messages.length === 0 ? (
                 <GeneratingLoader />
+              ) : !hasStartedChat ? (
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                  className="flex flex-col items-center justify-center text-center w-full max-w-lg mx-auto"
+                >
+                  <motion.div 
+                    initial={{ scale: 0.8, rotate: -10 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.2 }}
+                    className="w-24 h-24 mb-6 rounded-full bg-gradient-to-br from-purple-600/20 to-emerald-500/20 flex items-center justify-center border border-purple-500/40 shadow-[0_0_40px_rgba(163,136,225,0.15)] relative"
+                  >
+                    <div className="absolute inset-0 rounded-full border border-purple-400/30 animate-[spin_10s_linear_infinite]" />
+                    <Bot className="w-12 h-12 text-purple-400 drop-shadow-[0_0_10px_rgba(163,136,225,0.5)]" />
+                  </motion.div>
+                  <motion.h2 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.4 }}
+                    className="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-emerald-400 to-purple-400 mb-3"
+                  >
+                    Welcome to Dealit AI{user?.full_name ? `, ${user.full_name.split(' ')[0]}` : ''}!
+                  </motion.h2>
+                  <motion.p 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.5, delay: 0.6 }}
+                    className="text-gray-400 text-sm md:text-base mb-8 max-w-md"
+                  >
+                    Your personal assistant for trades, credits, and navigating the Dealit marketplace. How can I help you today?
+                  </motion.p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
+                    {SUGGESTIONS.map((text, i) => (
+                      <motion.button 
+                        key={i} 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.4, delay: 0.7 + (i * 0.1) }}
+                        onClick={() => processMessage(text)} 
+                        className="flex items-center gap-3 bg-gray-800/60 border border-gray-700/50 text-gray-300 text-sm font-medium p-4 rounded-xl hover:bg-purple-500/10 hover:text-white hover:border-purple-500/40 transition-all text-left shadow-sm group"
+                      >
+                        <div className="p-2 rounded-lg bg-gray-900 group-hover:bg-purple-500/20 transition-colors">
+                          <Sparkles className="w-4 h-4 text-purple-400" />
+                        </div>
+                        {text}
+                      </motion.button>
+                    ))}
+                  </div>
+                </motion.div>
               ) : (
                 messages.map((msg) => (
                   <motion.div 
@@ -876,16 +930,8 @@ const AiChatPage = ({ user }) => {
               )}
               <div ref={messagesEndRef} />
             </div>
+            
             <div className="shrink-0 bg-gray-900 pb-safe">
-              {messages.length <= 1 && !isLoading && (
-                <div className="container mx-auto max-w-3xl px-4 pb-3 flex flex-wrap gap-2 justify-center">
-                  {SUGGESTIONS.map((text, i) => (
-                    <button key={i} onClick={() => processMessage(text)} className="flex items-center gap-1.5 bg-gray-800/80 border border-purple-500/30 text-gray-300 text-xs font-medium px-4 py-2 rounded-full hover:bg-purple-500/20 hover:text-white hover:border-purple-500/50 transition-all shadow-sm">
-                      <Sparkles className="w-3.5 h-3.5 text-purple-400" />{text}
-                    </button>
-                  ))}
-                </div>
-              )}
               <div className="bg-gray-800/50 backdrop-blur-sm border-t border-purple-500/20 p-4 container mx-auto max-w-3xl">
                 <form onSubmit={handleSendMessage} className="relative flex items-center">
                   <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask Dealit AI..." className="w-full bg-gray-900 border border-gray-700 rounded-full py-4 pl-6 pr-24 text-base md:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-inner" />
