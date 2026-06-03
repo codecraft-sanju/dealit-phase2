@@ -402,18 +402,33 @@ const FloatingAIAssistant = ({ user }) => {
     }
   };
   
-  const handleMicClick = () => {
+const handleMicClick = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) { alert("Your browser does not support voice input."); return; }
     if (audioRef.current) audioRef.current.pause();
+    
     const recognition = new SpeechRecognition();
     recognition.lang = 'en-IN';
     recognition.onstart = () => setVoiceState('listening');
+    
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
       processVoiceMessage(transcript);
     };
-    recognition.onerror = (e) => setVoiceState('idle');
+    
+    // Yahan UI error alerts add kiye hain
+    recognition.onerror = (e) => {
+      console.error("Microphone Error:", e.error);
+      if (e.error === 'not-allowed') {
+        alert("⚠️ Microphone blocked! URL bar ke left icon par click karein aur mic ko 'Allow' karein.");
+      } else if (e.error === 'no-speech') {
+        console.log("No speech detected by microphone.");
+      } else {
+        alert(`Mic Issue: ${e.error}`);
+      }
+      setVoiceState(prev => prev === 'listening' ? 'idle' : prev);
+    };
+    
     recognition.onend = () => setVoiceState(prev => prev === 'listening' ? 'idle' : prev);
     recognition.start();
   };
