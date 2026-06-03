@@ -17,7 +17,6 @@ const AISetting = require('../models/AISetting');
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// Anti-Spam: Prevents users from holding the 'Enter' key and DDOSing the AI.
 const aiChatLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 15,
@@ -27,7 +26,7 @@ const aiChatLimiter = rateLimit({
   }
 });
 
-// --- NEW: Database-Backed Daily AI Token Logic ---
+
 const checkAndConsumeAIToken = async (userId, type) => {
   const user = await User.findById(userId);
   if (!user) return false;
@@ -35,7 +34,7 @@ const checkAndConsumeAIToken = async (userId, type) => {
   const now = new Date();
   const lastReset = user.lastAITokenReset || new Date(0);
   
-  // Check if it is a new day (UTC)
+
   const isNewDay = now.getUTCFullYear() !== lastReset.getUTCFullYear() ||
                    now.getUTCMonth() !== lastReset.getUTCMonth() ||
                    now.getUTCDate() !== lastReset.getUTCDate();
@@ -267,14 +266,26 @@ const processChat = async (req, res) => {
   try {
     const { message, sessionId, isSmartContextEnabled, chatMode } = req.body;
     const userId = req.user._id;
+    
+    const cleanMessage = message.trim();
+    const PRESET_RESPONSES = {
+      "What is my Aura Score?": (user) => `Your current Aura Score is **${user.aura_points || 0}**. Keep making successful deliveries and referrals to increase it!`,
+      "How do I earn more Credits?": () => `You can earn more credits by:\n1. Listing unused items for barter or sale.\n2. Completing successful trades.\n3. Referring friends using your referral code.`,
+      "Explain OTP delivery verification": () => `OTP delivery verification ensures safe trades. When a buyer receives an item, they get an OTP. They must share this OTP with the delivery partner to confirm successful handover. Once verified, the seller gets their credits!`,
+     "Tell me my account details": (user) => `Here is your account summary:\n- **Name:** ${user.full_name} ${user.isVerified ? '(Verified)' : '(Unverified)'}\n- **Credits:** ${user.account_credits || 0}\n- **Aura Score:** ${user.aura_points || 0}\n- **Active Listings:** ${user.listedProductsCount || 0}\n- **Total Referrals:** ${user.totalReferrals || 0}`
+    };
 
-    // --- 1. EARLY TOKEN CHECK ---
-    const hasTokens = await checkAndConsumeAIToken(userId, 'chat');
-    if (!hasTokens) {
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.write(`data: ${JSON.stringify({ content: "\n\n⚠️ **Daily Limit Reached:** You have exhausted your AI Chat tokens for today. Please return tomorrow to chat more!" })}\n\n`);
-      res.write('data: [DONE]\n\n');
-      return res.end();
+    const isPreset = PRESET_RESPONSES[cleanMessage] !== undefined;
+
+   
+    if (!isPreset) {
+      const hasTokens = await checkAndConsumeAIToken(userId, 'chat');
+      if (!hasTokens) {
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.write(`data: ${JSON.stringify({ content: "\n\n⚠️ **Daily Limit Reached:** You have exhausted your AI Chat tokens for today. Please return tomorrow to chat more!" })}\n\n`);
+        res.write('data: [DONE]\n\n');
+        return res.end();
+      }
     }
 
     let user, chatDoc;
@@ -300,6 +311,42 @@ const processChat = async (req, res) => {
 
     if (!user) {
         return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (isPreset) {
+      let currentSessionId = sessionId;
+      let targetChatDoc = chatDoc;
+      
+      if (!targetChatDoc) {
+        const generatedTitle = cleanMessage.length > 25 ? cleanMessage.substring(0, 25) + '...' : cleanMessage;
+        targetChatDoc = await AIChat.create({
+          user: userId,
+          title: generatedTitle,
+          messages: [] 
+        });
+        currentSessionId = targetChatDoc._id;
+      }
+
+      const presetReply = PRESET_RESPONSES[cleanMessage](user);
+
+      // FIX: Save the preset interaction directly to the DB *before* sending stream chunks
+      // This prevents the frontend from fetching an empty chat history during the active stream
+      targetChatDoc.messages.push({ role: 'user', content: cleanMessage });
+      targetChatDoc.messages.push({ role: 'assistant', content: presetReply });
+      await targetChatDoc.save();
+
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('X-Accel-Buffering', 'no');
+
+      res.write(`data: ${JSON.stringify({ type: 'session_id', sessionId: currentSessionId })}\n\n`);
+      
+      await new Promise(resolve => setTimeout(resolve, 300));
+      res.write(`data: ${JSON.stringify({ content: presetReply })}\n\n`);
+      
+      res.write('data: [DONE]\n\n');
+      return res.end();
     }
 
     let systemPrompt = prompts.getBaseSystemPrompt(user, chatMode);
@@ -454,7 +501,7 @@ const synthesizeVoice = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Text is required' });
     }
 
-    // --- 1. EARLY TOKEN CHECK ---
+    
     const hasTokens = await checkAndConsumeAIToken(req.user._id, 'voice');
     if (!hasTokens) {
       return res.status(429).json({ 

@@ -239,6 +239,8 @@ const AiChatPage = ({ user }) => {
   const abortControllerRef = useRef(null);
   const messagesEndRef = useRef(null);
   const audioRef = useRef(null);
+  // FIX: Added streaming guard to prevent loadHistory from wiping local message state!
+  const isStreamingRef = useRef(false);
   
   useEffect(() => {
     const handleResize = () => {
@@ -328,6 +330,8 @@ const AiChatPage = ({ user }) => {
   
   useEffect(() => {
     const loadHistory = async () => {
+      if (isStreamingRef.current) return; // Prevent overwriting during active response stream
+      
       if (!routeSessionId) {
         setMessages([
           { id: 'init', role: 'bot', content: `Welcome to Dealit AI, ${user?.full_name?.split(' ')[0] || 'friend'}. How can I assist you with your trades today?`, animated: true }
@@ -496,6 +500,7 @@ const AiChatPage = ({ user }) => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
     abortControllerRef.current = new AbortController();
     setVoiceState('thinking');
+    isStreamingRef.current = true;
     try {
       const token = localStorage.getItem('dealit_token');
       const smartContextStr = localStorage.getItem('dealit_ai_context');
@@ -517,7 +522,6 @@ const AiChatPage = ({ user }) => {
         signal: abortControllerRef.current.signal
       });
 
-      // ADDED: Better limit error handling
       if (!response.ok) {
         let errorMessage = 'Voice chat failed.';
         try {
@@ -542,6 +546,7 @@ const AiChatPage = ({ user }) => {
               setTimeout(() => {
                 if (botReply.trim()) speakText(botReply);
                 else setVoiceState('idle');
+                isStreamingRef.current = false;
               }, 300);
               break;
             }
@@ -558,6 +563,7 @@ const AiChatPage = ({ user }) => {
       }
     } catch (error) {
       if (error.name === 'AbortError') return;
+      isStreamingRef.current = false;
       setVoiceState('idle');
       alert(`Voice Error: ${error.message}`);
     }
@@ -608,6 +614,8 @@ const AiChatPage = ({ user }) => {
       { id: botMessageId, role: 'bot', content: '', animated: false } 
     ]);
     
+    isStreamingRef.current = true;
+
     try {
       const token = localStorage.getItem('dealit_token');
       const smartContextStr = localStorage.getItem('dealit_ai_context');
@@ -629,7 +637,6 @@ const AiChatPage = ({ user }) => {
         signal: abortControllerRef.current.signal
       });
 
-      // ADDED: Parse error json on rate limits
       if (!response.ok) {
         let errorMessage = 'Server connection failed.';
         try {
@@ -655,6 +662,7 @@ const AiChatPage = ({ user }) => {
             if (dataStr === '[DONE]') {
               setTimeout(() => {
                 setMessages((prev) => prev.map((msg) => msg.id === botMessageId ? { ...msg, content: botReply } : msg));
+                isStreamingRef.current = false;
               }, 1000);
               break;
             }
@@ -675,6 +683,7 @@ const AiChatPage = ({ user }) => {
     } catch (error) {
       if (error.name === 'AbortError') return;
       setIsLoading(false);
+      isStreamingRef.current = false;
       setMessages((prev) => prev.map((msg) => msg.id === botMessageId ? { ...msg, content: `⚠️ ${error.message}` } : msg));
     }
   };

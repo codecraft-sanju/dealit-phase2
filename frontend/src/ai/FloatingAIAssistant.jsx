@@ -94,10 +94,10 @@ const BotMessage = ({ content, animated, onComplete }) => {
 };
 
 const SUGGESTIONS = [
-  "What is Aura Score?",
-  "How do I earn Credits?",
-  "Delivery rules",
-  "My account stats"
+  "What is my Aura Score?",
+  "How do I earn more Credits?",
+  "Explain OTP delivery verification",
+  "Tell me my account details"
 ];
 
 const FloatingAIAssistant = ({ user }) => {
@@ -121,6 +121,8 @@ const FloatingAIAssistant = ({ user }) => {
   const abortControllerRef = useRef(null);
   const audioRef = useRef(null);
   const [buttonState, setButtonState] = useState('bot');
+  // FIX: Streaming guard
+  const isStreamingRef = useRef(false);
   
   useEffect(() => {
     if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = () => {};
@@ -241,6 +243,7 @@ const FloatingAIAssistant = ({ user }) => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
     abortControllerRef.current = new AbortController();
     setVoiceState('thinking');
+    isStreamingRef.current = true;
     try {
       const token = localStorage.getItem('dealit_token');
       const smartContextStr = localStorage.getItem('dealit_ai_context');
@@ -254,7 +257,6 @@ const FloatingAIAssistant = ({ user }) => {
         signal: abortControllerRef.current.signal
       });
 
-      // ADDED: Better limit error handling
       if (!response.ok) {
         let errorMessage = 'Voice chat failed.';
         try {
@@ -279,6 +281,7 @@ const FloatingAIAssistant = ({ user }) => {
               setTimeout(() => {
                 if (botReply.trim()) speakText(botReply);
                 else setVoiceState('idle');
+                isStreamingRef.current = false;
               }, 300);
               break;
             }
@@ -292,6 +295,7 @@ const FloatingAIAssistant = ({ user }) => {
       }
     } catch (error) {
       if (error.name === 'AbortError') return;
+      isStreamingRef.current = false;
       setVoiceState('idle');
       alert(`Voice Error: ${error.message}`);
     }
@@ -332,6 +336,8 @@ const FloatingAIAssistant = ({ user }) => {
     const botMessageId = Date.now() + 1;
     setMessages((prev) => [...prev, { id: botMessageId, role: 'bot', content: '', animated: false }]);
     
+    isStreamingRef.current = true;
+
     try {
       const token = localStorage.getItem('dealit_token');
       const smartContextStr = localStorage.getItem('dealit_ai_context');
@@ -345,7 +351,6 @@ const FloatingAIAssistant = ({ user }) => {
         signal: abortControllerRef.current.signal
       });
 
-      // ADDED: Parse error json on rate limits
       if (!response.ok) {
         let errorMessage = 'Server connection failed.';
         try {
@@ -369,7 +374,10 @@ const FloatingAIAssistant = ({ user }) => {
           if (line.startsWith('data: ')) {
             const dataStr = line.replace('data: ', '');
             if (dataStr === '[DONE]') {
-              setTimeout(() => setMessages((prev) => prev.map((msg) => msg.id === botMessageId ? { ...msg, content: botReply } : msg)), 1000);
+              setTimeout(() => {
+                setMessages((prev) => prev.map((msg) => msg.id === botMessageId ? { ...msg, content: botReply } : msg));
+                isStreamingRef.current = false;
+              }, 1000);
               break;
             }
             try {
@@ -384,6 +392,7 @@ const FloatingAIAssistant = ({ user }) => {
     } catch (error) {
       if (error.name === 'AbortError') return;
       setIsLoading(false);
+      isStreamingRef.current = false;
       setMessages((prev) => prev.map((msg) => msg.id === botMessageId ? { ...msg, content: `⚠️ ${error.message}` } : msg));
     }
   };
@@ -448,7 +457,6 @@ const FloatingAIAssistant = ({ user }) => {
               </div>
             </div>
             
-            {/* CHANGED: FULL SCREEN VOICE UI TAKEOVER */}
             {voiceState !== 'idle' ? (
               <AnimatePresence>
                 <motion.div 

@@ -6,8 +6,7 @@ const orderSchema = new mongoose.Schema({
   item: { type: mongoose.Schema.Types.ObjectId, ref: 'Item', required: true },
 
   itemPrice: { type: Number, required: true },      // Credits charged for the item
-  
-  // NEW FIELDS: Shipping Breakdown
+
   baseShippingCost: { type: Number, default: 0 },   // Actual delivery charge
   platformFee: { type: Number, default: 0 },        // 2% of base shipping
   gstAmount: { type: Number, default: 0 },          // 18% of base shipping
