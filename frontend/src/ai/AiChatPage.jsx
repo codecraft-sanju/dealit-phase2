@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { ArrowLeft, Send, Bot, Sparkles, Menu, Plus, Settings, HelpCircle, MessageSquare, X, Trash2, Minimize2, ChevronDown, Mic, User } from 'lucide-react';
+import { ArrowLeft, Send, Bot, Sparkles, Menu, Plus, Settings, HelpCircle, MessageSquare, X, Trash2, Minimize2, ChevronDown, Mic, User, WifiOff } from 'lucide-react'; // MODIFIED: Added WifiOff
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion'; 
 import axios from 'axios';
@@ -81,6 +81,7 @@ const MagicButtonStyles = () => (
       .magic-points_wrapper .point:nth-child(8) { left: 58%; opacity: 0.8; animation-duration: 2.25s; animation-delay: 0.2s; }
       .magic-points_wrapper .point:nth-child(9) { left: 98%; opacity: 0.6; animation-duration: 2.6s; animation-delay: 0.1s; }
       .magic-points_wrapper .point:nth-child(10) { left: 65%; opacity: 1; animation-duration: 2.5s; animation-delay: 0.2s; }
+      
       .magic-inner {
         z-index: 2;
         gap: 6px;
@@ -90,21 +91,25 @@ const MagicButtonStyles = () => (
         align-items: center;
         justify-content: center;
         font-weight: 500;
-        transition: color 0.2s ease-in-out;
+        /* CHANGED: Added width and height to ensure perfect flex centering */
+        width: 100%;
+        height: 100%;
       }
+      
       .magic-inner svg.icon {
-        transition: fill 0.1s linear;
-      }
-      .magic-btn:focus svg.icon { fill: white; }
-      .magic-btn:hover svg.icon {
+        /* CHANGED: Removed transition and added infinite auto-animation */
         fill: transparent;
-        animation: dasharray 1s linear forwards, filled 0.1s linear forwards 0.95s;
+        animation: magic-auto-draw 2s linear infinite;
       }
-      @keyframes dasharray {
-        from { stroke-dasharray: 0 0 0 0; }
-        to { stroke-dasharray: 68 68 0 0; }
+      
+      /* CHANGED: New keyframes for automatic 2-second loop instead of hover */
+      @keyframes magic-auto-draw {
+        0% { stroke-dasharray: 0 0 0 0; fill: transparent; }
+        25% { stroke-dasharray: 68 68 0 0; fill: transparent; }
+        30% { fill: white; }
+        80% { stroke-dasharray: 68 68 0 0; fill: white; }
+        100% { stroke-dasharray: 0 0 0 0; fill: transparent; }
       }
-      @keyframes filled { to { fill: white; } }
     `}
   </style>
 );
@@ -336,6 +341,29 @@ const AiChatPage = ({ user }) => {
   const [voiceState, setVoiceState] = useState('idle');
   const [voicePref, setVoicePref] = useState(() => localStorage.getItem('dealit_ai_voice_pref') || 'female');
   const [isPremiumVoiceLimited, setIsPremiumVoiceLimited] = useState(false);
+
+  // MODIFIED: Added offline state and listeners
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // MODIFIED: Cache messages automatically when updated
+  useEffect(() => {
+    if (currentSessionId && messages.length > 0) {
+      localStorage.setItem(`dealit_ai_history_${currentSessionId}`, JSON.stringify(messages));
+    }
+  }, [messages, currentSessionId]);
   
   const abortControllerRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -411,14 +439,23 @@ const AiChatPage = ({ user }) => {
     return () => window.removeEventListener('resize', handleResizeSidebar);
   }, []);
   
+  // MODIFIED: Updated fetchSessions for caching
   const fetchSessions = useCallback(async () => {
     try {
+      const cached = localStorage.getItem('dealit_ai_sessions');
+      if (cached) {
+        setSessions(JSON.parse(cached));
+      }
+
       const token = localStorage.getItem('dealit_token');
       const res = await axios.get(`${API_URL}/ai/chat/sessions`, {
         headers: { Authorization: `Bearer ${token}` },
         withCredentials: true
       });
-      if (res.data.success) setSessions(res.data.sessions);
+      if (res.data.success) {
+        setSessions(res.data.sessions);
+        localStorage.setItem('dealit_ai_sessions', JSON.stringify(res.data.sessions));
+      }
     } catch (error) {
       console.error('Failed to load chat sessions:', error);
     }
@@ -428,6 +465,7 @@ const AiChatPage = ({ user }) => {
     fetchSessions();
   }, [fetchSessions]);
   
+  // MODIFIED: Updated loadHistory for Stale-While-Revalidate pattern
   useEffect(() => {
     const loadHistory = async () => {
       if (isStreamingRef.current) return;
@@ -439,7 +477,16 @@ const AiChatPage = ({ user }) => {
         setIsLoading(false);
         return;
       }
-      setIsLoading(true);
+
+      const cachedHistory = localStorage.getItem(`dealit_ai_history_${routeSessionId}`);
+      if (cachedHistory) {
+        setMessages(JSON.parse(cachedHistory));
+        setHasStartedChat(true);
+        setCurrentSessionId(routeSessionId);
+      } else {
+        setIsLoading(true);
+      }
+
       try {
         const token = localStorage.getItem('dealit_token');
         const res = await axios.get(`${API_URL}/ai/chat/history/${routeSessionId}`, {
@@ -457,6 +504,7 @@ const AiChatPage = ({ user }) => {
           setMessages(formattedHistory);
           setHasStartedChat(true);
           setCurrentSessionId(res.data.sessionId);
+          localStorage.setItem(`dealit_ai_history_${routeSessionId}`, JSON.stringify(formattedHistory));
         } else {
           navigate('/ai-chat', { replace: true });
         }
@@ -595,6 +643,13 @@ const AiChatPage = ({ user }) => {
       setVoiceState('idle');
       return;
     }
+
+    // MODIFIED: Added offline check
+    if (!navigator.onLine) {
+      setIsOffline(true);
+      setTimeout(() => setIsOffline(false), 4000);
+      return;
+    }
     
     if (abortControllerRef.current) abortControllerRef.current.abort();
     abortControllerRef.current = new AbortController();
@@ -714,6 +769,14 @@ const AiChatPage = ({ user }) => {
   
   const processMessage = async (userMessage) => {
     if (!userMessage.trim()) return;
+
+    // MODIFIED: Added offline check
+    if (!navigator.onLine) {
+      setIsOffline(true);
+      setTimeout(() => setIsOffline(false), 4000);
+      return;
+    }
+
     if (abortControllerRef.current) abortControllerRef.current.abort();
     abortControllerRef.current = new AbortController();
     
@@ -925,7 +988,22 @@ const AiChatPage = ({ user }) => {
         </div>
 
         <div className="relative flex-1 flex flex-col overflow-hidden">
-          {/* Main Chat Content always rendered now */}
+
+          {/* MODIFIED: Added Offline Toast Here */}
+          <AnimatePresence>
+            {isOffline && (
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2 bg-red-500 text-white text-sm font-medium rounded-full shadow-lg"
+              >
+                <WifiOff className="w-4 h-4" />
+                Connection lost. Waiting for network...
+              </motion.div>
+            )}
+          </AnimatePresence>
+       
           <div className={`flex-1 overflow-y-auto p-4 space-y-6 container mx-auto max-w-3xl scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent relative ${!hasStartedChat && 'flex flex-col items-center justify-center'}`}>
             {isLoading && messages.length === 0 ? (
               <GeneratingLoader />
@@ -998,28 +1076,34 @@ const AiChatPage = ({ user }) => {
             <div ref={messagesEndRef} />
           </div>
           
-          {/* Main Input Form always rendered */}
-          <div className="shrink-0 bg-gray-900 pb-safe z-10 relative">
-            <div className="bg-gray-800/50 backdrop-blur-sm border-t border-purple-500/20 p-4 container mx-auto max-w-3xl">
-              <form onSubmit={handleSendMessage} className="relative flex items-center">
-                <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask Dealit AI..." className="w-full bg-gray-900 border border-gray-700 rounded-full py-4 pl-6 pr-24 text-base md:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-inner" />
-                <button type="button" onClick={handleMicClick} className="absolute right-14 w-10 h-10 flex items-center justify-center rounded-full transition-all text-gray-400 hover:text-purple-400">
-                  <Mic className="w-5 h-5" />
-                </button>
+     
+<div className="shrink-0 bg-gray-900 pb-safe z-10 relative">
+  <div className="bg-gray-800/50 backdrop-blur-sm border-t border-purple-500/20 p-4 container mx-auto max-w-3xl">
+    {/* CHANGED: Added flex items-center gap-2 directly to the form, removed absolute positioning setup */}
+    <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+      {/* CHANGED: Added flex-1 and removed large right padding (pr-24) */}
+      <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask Dealit AI..." className="flex-1 bg-gray-900 border border-gray-700 rounded-full py-4 px-5 text-base md:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-inner" />
+      
+      {/* CHANGED: Removed absolute positioning, added shrink-0 */}
+      <button type="button" onClick={handleMicClick} className="w-12 h-12 shrink-0 flex items-center justify-center rounded-full transition-all text-gray-400 hover:bg-gray-800 hover:text-purple-400">
+        <Mic className="w-5 h-5" />
+      </button>
 
-                <button type="submit" disabled={isLoading || !input.trim()} className="magic-btn absolute right-2 w-10 h-10 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-purple-500/30" style={{ '--round': '9999px', padding: 0 }}>
-                  <div className="magic-points_wrapper">
-                    {[...Array(10)].map((_, i) => <i key={i} className="point"></i>)}
-                  </div>
-                  <span className="magic-inner">
-                    <Send className="w-5 h-5 ml-1 icon" fill="none" strokeWidth="2.5" />
-                  </span>
-                </button>
-              </form>
-            </div>
-          </div>
+      {/* CHANGED: Removed absolute positioning, added shrink-0 */}
+      <button type="submit" disabled={isLoading || !input.trim()} className="magic-btn shrink-0 w-12 h-12 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-purple-500/30" style={{ '--round': '9999px', padding: 0 }}>
+        <div className="magic-points_wrapper">
+          {[...Array(10)].map((_, i) => <i key={i} className="point"></i>)}
+        </div>
+        <span className="magic-inner">
+          {/* CHANGED: Removed ml-1 to fix centering */}
+          <Send className="w-5 h-5 icon" fill="none" strokeWidth="2.5" />
+        </span>
+      </button>
+    </form>
+  </div>
+</div>
 
-          {/* Voice Overlay conditionally rendered OVER the chat */}
+        
           <AnimatePresence>
             {voiceState !== 'idle' && (
               <motion.div 

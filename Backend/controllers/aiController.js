@@ -276,8 +276,6 @@ const processChat = async (req, res) => {
     };
 
     const isPreset = PRESET_RESPONSES[cleanMessage] !== undefined;
-
-   
     if (!isPreset) {
       const hasTokens = await checkAndConsumeAIToken(userId, 'chat');
       if (!hasTokens) {

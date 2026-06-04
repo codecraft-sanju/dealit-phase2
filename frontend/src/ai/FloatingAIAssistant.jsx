@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Bot, Sparkles, Maximize2, Minimize2, Mic, User, ArrowRight } from 'lucide-react';
+import { X, Send, Bot, Sparkles, Maximize2, Minimize2, Mic, User, ArrowRight, WifiOff } from 'lucide-react'; // MODIFIED: Added WifiOff
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
@@ -81,6 +81,7 @@ const MagicButtonStyles = () => (
       .magic-points_wrapper .point:nth-child(8) { left: 58%; opacity: 0.8; animation-duration: 2.25s; animation-delay: 0.2s; }
       .magic-points_wrapper .point:nth-child(9) { left: 98%; opacity: 0.6; animation-duration: 2.6s; animation-delay: 0.1s; }
       .magic-points_wrapper .point:nth-child(10) { left: 65%; opacity: 1; animation-duration: 2.5s; animation-delay: 0.2s; }
+      
       .magic-inner {
         z-index: 2;
         gap: 6px;
@@ -90,21 +91,25 @@ const MagicButtonStyles = () => (
         align-items: center;
         justify-content: center;
         font-weight: 500;
-        transition: color 0.2s ease-in-out;
+        /* CHANGED: Added width and height to ensure perfect flex centering */
+        width: 100%;
+        height: 100%;
       }
+      
       .magic-inner svg.icon {
-        transition: fill 0.1s linear;
-      }
-      .magic-btn:focus svg.icon { fill: white; }
-      .magic-btn:hover svg.icon {
+        /* CHANGED: Removed transition and added infinite auto-animation */
         fill: transparent;
-        animation: dasharray 1s linear forwards, filled 0.1s linear forwards 0.95s;
+        animation: magic-auto-draw 2s linear infinite;
       }
-      @keyframes dasharray {
-        from { stroke-dasharray: 0 0 0 0; }
-        to { stroke-dasharray: 68 68 0 0; }
+      
+      /* CHANGED: New keyframes for automatic 2-second loop instead of hover */
+      @keyframes magic-auto-draw {
+        0% { stroke-dasharray: 0 0 0 0; fill: transparent; }
+        25% { stroke-dasharray: 68 68 0 0; fill: transparent; }
+        30% { fill: white; }
+        80% { stroke-dasharray: 68 68 0 0; fill: white; }
+        100% { stroke-dasharray: 0 0 0 0; fill: transparent; }
       }
-      @keyframes filled { to { fill: white; } }
     `}
   </style>
 );
@@ -216,6 +221,29 @@ const FloatingAIAssistant = ({ user }) => {
 
   const [chatMode, setChatMode] = useState(() => localStorage.getItem('dealit_ai_mode') || 'dealit');
   
+  // MODIFIED: Added offline state and listeners
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // MODIFIED: Cache messages automatically when updated
+  useEffect(() => {
+    if (currentSessionId && messages.length > 0) {
+      localStorage.setItem(`dealit_ai_history_${currentSessionId}`, JSON.stringify(messages));
+    }
+  }, [messages, currentSessionId]);
+
   const messagesEndRef = useRef(null);
   const abortControllerRef = useRef(null);
   const audioRef = useRef(null);
@@ -338,6 +366,14 @@ const FloatingAIAssistant = ({ user }) => {
       setVoiceState('idle');
       return;
     }
+
+    // MODIFIED: Added offline check
+    if (!navigator.onLine) {
+      setIsOffline(true);
+      setTimeout(() => setIsOffline(false), 4000);
+      return;
+    }
+
     if (abortControllerRef.current) abortControllerRef.current.abort();
     abortControllerRef.current = new AbortController();
     setVoiceState('thinking');
@@ -440,6 +476,14 @@ const FloatingAIAssistant = ({ user }) => {
   
   const processMessage = async (userMessage) => {
     if (!userMessage.trim()) return;
+
+    // MODIFIED: Added offline check
+    if (!navigator.onLine) {
+      setIsOffline(true);
+      setTimeout(() => setIsOffline(false), 4000);
+      return;
+    }
+
     if (abortControllerRef.current) abortControllerRef.current.abort();
     abortControllerRef.current = new AbortController();
     
@@ -586,6 +630,22 @@ const FloatingAIAssistant = ({ user }) => {
             </div>
             
             <div className="relative flex-1 flex flex-col overflow-hidden">
+              
+              {/* MODIFIED: Added Offline Toast Here */}
+              <AnimatePresence>
+                {isOffline && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className="absolute top-2 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-3 py-1.5 bg-red-500 text-white text-xs font-medium rounded-full shadow-lg whitespace-nowrap"
+                  >
+                    <WifiOff className="w-3 h-3" />
+                    Connection lost. Retrying...
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               {/* Main Chat Content always rendered */}
               <div className={`flex-1 overflow-y-auto p-3 space-y-4 scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent relative ${!hasStartedChat && 'flex flex-col items-center justify-center'}`}>
                 {!hasStartedChat ? (
@@ -657,24 +717,30 @@ const FloatingAIAssistant = ({ user }) => {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Main Input Form always rendered */}
-              <form onSubmit={handleSendMessage} className="p-3 bg-gray-800/80 backdrop-blur-sm border-t border-purple-500/20 shrink-0 z-10 relative">
-                <div className="relative flex items-center">
-                  <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask about items, Aura, rules..." className="w-full bg-gray-900 border border-gray-700 rounded-full py-3 pl-4 pr-20 text-base md:text-sm text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-inner" />
-                  <button type="button" onClick={handleMicClick} className="absolute right-12 w-8 h-8 flex items-center justify-center rounded-full transition-all text-gray-400 hover:text-purple-400"><Mic className="w-4 h-4" /></button>
-                  
-                  <button type="submit" disabled={isLoading || !input.trim()} className="magic-btn absolute right-2 w-8 h-8 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-purple-500/30" style={{ '--round': '9999px', padding: 0 }}>
-                    <div className="magic-points_wrapper">
-                      {[...Array(10)].map((_, i) => <i key={i} className="point"></i>)}
-                    </div>
-                    <span className="magic-inner">
-                      <Send className="w-3.5 h-3.5 ml-0.5 icon" fill="none" strokeWidth="2.5" />
-                    </span>
-                  </button>
-                </div>
-              </form>
+              
+<form onSubmit={handleSendMessage} className="p-3 bg-gray-800/80 backdrop-blur-sm border-t border-purple-500/20 shrink-0 z-10 relative">
 
-              {/* Voice Overlay conditionally rendered OVER the chat */}
+  <div className="flex items-center gap-2">
+
+    <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask about items, Aura, rules..." className="flex-1 bg-gray-900 border border-gray-700 rounded-full py-3 px-4 text-base md:text-sm text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-inner" />
+    
+ 
+    <button type="button" onClick={handleMicClick} className="w-10 h-10 shrink-0 flex items-center justify-center rounded-full transition-all text-gray-400 hover:bg-gray-800 hover:text-purple-400">
+      <Mic className="w-4 h-4" />
+    </button>
+    
+  
+    <button type="submit" disabled={isLoading || !input.trim()} className="magic-btn shrink-0 w-10 h-10 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-purple-500/30" style={{ '--round': '9999px', padding: 0 }}>
+      <div className="magic-points_wrapper">
+        {[...Array(10)].map((_, i) => <i key={i} className="point"></i>)}
+      </div>
+      <span className="magic-inner">
+       
+        <Send className="w-4 h-4 icon" fill="none" strokeWidth="2.5" />
+      </span>
+    </button>
+  </div>
+</form>
               <AnimatePresence>
                 {voiceState !== 'idle' && (
                   <motion.div 
@@ -723,8 +789,6 @@ const FloatingAIAssistant = ({ user }) => {
                           Daily Premium Limit Reached
                         </span>
                       )}
-                      
-                      {/* CHANGED HERE: Added text-white so TypingLoader becomes white */}
                       <div className="h-10 flex items-center justify-center w-full mb-8 text-white drop-shadow-md">
                         {voiceState === 'listening' && (
                           <div className="flex gap-2">
