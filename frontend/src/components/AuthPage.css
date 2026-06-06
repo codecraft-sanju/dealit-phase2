@@ -25,8 +25,8 @@ body, html {
 /* ── HERO SECTION (~35% of screen) ── */
 .new-hero-section {
   flex: 0 0 35%; /* Fixed ratio */
-  /* CHANGED: Increased top padding using max() to ensure logo and buttons clear the iPhone status bar/notch */
-  padding: max(env(safe-area-inset-top), 3rem) 1.5rem 0; 
+  /* CHANGED: 3rem ko kam karke 1.5rem kar diya taaki header thoda upar shift ho jaye */
+  padding: max(env(safe-area-inset-top), 1.5rem) 1.5rem 0; 
   display: flex;
   flex-direction: column;
   position: relative;
@@ -37,22 +37,23 @@ body, html {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem; /* CHANGED: Added slightly more breathing room below header */
+  margin-bottom: 1.5rem; 
 }
 
 .mb-brand {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  font-size: 1.2rem;
+  gap: 0.5rem;
+  font-size: 1.3rem;
   font-weight: 800;
   color: #ffffff;
   letter-spacing: -0.03em;
 }
 
 .brand-logo {
-  width: 20px; height: 20px;
-  filter: brightness(0) invert(1);
+  width: 26px; 
+  height: 26px;
+  object-fit: contain;
 }
 
 .top-toggle-btn {
@@ -71,7 +72,7 @@ body, html {
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start; /* CHANGED: Keeps content flowing naturally instead of strict center */
+  justify-content: flex-start; 
 }
 
 .hero-main-title {
@@ -414,8 +415,8 @@ body, html {
 }
 
 @media (max-height: 700px) {
-  /* CHANGED: Ensured smaller height screens also get better top padding */
-  .new-hero-section { flex: 0 0 42%; padding-top: max(env(safe-area-inset-top), 2.5rem); }
+  /* CHANGED: Chote phones ke liye bhi padding 2.5rem se ghata kar 1.2rem kar di hai */
+  .new-hero-section { flex: 0 0 42%; padding-top: max(env(safe-area-inset-top), 1.2rem); }
   .stats-banner-wrap { top: 42%; }
   .hero-main-title { font-size: 1.5rem; margin-bottom: 0.4rem; } 
   .aw-heading { font-size: 1.15rem; }

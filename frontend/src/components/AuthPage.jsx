@@ -233,6 +233,7 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
       <div className="new-hero-section">
         <div className="new-hero-header">
           <div className="mb-brand">
+            {/* Added your actual logo.png here */}
             <img src="/logo.png" alt="Dealit logo" className="brand-logo" />
             <span>dealit</span>
           </div>
