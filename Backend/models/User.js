@@ -3,7 +3,9 @@ const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
   supabaseId: { type: String, unique: true, sparse: true }, 
-  full_name: { type: String, required: true },
+ 
+  full_name: { type: String, default: 'Dealit User' },
+
   email: { type: String, required: true, unique: true },
   password: { type: String }, 
   phone: { type: String },

@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import axios from 'axios';
-import { User, Lock, Mail, Phone, MapPin, CheckCircle, Gift, Eye, EyeOff, ArrowRight } from 'lucide-react';
-import Lottie from 'lottie-react';
+import { Mail, CheckCircle, ArrowRight, Shield, Users, Tag, ShoppingBag, Zap } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
 
 import './AuthPage.css';
@@ -13,55 +12,6 @@ const API_URL = `${API_BASE}/api`;
 /* --- ADDED: Detect if running inside React Native WebView --- */
 const isWebView = typeof window !== 'undefined' && window.ReactNativeWebView;
 /* ---------------------------------------------------------- */
-
-const LottieComponent = Lottie && Lottie.default ? Lottie.default : Lottie;
-
-const calculateStrength = (pass) => {
-  let score = 0;
-  if (!pass) return 0;
-  if (pass.length > 5) score += 20;
-  if (pass.length > 8) score += 20;
-  if (/[A-Z]/.test(pass)) score += 20;
-  if (/[0-9]/.test(pass)) score += 20;
-  if (/[^A-Za-z0-9]/.test(pass)) score += 20;
-  return score;
-};
-
-const FloatInput = ({ icon: Icon, label, name, type = 'text', value, onChange, required, maxLength, inputMode, autoCapitalize, autoCorrect, style }) => {
-  const [focused, setFocused] = useState(false);
-  const [showPass, setShowPass] = useState(false);
-  const isPassword = type === 'password';
-  const isActive = focused || value?.length > 0;
-
-  return (
-    <div className={`fi-wrap ${isActive ? 'active' : ''} ${focused ? 'focused' : ''}`}>
-      <span className="fi-icon">{Icon && <Icon size={18} />}</span>
-      <div className="fi-inner">
-        <label className="fi-label">{label}</label>
-        <input
-          className="fi-input"
-          type={isPassword ? (showPass ? 'text' : 'password') : type}
-          name={name}
-          required={required}
-          value={value}
-          onChange={onChange}
-          maxLength={maxLength}
-          inputMode={inputMode}
-          autoCapitalize={autoCapitalize}
-          autoCorrect={autoCorrect}
-          style={style}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-        />
-      </div>
-      {isPassword && (
-        <button type="button" className="fi-eye" onClick={() => setShowPass(p => !p)} tabIndex={-1}>
-          {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
-        </button>
-      )}
-    </div>
-  );
-};
 
 const OtpInput = ({ value, onChange }) => {
   const digits = Array.from({ length: 6 }, (_, i) => value[i] || '');
@@ -108,39 +58,41 @@ const OtpInput = ({ value, onChange }) => {
   );
 };
 
+const TrustBadges = () => (
+  <div className="trust-badges">
+    <div className="badge-item">
+      <div className="badge-icon"><Shield size={18} /></div>
+      <h4>100% Free</h4>
+      <p>No hidden fees</p>
+    </div>
+    <div className="badge-item">
+      <div className="badge-icon"><CheckCircle size={18} /></div>
+      <h4>Safe & Secure</h4>
+      <p>Your data is protected</p>
+    </div>
+    <div className="badge-item">
+      <div className="badge-icon"><Users size={18} /></div>
+      <h4>For Everyone</h4>
+      <p>Buy, sell & save more</p>
+    </div>
+  </div>
+);
+
 const AuthPage = ({ setUser, defaultMode = 'login' }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
   const [isSignUpMode, setIsSignUpMode] = useState(defaultMode === 'signup');
-  const [formData, setFormData] = useState({ full_name: '', email: '', password: '', phone: '', city: '', referralCode: '' });
-  const [appSettings, setAppSettings] = useState({ isReferralSystemEnabled: true });
+  const [email, setEmail] = useState('');
   const [showOtp, setShowOtp] = useState(false);
   const [otp, setOtp] = useState('');
-  const [registeredEmail, setRegisteredEmail] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
-  const [loginAnimData, setLoginAnimData] = useState(null);
-  const [signupAnimData, setSignupAnimData] = useState(null);
-
-  useEffect(() => {
-    fetch('/Login.json').then(res => res.json()).then(setLoginAnimData).catch(() => {});
-    fetch('/signup.json').then(res => res.json()).then(setSignupAnimData).catch(() => {});
-  }, []);
 
   useEffect(() => {
     setIsSignUpMode(defaultMode === 'signup');
     setError('');
     setShowOtp(false);
-
-    const fetchSettings = async () => {
-      try {
-        const res = await axios.get(`${API_URL}/admin/public-settings`);
-        if (res.data.success) setAppSettings(res.data.data);
-      } catch { }
-    };
-    fetchSettings();
   }, [defaultMode, location.pathname]);
 
   /* --- ADDED: Native-Web Bridge Listener --- */
@@ -185,43 +137,11 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
     }
   });
 
-
-  const handleChange = (e) => {
-    if (e.target.name === 'phone') {
-      const numericValue = e.target.value.replace(/\D/g, '');
-      setFormData({ ...formData, phone: numericValue });
-    } else {
-      setFormData({ ...formData, [e.target.name]: e.target.value });
-    }
-  };
- 
-
   const handleModeSwitch = (mode) => {
     setIsSignUpMode(mode === 'signup');
     setError('');
     setShowOtp(false);
     navigate(mode === 'signup' ? '/signup' : '/login', { replace: true });
-  };
-
-  const handleGeneratePassword = () => {
-    const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const lower = 'abcdefghijklmnopqrstuvwxyz';
-    const nums = '0123456789';
-    const specials = '@#$*';
-    
-    let pass = '';
-    pass += upper[Math.floor(Math.random() * upper.length)];
-    pass += lower[Math.floor(Math.random() * lower.length)];
-    pass += nums[Math.floor(Math.random() * nums.length)];
-    pass += '@';
-    
-    const all = upper + lower + nums + specials;
-    for (let i = 0; i < 6; i++) {
-      pass += all[Math.floor(Math.random() * all.length)];
-    }
-    
-    pass = pass.split('').sort(() => 0.5 - Math.random()).join('');
-    setFormData((prev) => ({ ...prev, password: pass }));
   };
 
   const handleGoogleLoginSuccess = async (credentialResponse) => {
@@ -246,61 +166,34 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
     }
   };
 
-  const handleLogin = async (e) => {
+  /* --- MODIFICATION START: Updated to purely handle email and trigger OTP screen --- */
+  const handleAuthSubmit = async (e) => {
     e.preventDefault();
     setError(''); setLoading(true);
+    
+    const endpoint = isSignUpMode ? `${API_URL}/users/register` : `${API_URL}/users/login`;
+    
     try {
-      const res = await axios.post(`${API_URL}/users/login`, { email: formData.email, password: formData.password }, { withCredentials: true });
+      // Sending only email to the backend to request an OTP
+      const res = await axios.post(endpoint, { email }, { withCredentials: true });
+      
       if (res.data.success) {
-        setUser(res.data.user);
-        localStorage.setItem('dealit_user', JSON.stringify(res.data.user));
-        if (res.data.token) localStorage.setItem('dealit_token', res.data.token);
-        navigate('/');
+        // Both register and login now strictly show OTP screen
+        setShowOtp(true);
       }
     } catch (err) {
-      if (err.response) setError(err.response.data.message || 'Invalid email or password.');
+      if (err.response) setError(err.response.data.message || 'Something went wrong.');
       else if (err.request) setError('Network Error: Cannot reach server.');
       else setError('Error: ' + err.message);
     } finally { setLoading(false); }
   };
-
-  const handleSignup = async (e) => {
-    e.preventDefault();
-    
-   
-    if (formData.phone && formData.phone.length !== 10) {
-      setError('Phone number must be exactly 10 digits.');
-      return;
-    }
-   
-    
-    setError(''); setLoading(true);
-    try {
-      const res = await axios.post(`${API_URL}/users/register`, formData, { withCredentials: true });
-      if (res.data.success) {
-        if (res.data.requiresOtp) {
-          setRegisteredEmail(res.data.email || formData.email);
-          setShowOtp(true);
-        } else {
-          localStorage.setItem('showWelcomeBonus', 'true');
-          setUser(res.data.user);
-          localStorage.setItem('dealit_user', JSON.stringify(res.data.user));
-          if (res.data.token) localStorage.setItem('dealit_token', res.data.token);
-          navigate('/');
-        }
-      }
-    } catch (err) {
-      if (err.response) setError(err.response.data.message || 'Something went wrong during signup.');
-      else if (err.request) setError('Network Error: Cannot reach server.');
-      else setError('Error: ' + err.message);
-    } finally { setLoading(false); }
-  };
+  /* --- MODIFICATION END --- */
 
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     setError(''); setLoading(true);
     try {
-      const res = await axios.post(`${API_URL}/users/verify-otp`, { email: registeredEmail, otp }, { withCredentials: true });
+      const res = await axios.post(`${API_URL}/users/verify-otp`, { email, otp }, { withCredentials: true });
       if (res.data.success) {
         localStorage.setItem('showWelcomeBonus', 'true');
         setUser(res.data.user);
@@ -315,325 +208,136 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
 
   return (
     <div className="aw-root">
-      <div className="aw-bg">
-        <div className="aw-orb aw-orb1" />
-        <div className="aw-orb aw-orb2" />
-        <div className="aw-orb aw-orb3" />
-        <div className="aw-noise" />
-      </div>
-
-      <div className={`aw-desk ${isSignUpMode ? 'is-signup' : ''}`}>
-        <div className="aw-card">
-          <div className="aw-forms">
-
-            <div className="aw-form-pane login-pane">
-              <div className="aw-form-scroll admin-scroll">
-                <div className="aw-brand">
-                  <img src="/logo.png" alt="Dealit logo" className="brand-logo" />
-                  <span>dealit</span>
-                </div>
-                <h1 className="aw-heading">Welcome back</h1>
-                <p className="aw-sub">Sign in to your account</p>
-
-                {error && !isSignUpMode && <div className="aw-error">{error}</div>}
-
-                <div className="google-btn-container">
-                  {isWebView ? (
-               <button type="button" onClick={triggerNativeGoogleLogin} className="aw-btn" style={{ backgroundColor: '#ffffff', color: '#3c4043', border: '1px solid #dadce0', boxShadow: 'none' }} disabled={loading}>
-                      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="18" />
-                      <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>Sign in with Google</span>
-                    </button>
-                  ) : (
-                    <button type="button" onClick={() => loginWithGoogle()} className="aw-btn" style={{ backgroundColor: '#ffffff', color: '#3c4043', border: '1px solid #dadce0', boxShadow: 'none' }} disabled={loading}>
-                      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="18" />
-                      <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>Sign in with Google</span>
-                    </button>
-                  )}
-                </div>
-                <div className="google-divider"><span>or continue with email</span></div>
-
-                <form onSubmit={handleLogin} className="aw-form" noValidate>
-                  <FloatInput icon={Mail} label="Email address" name="email" type="email" value={formData.email} onChange={handleChange} required autoCapitalize="none" autoCorrect="off" />
-                  <FloatInput icon={Lock} label="Password" name="password" type="password" value={formData.password} onChange={handleChange} required />
-
-                  <div className="aw-forgot-row">
-                    <Link to="/forgot-password" className="aw-link">Forgot password?</Link>
-                  </div>
-
-                  <button type="submit" className={`aw-btn ${loading ? 'loading' : ''}`} disabled={loading}>
-                    {loading ? <span className="aw-spinner" /> : <><span>Sign In</span><ArrowRight size={18} /></>}
-                  </button>
-                </form>
-
-                <p className="aw-switch-txt">
-                  Don't have an account?{' '}
-                  <button className="aw-switch-btn" onClick={() => handleModeSwitch('signup')}>Sign Up</button>
-                </p>
-              </div>
-            </div>
-
-            <div className="aw-form-pane signup-pane">
-              <div className="aw-form-scroll admin-scroll">
-                <div className="aw-brand">
-                  <img src="/logo.png" alt="Dealit logo" className="brand-logo" />
-                  <span>dealit</span>
-                </div>
-
-                {!showOtp ? (
-                  <>
-                    <h1 className="aw-heading">Create account</h1>
-                    <p className="aw-sub">Join and start trading smarter</p>
-
-                    {error && isSignUpMode && <div className="aw-error">{error}</div>}
-
-                    <div className="google-btn-container">
-                      {isWebView ? (
-                        <button type="button" onClick={triggerNativeGoogleLogin} className="aw-btn" style={{ backgroundColor: '#ffffff', color: '#3c4043', border: '1px solid #dadce0', boxShadow: 'none' }} disabled={loading}>
-                          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="18" />
-                          <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>Sign up with Google</span>
-                        </button>
-                      ) : (
-                        <button type="button" onClick={() => loginWithGoogle()} className="aw-btn" style={{ backgroundColor: '#ffffff', color: '#3c4043', border: '1px solid #dadce0', boxShadow: 'none' }} disabled={loading}>
-                          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="18" />
-                          <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>Sign up with Google</span>
-                        </button>
-                      )}
-                    </div>
-                    <div className="google-divider"><span>or register with email</span></div>
-
-                    <form onSubmit={handleSignup} className="aw-form" noValidate>
-                      
-                      <div className="aw-form-row">
-                        <FloatInput icon={User} label="Full name" name="full_name" value={formData.full_name} onChange={handleChange} required />
-                        <FloatInput icon={Mail} label="Email address" name="email" type="email" value={formData.email} onChange={handleChange} required autoCapitalize="none" autoCorrect="off" />
-                      </div>
-                      
-                      <div className="pwd-wrap">
-                        <FloatInput icon={Lock} label="Password" name="password" type="password" value={formData.password} onChange={handleChange} required />
-                        
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.4rem' }}>
-                          <div className="pwd-strength-bar" style={{ flex: 1, marginRight: '1rem', marginTop: 0 }}>
-                            <div 
-                              className="pwd-strength-fill" 
-                              style={{ 
-                                width: `${calculateStrength(formData.password)}%`,
-                                backgroundColor: `hsl(${calculateStrength(formData.password) * 1.2}, 100%, 45%)` 
-                              }} 
-                            />
-                          </div>
-                          <button type="button" onClick={handleGeneratePassword} style={{ background: 'none', border: 'none', color: '#6B46C1', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}>
-                            Auto Generate
-                          </button>
-                        </div>
-                      </div>
-                      
-                   
-                      <FloatInput icon={Phone} label="Phone number (10 digits)" name="phone" value={formData.phone} onChange={handleChange} inputMode="numeric" maxLength={10} />
-                 
-
-                      <div className="aw-form-row">
-                        <FloatInput icon={MapPin} label="City" name="city" value={formData.city} onChange={handleChange} />
-                        {appSettings.isReferralSystemEnabled && (
-                          <FloatInput icon={Gift} label="Refer code" name="referralCode" value={formData.referralCode} onChange={handleChange} autoCapitalize="characters" style={{ textTransform: 'uppercase' }} />
-                        )}
-                      </div>
-
-                      <button type="submit" className={`aw-btn ${loading ? 'loading' : ''}`} disabled={loading}>
-                        {loading ? <span className="aw-spinner" /> : <><span>Create Account</span><ArrowRight size={18} /></>}
-                      </button>
-                    </form>
-
-                    <p className="aw-switch-txt">
-                      Already have an account?{' '}
-                      <button className="aw-switch-btn" onClick={() => handleModeSwitch('login')}>Sign In</button>
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <h1 className="aw-heading">Verify email</h1>
-                    <p className="aw-sub">Enter the 6-digit code sent to<br /><strong>{registeredEmail}</strong></p>
-
-                    {error && isSignUpMode && <div className="aw-error">{error}</div>}
-
-                    <form onSubmit={handleVerifyOtp} className="aw-form" noValidate>
-                      <OtpInput value={otp} onChange={setOtp} />
-
-                      <button type="submit" className={`aw-btn ${loading ? 'loading' : ''}`} disabled={loading || otp.length < 6}>
-                        {loading ? <span className="aw-spinner" /> : <><span>Verify &amp; Login</span><CheckCircle size={18} /></>}
-                      </button>
-                    </form>
-
-                    <p className="aw-switch-txt">
-                      Wrong email?{' '}
-                      <button className="aw-switch-btn" onClick={() => setShowOtp(false)}>Go back</button>
-                    </p>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="aw-hero">
-            <div className="hero-login-view">
-              {signupAnimData && <LottieComponent animationData={signupAnimData} loop={true} className="hero-img" style={{ width: '350px', height: 'auto', marginBottom: '20px' }} />}
-              <h2 className="hero-title">New here?</h2>
-              <p className="hero-body">Trade what you have for what you need — no money required.</p>
-              <button className="hero-btn" onClick={() => handleModeSwitch('signup')}>Create Account</button>
-            </div>
-            <div className="hero-signup-view">
-              {loginAnimData && <LottieComponent animationData={loginAnimData} loop={true} className="hero-img" style={{ width: '350px', height: 'auto', marginBottom: '20px' }} />}
-              <h2 className="hero-title">One of us?</h2>
-              <p className="hero-body">Welcome back! Your dashboard is waiting with fresh offers.</p>
-              <button className="hero-btn" onClick={() => handleModeSwitch('login')}>Sign In</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-    
-      <div className={`aw-mobile ${isSignUpMode ? 'is-signup' : ''}`}>
-        <div className="mb-hero">
-          <div className={`mb-hero-img-wrap ${!isSignUpMode ? 'active' : ''}`}>
-            {loginAnimData && <LottieComponent animationData={loginAnimData} loop={true} className="mb-hero-img" />}
-          </div>
-          <div className={`mb-hero-img-wrap ${isSignUpMode ? 'active' : ''}`}>
-            {signupAnimData && <LottieComponent animationData={signupAnimData} loop={true} className="mb-hero-img" />}
-          </div>
-          
+      
+      {/* HERO SECTION */}
+      <div className="new-hero-section">
+        <div className="new-hero-header">
           <div className="mb-brand">
             <img src="/logo.png" alt="Dealit logo" className="brand-logo" />
             <span>dealit</span>
           </div>
+          <button className="top-toggle-btn" onClick={() => handleModeSwitch(isSignUpMode ? 'login' : 'signup')}>
+            {isSignUpMode ? 'Login' : 'Sign Up'}
+          </button>
         </div>
 
-        <div className="mb-sheet">
-          <div className="mb-tabs">
-            <button className={`mb-tab ${!isSignUpMode ? 'active' : ''}`} onClick={() => handleModeSwitch('login')}>Sign In</button>
-            <button className={`mb-tab ${isSignUpMode ? 'active' : ''}`} onClick={() => handleModeSwitch('signup')}>Sign Up</button>
-            <div className={`mb-tab-indicator ${isSignUpMode ? 'right' : 'left'}`} />
+        <div className="new-hero-content">
+          <h1 className="hero-main-title">
+            {isSignUpMode ? (
+              <>Join Dealit & <br /><span className="text-yellow">Get 100 Credits</span> <br />Instantly!</>
+            ) : (
+              <>Welcome Back to <br /><span className="text-yellow">Dealit</span></>
+            )}
+          </h1>
+          <ul className="hero-benefits">
+            <li><Tag size={14} /> {isSignUpMode ? 'List items, earn credits' : 'Check new offers'}</li>
+            <li><ShoppingBag size={14} /> {isSignUpMode ? 'Buy anything with credits' : 'Spend your credits'}</li>
+            <li><Zap size={14} /> {isSignUpMode ? 'No hidden charges' : 'Complete your trades'}</li>
+          </ul>
+        </div>
+      </div>
+
+      {/* OVERLAPPING STATS BANNER */}
+      <div className="stats-banner-wrap">
+        <div className="stats-banner">
+          <div className="avatars">
+             <div className="avatar bg-1"></div>
+             <div className="avatar bg-2"></div>
+             <div className="avatar bg-3"></div>
           </div>
+          <span><strong>5000+</strong> happy users already earning & saving</span>
+        </div>
+      </div>
 
-          <div className="mb-form-area">
-            <div className={`mb-slider ${isSignUpMode ? 'show-signup' : 'show-login'}`}>
-
-              <div className="mb-slide custom-scrollbar">
-                <h2 className="aw-heading" style={{ fontSize: '1.4rem', marginTop: '0.5rem', marginBottom: '1.25rem' }}>Welcome back!</h2>
-                {error && !isSignUpMode && <div className="aw-error">{error}</div>}
-                
-                <div className="google-btn-container mobile-g-btn">
-                  {isWebView ? (
-                    <button type="button" onClick={triggerNativeGoogleLogin} className="aw-btn" style={{ backgroundColor: '#ffffff', color: '#3c4043', border: '1px solid #dadce0', boxShadow: 'none' }} disabled={loading}>
-                      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="18" />
-                      <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>Sign in with Google</span>
-                    </button>
-                  ) : (
-                    <button type="button" onClick={() => loginWithGoogle()} className="aw-btn" style={{ backgroundColor: '#ffffff', color: '#3c4043', border: '1px solid #dadce0', boxShadow: 'none' }} disabled={loading}>
-                      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="18" />
-                      <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>Sign in with Google</span>
-                    </button>
-                  )}
-                </div>
-                <div className="google-divider"><span>or continue with email</span></div>
-
-                <form onSubmit={handleLogin} className="aw-form" noValidate>
-                  <FloatInput icon={Mail} label="Email address" name="email" type="email" value={formData.email} onChange={handleChange} required autoCapitalize="none" autoCorrect="off" />
-                  <FloatInput icon={Lock} label="Password" name="password" type="password" value={formData.password} onChange={handleChange} required />
-                  <div className="aw-forgot-row">
-                    <Link to="/forgot-password" className="aw-link">Forgot password?</Link>
-                  </div>
-                  <button type="submit" className={`aw-btn ${loading ? 'loading' : ''}`} disabled={loading}>
-                    {loading ? <span className="aw-spinner" /> : <><span>Sign In</span><ArrowRight size={18} /></>}
-                  </button>
-                </form>
+      {/* BOTTOM SHEET / FORM */}
+      <div className="mb-sheet">
+        <div className="sheet-content">
+          
+          {!showOtp ? (
+            // EMAIL INPUT SCREEN
+            <div className="form-step">
+              <div className="form-header">
+                <h2 className="aw-heading">{isSignUpMode ? 'Create your account' : 'Welcome back'}</h2>
+                <p className="aw-sub">{isSignUpMode ? 'It takes less than 10 seconds!' : 'Sign in to continue'}</p>
+                {error && <div className="aw-error">{error}</div>}
               </div>
 
-            
-              <div className="mb-slide custom-scrollbar">
-                {!showOtp ? (
-                  <>
-                    <h2 className="aw-heading" style={{ fontSize: '1.4rem', marginTop: '0.5rem', marginBottom: '1.25rem' }}>Create account</h2>
-                    {error && isSignUpMode && <div className="aw-error">{error}</div>}
-                    
-                    <div className="google-btn-container mobile-g-btn">
-                      {isWebView ? (
-                        <button type="button" onClick={triggerNativeGoogleLogin} className="aw-btn" style={{ backgroundColor: '#ffffff', color: '#3c4043', border: '1px solid #dadce0', boxShadow: 'none' }} disabled={loading}>
-                          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="18" />
-                          <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>Sign up with Google</span>
-                        </button>
-                      ) : (
-                        <button type="button" onClick={() => loginWithGoogle()} className="aw-btn" style={{ backgroundColor: '#ffffff', color: '#3c4043', border: '1px solid #dadce0', boxShadow: 'none' }} disabled={loading}>
-                          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="18" />
-                          <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>Sign up with Google</span>
-                        </button>
-                      )}
-                    </div>
-                    <div className="google-divider"><span>or register with email</span></div>
-
-                    <form onSubmit={handleSignup} className="aw-form" noValidate>
-                      
-                      <div className="aw-form-row">
-                        <FloatInput icon={User} label="Full name" name="full_name" value={formData.full_name} onChange={handleChange} required />
-                        <FloatInput icon={Mail} label="Email address" name="email" type="email" value={formData.email} onChange={handleChange} required autoCapitalize="none" autoCorrect="off" />
-                      </div>
-                      
-                      <div className="pwd-wrap">
-                        <FloatInput icon={Lock} label="Password" name="password" type="password" value={formData.password} onChange={handleChange} required />
-                        
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.4rem' }}>
-                          <div className="pwd-strength-bar" style={{ flex: 1, marginRight: '1rem', marginTop: 0 }}>
-                            <div 
-                              className="pwd-strength-fill" 
-                              style={{ 
-                                width: `${calculateStrength(formData.password)}%`,
-                                backgroundColor: `hsl(${calculateStrength(formData.password) * 1.2}, 100%, 45%)` 
-                              }} 
-                            />
-                          </div>
-                          <button type="button" onClick={handleGeneratePassword} style={{ background: 'none', border: 'none', color: '#7c3aed', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}>
-                            Auto Generate
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* ---> MODIFICATION START */}
-                      <FloatInput icon={Phone} label="Phone number (10 digits)" name="phone" value={formData.phone} onChange={handleChange} inputMode="numeric" maxLength={10} />
-                      {/* ---> MODIFICATION END */}
-
-                      <div className="aw-form-row">
-                        <FloatInput icon={MapPin} label="City" name="city" value={formData.city} onChange={handleChange} />
-                        {appSettings.isReferralSystemEnabled && (
-                          <FloatInput icon={Gift} label="Refer code" name="referralCode" value={formData.referralCode} onChange={handleChange} autoCapitalize="characters" style={{ textTransform: 'uppercase' }} />
-                        )}
-                      </div>
-
-                      <button type="submit" className={`aw-btn ${loading ? 'loading' : ''}`} disabled={loading}>
-                        {loading ? <span className="aw-spinner" /> : <><span>Create Account</span><ArrowRight size={18} /></>}
-                      </button>
-                    </form>
-                  </>
-                ) : (
-                  <div className="otp-fade-in">
-                    <h2 className="aw-heading" style={{ fontSize: '1.4rem', marginTop: '0.5rem', marginBottom: '0.2rem' }}>Verify email</h2>
-                    <p className="aw-sub" style={{ marginBottom: '1.5rem' }}>
-                      Code sent to <strong>{registeredEmail}</strong>
-                    </p>
-                    {error && isSignUpMode && <div className="aw-error">{error}</div>}
-                    <form onSubmit={handleVerifyOtp} className="aw-form" noValidate>
-                      <OtpInput value={otp} onChange={setOtp} />
-                      <button type="submit" className={`aw-btn ${loading ? 'loading' : ''}`} disabled={loading || otp.length < 6}>
-                        {loading ? <span className="aw-spinner" /> : <><span>Verify &amp; Login</span><CheckCircle size={18} /></>}
-                      </button>
-                    </form>
-                    <p className="aw-switch-txt">
-                      Wrong email?{' '}
-                      <button type="button" className="aw-switch-btn" onClick={() => setShowOtp(false)}>Go back</button>
-                    </p>
+              <form onSubmit={handleAuthSubmit} className="aw-form" noValidate>
+                <div className="email-input-wrapper">
+                  <div className="email-icon-box">
+                    <Mail size={20} color="#6B46C1" />
                   </div>
+                  <input 
+                    type="email" 
+                    className="email-input" 
+                    placeholder="Enter your email address" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required 
+                    autoCapitalize="none" 
+                    autoCorrect="off"
+                  />
+                </div>
+                
+                <div className="verify-badge">
+                  <Shield size={14} /> We'll send you an OTP to verify
+                </div>
+
+                <button type="submit" className={`aw-btn ${loading ? 'loading' : ''}`} disabled={loading || !email}>
+                  {loading ? <span className="aw-spinner" /> : <><span>Continue</span><ArrowRight size={18} /></>}
+                </button>
+              </form>
+
+              <div className="divider-section">
+                <div className="google-divider"><span>OR CONTINUE WITH</span></div>
+                {isWebView ? (
+                  <button type="button" onClick={triggerNativeGoogleLogin} className="google-outlined-btn" disabled={loading}>
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="20" />
+                    <span>Continue with Google</span>
+                  </button>
+                ) : (
+                  <button type="button" onClick={() => loginWithGoogle()} className="google-outlined-btn" disabled={loading}>
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="20" />
+                    <span>Continue with Google</span>
+                  </button>
                 )}
               </div>
 
+              <TrustBadges />
+              
+              <div className="footer-terms">
+                By continuing, you agree to Dealit's <br/>
+                <Link to="/terms">Terms of Service</Link> and <Link to="/privacy">Privacy Policy</Link>
+              </div>
             </div>
-          </div>
+          ) : (
+            // OTP SCREEN
+            <div className="form-step">
+              <div className="form-header">
+                <h2 className="aw-heading">Verify email</h2>
+                <p className="aw-sub" style={{ color: '#4b5563' }}>
+                  Code sent to <br/><strong>{email}</strong>
+                </p>
+                {error && <div className="aw-error">{error}</div>}
+              </div>
+
+              <form onSubmit={handleVerifyOtp} className="aw-form" noValidate>
+                <OtpInput value={otp} onChange={setOtp} />
+                <button type="submit" className={`aw-btn ${loading ? 'loading' : ''}`} disabled={loading || otp.length < 6}>
+                  {loading ? <span className="aw-spinner" /> : <><span>Verify & Login</span><CheckCircle size={18} /></>}
+                </button>
+              </form>
+              
+              <div className="back-btn-container">
+                <button type="button" className="aw-switch-btn" onClick={() => setShowOtp(false)}>
+                  Wrong email? Go back
+                </button>
+              </div>
+              
+              <div style={{ flex: 1 }}></div> {/* Filler to push UI up */}
+            </div>
+          )}
+
         </div>
       </div>
     </div>

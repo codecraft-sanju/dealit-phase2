@@ -66,145 +66,58 @@ const generateUniqueReferralCode = async (name) => {
   return code;
 };
 
+
 const registerUser = async (req, res) => {
   try {
-    let { full_name, email, password, phone, city, referralCode } = req.body;
-    if (email) email = email.toLowerCase().trim();
+    let { email } = req.body;
+    if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
+    email = email.toLowerCase().trim();
     
-    const isOtpEnabled = process.env.ENABLE_OTP === 'true'; 
-
     let user = await User.findOne({ email });
     
     if (user) {
       if (user.isVerified) {
-        return res.status(400).json({ success: false, message: 'User already exists with this email' });
-      } else {
-        const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(password, salt);
-        user.full_name = full_name;
-        user.phone = phone;
-        user.city = city;
-        if (!isOtpEnabled) {
-          user.isVerified = true;
-        }
+        return res.status(400).json({ success: false, message: 'User already exists with this email. Please login.' });
       }
     } else {
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(password, salt);
-      
-      const newReferralCode = await generateUniqueReferralCode(full_name);
+     
+      const defaultName = email.split('@')[0];
+      const newReferralCode = await generateUniqueReferralCode(defaultName);
 
       user = new User({
-        full_name,
+        full_name: defaultName,
         email,
-        password: hashedPassword,
-        phone,
-        city,
-        isVerified: !isOtpEnabled,
+        isVerified: false,
         referralCode: newReferralCode 
       });
-
-      if (referralCode) {
-        const cleanReferralCode = referralCode.toUpperCase().trim();
-        const referrer = await User.findOne({ referralCode: cleanReferralCode });
-        
-        if (referrer) {
-          let setting = await CreditSetting.findOne();
-          if (!setting) {
-            setting = { 
-              isReferralSystemEnabled: true, 
-              referralRewardCredits: 40,
-              maxReferralLimit: 5,
-              milestoneReferralReward: 100
-            };
-          }
-
-          if (setting.isReferralSystemEnabled) {
-            if (referrer.totalReferrals < setting.maxReferralLimit) {
-              user.referredBy = referrer._id; 
-              referrer.totalReferrals += 1;   
-
-              if (referrer.totalReferrals === 1) {
-                referrer.account_credits += setting.referralRewardCredits;
-                referrer.aura_points = (referrer.aura_points || 0) + 20; 
-                
-               
-                queueNotification({
-                  user: referrer._id,
-                  type: 'CREDIT_ADDED',
-                  title: 'Referral Bonus! ',
-                  message: `A new user joined using your code. You have received ${setting.referralRewardCredits} credits and 20 Aura points.`,
-                  metadata: { amount: setting.referralRewardCredits, reason: 'referral_bonus' }
-                });
-
-            
-                await AuraLog.create({
-                  user: referrer._id,
-                  reason: "Successful Referral",
-                  points: 20,
-                  type: "positive"
-                });
-
-              } else if (referrer.totalReferrals === setting.maxReferralLimit) {
-                referrer.account_credits += setting.milestoneReferralReward;
-                referrer.aura_points = (referrer.aura_points || 0) + 50; 
-                
-                queueNotification({
-                  user: referrer._id,
-                  type: 'CREDIT_ADDED',
-                  title: 'Milestone Unlocked! 🚀',
-                  message: `You have completed max referrals. ${setting.milestoneReferralReward} bonus credits and 50 Aura points added.`,
-                  metadata: { amount: setting.milestoneReferralReward, reason: 'milestone_bonus' }
-                });
-
-                await AuraLog.create({
-                  user: referrer._id,
-                  reason: "Referral Milestone Unlocked",
-                  points: 50,
-                  type: "positive"
-                });
-              }
-
-              await referrer.save();
-            }
-          }
-        }
-      }
     }
 
-    if (isOtpEnabled) {
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      user.otp = otp;
-      user.otpExpiry = Date.now() + 10 * 60 * 1000; 
+  
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    user.otp = otp;
+    user.otpExpiry = Date.now() + 10 * 60 * 1000; 
+    await user.save();
 
-      await user.save();
+    const message = `Hi ${user.full_name},\n\nYour OTP for Dealit registration is: ${otp}\n\nThis OTP is valid for 10 minutes.\n\nRegards,\nTeam Dealit`;
+    
+    await sendEmail({
+      email: user.email,
+      subject: 'Verify your Dealit Account',
+      message
+    });
 
-      const message = `Hi ${full_name},\n\nYour OTP for Dealit registration is: ${otp}\n\nThis OTP is valid for 10 minutes.\n\nRegards,\nTeam Dealit`;
-      
-      await sendEmail({
-        email: user.email,
-        subject: 'Verify your Dealit Account',
-        message
-      });
-
-      return res.status(200).json({ 
-        success: true, 
-        requiresOtp: true, 
-        message: 'OTP sent to your email. Please verify to complete registration.',
-        email: user.email
-      });
-    } else {
-      user.otp = undefined;
-      user.otpExpiry = undefined;
-      await user.save();
-      
-      return sendTokenResponse(user, 201, res, 'Registration successful!');
-    }
+    return res.status(200).json({ 
+      success: true, 
+      requiresOtp: true, 
+      message: 'OTP sent to your email. Please verify to complete registration.',
+      email: user.email
+    });
 
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server Error during registration' });
   }
 };
+
 
 const verifyOtp = async (req, res) => {
   try {
@@ -219,10 +132,6 @@ const verifyOtp = async (req, res) => {
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
-    }
-
-    if (user.isVerified) {
-      return res.status(400).json({ success: false, message: 'Account is already verified. Please login.' });
     }
 
     if (user.otp !== otp || user.otpExpiry < Date.now()) {
@@ -241,48 +150,44 @@ const verifyOtp = async (req, res) => {
   }
 };
 
+
 const loginUser = async (req, res) => {
   try {
-    let { email, password } = req.body;
-    if (email) email = email.toLowerCase().trim();
-
-    if (!email || !password) {
-      return res.status(400).json({ success: false, message: 'Please provide email and password' });
-    }
+    let { email } = req.body;
+    if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
+    email = email.toLowerCase().trim();
 
     const user = await User.findOne({ email });
     
     if (!user || user.isDeleted) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials or account has been deleted' });
+      return res.status(404).json({ success: false, message: 'Account not found. Please sign up first.' });
     }
 
-    if (!user.isVerified) {
-      if (user.otp === undefined && user.password) {
-        user.isVerified = true;
-        await user.save();
-      } else {
-        return res.status(403).json({ success: false, message: 'Please verify your email first. Register again to get a new OTP.' });
-      }
-    }
+   
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    user.otp = otp;
+    user.otpExpiry = Date.now() + 10 * 60 * 1000;
+    await user.save();
 
-    if (!user.password) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'You are using an older account. Please use "Forgot Password" to set a new password.' 
-      });
-    }
+    const message = `Hi ${user.full_name},\n\nYour login OTP for Dealit is: ${otp}\n\nThis OTP is valid for 10 minutes.\n\nRegards,\nTeam Dealit`;
+    
+    await sendEmail({
+      email: user.email,
+      subject: 'Your Dealit Login OTP',
+      message
+    });
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
-    }
-
-    sendTokenResponse(user, 200, res, 'Login successful!');
+    return res.status(200).json({ 
+      success: true, 
+      requiresOtp: true, 
+      message: 'OTP sent to your email.' 
+    });
 
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server Error during login' });
   }
 };
+
 
 const googleLogin = async (req, res) => {
   try {

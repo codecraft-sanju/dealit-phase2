@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Suspense, lazy, useCallback } from 'react'; 
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate, Navigate, useLocation, useParams } from 'react-router-dom';
-import { Package, X, AlertCircle, ArrowLeft, Edit2, Trash2 } from 'lucide-react';
+import { Package, ArrowLeft, Edit2, Trash2 } from 'lucide-react';
 import axios from 'axios';
 
 import { ToastContainer } from 'react-toastify';
@@ -19,6 +19,7 @@ const smartLazy = (importFunc) => {
     })
   );
 };
+
 const OffersPage = smartLazy(() => import('./offer/OffersPage'));
 const PromoAlert = smartLazy(() => import('./popup/PromoAlert'));
 const IosInstallPopup = smartLazy(() => import('./components/IosInstallPopup'));
@@ -28,7 +29,7 @@ const PrivacyPage = smartLazy(() => import('./components/PrivacyPage'));
 const TermsPage = smartLazy(() => import('./components/TermsPage'));
 const RefundPolicyPage = smartLazy(() => import('./components/RefundPolicyPage'));
 const CancellationPolicyPage = smartLazy(() => import('./components/CancellationPolicyPage'));
-const HelpSupportPage=smartLazy(()=>import('./helpandSupport/HelpSupportPage'));
+const HelpSupportPage = smartLazy(()=>import('./helpandSupport/HelpSupportPage'));
 
 const AuraPage = smartLazy(() => import('./components/AuraPage'));
 const AuraLeadershipPage = smartLazy(() => import('./components/AuraLeadershipPage'));
@@ -60,6 +61,8 @@ const FloatingAIAssistant = smartLazy(() => import('./ai/FloatingAIAssistant'));
 const AiChatPage = smartLazy(() => import('./ai/AiChatPage'));
 const RecentlyViewedPage = smartLazy(() => import('./components/RecentlyViewedPage'));
 
+const CompleteProfilePopup = smartLazy(() => import('./components/CompleteProfilePopup'));
+
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
@@ -71,106 +74,6 @@ const queryClient = new QueryClient({
     },
   },
 });
-
-const ZeroPriceAlert = ({ user, onCheckComplete }) => {
-  const [show, setShow] = useState(false);
-  const [isClosing, setIsClosing] = useState(false);
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [hasChecked, setHasChecked] = useState(false);
-
-  useEffect(() => {
-    if (!user || hasChecked) return;
-
-    const checkItems = async () => {
-      try {
-        const res = await axios.get(`${API_URL}/items/me`, { withCredentials: true });
-        const needsUpdate = res.data.data.some(item => !item.estimated_value || item.estimated_value === 0);
-        
-        if (needsUpdate) {
-          setShow(true);
-          onCheckComplete(true);
-        } else {
-          onCheckComplete(false);
-        }
-        setHasChecked(true); 
-      } catch (error) {
-        console.error('Error checking item prices:', error);
-        onCheckComplete(false);
-      }
-    };
-    
-    if (!location.pathname.includes('/dashboard') && !location.pathname.includes('/edit-item')) {
-       checkItems();
-    } else {
-       onCheckComplete(false);
-    }
-  }, [user, hasChecked, location.pathname, onCheckComplete]);
-
-  const handleClose = () => {
-    setIsClosing(true);
-    setTimeout(() => {
-      setShow(false);
-      setIsClosing(false);
-    }, 300);
-  };
-
-  if (!show) return null;
-
-  return (
-    <div 
-      onClick={handleClose}
-      className={`fixed inset-0 z-[100] flex items-center justify-center px-4 ${isClosing ? 'animate-out fade-out' : 'animate-in fade-in'} duration-300`}
-    >
-      <div 
-        onClick={(e) => e.stopPropagation()}
-        className={`bg-gray-900 border border-purple-500/50 rounded-[2rem] p-8 max-w-sm w-full text-center shadow-[0_20px_60px_rgba(163,136,225,0.2)] relative overflow-hidden transform ${isClosing ? 'animate-out zoom-out-95 slide-out-to-bottom-8' : 'animate-in zoom-in-95 slide-in-from-bottom-8'} duration-300`}
-      >
-        
-        <div className="absolute -top-24 -left-24 w-48 h-48 bg-purple-500/20 rounded-full blur-[3rem] pointer-events-none"></div>
-        <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-emerald-500/10 rounded-full blur-[3rem] pointer-events-none"></div>
-
-        <button 
-          onClick={handleClose} 
-          className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors p-2.5 bg-gray-800 hover:bg-gray-700 rounded-full z-20"
-        >
-          <X className="w-6 h-6" />
-        </button>
-        
-        <div className="relative z-10">
-          <div className="w-20 h-20 bg-purple-500/10 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-purple-500/20 shadow-[0_0_30px_rgba(163,136,225,0.3)] transform rotate-3 hover:rotate-0 transition-transform duration-300">
-            <AlertCircle className="w-10 h-10 text-purple-500" />
-          </div>
-          
-          <h3 className="text-2xl font-black text-white mb-3 tracking-tight">Action Required!</h3>
-          
-          <div className="text-gray-400 text-sm mb-8 space-y-4">
-            <p>
-              Some of your listed items have a value of <strong className="text-purple-400">0 Credits</strong>. Please update their prices so others can make fair trade offers.
-            </p>
-            
-            <div className="bg-gray-800/60 p-4 rounded-2xl border border-gray-700 text-left flex gap-3">
-              <Package className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-gray-300 leading-relaxed">
-                <span className="text-emerald-400 font-bold tracking-wide uppercase">Tip:</span> Please also check your item <strong className="text-white">Categories</strong>. Selecting the correct category helps your item sell faster!
-              </p>
-            </div>
-          </div>
-          
-          <button 
-            onClick={() => {
-              handleClose();
-              setTimeout(() => navigate('/dashboard'), 300);
-            }}
-            className="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-400 hover:to-purple-500 text-white font-black text-lg py-4 px-4 rounded-2xl transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-purple-500/30 flex items-center justify-center gap-2"
-          >
-            <Edit2 className="w-5 h-5" /> Update My Items
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 const PremiumLoader = () => (
   <div className="flex flex-col items-center justify-center min-h-screen pb-20 bg-[#090714]">
@@ -188,7 +91,6 @@ const PremiumLoader = () => (
 const MainAppContent = ({ user, handleLogout, setUser }) => {
   const location = useLocation();
   const navigate = useNavigate(); 
-  const [hasZeroPriceIssue, setHasZeroPriceIssue] = useState(null);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth > 1024);
 
   useEffect(() => {
@@ -255,7 +157,7 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
           navigate(data.url);
         }
       } catch (e) {
-     
+      
       }
     };
 
@@ -285,10 +187,12 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
 
   return (
     <div className={`min-h-screen bg-gray-900 font-sans selection:bg-emerald-500/30 ${shouldShowBottomNav ? 'pb-16 md:pb-0' : ''}`}> 
-      <ZeroPriceAlert user={user} onCheckComplete={setHasZeroPriceIssue} />
       
       <Suspense fallback={null}>
-        <PromoAlert user={user} setUser={setUser} hasZeroPriceIssue={hasZeroPriceIssue} />
+        {/* --- COMPLETE PROFILE POPUP YAHAN LAGA DIYA --- */}
+        <CompleteProfilePopup user={user} setUser={setUser} />
+
+        <PromoAlert user={user} setUser={setUser} />
         <IosInstallPopup />
       </Suspense>
       
