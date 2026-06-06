@@ -9,9 +9,15 @@ import './AuthPage.css';
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
-/* --- ADDED: Detect if running inside React Native WebView --- */
 const isWebView = typeof window !== 'undefined' && window.ReactNativeWebView;
-/* ---------------------------------------------------------- */
+
+// Fallback dummy faces just in case the API fails or user doesn't have a profile pic
+const FALLBACK_AVATARS = [
+  'https://i.pravatar.cc/100?img=47',
+  'https://i.pravatar.cc/100?img=12',
+  'https://i.pravatar.cc/100?img=32',
+  'https://i.pravatar.cc/100?img=16'
+];
 
 const OtpInput = ({ value, onChange }) => {
   const digits = Array.from({ length: 6 }, (_, i) => value[i] || '');
@@ -88,6 +94,7 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [avatars, setAvatars] = useState([]);
 
   useEffect(() => {
     setIsSignUpMode(defaultMode === 'signup');
@@ -95,7 +102,22 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
     setShowOtp(false);
   }, [defaultMode, location.pathname]);
 
-  /* --- ADDED: Native-Web Bridge Listener --- */
+  // Fetch real user avatars from backend on load
+  useEffect(() => {
+    const fetchAvatars = async () => {
+      try {
+        const res = await axios.get(`${API_URL}/users/random-avatars`);
+        if (res.data.success && res.data.data) {
+          // We only need 4 avatars for the Auth UI
+          setAvatars(res.data.data.slice(0, 4));
+        }
+      } catch (err) {
+        console.error('Failed to fetch avatars, using fallbacks');
+      }
+    };
+    fetchAvatars();
+  }, []);
+
   useEffect(() => {
     const handleNativeMessage = (event) => {
       try {
@@ -125,7 +147,6 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
       window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'START_GOOGLE_LOGIN' }));
     }
   };
-  /* ----------------------------------------- */
 
   const loginWithGoogle = useGoogleLogin({
     onSuccess: (tokenResponse) => {
@@ -166,7 +187,6 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
     }
   };
 
-  /* --- MODIFICATION START: Updated to purely handle email and trigger OTP screen --- */
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
     setError(''); setLoading(true);
@@ -174,11 +194,9 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
     const endpoint = isSignUpMode ? `${API_URL}/users/register` : `${API_URL}/users/login`;
     
     try {
-      // Sending only email to the backend to request an OTP
       const res = await axios.post(endpoint, { email }, { withCredentials: true });
       
       if (res.data.success) {
-        // Both register and login now strictly show OTP screen
         setShowOtp(true);
       }
     } catch (err) {
@@ -187,7 +205,6 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
       else setError('Error: ' + err.message);
     } finally { setLoading(false); }
   };
-  /* --- MODIFICATION END --- */
 
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
@@ -205,6 +222,9 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
       setError(err.response?.data?.message || 'Invalid or expired OTP.');
     } finally { setLoading(false); }
   };
+
+  // Prepare images to display (use fetched if available, else fallback)
+  const displayAvatars = avatars.length === 4 ? avatars : FALLBACK_AVATARS;
 
   return (
     <div className="aw-root">
@@ -237,24 +257,34 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
         </div>
       </div>
 
-      {/* OVERLAPPING STATS BANNER */}
+     
       <div className="stats-banner-wrap">
         <div className="stats-banner">
           <div className="avatars">
-             <div className="avatar bg-1"></div>
-             <div className="avatar bg-2"></div>
-             <div className="avatar bg-3"></div>
+            {displayAvatars.map((src, i) => {
+              // If the backend sends an initial-based ui-avatar, replace it with a dummy face for better UI
+              const finalSrc = src.includes('ui-avatars.com') ? FALLBACK_AVATARS[i] : src;
+              return (
+                <img 
+                  key={i} 
+                  src={finalSrc} 
+                  alt={`User ${i + 1}`} 
+                  className="avatar" 
+                  onError={(e) => { e.target.src = FALLBACK_AVATARS[i]; }} 
+                />
+              );
+            })}
           </div>
           <span><strong>5000+</strong> happy users already earning & saving</span>
         </div>
       </div>
 
-      {/* BOTTOM SHEET / FORM */}
+ 
       <div className="mb-sheet">
         <div className="sheet-content">
           
           {!showOtp ? (
-            // EMAIL INPUT SCREEN
+         
             <div className="form-step">
               <div className="form-header">
                 <h2 className="aw-heading">{isSignUpMode ? 'Create your account' : 'Welcome back'}</h2>

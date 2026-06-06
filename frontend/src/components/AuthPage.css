@@ -25,7 +25,8 @@ body, html {
 /* ── HERO SECTION (~35% of screen) ── */
 .new-hero-section {
   flex: 0 0 35%; /* Fixed ratio */
-  padding: env(safe-area-inset-top, 1rem) 1.25rem 0;
+  /* CHANGED: Increased top padding using max() to ensure logo and buttons clear the iPhone status bar/notch */
+  padding: max(env(safe-area-inset-top), 3rem) 1.5rem 0; 
   display: flex;
   flex-direction: column;
   position: relative;
@@ -36,7 +37,7 @@ body, html {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem; /* CHANGED: Added slightly more breathing room below header */
 }
 
 .mb-brand {
@@ -70,7 +71,7 @@ body, html {
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start; /* CHANGED: Keeps content flowing naturally instead of strict center */
 }
 
 .hero-main-title {
@@ -128,19 +129,19 @@ body, html {
 
 .avatars {
   display: flex;
+  align-items: center;
 }
 
 .avatar {
-  width: 22px; height: 22px;
+  width: 26px; height: 26px;
   border-radius: 50%;
   border: 2px solid #fff;
-  background-color: #ddd;
-  margin-left: -6px;
+  background-color: #f3f4f6;
+  margin-left: -8px;
+  object-fit: cover;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 .avatar:first-child { margin-left: 0; }
-.avatar.bg-1 { background: #c4b5fd; }
-.avatar.bg-2 { background: #fca5a5; }
-.avatar.bg-3 { background: #93c5fd; }
 
 .stats-banner span {
   font-size: 0.7rem;
@@ -412,10 +413,11 @@ body, html {
   padding: 0;
 }
 
-/* Very small screens adjustment to ensure no scroll */
 @media (max-height: 700px) {
-  .new-hero-section { flex: 0 0 30%; }
-  .stats-banner-wrap { top: 30%; }
+  /* CHANGED: Ensured smaller height screens also get better top padding */
+  .new-hero-section { flex: 0 0 42%; padding-top: max(env(safe-area-inset-top), 2.5rem); }
+  .stats-banner-wrap { top: 42%; }
+  .hero-main-title { font-size: 1.5rem; margin-bottom: 0.4rem; } 
   .aw-heading { font-size: 1.15rem; }
   .email-input-wrapper, .aw-btn, .google-outlined-btn { height: 2.8rem; }
   .badge-icon { width: 28px; height: 28px; }
