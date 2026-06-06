@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap');
 
-/* Strict No-Scroll Mobile Layout */
+
 * {
   box-sizing: border-box;
 }
@@ -8,8 +8,7 @@
 body, html {
   margin: 0;
   padding: 0;
-  overflow: hidden; /* Prevent scrolling globally */
-  background: #1A0042;
+ 
 }
 
 .aw-root {
@@ -20,12 +19,10 @@ body, html {
   flex-direction: column;
   background: linear-gradient(150deg, #3A1078 0%, #2A0463 50%, #1A0042 100%);
   position: relative;
+  overflow: hidden;
 }
-
-/* ── HERO SECTION (~35% of screen) ── */
 .new-hero-section {
   flex: 0 0 35%; /* Fixed ratio */
-  /* CHANGED: 3rem ko kam karke 1.5rem kar diya taaki header thoda upar shift ho jaye */
   padding: max(env(safe-area-inset-top), 1.5rem) 1.5rem 0; 
   display: flex;
   flex-direction: column;
@@ -415,7 +412,6 @@ body, html {
 }
 
 @media (max-height: 700px) {
-  /* CHANGED: Chote phones ke liye bhi padding 2.5rem se ghata kar 1.2rem kar di hai */
   .new-hero-section { flex: 0 0 42%; padding-top: max(env(safe-area-inset-top), 1.2rem); }
   .stats-banner-wrap { top: 42%; }
   .hero-main-title { font-size: 1.5rem; margin-bottom: 0.4rem; } 
