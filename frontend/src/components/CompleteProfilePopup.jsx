@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { User, Phone, MapPin, Loader2, Sparkles, Gift, ArrowRight } from 'lucide-react';
+import { User, Phone, MapPin, Loader2, Sparkles, Gift, ArrowRight, X } from 'lucide-react'; // Added X icon
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -14,12 +14,14 @@ const CompleteProfilePopup = ({ user, setUser }) => {
     full_name: '',
     phone: '',
     city: '',
-    referralCode: '' // Added Referral field
+    referralCode: '' 
   });
 
   useEffect(() => {
-    // Only show if user exists but lacks essential contact info
-    if (user && !user.phone) {
+    // Check if user dismissed the popup in this session
+    const hasDismissed = sessionStorage.getItem('dismissedProfilePopup');
+
+    if (user && !user.phone && !hasDismissed) {
       setFormData({
         full_name: user.full_name || '',
         phone: '',
@@ -32,6 +34,11 @@ const CompleteProfilePopup = ({ user, setUser }) => {
     }
   }, [user]);
 
+  const handleDismiss = () => {
+    sessionStorage.setItem('dismissedProfilePopup', 'true');
+    setShow(false);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (formData.phone.length !== 10) {
@@ -43,7 +50,6 @@ const CompleteProfilePopup = ({ user, setUser }) => {
     setLoading(true);
 
     try {
-      // Using existing profile update API
       const res = await axios.put(`${API_URL}/users/profile`, formData, { withCredentials: true });
       if (res.data.success) {
         setUser(res.data.data);
@@ -63,11 +69,18 @@ const CompleteProfilePopup = ({ user, setUser }) => {
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 animate-in fade-in duration-300">
       <div className="absolute inset-0 bg-[#090714]/60 backdrop-blur-md"></div>
       
-      {/* Premium Card Design */}
       <div className="bg-white rounded-[2.5rem] p-8 max-w-sm w-full shadow-2xl relative overflow-hidden z-10">
         
-        {/* Header Section */}
-        <div className="text-center mb-8">
+        {/* Close Button added here */}
+        <button 
+          onClick={handleDismiss} 
+          type="button" 
+          className="absolute top-5 right-5 text-gray-400 hover:text-gray-700 transition-colors"
+        >
+          <X className="w-6 h-6" />
+        </button>
+
+        <div className="text-center mb-8 mt-2">
           <div className="w-16 h-16 bg-gradient-to-br from-[#805ad5] to-[#6B46C1] rounded-[2rem] flex items-center justify-center mx-auto mb-4 shadow-lg shadow-[#6B46C1]/20">
             <Sparkles className="w-8 h-8 text-white" />
           </div>
@@ -79,7 +92,6 @@ const CompleteProfilePopup = ({ user, setUser }) => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           
-          {/* Input Fields with Premium Styling */}
           <div className="space-y-3">
             <div className="relative group">
               <User className="absolute left-4 top-4 w-5 h-5 text-[#6B46C1] opacity-50 group-focus-within:opacity-100 transition-opacity" />

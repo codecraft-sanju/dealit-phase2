@@ -35,6 +35,9 @@ const sendTokenResponse = (user, statusCode, res, message) => {
       id: user._id, 
       full_name: user.full_name, 
       email: user.email, 
+      phone: user.phone,             // Added phone
+      city: user.city,               // Added city
+      profilePic: user.profilePic,   // Added profilePic
       role: user.role,
       account_credits: user.account_credits,
       aura_points: user.aura_points, 
