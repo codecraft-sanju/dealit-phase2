@@ -157,7 +157,7 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
           navigate(data.url);
         }
       } catch (e) {
-      
+        
       }
     };
 
@@ -189,7 +189,6 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
     <div className={`min-h-screen bg-gray-900 font-sans selection:bg-emerald-500/30 ${shouldShowBottomNav ? 'pb-16 md:pb-0' : ''}`}> 
       
       <Suspense fallback={null}>
-        {/* --- COMPLETE PROFILE POPUP YAHAN LAGA DIYA --- */}
         <CompleteProfilePopup user={user} setUser={setUser} />
 
         <PromoAlert user={user} setUser={setUser} />
@@ -200,12 +199,17 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
         <Suspense fallback={<PremiumLoader />}>
           {user && !isAiChatRoute && <FloatingAIAssistant user={user} />}
           
+          {/* CHANGED: Added the missing <Routes> opening tag below */}
           <Routes>
             <Route path="/" element={
-              <>
-                <Navbar user={user} onLogout={handleLogout} />
-                <HomePage user={user} setUser={setUser}/>
-              </>
+              user ? (
+                <>
+                  <Navbar user={user} onLogout={handleLogout} />
+                  <HomePage user={user} setUser={setUser}/>
+                </>
+              ) : (
+                <Navigate to="/login" replace />
+              )
             } />
             
             <Route path="/login" element={user ? <Navigate to="/" replace /> : <AuthPage defaultMode="login" setUser={setUser} />} />
