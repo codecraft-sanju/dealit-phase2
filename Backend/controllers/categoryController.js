@@ -3,19 +3,19 @@ const Item = require('../models/Item');
 
 const getCategories = async (req, res) => {
   try {
-    const { activeOnly } = req.query; // Frontend se aane wala query parameter check kar rahe hain
+    const { activeOnly } = req.query; 
     
     let queryCondition = { isActive: true };
 
-    // Agar Home page ne activeOnly=true bheja hai
+
     if (activeOnly === 'true') {
-      // Sirf unhi items ki categories nikalo jo active hain aur jinki value 0 se zyada hai
+   
       const activeCategoryNames = await Item.distinct('category', {
         status: 'active',
         estimated_value: { $gt: 0 }
       });
       
-      // Query me condition add kar do ki category ka naam in active names me hona chahiye
+    
       queryCondition.name = { $in: activeCategoryNames };
     }
 

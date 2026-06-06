@@ -48,7 +48,7 @@ const DUMMY_AVATARS = [
   'https://i.pravatar.cc/40?img=57',
 ];
 
-// --- Framer Motion Variants ---
+
 const containerVariants = {
   hidden: { opacity: 0 },
   show: {
@@ -71,7 +71,7 @@ const ModernShimmer = ({ className }) => (
   </div>
 );
 
-// Global variable to track if the initial animation has played this session
+
 let initialAnimationPlayed = false;
 
 const HomePage = ({ user, setUser }) => {
@@ -86,7 +86,7 @@ const HomePage = ({ user, setUser }) => {
   const scrollLeftPos = useRef(0);
 
   useEffect(() => {
-    // Mark that the animation has played so it doesn't repeat when returning to the page
+   
     initialAnimationPlayed = true;
 
     const handleBonusClaimedEvent = () => {
@@ -122,9 +122,8 @@ const HomePage = ({ user, setUser }) => {
   });
 
   const { data: categories = [], isLoading: loadingCategories } = useQuery({
-    queryKey: ['categories'],
+    queryKey: ['categories', 'activeOnly'], 
     queryFn: async () => {
-      // Changed: Added hasItems=true to optionally allow backend filtering
       const response = await axios.get(`${API_URL}/categories?activeOnly=true&hasItems=true`);
       return response.data.data;
     },
@@ -142,7 +141,7 @@ const HomePage = ({ user, setUser }) => {
     },
   });
 
-  // MODIFIED: Fetch 5 random avatars from backend
+ 
   const { data: randomAvatars = [] } = useQuery({
     queryKey: ['randomAvatars'],
     queryFn: async () => {
@@ -250,12 +249,12 @@ const HomePage = ({ user, setUser }) => {
       variants={containerVariants}
       className="max-w-md mx-auto bg-[#faf9fc] min-h-[calc(100vh-130px)] md:max-w-7xl md:px-0 relative overflow-hidden"
     >
-      {/* Background Ambient Glows */}
+   
       <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-purple-100/40 to-transparent pointer-events-none"></div>
 
       <div className="px-4 pt-3 pb-0 relative z-10">
         
-        {/* --- Hero Banner Section --- */}
+      
         <div className="grid grid-cols-7 gap-2 mb-3">
           <motion.div 
             variants={itemVariants}
@@ -264,7 +263,7 @@ const HomePage = ({ user, setUser }) => {
             {/* Glossy Gradient Background */}
             <div className="absolute inset-0 bg-gradient-to-br from-purple-50/50 via-white to-white opacity-80 z-0"></div>
             
-            {/* Subtle floating background gradient */}
+     
             <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#A388E1]/20 rounded-full blur-3xl group-hover:bg-[#A388E1]/30 transition-colors duration-500 z-0"></div>
             
             <h1 className="text-[16px] sm:text-[15px] md:text-[20px] font-extrabold text-gray-900 leading-tight mb-1.5 tracking-tight relative z-10 drop-shadow-sm">
@@ -275,7 +274,7 @@ const HomePage = ({ user, setUser }) => {
               Sell your stuff &rarr; Earn credits &rarr; Buy anything.
             </p>
 
-            {/* Corner Gloss Glare overlay on hover */}
+       
             <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none z-20"></div>
           </motion.div>
 
@@ -291,7 +290,7 @@ const HomePage = ({ user, setUser }) => {
                 </div>
 
                 <div className="relative z-10 flex flex-col justify-end">
-                  {/* --- PREMIUM 3D COIN REPLACEMENT --- */}
+               
                   <motion.div 
                     animate={showCelebration ? { rotateY: 360, scale: 1.2 } : { rotateY: 0, scale: 1 }}
                     transition={{ duration: 0.8, type: "spring" }}
@@ -302,11 +301,11 @@ const HomePage = ({ user, setUser }) => {
                       <div className="absolute inset-[2px] rounded-full border-[0.5px] border-[#92400E]/50 bg-gradient-to-tl from-[#FEF08A]/20 via-transparent to-[#D97706]/40 flex items-center justify-center shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)]">
                         <span className="font-black text-[#78350F] text-[9px] tracking-tighter drop-shadow-[0_1px_1px_rgba(255,255,255,0.7)]">Cr</span>
                       </div>
-                      {/* Premium Glare sweep inside the coin */}
+            
                       <div className="absolute top-0 left-[-150%] w-full h-full bg-gradient-to-r from-transparent via-white/60 to-transparent skew-x-[-25deg] animate-[glare_3s_infinite_ease-in-out]"></div>
                     </div>
                   </motion.div>
-                  {/* ------------------------------------- */}
+                 
 
                   <div className="flex items-end gap-0.5 mt-0.5">
                     <span className="text-base font-bold leading-none relative drop-shadow-md">
@@ -336,7 +335,7 @@ const HomePage = ({ user, setUser }) => {
                     disabled={claimBonusMutation.isPending}
                     className="bg-gradient-to-r from-[#FFE28A] via-[#FFF0B3] to-[#FFD75E] text-yellow-900 text-[9px] font-extrabold px-1 py-1.5 mt-1.5 rounded-lg flex items-center justify-center gap-0.5 shadow-[0_4px_10px_rgba(0,0,0,0.1),inset_0_1px_1px_rgba(255,255,255,0.8)] transition hover:brightness-105 z-10 whitespace-nowrap disabled:opacity-80 relative overflow-hidden"
                   >
-                    {/* Sharp Glass Sweep inside Button */}
+                 
                     <motion.div 
                       className="absolute inset-0 bg-gradient-to-r from-transparent via-white/70 to-transparent skew-x-[-20deg]"
                       animate={{ x: ["-150%", "250%"] }}
@@ -449,44 +448,37 @@ const HomePage = ({ user, setUser }) => {
             <span className="text-[13px] font-bold relative z-10">All</span>
           </motion.div>
 
-          {/* Dynamic Categories */}
           {loadingCategories ? (
             [1, 2, 3, 4].map((i) => (
               <ModernShimmer key={i} className="min-w-[90px] h-9 rounded-2xl shadow-sm flex-shrink-0" />
             ))
           ) : (
             <>
-              {categories
-                .filter((cat) => {
-                  const count = cat.itemCount ?? cat.itemsCount ?? cat.count ?? cat.totalItems;
-                  if (count !== undefined) return count > 0;
-                  return true;
-                })
-                .map((cat) => {
-                  const IconComponent = ICON_DICTIONARY[cat.icon] || Package;
-                  const isActive = activeCategory === cat.name;
+              {categories.map((cat) => {
+                const IconComponent = ICON_DICTIONARY[cat.icon] || Package;
+                const isActive = activeCategory === cat.name;
 
-                  return (
-                    <motion.div 
-                      key={cat._id} 
-                      whileHover={hoverSpring} whileTap={scaleTap}
-                      onClick={() => setActiveCategory(cat.name)}
-                      className={`relative flex items-center gap-2 px-4 py-2 rounded-2xl cursor-pointer transition-colors duration-300 min-w-max z-0 ${isActive ? 'text-white' : 'text-gray-600 hover:text-gray-900'}`}
-                    >
-                      {isActive && (
-                        <motion.div 
-                          layoutId="activeCategoryBg" 
-                          className="absolute inset-0 bg-gradient-to-r from-[#805ad5] to-[#A388E1] rounded-2xl -z-10 shadow-[0_4px_12px_rgba(128,90,213,0.3)]"
-                          transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                        />
-                      )}
-                      {!isActive && (
-                        <div className="absolute inset-0 bg-white border border-gray-100 rounded-2xl -z-10 shadow-[0_2px_8px_rgba(0,0,0,0.02)]" />
-                      )}
-                      <IconComponent className={`w-4 h-4 relative z-10 ${isActive ? 'text-white drop-shadow-sm' : 'text-gray-400'}`} />
-                      <span className="text-[13px] font-bold relative z-10">{cat.name}</span>
-                    </motion.div>
-                  );
+                return (
+                  <motion.div 
+                    key={cat._id} 
+                    whileHover={hoverSpring} whileTap={scaleTap}
+                    onClick={() => setActiveCategory(cat.name)}
+                    className={`relative flex items-center gap-2 px-4 py-2 rounded-2xl cursor-pointer transition-colors duration-300 min-w-max z-0 ${isActive ? 'text-white' : 'text-gray-600 hover:text-gray-900'}`}
+                  >
+                    {isActive && (
+                      <motion.div 
+                        layoutId="activeCategoryBg" 
+                        className="absolute inset-0 bg-gradient-to-r from-[#805ad5] to-[#A388E1] rounded-2xl -z-10 shadow-[0_4px_12px_rgba(128,90,213,0.3)]"
+                        transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                      />
+                    )}
+                    {!isActive && (
+                      <div className="absolute inset-0 bg-white border border-gray-100 rounded-2xl -z-10 shadow-[0_2px_8px_rgba(0,0,0,0.02)]" />
+                    )}
+                    <IconComponent className={`w-4 h-4 relative z-10 ${isActive ? 'text-white drop-shadow-sm' : 'text-gray-400'}`} />
+                    <span className="text-[13px] font-bold relative z-10">{cat.name}</span>
+                  </motion.div>
+                );
               })}
 
               {/* OTHER Category */}
@@ -591,7 +583,7 @@ const HomePage = ({ user, setUser }) => {
         </motion.div>
       </motion.div>
 
-      {/* --- Social Proof Footer --- */}
+  
       <motion.div variants={itemVariants} className="px-4 pb-6 pt-3 relative z-10">
         <div className="flex items-center gap-3 px-1 bg-white/40 backdrop-blur-sm border border-white/60 rounded-2xl p-2 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
           <motion.div 
@@ -613,10 +605,10 @@ const HomePage = ({ user, setUser }) => {
             <div className="flex items-center gap-1.5">
               <div className="flex -space-x-1.5 hover:space-x-0 transition-all duration-300 cursor-pointer">
                 
-                {/* --- MODIFIED: Overriding initials with dummy faces --- */}
+      
                 {(randomAvatars.length > 0 ? randomAvatars : DUMMY_AVATARS).map((src, i) => {
                   
-                  // Agar url ui-avatars.com se aa raha hai (initials), toh usko reject karke cute DUMMY_AVATARS face laga do.
+                
                   const finalSrc = (src && src.includes('ui-avatars.com')) ? DUMMY_AVATARS[i % DUMMY_AVATARS.length] : src;
 
                   return (
@@ -628,7 +620,7 @@ const HomePage = ({ user, setUser }) => {
                       className="w-5 h-5 rounded-full border-2 border-white object-cover shadow-[0_2px_5px_rgba(0,0,0,0.1)] relative z-0 bg-white"
                       onError={(e) => {
                         e.target.onerror = null;
-                        // Error aane par bhi cute faces hi show karega
+               
                         e.target.src = DUMMY_AVATARS[i % DUMMY_AVATARS.length];
                       }}
                     />
@@ -644,7 +636,7 @@ const HomePage = ({ user, setUser }) => {
         </div>
       </motion.div>
 
-      {/* --- Celebration Particle Effect (CSS driven for perf on mobile) --- */}
+ 
       {showCelebration && <CoinCelebration coinCount={30} />}
 
       {/* Embedded Styles for Shimmers and Animations */}
