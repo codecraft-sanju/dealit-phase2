@@ -11,11 +11,12 @@ const {
   searchItems, 
   getRelatedItems, 
   getExploreData,
-  getItemsByIds 
+  getItemsByIds,
+  getSitemap 
 } = require('../controllers/itemController');
 
 const { protect } = require('../middleware/authMiddleware');
-
+router.route('/sitemap.xml').get(getSitemap);
 router.route('/').get(getItems).post(protect, createItem);
 router.route('/me').get(protect, getMyItems);
 router.route('/search').get(searchItems);

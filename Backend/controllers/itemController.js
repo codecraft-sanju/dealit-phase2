@@ -467,20 +467,18 @@ const getExploreData = async (req, res) => {
 
 const getItemsByIds = async (req, res) => {
   try {
-    const { itemIds } = req.body; // Frontend se IDs ka array aayega
+    const { itemIds } = req.body; 
 
     if (!itemIds || !Array.isArray(itemIds) || itemIds.length === 0) {
       return res.status(200).json({ success: true, count: 0, data: [] });
     }
 
-    // Security & Error Prevention: Sirf valid MongoDB IDs ko filter karo
     const validIds = itemIds.filter(id => mongoose.Types.ObjectId.isValid(id));
 
     if (validIds.length === 0) {
       return res.status(200).json({ success: true, count: 0, data: [] });
     }
 
-    // Ek hi query me saare items fetch kar lo (Super Fast)
     const items = await Item.find({
       _id: { $in: validIds },
       status: 'active'
@@ -507,6 +505,33 @@ const getItemsByIds = async (req, res) => {
   }
 };
 
+const getSitemap = async (req, res) => {
+  try {
+    const items = await Item.find({ status: 'active' }).select('_id updated_at');
+    const frontendUrl = 'https://dealiit.com';
+
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`;
+
+    const staticPages = ['', '/items', '/search', '/help-support', '/privacy', '/terms'];
+    staticPages.forEach(page => {
+      xml += `\n  <url>\n    <loc>${frontendUrl}${page}</loc>\n    <changefreq>daily</changefreq>\n    <priority>${page === '' ? '1.0' : '0.8'}</priority>\n  </url>`;
+    });
+
+    items.forEach(item => {
+      const lastModDate = item.updated_at ? new Date(item.updated_at).toISOString() : new Date().toISOString();
+      xml += `\n  <url>\n    <loc>${frontendUrl}/item/${item._id}</loc>\n    <lastmod>${lastModDate}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.9</priority>\n  </url>`;
+    });
+
+    xml += `\n</urlset>`;
+
+    res.header('Content-Type', 'application/xml');
+    res.send(xml);
+  } catch (error) {
+    console.error('Sitemap generation error:', error);
+    res.status(500).send('Error generating sitemap');
+  }
+};
+
 module.exports = {
   createItem,
   getItems,
@@ -517,5 +542,6 @@ module.exports = {
   searchItems,
   getRelatedItems,
   getExploreData,
-  getItemsByIds
+  getItemsByIds,
+  getSitemap
 };
