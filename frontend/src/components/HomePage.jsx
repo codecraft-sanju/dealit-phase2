@@ -713,16 +713,16 @@ const containerVariants = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
-    transition: { staggerChildren: 0.1, delayChildren: 0.1 }
+    transition: { staggerChildren: 0.05, delayChildren: 0.05 }
   }
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+  hidden: { opacity: 0, y: 15 },
+  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 350, damping: 25 } }
 };
 
-const scaleTap = { scale: 0.92 };
+const scaleTap = { scale: 0.94 };
 const hoverSpring = { scale: 1.05, transition: { type: "spring", stiffness: 400, damping: 10 } };
 
 const ModernShimmer = ({ className }) => (
@@ -827,27 +827,59 @@ const HomePage = ({ user, setUser }) => {
       initial={shouldAnimate ? "hidden" : false} 
       animate="show" 
       variants={containerVariants}
-      className="max-w-md mx-auto bg-white min-h-[calc(100vh-130px)] pb-32 md:max-w-7xl md:px-0 relative overflow-hidden font-sans"
+      className="max-w-md mx-auto bg-white min-h-[calc(100vh-130px)] pb-[88px] md:max-w-7xl md:px-0 relative overflow-hidden font-sans"
     >
       <Helmet>
         <title>Home - DealIt | Swap & Trade</title>
         <meta name="description" content="Sell your unused items, earn credits, and get what you actually want on DealIt. Start bartering today!" />
       </Helmet>
 
-      {/* --- Hero Section --- */}
-      <motion.div variants={itemVariants} className="pt-6 pb-6 px-4 relative z-10 bg-gradient-to-b from-[#FAF8FF] to-white">
-        <div className="inline-flex items-center gap-1.5 bg-[#F6F3FE] text-[#7C3AED] px-3 py-1.5 rounded-full text-xs font-bold mb-5 shadow-[0_2px_8px_rgba(124,58,237,0.08)]">
-          <Gift className="w-4 h-4 text-[#F59E0B]" /> Join Free & Get 100 Credits
-        </div>
-        
-        <div className="flex justify-between items-start">
-          <div className="w-full sm:w-[60%] z-10 relative">
-            <h1 className="text-4xl sm:text-5xl font-black text-[#111827] leading-[1.1] mb-3 tracking-tight">
-              Sell Unused.<br />
-              <span className="text-[#6B46C1]">Get Anything.</span>
+      {/* --- Premium Compact Rectangle Hero Card Section --- */}
+      <motion.div variants={itemVariants} className="pt-3 pb-2 px-3 relative z-10">
+        <div className="bg-gradient-to-br from-[#F8F6FF] via-white to-[#F3EFFF] border border-[#EBE5F7] rounded-[20px] p-4 relative overflow-hidden shadow-[0_4px_15px_rgba(107,70,193,0.06)]">
+          
+          {/* Decorative Background Glows */}
+          <div className="absolute -right-4 -top-4 w-28 h-28 bg-gradient-to-br from-[#E9D5FF] to-[#C084FC] rounded-full blur-[40px] opacity-30 pointer-events-none"></div>
+          <div className="absolute right-2 -bottom-6 w-20 h-20 bg-gradient-to-br from-[#FDE68A] to-[#F59E0B] rounded-full blur-[30px] opacity-20 pointer-events-none"></div>
+          
+          {/* Floating Icons filling the right side perfectly */}
+          <div className="absolute right-0 top-0 w-[35%] h-full pointer-events-none flex items-center justify-center">
+            <div className="relative w-full h-full max-w-[100px]">
+              <motion.div 
+                animate={{ y: [-3, 3, -3] }} 
+                transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }} 
+                className="absolute top-[12%] right-[5%] bg-white p-1.5 rounded-[10px] shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-gray-50 transform rotate-[10deg]"
+              >
+                <ShoppingBag className="w-4 h-4 text-[#6B46C1]" />
+              </motion.div>
+              <motion.div 
+                animate={{ y: [3, -3, 3] }} 
+                transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }} 
+                className="absolute bottom-[15%] right-[25%] bg-white p-2 rounded-[10px] shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-gray-50 transform rotate-[-8deg]"
+              >
+                <Coins className="w-5 h-5 text-[#F59E0B]" />
+              </motion.div>
+              <motion.div 
+                animate={{ y: [-2, 2, -2] }} 
+                transition={{ repeat: Infinity, duration: 3.5, ease: "easeInOut" }} 
+                className="absolute top-[40%] left-[-10%] bg-white p-1 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-gray-50 transform rotate-[-5deg]"
+              >
+                <Smartphone className="w-3 h-3 text-gray-500" />
+              </motion.div>
+            </div>
+          </div>
+
+          {/* Hero Content - Adjusted to single line heading for minimal height */}
+          <div className="relative z-10 w-[72%] sm:w-[75%]">
+            <div className="inline-flex items-center gap-1 bg-white border border-[#EBE5F7] text-[#7C3AED] px-2 py-0.5 rounded-full text-[9px] font-bold mb-2 shadow-sm">
+              <Gift className="w-3 h-3 text-[#F59E0B]" /> Join & Get 100 Credits
+            </div>
+            
+            <h1 className="text-[20px] sm:text-[24px] font-black text-[#111827] leading-[1.1] mb-1.5 tracking-tight">
+              Sell Unused. <span className="text-[#6B46C1]">Get Anything.</span>
             </h1>
-            <p className="text-[#6B7280] text-sm mb-7 font-medium max-w-[240px] leading-relaxed">
-              List your unused items, earn credits and buy what you actually want.
+            <p className="text-[#6B7280] text-[9.5px] sm:text-[11px] mb-3 font-medium leading-[1.3] pr-2">
+              List unused items, earn credits & buy what you want.
             </p>
             
             {shouldShowClaimButton ? (
@@ -855,136 +887,133 @@ const HomePage = ({ user, setUser }) => {
                  whileHover={{ scale: 1.02 }}
                  whileTap={{ scale: 0.95 }}
                  onClick={() => claimBonusMutation.mutate()} 
-                 className="bg-[#6B46C1] text-white font-bold py-3 px-5 rounded-xl flex items-center gap-2 shadow-[0_8px_20px_rgba(107,70,193,0.3)] hover:bg-[#5A38A3] transition-colors"
+                 className="bg-[#6B46C1] text-white text-[10px] sm:text-xs font-bold py-2 px-3 rounded-[10px] flex items-center gap-1.5 shadow-[0_4px_10px_rgba(107,70,193,0.25)] hover:bg-[#5A38A3] transition-colors w-max"
                >
-                  Join Now & Get 100 Credits <ArrowRight className="w-4 h-4" />
+                  Claim 100 Credits <ArrowRight className="w-3 h-3" />
                </motion.button>
             ) : (
                <Link to="/add-item" className="inline-block">
                  <motion.button 
                    whileHover={{ scale: 1.02 }}
                    whileTap={{ scale: 0.95 }}
-                   className="bg-[#6B46C1] text-white font-bold py-3 px-6 rounded-xl flex items-center gap-2 shadow-[0_8px_20px_rgba(107,70,193,0.3)] hover:bg-[#5A38A3] transition-colors"
+                   className="bg-[#6B46C1] text-white text-[10px] sm:text-xs font-bold py-2 px-3.5 rounded-[10px] flex items-center gap-1.5 shadow-[0_4px_10px_rgba(107,70,193,0.25)] hover:bg-[#5A38A3] transition-colors w-max"
                  >
-                    Start Selling <ArrowRight className="w-4 h-4" />
+                    Start Selling <ArrowRight className="w-3 h-3" />
                  </motion.button>
                </Link>
             )}
           </div>
-          
-          <div className="hidden sm:flex absolute right-[-20px] top-[-20px] w-[50%] h-[120%] opacity-10 pointer-events-none items-center justify-end overflow-hidden">
-             <Package size={200} className="text-[#6B46C1]" />
-          </div>
         </div>
       </motion.div>
 
-      {/* --- Trust Badges Section --- */}
-      <motion.div variants={itemVariants} className="flex justify-between items-start px-5 py-5 bg-white border-y border-gray-100 mb-6">
-        <div className="flex flex-col items-center gap-1 text-center w-1/4">
-          <ShieldCheck className="w-5 h-5 text-[#6B46C1] mb-0.5" />
-          <span className="text-[10px] sm:text-xs font-bold text-gray-900 leading-tight">100% Free</span>
-          <span className="text-[8px] sm:text-[9px] text-gray-500 leading-tight">No hidden charges</span>
+      {/* --- Compact Trust Badges Section --- */}
+      <motion.div variants={itemVariants} className="flex justify-between items-start px-3 py-2.5 bg-white border-b border-gray-100 mb-3 mx-2">
+        <div className="flex flex-col items-center gap-0.5 text-center w-1/4">
+          <ShieldCheck className="w-3.5 h-3.5 text-[#6B46C1]" />
+          <span className="text-[8.5px] font-bold text-gray-900 leading-tight">100% Free</span>
+          <span className="text-[6.5px] text-gray-500 leading-tight">No hidden charges</span>
         </div>
-        <div className="w-[1px] h-10 bg-gray-100 mt-1"></div>
-        <div className="flex flex-col items-center gap-1 text-center w-1/4">
-          <Lock className="w-5 h-5 text-[#6B46C1] mb-0.5" />
-          <span className="text-[10px] sm:text-xs font-bold text-gray-900 leading-tight">Safe & Trusted</span>
-          <span className="text-[8px] sm:text-[9px] text-gray-500 leading-tight">Secure platform</span>
+        <div className="w-[1px] h-7 bg-gray-100 mt-1"></div>
+        <div className="flex flex-col items-center gap-0.5 text-center w-1/4">
+          <Lock className="w-3.5 h-3.5 text-[#6B46C1]" />
+          <span className="text-[8.5px] font-bold text-gray-900 leading-tight">Safe & Trusted</span>
+          <span className="text-[6.5px] text-gray-500 leading-tight">Secure platform</span>
         </div>
-        <div className="w-[1px] h-10 bg-gray-100 mt-1"></div>
-        <div className="flex flex-col items-center gap-1 text-center w-1/4">
-          <UserCircle className="w-5 h-5 text-[#6B46C1] mb-0.5" />
-          <span className="text-[10px] sm:text-xs font-bold text-gray-900 leading-tight">For Everyone</span>
-          <span className="text-[8px] sm:text-[9px] text-gray-500 leading-tight">Buy, sell, save more</span>
+        <div className="w-[1px] h-7 bg-gray-100 mt-1"></div>
+        <div className="flex flex-col items-center gap-0.5 text-center w-1/4">
+          <UserCircle className="w-3.5 h-3.5 text-[#6B46C1]" />
+          <span className="text-[8.5px] font-bold text-gray-900 leading-tight">For Everyone</span>
+          <span className="text-[6.5px] text-gray-500 leading-tight">Buy, sell, save</span>
         </div>
-        <div className="w-[1px] h-10 bg-gray-100 mt-1"></div>
-        <div className="flex flex-col items-center gap-1 text-center w-1/4">
-          <Zap className="w-5 h-5 text-[#6B46C1] mb-0.5" />
-          <span className="text-[10px] sm:text-xs font-bold text-gray-900 leading-tight">Instant Credits</span>
-          <span className="text-[8px] sm:text-[9px] text-gray-500 leading-tight">Get credits instantly</span>
+        <div className="w-[1px] h-7 bg-gray-100 mt-1"></div>
+        <div className="flex flex-col items-center gap-0.5 text-center w-1/4">
+          <Zap className="w-3.5 h-3.5 text-[#6B46C1]" />
+          <span className="text-[8.5px] font-bold text-gray-900 leading-tight">Instant Credits</span>
+          <span className="text-[6.5px] text-gray-500 leading-tight">Get instantly</span>
         </div>
       </motion.div>
 
-      {/* --- How Dealit Works Section --- */}
-      <motion.div variants={itemVariants} className="px-4 mb-8">
-        <h2 className="text-lg font-bold text-gray-900 mb-6">How <span className="text-[#6B46C1]">Dealit</span> Works?</h2>
-        <div className="flex items-start justify-between relative px-2">
-           <div className="absolute top-6 left-[22%] w-[18%] h-[1px] bg-gray-200">
-             <div className="absolute -right-1 -top-1 w-2 h-2 border-t border-r border-gray-200 transform rotate-45"></div>
+      {/* --- Compact How Dealit Works Section --- */}
+      <motion.div variants={itemVariants} className="px-3 mb-4">
+        <h2 className="text-[14px] font-bold text-gray-900 mb-3 px-1">How <span className="text-[#6B46C1]">Dealit</span> Works?</h2>
+        <div className="flex items-start justify-between relative px-1">
+           {/* Connecting Arrows */}
+           <div className="absolute top-[18px] left-[22%] w-[18%] h-[1px] bg-gray-200">
+             <div className="absolute -right-1 -top-1 w-1.5 h-1.5 border-t border-r border-gray-200 transform rotate-45"></div>
            </div>
-           <div className="absolute top-6 left-[60%] w-[18%] h-[1px] bg-gray-200">
-             <div className="absolute -right-1 -top-1 w-2 h-2 border-t border-r border-gray-200 transform rotate-45"></div>
-           </div>
-
-           <div className="flex flex-col items-center flex-1 relative z-10">
-              <div className="relative mb-3">
-                <div className="absolute -top-1.5 -left-1.5 w-[18px] h-[18px] bg-[#6B46C1] text-white rounded-full flex items-center justify-center text-[10px] font-bold z-10 shadow-sm border-[1.5px] border-white">1</div>
-                <div className="w-14 h-14 bg-[#F8F6FF] rounded-[18px] flex items-center justify-center shadow-[0_4px_12px_rgba(107,70,193,0.06)] transform rotate-[-3deg] transition-transform hover:rotate-0">
-                   <Tag className="w-6 h-6 text-[#6B46C1]" />
-                </div>
-              </div>
-              <span className="text-xs font-bold text-gray-900 mb-1 text-center">List Items</span>
-              <span className="text-[9px] text-gray-500 text-center leading-snug">Upload items you<br/>don't use anymore</span>
+           <div className="absolute top-[18px] left-[60%] w-[18%] h-[1px] bg-gray-200">
+             <div className="absolute -right-1 -top-1 w-1.5 h-1.5 border-t border-r border-gray-200 transform rotate-45"></div>
            </div>
 
            <div className="flex flex-col items-center flex-1 relative z-10">
-              <div className="relative mb-3">
-                <div className="absolute -top-1.5 -left-1.5 w-[18px] h-[18px] bg-[#6B46C1] text-white rounded-full flex items-center justify-center text-[10px] font-bold z-10 shadow-sm border-[1.5px] border-white">2</div>
-                <div className="w-14 h-14 bg-[#FFFBF0] rounded-[18px] flex items-center justify-center shadow-[0_4px_12px_rgba(245,158,11,0.06)] transition-transform hover:scale-105">
-                   <Coins className="w-6 h-6 text-[#F59E0B]" />
+              <div className="relative mb-1.5">
+                <div className="absolute -top-1 -left-1 w-3.5 h-3.5 bg-[#6B46C1] text-white rounded-full flex items-center justify-center text-[7px] font-bold z-10 shadow-sm border border-white">1</div>
+                <div className="w-9 h-9 bg-[#F8F6FF] rounded-[12px] flex items-center justify-center shadow-[0_2px_8px_rgba(107,70,193,0.05)] transform rotate-[-3deg] transition-transform hover:rotate-0">
+                   <Tag className="w-4 h-4 text-[#6B46C1]" />
                 </div>
               </div>
-              <span className="text-xs font-bold text-gray-900 mb-1 text-center">Earn Credits</span>
-              <span className="text-[9px] text-gray-500 text-center leading-snug">Get credits when<br/>someone buys</span>
+              <span className="text-[10px] font-bold text-gray-900 mb-0.5 text-center">List Items</span>
+              <span className="text-[7.5px] text-gray-500 text-center leading-[1.2]">Upload items you<br/>don't use</span>
            </div>
 
            <div className="flex flex-col items-center flex-1 relative z-10">
-              <div className="relative mb-3">
-                <div className="absolute -top-1.5 -left-1.5 w-[18px] h-[18px] bg-[#6B46C1] text-white rounded-full flex items-center justify-center text-[10px] font-bold z-10 shadow-sm border-[1.5px] border-white">3</div>
-                <div className="w-14 h-14 bg-[#F8F6FF] rounded-[18px] flex items-center justify-center shadow-[0_4px_12px_rgba(107,70,193,0.06)] transform rotate-[3deg] transition-transform hover:rotate-0">
-                   <ShoppingBag className="w-6 h-6 text-[#6B46C1]" />
+              <div className="relative mb-1.5">
+                <div className="absolute -top-1 -left-1 w-3.5 h-3.5 bg-[#6B46C1] text-white rounded-full flex items-center justify-center text-[7px] font-bold z-10 shadow-sm border border-white">2</div>
+                <div className="w-9 h-9 bg-[#FFFBF0] rounded-[12px] flex items-center justify-center shadow-[0_2px_8px_rgba(245,158,11,0.05)] transition-transform hover:scale-105">
+                   <Coins className="w-4 h-4 text-[#F59E0B]" />
                 </div>
               </div>
-              <span className="text-xs font-bold text-gray-900 mb-1 text-center">Buy Anything</span>
-              <span className="text-[9px] text-gray-500 text-center leading-snug">Use credits to buy<br/>what you want</span>
+              <span className="text-[10px] font-bold text-gray-900 mb-0.5 text-center">Earn Credits</span>
+              <span className="text-[7.5px] text-gray-500 text-center leading-[1.2]">Get credits when<br/>someone buys</span>
+           </div>
+
+           <div className="flex flex-col items-center flex-1 relative z-10">
+              <div className="relative mb-1.5">
+                <div className="absolute -top-1 -left-1 w-3.5 h-3.5 bg-[#6B46C1] text-white rounded-full flex items-center justify-center text-[7px] font-bold z-10 shadow-sm border border-white">3</div>
+                <div className="w-9 h-9 bg-[#F8F6FF] rounded-[12px] flex items-center justify-center shadow-[0_2px_8px_rgba(107,70,193,0.05)] transform rotate-[3deg] transition-transform hover:rotate-0">
+                   <ShoppingBag className="w-4 h-4 text-[#6B46C1]" />
+                </div>
+              </div>
+              <span className="text-[10px] font-bold text-gray-900 mb-0.5 text-center">Buy Anything</span>
+              <span className="text-[7.5px] text-gray-500 text-center leading-[1.2]">Use credits to buy<br/>what you want</span>
            </div>
         </div>
       </motion.div>
 
-      {/* --- Popular Right Now Items Section --- */}
-      <motion.div variants={itemVariants} className="px-4 mb-2">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-bold text-gray-900">
+      {/* --- Popular Right Now Items Section (Compact Cards) --- */}
+      <motion.div variants={itemVariants} className="px-3 mb-2">
+        <div className="flex justify-between items-center mb-2 px-1">
+          <h2 className="text-[14px] font-bold text-gray-900">
             {activeCategory === 'All' ? 'Popular Right Now' : `Top in ${activeCategory}`}
           </h2>
           <Link to={activeCategory === 'All' ? '/items' : `/items?category=${activeCategory}`}>
-            <motion.div whileHover={{ x: 2 }} className="text-xs font-bold text-[#6B46C1] flex items-center gap-0.5">
-              See All <ChevronRight className="w-3.5 h-3.5" />
+            <motion.div whileHover={{ x: 2 }} className="text-[10px] font-bold text-[#6B46C1] flex items-center gap-0.5">
+              See All <ChevronRight className="w-3 h-3" />
             </motion.div>
           </Link>
         </div>
 
         {loadingItems ? (
-          <div className="flex overflow-x-auto hide-scrollbar gap-3 pb-2 pt-1">
+          <div className="flex overflow-x-auto hide-scrollbar gap-2.5 pb-2 pt-1">
             {[1, 2, 3, 4].map((i) => (
-              <ProductCard key={i} isLoading={true} className="min-w-[150px] w-[150px] flex-shrink-0 shadow-sm" />
+              <ProductCard key={i} isLoading={true} className="min-w-[130px] w-[130px] flex-shrink-0 shadow-sm" />
             ))}
           </div>
         ) : items.length === 0 ? (
-          <div className="text-center text-gray-400 py-10 bg-[#F9FAFB] rounded-[20px] border border-gray-100 flex flex-col items-center justify-center">
-            <Package className="w-8 h-8 text-gray-300 mb-2" />
-            <span className="text-xs font-medium">No items right now.</span>
+          <div className="text-center text-gray-400 py-5 bg-[#F9FAFB] rounded-2xl border border-gray-100 flex flex-col items-center justify-center">
+            <Package className="w-5 h-5 text-gray-300 mb-1.5" />
+            <span className="text-[10px] font-medium">No items right now.</span>
           </div>
         ) : (
           <motion.div 
             initial={shouldAnimate ? "hidden" : false} 
             animate="show" 
             variants={containerVariants}
-            className="flex overflow-x-auto hide-scrollbar gap-4 pb-4 pt-1 snap-x"
+            className="flex overflow-x-auto hide-scrollbar gap-3 pb-2 pt-1 snap-x"
           >
             {items.map((item) => (
-              <motion.div variants={itemVariants} key={item._id} className="min-w-[150px] w-[150px] flex-shrink-0 snap-start">
-                <ProductCard item={item} className="bg-white border border-gray-100 rounded-[16px] overflow-hidden" />
+              <motion.div variants={itemVariants} key={item._id} className="min-w-[130px] w-[130px] flex-shrink-0 snap-start">
+                <ProductCard item={item} className="bg-white border border-gray-100 rounded-2xl overflow-hidden" />
               </motion.div>
             ))}
           </motion.div>
@@ -992,31 +1021,31 @@ const HomePage = ({ user, setUser }) => {
       </motion.div>
 
       {/* --- Fixed Categories Section --- */}
-      <div className="fixed bottom-[60px] md:bottom-0 left-0 right-0 z-40 flex justify-center pointer-events-none">
+      <div className="fixed bottom-[56px] md:bottom-0 left-0 right-0 z-40 flex justify-center pointer-events-none">
         <motion.div 
            initial={{ y: 50, opacity: 0 }}
            animate={{ y: 0, opacity: 1 }}
            transition={{ delay: 0.2, type: 'spring', stiffness: 300, damping: 25 }}
-           className="w-full max-w-md md:max-w-7xl bg-white/90 backdrop-blur-xl border-t border-gray-100 px-3 py-2.5 shadow-[0_-10px_30px_rgba(0,0,0,0.06)] pointer-events-auto"
+           className="w-full max-w-md md:max-w-7xl bg-white/90 backdrop-blur-xl border-t border-gray-100 px-3 py-2 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] pointer-events-auto"
         >
-          <div className="flex gap-3.5 overflow-x-auto hide-scrollbar items-start px-1">
+          <div className="flex gap-3 overflow-x-auto hide-scrollbar items-start px-1">
             
             <motion.div 
               whileHover={hoverSpring} whileTap={scaleTap}
               onClick={() => setActiveCategory('All')}
-              className="flex flex-col items-center gap-1 cursor-pointer min-w-[56px]"
+              className="flex flex-col items-center gap-1 cursor-pointer min-w-[52px]"
             >
-              <div className={`w-[48px] h-[48px] rounded-[14px] flex items-center justify-center transition-all duration-300 shadow-sm ${activeCategory === 'All' ? 'bg-[#6B46C1] text-white' : 'bg-[#F8F6FF] text-[#6B46C1] hover:bg-[#F3EFFF]'}`}>
-                <Package className="w-5 h-5" />
+              <div className={`w-[44px] h-[44px] rounded-[14px] flex items-center justify-center transition-all duration-300 shadow-sm ${activeCategory === 'All' ? 'bg-[#6B46C1] text-white' : 'bg-[#F8F6FF] text-[#6B46C1] hover:bg-[#F3EFFF]'}`}>
+                <Package className="w-[18px] h-[18px]" />
               </div>
-              <span className={`text-[10px] font-bold ${activeCategory === 'All' ? 'text-[#6B46C1]' : 'text-gray-500'}`}>All</span>
+              <span className={`text-[9px] font-bold ${activeCategory === 'All' ? 'text-[#6B46C1]' : 'text-gray-500'}`}>All</span>
             </motion.div>
 
             {loadingCategories ? (
-              [1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="flex flex-col items-center gap-1 min-w-[56px]">
-                   <ModernShimmer className="w-[48px] h-[48px] rounded-[14px] shadow-sm" />
-                   <ModernShimmer className="w-8 h-2 rounded-full mt-0.5" />
+              [1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="flex flex-col items-center gap-1 min-w-[52px]">
+                   <ModernShimmer className="w-[44px] h-[44px] rounded-[14px] shadow-sm" />
+                   <ModernShimmer className="w-7 h-1.5 rounded-full mt-0.5" />
                 </div>
               ))
             ) : (
@@ -1030,12 +1059,12 @@ const HomePage = ({ user, setUser }) => {
                       key={cat._id} 
                       whileHover={hoverSpring} whileTap={scaleTap}
                       onClick={() => setActiveCategory(cat.name)}
-                      className="flex flex-col items-center gap-1 cursor-pointer min-w-[56px]"
+                      className="flex flex-col items-center gap-1 cursor-pointer min-w-[52px]"
                     >
-                      <div className={`w-[48px] h-[48px] rounded-[14px] flex items-center justify-center transition-all duration-300 shadow-sm ${isActive ? 'bg-[#6B46C1] text-white' : 'bg-white border border-gray-100 text-gray-500 hover:border-gray-200'}`}>
-                        <IconComponent className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
+                      <div className={`w-[44px] h-[44px] rounded-[14px] flex items-center justify-center transition-all duration-300 shadow-sm ${isActive ? 'bg-[#6B46C1] text-white' : 'bg-white border border-gray-100 text-gray-500 hover:border-gray-200'}`}>
+                        <IconComponent className="w-[18px] h-[18px]" strokeWidth={isActive ? 2.5 : 2} />
                       </div>
-                      <span className={`text-[10px] font-bold ${isActive ? 'text-[#6B46C1]' : 'text-gray-500'}`}>{cat.name}</span>
+                      <span className={`text-[9px] font-bold ${isActive ? 'text-[#6B46C1]' : 'text-gray-500'}`}>{cat.name}</span>
                     </motion.div>
                   );
                 })}
@@ -1043,12 +1072,12 @@ const HomePage = ({ user, setUser }) => {
                 <motion.div 
                   whileHover={hoverSpring} whileTap={scaleTap}
                   onClick={() => setActiveCategory('Other')}
-                  className="flex flex-col items-center gap-1 cursor-pointer min-w-[56px]"
+                  className="flex flex-col items-center gap-1 cursor-pointer min-w-[52px]"
                 >
-                  <div className={`w-[48px] h-[48px] rounded-[14px] flex items-center justify-center transition-all duration-300 shadow-sm ${activeCategory === 'Other' ? 'bg-[#6B46C1] text-white' : 'bg-white border border-gray-100 text-gray-500 hover:border-gray-200'}`}>
-                    <Plus className="w-5 h-5" strokeWidth={activeCategory === 'Other' ? 2.5 : 2} />
+                  <div className={`w-[44px] h-[44px] rounded-[14px] flex items-center justify-center transition-all duration-300 shadow-sm ${activeCategory === 'Other' ? 'bg-[#6B46C1] text-white' : 'bg-white border border-gray-100 text-gray-500 hover:border-gray-200'}`}>
+                    <Plus className="w-[18px] h-[18px]" strokeWidth={activeCategory === 'Other' ? 2.5 : 2} />
                   </div>
-                  <span className={`text-[10px] font-bold ${activeCategory === 'Other' ? 'text-[#6B46C1]' : 'text-gray-500'}`}>More</span>
+                  <span className={`text-[9px] font-bold ${activeCategory === 'Other' ? 'text-[#6B46C1]' : 'text-gray-500'}`}>More</span>
                 </motion.div>
               </>
             )}
