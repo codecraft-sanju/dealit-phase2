@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Link, useNavigate, Navigate, us
 import { Package, ArrowLeft, Edit2, Trash2 } from 'lucide-react';
 import axios from 'axios';
 import { HelmetProvider } from 'react-helmet-async';
+import ReactGA from 'react-ga4';
 
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -10,6 +11,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
+
+
+const TRACKING_ID = "G-1FKF92TWCE";
+ReactGA.initialize(TRACKING_ID);
+
 
 const smartLazy = (importFunc) => {
   return lazy(() =>
@@ -93,6 +99,16 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
   const location = useLocation();
   const navigate = useNavigate(); 
   const [isDesktop, setIsDesktop] = useState(window.innerWidth > 1024);
+
+
+useEffect(() => {
+  ReactGA.send({ 
+    hitType: "pageview", 
+    page: location.pathname + location.search,
+    title: document.title 
+  });
+}, [location]);
+
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {
