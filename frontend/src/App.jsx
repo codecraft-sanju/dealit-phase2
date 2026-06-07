@@ -2,6 +2,7 @@ import React, { useState, useEffect, Suspense, lazy, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate, Navigate, useLocation, useParams } from 'react-router-dom';
 import { Package, ArrowLeft, Edit2, Trash2 } from 'lucide-react';
 import axios from 'axios';
+import { HelmetProvider } from 'react-helmet-async';
 
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -198,8 +199,6 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
       <main>
         <Suspense fallback={<PremiumLoader />}>
           {user && !isAiChatRoute && <FloatingAIAssistant user={user} />}
-          
-          {/* CHANGED: Added the missing <Routes> opening tag below */}
           <Routes>
             <Route path="/" element={
               user ? (
@@ -309,14 +308,16 @@ function App() {
   }, []);
 
   return (
-    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
-      <QueryClientProvider client={queryClient}>
-        <Router>
-          <MainAppContent user={user} handleLogout={handleLogout} setUser={setUser} />
-        </Router>
-        <ToastContainer />
-      </QueryClientProvider>
-    </GoogleOAuthProvider>
+    <HelmetProvider>
+      <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+        <QueryClientProvider client={queryClient}>
+          <Router>
+            <MainAppContent user={user} handleLogout={handleLogout} setUser={setUser} />
+          </Router>
+          <ToastContainer />
+        </QueryClientProvider>
+      </GoogleOAuthProvider>
+    </HelmetProvider>
   );
 }
 

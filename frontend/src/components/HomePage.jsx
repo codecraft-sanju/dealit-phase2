@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Package, Coins, ChevronRight, Plus, UserCircle, Gift,
@@ -48,7 +49,6 @@ const DUMMY_AVATARS = [
   'https://i.pravatar.cc/40?img=57',
 ];
 
-
 const containerVariants = {
   hidden: { opacity: 0 },
   show: {
@@ -71,7 +71,6 @@ const ModernShimmer = ({ className }) => (
   </div>
 );
 
-
 let initialAnimationPlayed = false;
 
 const HomePage = ({ user, setUser }) => {
@@ -86,7 +85,7 @@ const HomePage = ({ user, setUser }) => {
   const scrollLeftPos = useRef(0);
 
   useEffect(() => {
-   
+    
     initialAnimationPlayed = true;
 
     const handleBonusClaimedEvent = () => {
@@ -141,7 +140,6 @@ const HomePage = ({ user, setUser }) => {
     },
   });
 
- 
   const { data: randomAvatars = [] } = useQuery({
     queryKey: ['randomAvatars'],
     queryFn: async () => {
@@ -249,21 +247,24 @@ const HomePage = ({ user, setUser }) => {
       variants={containerVariants}
       className="max-w-md mx-auto bg-[#faf9fc] min-h-[calc(100vh-130px)] md:max-w-7xl md:px-0 relative overflow-hidden"
     >
-   
+      <Helmet>
+        <title>Home - DealIt | Swap & Trade</title>
+        <meta name="description" content="Sell your unused items, earn credits, and get what you actually want on DealIt. Start bartering today!" />
+      </Helmet>
+
       <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-purple-100/40 to-transparent pointer-events-none"></div>
 
       <div className="px-4 pt-3 pb-0 relative z-10">
         
-      
         <div className="grid grid-cols-7 gap-2 mb-3">
           <motion.div 
             variants={itemVariants}
             className="col-span-5 bg-white border border-white shadow-[0_4px_20px_rgb(0,0,0,0.03),inset_0_1px_1px_rgb(255,255,255,1)] rounded-2xl p-3 flex flex-col justify-center h-full relative overflow-hidden group"
           >
-            {/* Glossy Gradient Background */}
+       
             <div className="absolute inset-0 bg-gradient-to-br from-purple-50/50 via-white to-white opacity-80 z-0"></div>
             
-     
+      
             <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#A388E1]/20 rounded-full blur-3xl group-hover:bg-[#A388E1]/30 transition-colors duration-500 z-0"></div>
             
             <h1 className="text-[16px] sm:text-[15px] md:text-[20px] font-extrabold text-gray-900 leading-tight mb-1.5 tracking-tight relative z-10 drop-shadow-sm">
@@ -282,7 +283,7 @@ const HomePage = ({ user, setUser }) => {
             {user ? (
               <div className={`h-full bg-gradient-to-br from-[#A388E1] via-[#8c67d6] to-[#6b46c1] rounded-2xl p-2 text-white shadow-[0_8px_20px_rgba(163,136,225,0.4),inset_0_1px_1px_rgba(255,255,255,0.3)] flex flex-col justify-between relative overflow-hidden transition-all duration-700 ${showCelebration ? 'shadow-[0_0_30px_rgba(250,204,21,0.6)] scale-[1.05]' : ''}`}>
                 
-                {/* Continuous Glossy Shimmer Line */}
+            
                 <div className="absolute top-0 left-[-150%] w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-[-25deg] animate-[glare_4s_infinite_ease-in-out] pointer-events-none z-0"></div>
 
                 <div className="absolute top-1.5 right-1.5 bg-white/20 px-1 py-[1px] rounded text-[7px] font-semibold border border-white/20 backdrop-blur-md shadow-sm tracking-wide z-10 whitespace-nowrap">
@@ -297,7 +298,7 @@ const HomePage = ({ user, setUser }) => {
                     className="mb-1 w-max"
                   >
                     <div className="relative w-6 h-6 rounded-full shadow-[0_3px_8px_rgba(217,119,6,0.6),inset_0_-2px_4px_rgba(146,64,14,0.6),inset_0_1px_3px_rgba(255,255,255,0.9)] border border-[#FEF08A] bg-gradient-to-br from-[#FEF08A] via-[#F59E0B] to-[#92400E] flex items-center justify-center overflow-hidden">
-                      {/* Inner Engraving */}
+                    
                       <div className="absolute inset-[2px] rounded-full border-[0.5px] border-[#92400E]/50 bg-gradient-to-tl from-[#FEF08A]/20 via-transparent to-[#D97706]/40 flex items-center justify-center shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)]">
                         <span className="font-black text-[#78350F] text-[9px] tracking-tighter drop-shadow-[0_1px_1px_rgba(255,255,255,0.7)]">Cr</span>
                       </div>
@@ -305,7 +306,7 @@ const HomePage = ({ user, setUser }) => {
                       <div className="absolute top-0 left-[-150%] w-full h-full bg-gradient-to-r from-transparent via-white/60 to-transparent skew-x-[-25deg] animate-[glare_3s_infinite_ease-in-out]"></div>
                     </div>
                   </motion.div>
-                 
+                  
 
                   <div className="flex items-end gap-0.5 mt-0.5">
                     <span className="text-base font-bold leading-none relative drop-shadow-md">
@@ -377,7 +378,7 @@ const HomePage = ({ user, setUser }) => {
           </motion.div>
         </div>
 
-        {/* --- Offers Section --- */}
+
         {loadingOffers ? (
           <motion.div variants={itemVariants} className="mb-0">
             <div className="flex overflow-x-auto hide-scrollbar gap-3 pb-0">
@@ -386,7 +387,7 @@ const HomePage = ({ user, setUser }) => {
           </motion.div>
         ) : offers.length > 0 ? (
           <motion.div variants={itemVariants} className="mb-0 relative group">
-            {/* Offer Glass Overlay Reflection */}
+         
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-10"></div>
 
             <div 
@@ -620,7 +621,7 @@ const HomePage = ({ user, setUser }) => {
                       className="w-5 h-5 rounded-full border-2 border-white object-cover shadow-[0_2px_5px_rgba(0,0,0,0.1)] relative z-0 bg-white"
                       onError={(e) => {
                         e.target.onerror = null;
-               
+                
                         e.target.src = DUMMY_AVATARS[i % DUMMY_AVATARS.length];
                       }}
                     />
@@ -649,7 +650,6 @@ const HomePage = ({ user, setUser }) => {
           scrollbar-width: none;
         }
 
-        /* Advanced Glossy Glare Sweep Animation */
         @keyframes glare {
           0%, 20% { transform: translateX(-150%) skewX(-20deg); }
           80%, 100% { transform: translateX(250%) skewX(-20deg); }
