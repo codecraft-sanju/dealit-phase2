@@ -147,7 +147,6 @@ body, html {
   line-height: 1.2;
 }
 
-/* ── BOTTOM SHEET (~65% of screen) ── */
 .mb-sheet {
   flex: 1; /* Takes remaining space */
   background: #ffffff;
@@ -211,7 +210,6 @@ body, html {
   margin-top: 0.5rem;
 }
 
-/* ── NEW EMAIL INPUT MATCHING DESIGN ── */
 .aw-form {
   display: flex;
   flex-direction: column;
@@ -292,7 +290,7 @@ body, html {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── DIVIDER & GOOGLE BUTTON ── */
+
 .divider-section {
   width: 100%;
 }
@@ -329,7 +327,6 @@ body, html {
   cursor: pointer;
 }
 
-/* ── TRUST BADGES ── */
 .trust-badges {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -358,7 +355,7 @@ body, html {
   font-size: 0.55rem; color: #6b7280; margin: 0; line-height: 1.2;
 }
 
-/* ── FOOTER ── */
+
 .footer-terms {
   text-align: center;
   font-size: 0.65rem;
@@ -371,7 +368,6 @@ body, html {
   text-decoration: none;
 }
 
-/* ── OTP SCREEN ── */
 .otp-grid {
   display: flex;
   justify-content: center;
