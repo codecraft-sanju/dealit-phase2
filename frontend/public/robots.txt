@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+
+Disallow: /admin
+Disallow: /wallet
+Disallow: /checkout
+Disallow: /orders
+Disallow: /profile
+Disallow: /chat/
+Disallow: /notifications
+Disallow: /wishlist
+Disallow: /forgot-password
+
+Sitemap: https://dealiit.com/sitemap.xml
