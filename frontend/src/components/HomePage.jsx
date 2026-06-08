@@ -681,8 +681,6 @@
 
 
 
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -889,46 +887,48 @@ const HomePage = ({ user, setUser }) => {
 
             <div className="relative z-10 flex flex-col gap-1.5 w-full">
               {/* Step Flow */}
-              <div className="bg-white/10 backdrop-blur-md rounded-lg p-2 flex items-center justify-between">
-                <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                  <Tag className="w-3.5 h-3.5 text-purple-200 flex-shrink-0" />
+              {/* CHANGE: Changed items-center to items-start, removed truncate, added line-clamp-2 and leading-tight for proper wrapping */}
+              <div className="bg-white/10 backdrop-blur-md rounded-lg p-2 flex items-start justify-between">
+                <div className="flex items-start gap-1.5 flex-1 min-w-0">
+                  <Tag className="w-3.5 h-3.5 text-purple-200 flex-shrink-0 mt-[2px]" />
                   <div className="min-w-0">
-                    <div className="text-[10px] font-bold truncate">1. Sell</div>
-                    <div className="text-[7px] text-purple-300 truncate">List your items</div>
+                    <div className="text-[10px] font-bold leading-tight">1. Sell</div>
+                    <div className="text-[7px] text-purple-300 leading-tight line-clamp-2 mt-0.5">List your items</div>
                   </div>
                 </div>
-                <ChevronRight className="w-3 h-3 text-purple-400 flex-shrink-0 mx-0.5" />
-                <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                  <Coins className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0" />
+                <ChevronRight className="w-3 h-3 text-purple-400 flex-shrink-0 mx-0.5 mt-[4px]" />
+                <div className="flex items-start gap-1.5 flex-1 min-w-0">
+                  <Coins className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0 mt-[2px]" />
                   <div className="min-w-0">
-                    <div className="text-[10px] font-bold truncate">2. Earn</div>
-                    <div className="text-[7px] text-purple-300 truncate">Get credits</div>
+                    <div className="text-[10px] font-bold leading-tight">2. Earn</div>
+                    <div className="text-[7px] text-purple-300 leading-tight line-clamp-2 mt-0.5">Get credits</div>
                   </div>
                 </div>
-                <ChevronRight className="w-3 h-3 text-purple-400 flex-shrink-0 mx-0.5" />
-                <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                  <ShoppingBag className="w-3.5 h-3.5 text-pink-300 flex-shrink-0" />
+                <ChevronRight className="w-3 h-3 text-purple-400 flex-shrink-0 mx-0.5 mt-[4px]" />
+                <div className="flex items-start gap-1.5 flex-1 min-w-0">
+                  <ShoppingBag className="w-3.5 h-3.5 text-pink-300 flex-shrink-0 mt-[2px]" />
                   <div className="min-w-0">
-                    <div className="text-[10px] font-bold truncate">3. Buy</div>
-                    <div className="text-[7px] text-purple-300 truncate">Buy anything</div>
+                    <div className="text-[10px] font-bold leading-tight">3. Buy</div>
+                    <div className="text-[7px] text-purple-300 leading-tight line-clamp-2 mt-0.5">Buy anything</div>
                   </div>
                 </div>
               </div>
 
               {/* Perks Row */}
+              {/* CHANGE: Changed alignment to items-start, removed truncate, added min-w-0 and line-clamp-2 */}
               <div className="grid grid-cols-2 gap-1.5">
-                <div className="bg-white/10 backdrop-blur-md rounded-lg p-1.5 flex items-center gap-1.5">
-                  <Gift className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0" />
-                  <div>
-                    <div className="text-[9px] font-bold leading-tight truncate">Get 100 credits</div>
-                    <div className="text-[7px] text-purple-300 truncate">on signup</div>
+                <div className="bg-white/10 backdrop-blur-md rounded-lg p-1.5 flex items-start gap-1.5">
+                  <Gift className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0 mt-[1px]" />
+                  <div className="min-w-0">
+                    <div className="text-[9px] font-bold leading-tight line-clamp-2">Get 100 credits</div>
+                    <div className="text-[7px] text-purple-300 leading-tight mt-0.5">on signup</div>
                   </div>
                 </div>
-                <div className="bg-white/10 backdrop-blur-md rounded-lg p-1.5 flex items-center gap-1.5">
-                  <Coins className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0" />
-                  <div>
-                    <div className="text-[9px] font-bold leading-tight truncate">List items</div>
-                    <div className="text-[7px] text-purple-300 truncate">Get 70 credits each</div>
+                <div className="bg-white/10 backdrop-blur-md rounded-lg p-1.5 flex items-start gap-1.5">
+                  <Coins className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0 mt-[1px]" />
+                  <div className="min-w-0">
+                    <div className="text-[9px] font-bold leading-tight line-clamp-2">List items</div>
+                    <div className="text-[7px] text-purple-300 leading-tight mt-0.5">Get 70 credits each</div>
                   </div>
                 </div>
               </div>
@@ -1004,41 +1004,43 @@ const HomePage = ({ user, setUser }) => {
         {/* --- How Dealit Works Section --- */}
         <motion.div variants={itemVariants} className="bg-white rounded-2xl p-4 shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-gray-100 mb-4">
           <h2 className="text-center font-bold text-gray-800 text-sm mb-4">How <span className="text-[#6b46c1]">Dealit</span> Works?</h2>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0 relative">
-                <Tag className="w-4 h-4 text-[#6b46c1]" />
+          
+          {/* CHANGE: items-center to items-start for wrapping text support, removed truncate, added line-clamp-2 */}
+          <div className="flex items-start justify-between gap-1.5">
+            <div className="flex items-start gap-2 flex-1 min-w-0">
+              <div className="w-7 h-7 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0 relative">
+                <Tag className="w-3.5 h-3.5 text-[#6b46c1]" />
                 <div className="absolute -top-1.5 -left-1.5 w-4 h-4 rounded-full bg-[#6b46c1] text-white flex items-center justify-center text-[8px] font-bold border border-white">1</div>
               </div>
-              <div className="min-w-0">
-                <div className="text-[11px] font-bold text-gray-800 truncate">List Items</div>
-                <div className="text-[8px] text-gray-500 truncate">Upload items you don't use</div>
+              <div className="min-w-0 mt-0.5">
+                <div className="text-[11px] font-bold text-gray-800 leading-tight">List Items</div>
+                <div className="text-[8px] text-gray-500 leading-tight line-clamp-2 mt-0.5">Upload items you don't use</div>
               </div>
             </div>
 
-            <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0 mx-1" />
+            <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0 mx-0.5 mt-1.5" />
 
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0 relative">
-                <Coins className="w-4 h-4 text-orange-500" />
+            <div className="flex items-start gap-2 flex-1 min-w-0">
+              <div className="w-7 h-7 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0 relative">
+                <Coins className="w-3.5 h-3.5 text-orange-500" />
                 <div className="absolute -top-1.5 -left-1.5 w-4 h-4 rounded-full bg-[#6b46c1] text-white flex items-center justify-center text-[8px] font-bold border border-white">2</div>
               </div>
-              <div className="min-w-0">
-                <div className="text-[11px] font-bold text-gray-800 truncate">Earn Credits</div>
-                <div className="text-[8px] text-gray-500 truncate">Get credits when someone buys</div>
+              <div className="min-w-0 mt-0.5">
+                <div className="text-[11px] font-bold text-gray-800 leading-tight">Earn Credits</div>
+                <div className="text-[8px] text-gray-500 leading-tight line-clamp-2 mt-0.5">Get credits when someone buys</div>
               </div>
             </div>
 
-            <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0 mx-1" />
+            <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0 mx-0.5 mt-1.5" />
 
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0 relative">
-                <ShoppingBag className="w-4 h-4 text-[#6b46c1]" />
+            <div className="flex items-start gap-2 flex-1 min-w-0">
+              <div className="w-7 h-7 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0 relative">
+                <ShoppingBag className="w-3.5 h-3.5 text-[#6b46c1]" />
                 <div className="absolute -top-1.5 -left-1.5 w-4 h-4 rounded-full bg-[#6b46c1] text-white flex items-center justify-center text-[8px] font-bold border border-white">3</div>
               </div>
-              <div className="min-w-0">
-                <div className="text-[11px] font-bold text-gray-800 truncate">Buy Anything</div>
-                <div className="text-[8px] text-gray-500 truncate">Use credits to buy what you want</div>
+              <div className="min-w-0 mt-0.5">
+                <div className="text-[11px] font-bold text-gray-800 leading-tight">Buy Anything</div>
+                <div className="text-[8px] text-gray-500 leading-tight line-clamp-2 mt-0.5">Use credits to buy what you want</div>
               </div>
             </div>
           </div>
