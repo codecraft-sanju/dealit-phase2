@@ -670,15 +670,6 @@
 
 
 
-
-
-
-
-
-
-
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -761,7 +752,6 @@ const HomePage = ({ user, setUser }) => {
   const shouldAnimate = !initialAnimationPlayed;
 
   useEffect(() => {
-    
     initialAnimationPlayed = true;
 
     const handleBonusClaimedEvent = () => {
@@ -785,23 +775,23 @@ const HomePage = ({ user, setUser }) => {
       }
       return { enabled: true, amount: 50 };
     },
-    staleTime: 1000 * 60 * 5, 
+    staleTime: 1000 * 60 * 5,
   });
 
   const { data: categories = [], isLoading: loadingCategories } = useQuery({
-    queryKey: ['categories', 'activeOnly'], 
+    queryKey: ['categories', 'activeOnly'],
     queryFn: async () => {
       const response = await axios.get(`${API_URL}/categories?activeOnly=true&hasItems=true`);
       return response.data.data;
     },
-    staleTime: Infinity, 
+    staleTime: Infinity,
   });
 
   const { data: items = [], isLoading: loadingItems } = useQuery({
-    queryKey: ['items', activeCategory], 
+    queryKey: ['items', activeCategory],
     queryFn: async () => {
-      const url = activeCategory === 'All' 
-        ? `${API_URL}/items?limit=20` 
+      const url = activeCategory === 'All'
+        ? `${API_URL}/items?limit=20`
         : `${API_URL}/items?category=${activeCategory}&limit=20`;
       const response = await axios.get(url);
       return response.data.data;
@@ -824,7 +814,6 @@ const HomePage = ({ user, setUser }) => {
           localStorage.setItem('dealit_user', JSON.stringify(updatedUser));
           return updatedUser;
         });
-
         setTimeout(() => setShowCelebration(false), 5500);
       }
     },
@@ -846,9 +835,9 @@ const HomePage = ({ user, setUser }) => {
   const shouldShowClaimButton = user && !user.hasClaimedWelcomeBonus && bonusSettings.enabled;
 
   return (
-    <motion.div 
-      initial={shouldAnimate ? "hidden" : false} 
-      animate="show" 
+    <motion.div
+      initial={shouldAnimate ? "hidden" : false}
+      animate="show"
       variants={containerVariants}
       className="max-w-md mx-auto bg-[#faf9fc] min-h-[calc(100vh-130px)] md:max-w-7xl md:px-0 relative overflow-hidden pb-10"
     >
@@ -860,103 +849,40 @@ const HomePage = ({ user, setUser }) => {
       <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-purple-100/40 to-transparent pointer-events-none"></div>
 
       <div className="px-3 pt-3 pb-0 relative z-10">
-        
-       
-        <div className="flex gap-2.5 mb-4">
-          
+
+        {/*
+          FIX: `items-stretch` on the parent row makes both children
+          equal height automatically — no hardcoded px needed.
+          Left image gets `h-full` so it fills whatever height the
+          right column naturally grows to on any phone screen.
+        */}
+        <div className="flex gap-2.5 mb-4 items-stretch">
+
           {/* Left Banner */}
-          <motion.div variants={itemVariants} className="w-[60%] bg-gradient-to-br from-[#3b217a] via-[#2d1566] to-[#1a0a42] rounded-[20px] p-4 text-white relative overflow-hidden flex flex-col justify-between shadow-sm group">
-            {/* NEW: Added pulse animation to background blur circles */}
-            <motion.div 
-              animate={{ opacity: [0.05, 0.15, 0.05] }} 
-              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} 
-              className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full blur-2xl pointer-events-none"
+          <motion.div
+            variants={itemVariants}
+            className="w-[60%] rounded-[20px] overflow-hidden shadow-sm"
+          >
+            <img
+              src="/hero-banner2.png"
+              alt="Sell Unused. Get Anything."
+              className="w-full h-full"
             />
-            <motion.div 
-              animate={{ opacity: [0.1, 0.2, 0.1] }} 
-              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 1 }} 
-              className="absolute -bottom-10 -left-10 w-40 h-40 bg-purple-500 rounded-full blur-2xl pointer-events-none"
-            />
-            
-            {/* NEW: Added glare effect element */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-glare pointer-events-none"></div>
-
-            <div className="relative z-10">
-              {/* CHANGED: Wrapped in motion.div for slight hover lift */}
-              <motion.div whileHover={{ y: -2 }} className="inline-flex items-center gap-1 bg-white/10 border border-white/20 rounded-full px-2 py-0.5 mb-3 backdrop-blur-sm cursor-default">
-                <Gift className="w-3 h-3 text-yellow-300" />
-                <span className="text-[9px] font-semibold text-yellow-100">Join & Get 100 Credits</span>
-              </motion.div>
-
-              <h1 className="text-xl md:text-3xl font-extrabold leading-tight mb-2 tracking-tight">
-                Sell Unused.<br/>Get Anything.
-              </h1>
-              <p className="text-[10px] md:text-xs text-purple-200 mb-4 font-medium leading-snug w-[90%]">
-                List unused items, earn credits & buy what you want instantly.
-              </p>
-            </div>
-
-            <div className="relative z-10 flex flex-col gap-1.5 w-full">
-              {/* Step Flow */}
-              <div className="bg-white/10 backdrop-blur-md rounded-lg p-2 flex items-start justify-between">
-                <div className="flex items-start gap-1.5 flex-1 min-w-0">
-                  <Tag className="w-3.5 h-3.5 text-purple-200 flex-shrink-0 mt-[2px]" />
-                  <div className="min-w-0">
-                    <div className="text-[10px] font-bold leading-tight">1. Sell</div>
-                    <div className="text-[7px] text-purple-300 leading-tight line-clamp-2 mt-0.5">List your items</div>
-                  </div>
-                </div>
-                <ChevronRight className="w-3 h-3 text-purple-400 flex-shrink-0 mx-0.5 mt-[4px]" />
-                <div className="flex items-start gap-1.5 flex-1 min-w-0">
-                  <Coins className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0 mt-[2px]" />
-                  <div className="min-w-0">
-                    <div className="text-[10px] font-bold leading-tight">2. Earn</div>
-                    <div className="text-[7px] text-purple-300 leading-tight line-clamp-2 mt-0.5">Get credits</div>
-                  </div>
-                </div>
-                <ChevronRight className="w-3 h-3 text-purple-400 flex-shrink-0 mx-0.5 mt-[4px]" />
-                <div className="flex items-start gap-1.5 flex-1 min-w-0">
-                  <ShoppingBag className="w-3.5 h-3.5 text-pink-300 flex-shrink-0 mt-[2px]" />
-                  <div className="min-w-0">
-                    <div className="text-[10px] font-bold leading-tight">3. Buy</div>
-                    <div className="text-[7px] text-purple-300 leading-tight line-clamp-2 mt-0.5">Buy anything</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Perks Row */}
-              <div className="grid grid-cols-2 gap-1.5">
-                <motion.div whileHover={{ scale: 1.02 }} className="bg-white/10 backdrop-blur-md rounded-lg p-1.5 flex items-start gap-1.5 cursor-default">
-                  <Gift className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0 mt-[1px]" />
-                  <div className="min-w-0">
-                    <div className="text-[9px] font-bold leading-tight line-clamp-2">Get 100 credits</div>
-                    <div className="text-[7px] text-purple-300 leading-tight mt-0.5">on signup</div>
-                  </div>
-                </motion.div>
-                <motion.div whileHover={{ scale: 1.02 }} className="bg-white/10 backdrop-blur-md rounded-lg p-1.5 flex items-start gap-1.5 cursor-default">
-                  <Coins className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0 mt-[1px]" />
-                  <div className="min-w-0">
-                    <div className="text-[9px] font-bold leading-tight line-clamp-2">List items</div>
-                    <div className="text-[7px] text-purple-300 leading-tight mt-0.5">Get 70 credits each</div>
-                  </div>
-                </motion.div>
-              </div>
-            </div>
           </motion.div>
 
-          {/* Right Column (Credits + Trust Badges) */}
+         
           <motion.div variants={itemVariants} className="w-[40%] flex flex-col gap-2.5">
-            {/* Credits Card */}
+
+          
             <div className={`flex-1 bg-gradient-to-br from-[#805ad5] to-[#5a3da6] rounded-[20px] p-3 text-white shadow-sm flex flex-col justify-between relative overflow-hidden transition-all duration-700 ${showCelebration ? 'shadow-[0_0_20px_rgba(250,204,21,0.6)] scale-[1.02]' : ''}`}>
               <div className="flex justify-between items-start mb-2">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-300 to-yellow-600 flex items-center justify-center text-yellow-900 font-black text-xs shadow-inner">Cr</div>
                 <div className="bg-white/20 border border-white/20 backdrop-blur-sm rounded-full px-2 py-0.5 text-[8px] font-semibold">₹1 = 1 Cr</div>
               </div>
-              
+
               <div>
                 <div className="flex items-baseline gap-1 mb-0.5">
-                  {/* NEW: Added simple number counter effect on credits change */}
-                  <motion.span 
+                  <motion.span
                     key={user?.account_credits}
                     initial={{ scale: 1.2, color: "#fef08a" }}
                     animate={{ scale: 1, color: "#ffffff" }}
@@ -971,10 +897,9 @@ const HomePage = ({ user, setUser }) => {
 
               {user ? (
                 shouldShowClaimButton ? (
-                  /* CHANGED: Wrapped in motion.button for tap interaction */
-                  <motion.button 
+                  <motion.button
                     whileTap={{ scale: 0.95 }}
-                    onClick={() => claimBonusMutation.mutate()} 
+                    onClick={() => claimBonusMutation.mutate()}
                     disabled={claimBonusMutation.isPending}
                     className="w-full bg-gradient-to-r from-[#FFE28A] via-[#FFF0B3] to-[#FFD75E] text-yellow-900 py-1.5 rounded-lg font-bold text-[10px] shadow-sm disabled:opacity-80"
                   >
@@ -1001,7 +926,6 @@ const HomePage = ({ user, setUser }) => {
 
             {/* Trust Badges */}
             <div className="bg-white rounded-[20px] p-2.5 flex flex-col justify-between gap-1 shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-gray-100 flex-1">
-              {/* CHANGED: Added motion.div and hover effects to each badge */}
               <motion.div whileHover={{ x: 3, backgroundColor: "rgba(243, 232, 255, 0.3)" }} className="flex items-center gap-2 rounded-lg transition-colors p-0.5 cursor-default">
                 <div className="bg-purple-50 p-1.5 rounded-full text-[#6b46c1]"><UserCircle className="w-4 h-4" /></div>
                 <div>
@@ -1027,76 +951,27 @@ const HomePage = ({ user, setUser }) => {
           </motion.div>
         </div>
 
-        {/* --- How Dealit Works Section --- */}
-        <motion.div variants={itemVariants} className="bg-white rounded-2xl p-4 shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-gray-100 mb-4">
-          <h2 className="text-center font-extrabold text-gray-800 text-sm mb-4">How <span className="text-[#6b46c1]">Dealit</span> Works?</h2>
-          
-          <div className="flex items-start justify-between relative px-1">
-            
-            {/* Step 1 */}
-            {/* CHANGED: Wrapped icon container in motion.div for engaging hover lift */}
-            <div className="flex flex-col items-center text-center flex-1 group">
-              <motion.div 
-                whileHover={{ y: -3, scale: 1.05, rotate: -5 }} 
-                className="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center mb-2 shadow-sm border border-purple-100 relative cursor-default"
-              >
-                <Tag className="w-4 h-4 text-[#6b46c1]" />
-                <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#6b46c1] text-white flex items-center justify-center text-[9px] font-bold border-2 border-white shadow-sm">1</div>
-              </motion.div>
-              <div className="text-[11px] font-bold text-gray-800 mb-0.5 whitespace-nowrap transition-colors group-hover:text-[#6b46c1]">List Items</div>
-              <div className="text-[8px] text-gray-500 leading-tight w-full max-w-[80px]">Upload what you don't use</div>
-            </div>
-
-            <div className="pt-3">
-              <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
-            </div>
-
-            {/* Step 2 */}
-            <div className="flex flex-col items-center text-center flex-1 group">
-              <motion.div 
-                whileHover={{ y: -3, scale: 1.05, rotate: 5 }} 
-                className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center mb-2 shadow-sm border border-orange-100 relative cursor-default"
-              >
-                <Coins className="w-4 h-4 text-orange-500" />
-                <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-orange-500 text-white flex items-center justify-center text-[9px] font-bold border-2 border-white shadow-sm">2</div>
-              </motion.div>
-              <div className="text-[11px] font-bold text-gray-800 mb-0.5 whitespace-nowrap transition-colors group-hover:text-orange-500">Earn Credits</div>
-              <div className="text-[8px] text-gray-500 leading-tight w-full max-w-[80px]">Get credits when sold</div>
-            </div>
-
-            <div className="pt-3">
-              <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
-            </div>
-
-            {/* Step 3 */}
-            <div className="flex flex-col items-center text-center flex-1 group">
-              <motion.div 
-                whileHover={{ y: -3, scale: 1.05, rotate: -5 }} 
-                className="w-10 h-10 rounded-full bg-pink-50 flex items-center justify-center mb-2 shadow-sm border border-pink-100 relative cursor-default"
-              >
-                <ShoppingBag className="w-4 h-4 text-pink-500" />
-                <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-pink-500 text-white flex items-center justify-center text-[9px] font-bold border-2 border-white shadow-sm">3</div>
-              </motion.div>
-              <div className="text-[11px] font-bold text-gray-800 mb-0.5 whitespace-nowrap transition-colors group-hover:text-pink-500">Buy Anything</div>
-              <div className="text-[8px] text-gray-500 leading-tight w-full max-w-[80px]">Use credits for what you want</div>
-            </div>
-          </div>
+        {/* How It Works Banner */}
+        <motion.div variants={itemVariants} className="mb-4 rounded-2xl overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-gray-100 bg-white">
+          <img
+            src="/how-it-works2.png"
+            alt="How Dealit Works"
+            className="w-full h-auto block"
+          />
         </motion.div>
 
       </div>
-
-      {/* --- Categories Section --- */}
       <motion.div variants={itemVariants} className="px-4 pb-0 relative z-10">
         <div className="flex gap-2.5 overflow-x-auto hide-scrollbar items-center pb-3 pt-1">
-          {/* ALL Category */}
-          <motion.div 
+
+          <motion.div
             whileHover={hoverSpring} whileTap={scaleTap}
             onClick={() => setActiveCategory('All')}
             className={`relative flex items-center gap-2 px-4 py-2 rounded-2xl cursor-pointer transition-colors duration-300 min-w-max z-0 ${activeCategory === 'All' ? 'text-white' : 'text-gray-600 hover:text-gray-900'}`}
           >
             {activeCategory === 'All' && (
-              <motion.div 
-                layoutId="activeCategoryBg" 
+              <motion.div
+                layoutId="activeCategoryBg"
                 className="absolute inset-0 bg-gradient-to-r from-[#805ad5] to-[#A388E1] rounded-2xl -z-10 shadow-[0_4px_12px_rgba(128,90,213,0.3)]"
                 transition={{ type: "spring", stiffness: 400, damping: 25 }}
               />
@@ -1119,15 +994,15 @@ const HomePage = ({ user, setUser }) => {
                 const isActive = activeCategory === cat.name;
 
                 return (
-                  <motion.div 
-                    key={cat._id} 
+                  <motion.div
+                    key={cat._id}
                     whileHover={hoverSpring} whileTap={scaleTap}
                     onClick={() => setActiveCategory(cat.name)}
                     className={`relative flex items-center gap-2 px-4 py-2 rounded-2xl cursor-pointer transition-colors duration-300 min-w-max z-0 ${isActive ? 'text-white' : 'text-gray-600 hover:text-gray-900'}`}
                   >
                     {isActive && (
-                      <motion.div 
-                        layoutId="activeCategoryBg" 
+                      <motion.div
+                        layoutId="activeCategoryBg"
                         className="absolute inset-0 bg-gradient-to-r from-[#805ad5] to-[#A388E1] rounded-2xl -z-10 shadow-[0_4px_12px_rgba(128,90,213,0.3)]"
                         transition={{ type: "spring", stiffness: 400, damping: 25 }}
                       />
@@ -1142,14 +1017,14 @@ const HomePage = ({ user, setUser }) => {
               })}
 
               {/* OTHER Category */}
-              <motion.div 
+              <motion.div
                 whileHover={hoverSpring} whileTap={scaleTap}
                 onClick={() => setActiveCategory('Other')}
                 className={`relative flex items-center gap-2 px-4 py-2 rounded-2xl cursor-pointer transition-colors duration-300 min-w-max z-0 ${activeCategory === 'Other' ? 'text-white' : 'text-gray-600 hover:text-gray-900'}`}
               >
                 {activeCategory === 'Other' && (
-                  <motion.div 
-                    layoutId="activeCategoryBg" 
+                  <motion.div
+                    layoutId="activeCategoryBg"
                     className="absolute inset-0 bg-gradient-to-r from-[#805ad5] to-[#A388E1] rounded-2xl -z-10 shadow-[0_4px_12px_rgba(128,90,213,0.3)]"
                     transition={{ type: "spring", stiffness: 400, damping: 25 }}
                   />
@@ -1171,7 +1046,6 @@ const HomePage = ({ user, setUser }) => {
           <h2 className="text-[17px] font-extrabold text-gray-900">
             {activeCategory === 'All' ? 'Popular Right Now' : `Top in ${activeCategory}`}
           </h2>
-          {/* CHANGED: Wrapped "See All" link in motion.div for tap effect */}
           <motion.div whileTap={{ scale: 0.9 }}>
             <Link to={activeCategory === 'All' ? '/items' : `/items?category=${activeCategory}`}>
               <span className="text-xs font-bold text-[#6B46C1] flex items-center gap-0.5 hover:text-[#5a3da6] transition-colors">
@@ -1193,9 +1067,9 @@ const HomePage = ({ user, setUser }) => {
             <span className="text-xs font-medium">No items right now.</span>
           </div>
         ) : (
-          <motion.div 
-            initial={shouldAnimate ? "hidden" : false} 
-            animate="show" 
+          <motion.div
+            initial={shouldAnimate ? "hidden" : false}
+            animate="show"
             variants={containerVariants}
             className="flex overflow-x-auto hide-scrollbar gap-3 pb-4 snap-x"
           >
@@ -1218,8 +1092,6 @@ const HomePage = ({ user, setUser }) => {
           -ms-overflow-style: none;
           scrollbar-width: none;
         }
-
-        /* CHANGED: Adjusted glare animation timing and coordinates to work cleanly on the banner */
         @keyframes glare {
           0%, 15% { transform: translateX(-100%) skewX(-15deg); }
           85%, 100% { transform: translateX(250%) skewX(-15deg); }
@@ -1230,6 +1102,6 @@ const HomePage = ({ user, setUser }) => {
       `}</style>
     </motion.div>
   );
-}; 
+};
 
 export default HomePage;
