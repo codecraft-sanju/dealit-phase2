@@ -864,7 +864,7 @@ const HomePage = ({ user, setUser }) => {
             className="w-[60%] rounded-[20px] overflow-hidden shadow-sm"
           >
             <img
-              src="/hero-banner2.png"
+              src="/hero-banner3.png"
               alt="Sell Unused. Get Anything."
               className="w-full h-full"
             />
@@ -951,10 +951,9 @@ const HomePage = ({ user, setUser }) => {
           </motion.div>
         </div>
 
-        {/* How It Works Banner */}
         <motion.div variants={itemVariants} className="mb-4 rounded-2xl overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-gray-100 bg-white">
           <img
-            src="/how-it-works2.png"
+            src="/how-it-works3.png"
             alt="How Dealit Works"
             className="w-full h-auto block"
           />
