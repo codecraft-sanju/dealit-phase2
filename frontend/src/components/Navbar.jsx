@@ -51,8 +51,9 @@ const Navbar = ({ user }) => {
 
   return (
     <>
-      <nav className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-3">
+      {/* CHANGED: Added h-[60px] to lock exact height for viewport calculations */}
+      <nav className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm h-[60px] flex items-center">
+        <div className="max-w-7xl mx-auto px-4 w-full">
           <div className="flex justify-between items-center">
             
             {/* Logo */}
@@ -100,7 +101,6 @@ const Navbar = ({ user }) => {
                     <span className="text-sm font-bold">{credits}</span>
                   </Link>
 
-                  {/* Desktop ke liye notification icon with badge */}
                   <Link to="/notifications" className="text-gray-500 hover:text-[#A388E1] transition flex items-center gap-1.5 relative">
                     <div className="relative">
                       <Bell className="w-5 h-5" />

@@ -170,11 +170,10 @@ const ProductCard = ({ item, isLoading, className = '', onClick, isSelected }) =
 
       localStorage.setItem('dealit_recently_viewed_ids', JSON.stringify(viewedIds));
 
-      // Silent Cross-Device Sync (Database me update karega bina loading dikhaye)
       const token = localStorage.getItem('dealit_token');
       if (token) {
         axios.post(`${API_URL}/users/recently-viewed/sync`, { viewedIds })
-          .catch(() => {}); // Error aaye toh ignore kar dega, UI block nahi hoga
+          .catch(() => {});
       }
 
     } catch (error) {
@@ -184,14 +183,14 @@ const ProductCard = ({ item, isLoading, className = '', onClick, isSelected }) =
 
   if (isLoading) {
     return (
-      <div className={`bg-[#F8F6FF] rounded-2xl p-2.5 relative block border border-gray-50 animate-pulse ${className}`}>
-        <div className="w-full aspect-square bg-[#EBE5F7] rounded-xl mb-3" />
+      <div className={`bg-[#F8F6FF] rounded-2xl p-2 relative block border border-gray-50 animate-pulse ${className}`}>
+        <div className="w-full aspect-square bg-[#EBE5F7] rounded-xl mb-2" />
         <div>
-          <div className="h-2.5 w-full bg-[#EBE5F7] rounded-md mb-1.5" />
-          <div className="h-2.5 w-2/3 bg-[#EBE5F7] rounded-md mb-2" />
-          <div className="flex items-center justify-between mt-1.5">
-            <div className="h-2.5 w-16 bg-[#EBE5F7] rounded-md" />
-            <div className="h-3 w-12 bg-[#EBE5F7] rounded-md" />
+          <div className="h-2 w-full bg-[#EBE5F7] rounded-md mb-1.5" />
+          <div className="h-2 w-2/3 bg-[#EBE5F7] rounded-md mb-2" />
+          <div className="flex items-center justify-between mt-1">
+            <div className="h-2 w-12 bg-[#EBE5F7] rounded-md" />
+            <div className="h-2 w-8 bg-[#EBE5F7] rounded-md" />
           </div>
         </div>
       </div>
@@ -200,7 +199,7 @@ const ProductCard = ({ item, isLoading, className = '', onClick, isSelected }) =
 
   if (!item) return null;
 
-  const baseClasses = `rounded-2xl p-2.5 relative block transition-all ${className}`;
+  const baseClasses = `rounded-2xl p-2 relative block transition-all ${className}`;
   const selectedClasses = isSelected
     ? 'border-2 border-[#6B46C1] shadow-md shadow-[#6B46C1]/10 bg-[#f8f6ff] scale-[0.98]'
     : 'border-2 border-transparent bg-[#F8F6FF] hover:shadow-md hover:border-slate-200';
@@ -210,9 +209,10 @@ const ProductCard = ({ item, isLoading, className = '', onClick, isSelected }) =
   const cardContent = (
     <>
       {/* Image */}
-      <div className="relative w-full aspect-square flex items-center justify-center mb-3 bg-white/40 rounded-xl overflow-hidden">
+      {/* CHANGED: Slightly adjusted aspect ratio margins for compactness */}
+      <div className="relative w-full aspect-square flex items-center justify-center mb-2 bg-white/40 rounded-xl overflow-hidden">
         {item.discount_percentage && (
-          <span className="absolute top-2 left-2 z-10 text-[9px] font-black text-white bg-[#FF4747] px-1.5 py-0.5 rounded shadow-sm">
+          <span className="absolute top-1.5 left-1.5 z-10 text-[8px] font-black text-white bg-[#FF4747] px-1.5 py-0.5 rounded shadow-sm">
             {item.discount_percentage}% OFF
           </span>
         )}
@@ -224,28 +224,27 @@ const ProductCard = ({ item, isLoading, className = '', onClick, isSelected }) =
             className="w-full h-full object-cover mix-blend-multiply drop-shadow-sm transition-transform duration-300 hover:scale-105"
           />
         ) : (
-          <Package className="w-8 h-8 text-[#A388E1]/40" />
+          <Package className="w-6 h-6 text-[#A388E1]/40" />
         )}
       </div>
 
       {/* Info */}
       <div>
-        <h3 className="text-xs font-bold text-gray-900 leading-tight mb-1 line-clamp-2">
+        <h3 className="text-[11px] font-bold text-gray-900 leading-tight mb-1 line-clamp-2">
           {item.title}
         </h3>
 
-        <div className="flex items-center justify-between mt-1.5">
+        <div className="flex items-center justify-between mt-1">
 
           <div className="flex items-baseline gap-1">
-            <span className="text-sm font-black text-gray-900">
+            <span className="text-xs font-black text-gray-900">
               {item.estimated_value || '0'}
             </span>
-            {/* Credits label next to price */}
-            <span className="text-[10px] font-semibold text-[#6B46C1]">
+            <span className="text-[8px] font-semibold text-[#6B46C1]">
               credits
             </span>
             {item.original_value && (
-              <span className="text-[10px] text-gray-400 line-through font-medium">
+              <span className="text-[8px] text-gray-400 line-through font-medium hidden sm:inline-block">
                 {item.original_value}
               </span>
             )}
@@ -253,7 +252,7 @@ const ProductCard = ({ item, isLoading, className = '', onClick, isSelected }) =
 
           {/* Category badge */}
           {item.category && (
-            <span className="text-[9px] font-medium text-[#A388E1] bg-[#EBE5F7] px-1.5 py-0.5 rounded-md truncate max-w-[65px]">
+            <span className="text-[8px] font-medium text-[#A388E1] bg-[#EBE5F7] px-1.5 py-0.5 rounded-md truncate max-w-[50px]">
               {item.category}
             </span>
           )}

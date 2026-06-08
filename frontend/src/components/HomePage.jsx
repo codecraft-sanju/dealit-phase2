@@ -1384,14 +1384,6 @@ const ICON_DICTIONARY = {
   'Dumbbell': Dumbbell
 };
 
-const DUMMY_AVATARS = [
-  'https://i.pravatar.cc/40?img=11',
-  'https://i.pravatar.cc/40?img=32',
-  'https://i.pravatar.cc/40?img=45',
-  'https://i.pravatar.cc/40?img=16',
-  'https://i.pravatar.cc/40?img=57',
-];
-
 const containerVariants = {
   hidden: { opacity: 0 },
   show: {
@@ -1411,13 +1403,6 @@ const hoverSpring = { scale: 1.05, transition: { type: 'spring', stiffness: 400,
 const ModernShimmer = ({ className }) => (
   <div className={`relative overflow-hidden bg-gray-100 rounded-2xl ${className}`}>
     <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
-  </div>
-);
-
-// Reusable step badge component used in hero and "How it Works"
-const StepBadge = ({ number, active }) => (
-  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 ${active ? 'bg-[#F59E0B] text-white shadow-[0_3px_10px_rgba(245,158,11,0.5)]' : 'bg-[#6b46c1] text-white'}`}>
-    {number}
   </div>
 );
 
@@ -1475,15 +1460,6 @@ const HomePage = ({ user, setUser }) => {
     },
   });
 
-  const { data: randomAvatars = [] } = useQuery({
-    queryKey: ['randomAvatars'],
-    queryFn: async () => {
-      const response = await axios.get(`${API_URL}/users/random-avatars`);
-      return response.data.data;
-    },
-    staleTime: 0,
-  });
-
   const claimBonusMutation = useMutation({
     mutationFn: async () => {
       return axios.post(`${API_URL}/users/claim-bonus`, {}, { withCredentials: true });
@@ -1525,7 +1501,9 @@ const HomePage = ({ user, setUser }) => {
       initial={shouldAnimate ? 'hidden' : false}
       animate="show"
       variants={containerVariants}
-      className="max-w-md mx-auto bg-[#f5f4f9] min-h-[calc(100vh-130px)] md:max-w-7xl relative"
+      /* CHANGED: Used fixed calc height minus Navbar(60) & BottomNav(65) = 125px.
+         Used flex flex-col justify-between to perfectly stretch inner spacing without scrolling. */
+      className="max-w-md mx-auto bg-[#f5f4f9] h-[calc(100dvh-125px)] md:h-auto overflow-y-auto overflow-x-hidden hide-scrollbar flex flex-col justify-between md:max-w-7xl relative pb-2"
     >
       <Helmet>
         <title>Home - DealIt | Swap & Trade</title>
@@ -1535,152 +1513,116 @@ const HomePage = ({ user, setUser }) => {
       {/* ─────────────────────────────────────────────
           HERO SECTION
       ───────────────────────────────────────────── */}
-      <motion.div variants={itemVariants} className="px-4 pt-4 pb-0">
+      {/* CHANGED: pt-4 changed to pt-2 to save vertical space */}
+      <motion.div variants={itemVariants} className="px-3 pt-2 pb-0 flex-shrink-0">
         <div className="grid grid-cols-5 gap-3 md:gap-4">
 
           {/* ── Left Hero Card ── */}
-          <div className="col-span-3 bg-gradient-to-br from-[#5B21B6] via-[#6D28D9] to-[#7C3AED] rounded-3xl overflow-hidden relative shadow-[0_12px_40px_rgba(109,40,217,0.45)] min-h-[220px] md:min-h-[260px]">
+          {/* CHANGED: min-h-[220px] -> min-h-[190px] for better fit on small screens */}
+          <div className="col-span-3 bg-gradient-to-br from-[#5B21B6] via-[#6D28D9] to-[#7C3AED] rounded-3xl overflow-hidden relative shadow-[0_12px_40px_rgba(109,40,217,0.45)] min-h-[190px] md:min-h-[260px]">
 
-            {/* Background glow orbs */}
             <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-[#A78BFA]/30 blur-3xl -translate-y-10 translate-x-10 pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-32 h-32 rounded-full bg-[#4C1D95]/50 blur-2xl pointer-events-none" />
-
-            {/* Glare sweep */}
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-[-20deg] animate-[glare_5s_infinite_ease-in-out] pointer-events-none" />
 
-            <div className="relative z-10 p-4 flex flex-col h-full">
-              {/* Join badge */}
+            <div className="relative z-10 p-3.5 flex flex-col h-full justify-center">
               {!user && (
-                <div className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-sm border border-white/20 rounded-full px-2.5 py-1 mb-3 w-max">
+                <div className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-sm border border-white/20 rounded-full px-2.5 py-1 mb-2 w-max">
                   <Gift className="w-3 h-3 text-yellow-300" />
                   <span className="text-[10px] font-bold text-white">Join &amp; Get {bonusSettings.amount} Credits</span>
                 </div>
               )}
 
               {/* Headline */}
-              <h1 className="text-[22px] sm:text-2xl md:text-3xl font-black text-white leading-[1.15] mb-2 tracking-tight drop-shadow-sm">
+              <h1 className="text-[20px] sm:text-2xl md:text-3xl font-black text-white leading-[1.15] mb-1.5 tracking-tight drop-shadow-sm">
                 Sell Unused.<br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FDE68A] to-[#F59E0B]">Get Anything.</span>
               </h1>
-              <p className="text-[11px] text-white/80 font-medium leading-snug mb-4">
+              <p className="text-[10px] text-white/80 font-medium leading-snug mb-3">
                 List unused items, earn credits<br />&amp; buy what you want instantly.
               </p>
 
               {/* 3-step row */}
-              <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm rounded-xl px-2 py-2 border border-white/10">
+              <div className="flex items-center gap-1 bg-white/10 backdrop-blur-sm rounded-xl px-1.5 py-1.5 border border-white/10">
                 <div className="flex flex-col items-center gap-0.5">
-                  <div className="w-6 h-6 rounded-lg bg-white/15 flex items-center justify-center">
-                    <Tag className="w-3 h-3 text-white" />
+                  <div className="w-5 h-5 rounded-md bg-white/15 flex items-center justify-center">
+                    <Tag className="w-2.5 h-2.5 text-white" />
                   </div>
-                  <span className="text-[8px] font-bold text-white">1. Sell</span>
-                  <span className="text-[7px] text-white/60 font-medium">List items</span>
+                  <span className="text-[7px] font-bold text-white">1. Sell</span>
                 </div>
-                <ChevronRight className="w-3 h-3 text-white/40 flex-shrink-0" />
+                <ChevronRight className="w-2.5 h-2.5 text-white/40 flex-shrink-0" />
                 <div className="flex flex-col items-center gap-0.5">
-                  <div className="w-6 h-6 rounded-lg bg-white/15 flex items-center justify-center">
-                    <Coins className="w-3 h-3 text-[#FCD34D]" />
+                  <div className="w-5 h-5 rounded-md bg-white/15 flex items-center justify-center">
+                    <Coins className="w-2.5 h-2.5 text-[#FCD34D]" />
                   </div>
-                  <span className="text-[8px] font-bold text-white">2. Earn</span>
-                  <span className="text-[7px] text-white/60 font-medium">Get credits</span>
+                  <span className="text-[7px] font-bold text-white">2. Earn</span>
                 </div>
-                <ChevronRight className="w-3 h-3 text-white/40 flex-shrink-0" />
+                <ChevronRight className="w-2.5 h-2.5 text-white/40 flex-shrink-0" />
                 <div className="flex flex-col items-center gap-0.5">
-                  <div className="w-6 h-6 rounded-lg bg-white/15 flex items-center justify-center">
-                    <ShoppingBag className="w-3 h-3 text-white" />
+                  <div className="w-5 h-5 rounded-md bg-white/15 flex items-center justify-center">
+                    <ShoppingBag className="w-2.5 h-2.5 text-white" />
                   </div>
-                  <span className="text-[8px] font-bold text-white">3. Buy</span>
-                  <span className="text-[7px] text-white/60 font-medium">Buy anything</span>
+                  <span className="text-[7px] font-bold text-white">3. Buy</span>
                 </div>
               </div>
 
               {/* Bonus strips */}
               <div className="grid grid-cols-3 gap-1 mt-2">
                 <div className="bg-white/10 rounded-lg p-1.5 flex flex-col gap-0.5 border border-white/10">
-                  <Zap className="w-3 h-3 text-yellow-300" />
-                  <span className="text-[8px] font-extrabold text-white leading-tight">Get {bonusSettings.amount} credits</span>
-                  <span className="text-[7px] text-white/60">on signup</span>
+                  <Zap className="w-2.5 h-2.5 text-yellow-300" />
+                  <span className="text-[7px] font-extrabold text-white leading-tight">Get {bonusSettings.amount} credits</span>
                 </div>
                 <div className="bg-white/10 rounded-lg p-1.5 flex flex-col gap-0.5 border border-white/10">
-                  <Coins className="w-3 h-3 text-yellow-300" />
-                  <span className="text-[8px] font-extrabold text-white leading-tight">List items</span>
-                  <span className="text-[7px] text-white/60">Get 70 cr each</span>
+                  <Coins className="w-2.5 h-2.5 text-yellow-300" />
+                  <span className="text-[7px] font-extrabold text-white leading-tight">List items</span>
                 </div>
                 <div className="bg-white/10 rounded-lg p-1.5 flex flex-col gap-0.5 border border-white/10">
-                  <ShoppingBag className="w-3 h-3 text-yellow-300" />
-                  <span className="text-[8px] font-extrabold text-white leading-tight">Buy from credits</span>
-                  <span className="text-[7px] text-white/60">Anything you want</span>
+                  <ShoppingBag className="w-2.5 h-2.5 text-yellow-300" />
+                  <span className="text-[7px] font-extrabold text-white leading-tight">Buy anything</span>
                 </div>
               </div>
             </div>
           </div>
 
           {/* ── Right Column: Credits + Trust ── */}
-          <div className="col-span-2 flex flex-col gap-2.5">
-
-            {/* Credits / Auth Card */}
+          <div className="col-span-2 flex flex-col gap-2 relative">
             {user ? (
-              <div className={`bg-gradient-to-br from-[#A388E1] via-[#8c67d6] to-[#6b46c1] rounded-2xl p-3 text-white shadow-[0_8px_24px_rgba(163,136,225,0.4),inset_0_1px_1px_rgba(255,255,255,0.3)] flex flex-col justify-between relative overflow-hidden transition-all duration-700 ${showCelebration ? 'shadow-[0_0_30px_rgba(250,204,21,0.6)] scale-[1.03]' : ''}`}>
-                {/* glare */}
+              <div className={`bg-gradient-to-br from-[#A388E1] via-[#8c67d6] to-[#6b46c1] rounded-2xl p-2.5 text-white shadow-[0_8px_24px_rgba(163,136,225,0.4),inset_0_1px_1px_rgba(255,255,255,0.3)] flex flex-col justify-between relative overflow-hidden transition-all duration-700 flex-1 ${showCelebration ? 'shadow-[0_0_30px_rgba(250,204,21,0.6)] scale-[1.03]' : ''}`}>
                 <div className="absolute top-0 left-[-150%] w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-[-25deg] animate-[glare_4s_infinite_ease-in-out] pointer-events-none" />
-
                 <div className="absolute top-2 right-2 bg-white/20 px-1.5 py-0.5 rounded text-[7px] font-semibold border border-white/20 backdrop-blur-md z-10 whitespace-nowrap">
                   ₹1 = 1 Cr
                 </div>
 
-                {/* Coin */}
                 <motion.div
                   animate={showCelebration ? { rotateY: 360, scale: 1.2 } : { rotateY: 0, scale: 1 }}
                   transition={{ duration: 0.8, type: 'spring' }}
-                  className="w-8 h-8 rounded-full shadow-[0_3px_10px_rgba(217,119,6,0.7),inset_0_-2px_4px_rgba(146,64,14,0.6),inset_0_1px_3px_rgba(255,255,255,0.9)] border border-[#FEF08A] bg-gradient-to-br from-[#FEF08A] via-[#F59E0B] to-[#92400E] flex items-center justify-center relative overflow-hidden"
+                  className="w-7 h-7 rounded-full shadow-[0_3px_10px_rgba(217,119,6,0.7),inset_0_-2px_4px_rgba(146,64,14,0.6),inset_0_1px_3px_rgba(255,255,255,0.9)] border border-[#FEF08A] bg-gradient-to-br from-[#FEF08A] via-[#F59E0B] to-[#92400E] flex items-center justify-center relative overflow-hidden"
                 >
-                  <span className="font-black text-[#78350F] text-[10px]">Cr</span>
-                  <div className="absolute top-0 left-[-150%] w-full h-full bg-gradient-to-r from-transparent via-white/60 to-transparent skew-x-[-25deg] animate-[glare_3s_infinite_ease-in-out]" />
+                  <span className="font-black text-[#78350F] text-[9px]">Cr</span>
                 </motion.div>
 
-                {/* Balance */}
                 <div className="mt-1">
                   <div className="flex items-end gap-1">
-                    <span className="text-2xl font-black leading-none relative">
+                    <span className="text-xl font-black leading-none relative">
                       {user.account_credits || 0}
-                      <AnimatePresence>
-                        {showCelebration && (
-                          <motion.span
-                            initial={{ opacity: 0, y: 10, scale: 0.5 }}
-                            animate={{ opacity: 1, y: -30, scale: 1.2 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 1.5, ease: 'easeOut' }}
-                            className="absolute -top-2 -right-8 text-xs text-yellow-300 font-black flex items-center z-10"
-                          >
-                            +{bonusSettings.amount} <Sparkles className="w-2.5 h-2.5 ml-0.5 animate-spin" />
-                          </motion.span>
-                        )}
-                      </AnimatePresence>
                     </span>
-                    <span className="text-[10px] font-medium opacity-80 mb-0.5">Credits</span>
+                    <span className="text-[9px] font-medium opacity-80 mb-0.5">Credits</span>
                   </div>
-                  <p className="text-[9px] text-white/60 font-medium mt-0.5">Your balance</p>
+                  <p className="text-[8px] text-white/60 font-medium mt-0.5">Your balance</p>
                 </div>
 
-                {/* CTA */}
                 {shouldShowClaimButton ? (
                   <motion.button
                     whileTap={scaleTap}
                     onClick={() => claimBonusMutation.mutate()}
                     disabled={claimBonusMutation.isPending}
-                    className="mt-2 bg-gradient-to-r from-[#FFE28A] via-[#FFF0B3] to-[#FFD75E] text-yellow-900 text-[9px] font-extrabold px-2 py-1.5 rounded-xl flex items-center justify-center gap-1 shadow-[0_4px_10px_rgba(0,0,0,0.1)] relative overflow-hidden disabled:opacity-80"
+                    className="mt-1.5 bg-gradient-to-r from-[#FFE28A] via-[#FFF0B3] to-[#FFD75E] text-yellow-900 text-[9px] font-extrabold px-2 py-1.5 rounded-xl flex items-center justify-center gap-1 shadow-[0_4px_10px_rgba(0,0,0,0.1)] relative overflow-hidden disabled:opacity-80"
                   >
-                    <motion.div
-                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/70 to-transparent skew-x-[-20deg]"
-                      animate={{ x: ['-150%', '250%'] }}
-                      transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
-                    />
                     <span className="relative z-10">{claimBonusMutation.isPending ? 'Claiming...' : `Claim ${bonusSettings.amount}`}</span>
-                    <Gift className="w-3 h-3 relative z-10" />
                   </motion.button>
                 ) : (
-                  <Link to="/wallet" className="block mt-2">
+                  <Link to="/wallet" className="block mt-1.5">
                     <motion.div whileTap={scaleTap} className="bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/20 text-white text-[9px] font-bold px-2 py-1.5 rounded-xl flex items-center justify-center gap-1 relative overflow-hidden transition-colors">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-[-20deg] animate-[glare_3s_infinite_ease-in-out]" />
                       <span className="relative z-10">Earn More</span>
                       <ChevronRight className="w-3 h-3 relative z-10" />
                     </motion.div>
@@ -1688,15 +1630,13 @@ const HomePage = ({ user, setUser }) => {
                 )}
               </div>
             ) : (
-              /* Guest state */
-              <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-3 text-white shadow-[0_8px_20px_rgba(0,0,0,0.2)] flex flex-col justify-between relative overflow-hidden">
-                <div className="absolute top-0 left-[-150%] w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-[-25deg] animate-[glare_5s_infinite_ease-in-out] pointer-events-none" />
+              <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-2.5 text-white shadow-[0_8px_20px_rgba(0,0,0,0.2)] flex flex-col justify-between relative overflow-hidden flex-1">
                 <div className="relative z-10">
                   <UserCircle className="w-5 h-5 text-gray-400 mb-1" />
-                  <h3 className="text-[11px] font-extrabold leading-tight">Join Dealit</h3>
-                  <p className="text-[9px] text-gray-400 mt-0.5">Get {bonusSettings.amount} free credits</p>
+                  <h3 className="text-[10px] font-extrabold leading-tight">Join Dealit</h3>
+                  <p className="text-[8px] text-gray-400 mt-0.5">Get {bonusSettings.amount} free credits</p>
                 </div>
-                <div className="flex flex-col gap-1.5 mt-2 relative z-10">
+                <div className="flex flex-col gap-1 mt-1.5 relative z-10">
                   <Link to="/login">
                     <motion.div whileTap={scaleTap} className="bg-white/10 hover:bg-white/20 border border-white/10 text-white text-center text-[9px] font-bold py-1.5 rounded-xl transition-colors">
                       Login
@@ -1712,20 +1652,17 @@ const HomePage = ({ user, setUser }) => {
             )}
 
             {/* Trust Badges */}
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1 flex-1 justify-end">
               {[
-                { icon: Users, color: 'text-[#7C3AED]', bg: 'bg-purple-50', label: 'Trusted Community', sub: 'Verified members' },
-                { icon: Shield, color: 'text-[#EA580C]', bg: 'bg-orange-50', label: 'Secure & Safe', sub: 'Protected payments' },
-                { icon: Zap, color: 'text-[#0EA5E9]', bg: 'bg-sky-50', label: 'Easy & Instant', sub: 'Sell & buy in seconds' },
-              ].map(({ icon: Icon, color, bg, label, sub }) => (
-                <div key={label} className="bg-white rounded-xl px-2.5 py-2 flex items-center gap-2 shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-50">
-                  <div className={`${bg} p-1.5 rounded-lg flex-shrink-0`}>
-                    <Icon className={`w-3 h-3 ${color}`} />
+                { icon: Users, color: 'text-[#7C3AED]', bg: 'bg-purple-50', label: 'Trusted Community' },
+                { icon: Shield, color: 'text-[#EA580C]', bg: 'bg-orange-50', label: 'Secure & Safe' },
+                { icon: Zap, color: 'text-[#0EA5E9]', bg: 'bg-sky-50', label: 'Easy & Instant' },
+              ].map(({ icon: Icon, color, bg, label }) => (
+                <div key={label} className="bg-white rounded-xl px-2 py-1.5 flex items-center gap-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-50">
+                  <div className={`${bg} p-1 rounded-md flex-shrink-0`}>
+                    <Icon className={`w-2.5 h-2.5 ${color}`} />
                   </div>
-                  <div>
-                    <p className="text-[9px] font-bold text-gray-800 leading-none">{label}</p>
-                    <p className="text-[8px] text-gray-400 mt-0.5">{sub}</p>
-                  </div>
+                  <p className="text-[8px] font-bold text-gray-800 leading-none">{label}</p>
                 </div>
               ))}
             </div>
@@ -1736,33 +1673,30 @@ const HomePage = ({ user, setUser }) => {
       {/* ─────────────────────────────────────────────
           HOW IT WORKS
       ───────────────────────────────────────────── */}
-      <motion.div variants={itemVariants} className="px-4 pt-4">
-        <div className="bg-white rounded-3xl p-4 shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-gray-50">
-          <h2 className="text-base font-extrabold text-gray-900 text-center mb-4">
+      <motion.div variants={itemVariants} className="px-3 pt-2 flex-shrink-0">
+        <div className="bg-white rounded-3xl p-3 shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-gray-50">
+          <h2 className="text-sm font-extrabold text-gray-900 text-center mb-2.5">
             How <span className="text-[#7C3AED]">Dealit</span> Works?
           </h2>
           <div className="flex items-start gap-1">
             {[
-              { icon: Tag, step: 1, title: 'List Items', desc: 'Upload items you don\'t use', active: false },
-              { icon: Coins, step: 2, title: 'Earn Credits', desc: 'Get credits when someone buys', active: true },
-              { icon: ShoppingBag, step: 3, title: 'Buy Anything', desc: 'Use credits to buy what you want', active: false },
-            ].map(({ icon: Icon, step, title, desc, active }, idx, arr) => (
+              { icon: Tag, step: 1, title: 'List Items', active: false },
+              { icon: Coins, step: 2, title: 'Earn Credits', active: true },
+              { icon: ShoppingBag, step: 3, title: 'Buy Anything', active: false },
+            ].map(({ icon: Icon, step, title, active }, idx, arr) => (
               <React.Fragment key={step}>
-                <div className="flex-1 flex flex-col items-center text-center gap-2">
-                  <div className={`relative w-12 h-12 rounded-2xl flex items-center justify-center ${active ? 'bg-[#FEF9C3] shadow-[0_4px_12px_rgba(245,158,11,0.2)]' : 'bg-[#F3F0FF] shadow-[0_4px_12px_rgba(124,58,237,0.1)]'}`}>
-                    <Icon className={`w-5 h-5 ${active ? 'text-[#F59E0B]' : 'text-[#7C3AED]'}`} />
-                    <div className={`absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black text-white ${active ? 'bg-[#F59E0B] shadow-[0_2px_6px_rgba(245,158,11,0.5)]' : 'bg-[#7C3AED]'}`}>
+                <div className="flex-1 flex flex-col items-center text-center gap-1.5">
+                  <div className={`relative w-10 h-10 rounded-2xl flex items-center justify-center ${active ? 'bg-[#FEF9C3] shadow-[0_4px_12px_rgba(245,158,11,0.2)]' : 'bg-[#F3F0FF] shadow-[0_4px_12px_rgba(124,58,237,0.1)]'}`}>
+                    <Icon className={`w-4 h-4 ${active ? 'text-[#F59E0B]' : 'text-[#7C3AED]'}`} />
+                    <div className={`absolute -top-1 -left-1 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black text-white ${active ? 'bg-[#F59E0B]' : 'bg-[#7C3AED]'}`}>
                       {step}
                     </div>
                   </div>
-                  <div>
-                    <p className="text-[11px] font-extrabold text-gray-900">{title}</p>
-                    <p className="text-[9px] text-gray-400 leading-snug mt-0.5">{desc}</p>
-                  </div>
+                  <p className="text-[10px] font-extrabold text-gray-900">{title}</p>
                 </div>
                 {idx < arr.length - 1 && (
-                  <div className="flex-shrink-0 mt-5">
-                    <ChevronRight className="w-3.5 h-3.5 text-gray-300" />
+                  <div className="flex-shrink-0 mt-3">
+                    <ChevronRight className="w-3 h-3 text-gray-300" />
                   </div>
                 )}
               </React.Fragment>
@@ -1774,31 +1708,30 @@ const HomePage = ({ user, setUser }) => {
       {/* ─────────────────────────────────────────────
           CATEGORIES
       ───────────────────────────────────────────── */}
-      <motion.div variants={itemVariants} className="px-4 pt-4">
-        <div className="flex gap-2 overflow-x-auto hide-scrollbar items-center pb-1 pt-0.5">
-          {/* ALL */}
+      <motion.div variants={itemVariants} className="px-3 pt-2 flex-shrink-0">
+        <div className="flex gap-2 overflow-x-auto hide-scrollbar items-center pb-1">
           <motion.div
             whileHover={hoverSpring} whileTap={scaleTap}
             onClick={() => setActiveCategory('All')}
-            className={`relative flex items-center gap-1.5 px-4 py-2 rounded-2xl cursor-pointer transition-colors duration-200 min-w-max z-0 ${activeCategory === 'All' ? 'text-white' : 'text-gray-600'}`}
+            className={`relative flex items-center gap-1 px-3 py-1.5 rounded-xl cursor-pointer transition-colors duration-200 min-w-max z-0 ${activeCategory === 'All' ? 'text-white' : 'text-gray-600'}`}
           >
             {activeCategory === 'All' && (
               <motion.div
                 layoutId="activeCategoryBg"
-                className="absolute inset-0 bg-gradient-to-r from-[#7C3AED] to-[#A388E1] rounded-2xl -z-10 shadow-[0_4px_12px_rgba(124,58,237,0.35)]"
+                className="absolute inset-0 bg-gradient-to-r from-[#7C3AED] to-[#A388E1] rounded-xl -z-10 shadow-[0_4px_12px_rgba(124,58,237,0.35)]"
                 transition={{ type: 'spring', stiffness: 400, damping: 25 }}
               />
             )}
             {activeCategory !== 'All' && (
-              <div className="absolute inset-0 bg-white border border-gray-100 rounded-2xl -z-10 shadow-[0_2px_8px_rgba(0,0,0,0.04)]" />
+              <div className="absolute inset-0 bg-white border border-gray-100 rounded-xl -z-10 shadow-[0_2px_8px_rgba(0,0,0,0.04)]" />
             )}
-            <Package className={`w-4 h-4 relative z-10 ${activeCategory === 'All' ? 'text-white' : 'text-gray-400'}`} />
-            <span className="text-[13px] font-bold relative z-10">All</span>
+            <Package className={`w-3.5 h-3.5 relative z-10 ${activeCategory === 'All' ? 'text-white' : 'text-gray-400'}`} />
+            <span className="text-[11px] font-bold relative z-10">All</span>
           </motion.div>
 
           {loadingCategories ? (
-            [1, 2, 3, 4].map(i => (
-              <ModernShimmer key={i} className="min-w-[90px] h-9 rounded-2xl flex-shrink-0" />
+            [1, 2, 3].map(i => (
+              <ModernShimmer key={i} className="min-w-[70px] h-7 rounded-xl flex-shrink-0" />
             ))
           ) : (
             <>
@@ -1810,43 +1743,23 @@ const HomePage = ({ user, setUser }) => {
                     key={cat._id}
                     whileHover={hoverSpring} whileTap={scaleTap}
                     onClick={() => setActiveCategory(cat.name)}
-                    className={`relative flex items-center gap-1.5 px-4 py-2 rounded-2xl cursor-pointer transition-colors duration-200 min-w-max z-0 ${isActive ? 'text-white' : 'text-gray-600'}`}
+                    className={`relative flex items-center gap-1 px-3 py-1.5 rounded-xl cursor-pointer transition-colors duration-200 min-w-max z-0 ${isActive ? 'text-white' : 'text-gray-600'}`}
                   >
                     {isActive && (
                       <motion.div
                         layoutId="activeCategoryBg"
-                        className="absolute inset-0 bg-gradient-to-r from-[#7C3AED] to-[#A388E1] rounded-2xl -z-10 shadow-[0_4px_12px_rgba(124,58,237,0.35)]"
+                        className="absolute inset-0 bg-gradient-to-r from-[#7C3AED] to-[#A388E1] rounded-xl -z-10 shadow-[0_4px_12px_rgba(124,58,237,0.35)]"
                         transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                       />
                     )}
                     {!isActive && (
-                      <div className="absolute inset-0 bg-white border border-gray-100 rounded-2xl -z-10 shadow-[0_2px_8px_rgba(0,0,0,0.04)]" />
+                      <div className="absolute inset-0 bg-white border border-gray-100 rounded-xl -z-10 shadow-[0_2px_8px_rgba(0,0,0,0.04)]" />
                     )}
-                    <IconComponent className={`w-4 h-4 relative z-10 ${isActive ? 'text-white' : 'text-gray-400'}`} />
-                    <span className="text-[13px] font-bold relative z-10">{cat.name}</span>
+                    <IconComponent className={`w-3.5 h-3.5 relative z-10 ${isActive ? 'text-white' : 'text-gray-400'}`} />
+                    <span className="text-[11px] font-bold relative z-10">{cat.name}</span>
                   </motion.div>
                 );
               })}
-
-              {/* OTHER */}
-              <motion.div
-                whileHover={hoverSpring} whileTap={scaleTap}
-                onClick={() => setActiveCategory('Other')}
-                className={`relative flex items-center gap-1.5 px-4 py-2 rounded-2xl cursor-pointer transition-colors duration-200 min-w-max z-0 ${activeCategory === 'Other' ? 'text-white' : 'text-gray-600'}`}
-              >
-                {activeCategory === 'Other' && (
-                  <motion.div
-                    layoutId="activeCategoryBg"
-                    className="absolute inset-0 bg-gradient-to-r from-[#7C3AED] to-[#A388E1] rounded-2xl -z-10 shadow-[0_4px_12px_rgba(124,58,237,0.35)]"
-                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                  />
-                )}
-                {activeCategory !== 'Other' && (
-                  <div className="absolute inset-0 bg-white border border-gray-100 rounded-2xl -z-10 shadow-[0_2px_8px_rgba(0,0,0,0.04)]" />
-                )}
-                <Plus className={`w-4 h-4 relative z-10 ${activeCategory === 'Other' ? 'text-white' : 'text-gray-400'}`} />
-                <span className="text-[13px] font-bold relative z-10">More</span>
-              </motion.div>
             </>
           )}
         </div>
@@ -1855,126 +1768,50 @@ const HomePage = ({ user, setUser }) => {
       {/* ─────────────────────────────────────────────
           ITEMS LISTING
       ───────────────────────────────────────────── */}
-      <motion.div variants={itemVariants} className="px-4 pt-3">
-        <div className="flex justify-between items-center mb-2.5">
-          <h2 className="text-[17px] font-extrabold text-gray-900">
+      {/* CHANGED: Used flex-1 so this section takes remaining space */}
+      <motion.div variants={itemVariants} className="px-3 pt-2 flex-1 flex flex-col min-h-0">
+        <div className="flex justify-between items-center mb-1.5 flex-shrink-0">
+          <h2 className="text-[15px] font-extrabold text-gray-900">
             {activeCategory === 'All' ? 'Popular Right Now' : `Top in ${activeCategory}`}
           </h2>
           <Link to={activeCategory === 'All' ? '/items' : `/items?category=${activeCategory}`}>
-            <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.95 }} className="text-xs font-bold text-[#7C3AED] bg-white border border-[#EBE5F7] px-3 py-1.5 rounded-full flex items-center gap-0.5 shadow-[0_2px_8px_rgba(124,58,237,0.08)] hover:shadow-[0_4px_12px_rgba(124,58,237,0.15)] transition-all">
-              See All <ChevronRight className="w-3.5 h-3.5" />
+            <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.95 }} className="text-[10px] font-bold text-[#7C3AED] bg-white border border-[#EBE5F7] px-2.5 py-1 rounded-full flex items-center gap-0.5 shadow-sm transition-all">
+              See All <ChevronRight className="w-3 h-3" />
             </motion.div>
           </Link>
         </div>
 
-        {loadingItems ? (
-          <div className="flex overflow-x-auto hide-scrollbar gap-3 pb-2">
-            {[1, 2, 3, 4].map(i => (
-              <ProductCard key={i} isLoading={true} className="min-w-[145px] w-[145px] flex-shrink-0" />
-            ))}
-          </div>
-        ) : items.length === 0 ? (
-          <div className="text-center text-gray-400 py-10 bg-white rounded-2xl border border-gray-50 flex flex-col items-center justify-center shadow-[0_4px_15px_rgba(0,0,0,0.03)]">
-            <Package className="w-9 h-9 text-gray-200 mb-2" />
-            <span className="text-xs font-semibold text-gray-400">No items right now.</span>
-          </div>
-        ) : (
-          <motion.div
-            initial={shouldAnimate ? 'hidden' : false}
-            animate="show"
-            variants={containerVariants}
-            className="flex overflow-x-auto hide-scrollbar gap-3 pb-4 snap-x"
-          >
-            {items.map(item => (
-              <motion.div variants={itemVariants} key={item._id} className="min-w-[145px] w-[145px] flex-shrink-0 snap-start">
-                <ProductCard item={item} className="hover:shadow-[0_8px_25px_rgba(124,58,237,0.15)] transition-shadow duration-300" />
-              </motion.div>
-            ))}
-          </motion.div>
-        )}
-      </motion.div>
-
-      {/* ─────────────────────────────────────────────
-          CTA — LIST AN ITEM
-      ───────────────────────────────────────────── */}
-      <motion.div variants={itemVariants} className="px-4 pt-1 pb-1">
-        <motion.div
-          whileHover={{ y: -2 }}
-          className="bg-gradient-to-r from-[#EBE5F7] via-[#F5F0FF] to-white border border-white shadow-[0_8px_24px_rgba(124,58,237,0.08),inset_0_1px_2px_rgba(255,255,255,1)] rounded-2xl p-4 relative overflow-hidden group"
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#A388E1]/5 to-transparent skew-x-[-20deg] animate-[glare_5s_infinite_ease-in-out] pointer-events-none" />
-
-          {/* <div className="w-3/4 relative z-10">
-            <h3 className="text-base font-extrabold text-[#5B21B6] mb-1">Got unused items?</h3>
-            <p className="text-[11px] text-gray-500 mb-3 leading-snug font-medium">
-              List items you no longer need and earn instant credits to exchange for products you want!
-            </p>
-            <Link to={user ? '/add-item' : '/login'}>
-              <motion.div
-                whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.95 }}
-                className="bg-gradient-to-r from-[#FFE28A] via-[#FFF0B3] to-[#FFD75E] text-yellow-900 px-4 py-2 rounded-xl text-xs font-extrabold inline-flex items-center gap-1.5 shadow-[0_4px_12px_rgba(250,204,21,0.25)] hover:shadow-[0_6px_18px_rgba(250,204,21,0.4)] transition-all relative overflow-hidden"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent skew-x-[-20deg] animate-[glare_2.5s_infinite_ease-in-out]" />
-                <Plus className="w-4 h-4 relative z-10" />
-                <span className="relative z-10">List an Item</span>
-              </motion.div>
-            </Link>
-          </div> */}
-
-          {/* <motion.div
-            animate={{ y: [0, -8, 0], rotate: [0, 5, 0] }}
-            transition={{ repeat: Infinity, duration: 5, ease: 'easeInOut' }}
-            className="absolute -right-4 -bottom-4 w-28 h-28 opacity-[0.12] pointer-events-none"
-          >
-            <Package className="w-full h-full text-[#7C3AED]" />
-          </motion.div> */}
-        </motion.div>
-      </motion.div>
-
-      {/* <motion.div variants={itemVariants} className="px-4 pb-6 pt-3">
-        <div className="flex items-center gap-3 bg-white/70 backdrop-blur-sm border border-white/80 rounded-2xl p-3 shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
-          <motion.div
-            animate={{ scale: [1, 1.1, 1] }}
-            transition={{ repeat: Infinity, duration: 2 }}
-            className="flex-shrink-0 bg-white p-2 rounded-full shadow-[0_2px_8px_rgba(124,58,237,0.15)]"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path d="M3 17L9 11L13 15L21 7" stroke="#7C3AED" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M15 7H21V13" stroke="#7C3AED" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </motion.div>
-
-          <div className="flex flex-col gap-1">
-            <p className="text-[11px] font-extrabold text-gray-800 leading-tight">
-              Start earning by selling what you don't use anymore!
-            </p>
-
-            <div className="flex items-center gap-2">
-              <div className="flex -space-x-1.5">
-                {(randomAvatars.length > 0 ? randomAvatars : DUMMY_AVATARS).map((src, i) => {
-                  const finalSrc = src && src.includes('ui-avatars.com')
-                    ? DUMMY_AVATARS[i % DUMMY_AVATARS.length]
-                    : src;
-                  return (
-                    <motion.img
-                      whileHover={{ y: -5, scale: 1.1, zIndex: 20 }}
-                      key={i}
-                      src={finalSrc}
-                      alt={`user-${i}`}
-                      className="w-5 h-5 rounded-full border-2 border-white object-cover shadow-sm bg-white"
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = DUMMY_AVATARS[i % DUMMY_AVATARS.length];
-                      }}
-                    />
-                  );
-                })}
-              </div>
-              <p className="text-[9px] text-gray-400 font-bold">people are already trading</p>
+        <div className="flex-1 min-h-0">
+          {loadingItems ? (
+            <div className="flex overflow-x-auto hide-scrollbar gap-2.5 pb-1 h-full items-center">
+              {[1, 2, 3].map(i => (
+                <ProductCard key={i} isLoading={true} className="min-w-[130px] w-[130px] flex-shrink-0" />
+              ))}
             </div>
-          </div>
+          ) : items.length === 0 ? (
+            <div className="text-center text-gray-400 h-full bg-white rounded-2xl border border-gray-50 flex flex-col items-center justify-center shadow-sm">
+              <Package className="w-8 h-8 text-gray-200 mb-2" />
+              <span className="text-xs font-semibold text-gray-400">No items right now.</span>
+            </div>
+          ) : (
+            <motion.div
+              initial={shouldAnimate ? 'hidden' : false}
+              animate="show"
+              variants={containerVariants}
+              className="flex overflow-x-auto hide-scrollbar gap-2.5 pb-2 snap-x h-full items-center"
+            >
+              {items.map(item => (
+                <motion.div variants={itemVariants} key={item._id} className="min-w-[130px] w-[130px] flex-shrink-0 snap-start">
+                  <ProductCard item={item} className="hover:shadow-[0_8px_25px_rgba(124,58,237,0.15)] transition-shadow duration-300" />
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
         </div>
-      </motion.div> */}
+      </motion.div>
+
+      {/* CTA Box removed temporarily to save vertical space based on your requirements.
+          Uncomment if you still want it, but the list item button is already in BottomNav anyway! */}
 
       {showCelebration && <CoinCelebration coinCount={30} />}
 
