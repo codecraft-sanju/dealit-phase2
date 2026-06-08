@@ -864,7 +864,7 @@ const HomePage = ({ user, setUser }) => {
             className="w-[60%] rounded-[20px] overflow-hidden shadow-sm"
           >
             <img
-              src="/hero-banner3.png"
+              src="/hero-banner4.png"
               alt="Sell Unused. Get Anything."
               className="w-full h-full"
             />
