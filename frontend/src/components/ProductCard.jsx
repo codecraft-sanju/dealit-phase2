@@ -185,11 +185,11 @@ const ProductCard = ({ item, isLoading, className = '', onClick, isSelected }) =
       
       localStorage.setItem('dealit_recently_viewed_ids', JSON.stringify(viewedIds));
 
-      // NAYA CHANGE: Silent Cross-Device Sync (Database me update karega bina loading dikhaye)
+     
       const token = localStorage.getItem('dealit_token');
       if (token) {
         axios.post(`${API_URL}/users/recently-viewed/sync`, { viewedIds })
-          .catch(() => {}); // Error aaye toh ignore kar dega, UI block nahi hoga
+          .catch(() => {}); 
       }
 
     } catch (error) {

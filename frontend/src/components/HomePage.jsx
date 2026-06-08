@@ -679,8 +679,6 @@
 
 
 
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -863,19 +861,32 @@ const HomePage = ({ user, setUser }) => {
 
       <div className="px-3 pt-3 pb-0 relative z-10">
         
-        {/* --- Top Side-by-Side Banner & Credits Section --- */}
+       
         <div className="flex gap-2.5 mb-4">
           
           {/* Left Banner */}
-          <motion.div variants={itemVariants} className="w-[60%] bg-gradient-to-br from-[#3b217a] via-[#2d1566] to-[#1a0a42] rounded-[20px] p-4 text-white relative overflow-hidden flex flex-col justify-between shadow-sm">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 rounded-full blur-2xl pointer-events-none"></div>
-            <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-purple-500 opacity-10 rounded-full blur-2xl pointer-events-none"></div>
+          <motion.div variants={itemVariants} className="w-[60%] bg-gradient-to-br from-[#3b217a] via-[#2d1566] to-[#1a0a42] rounded-[20px] p-4 text-white relative overflow-hidden flex flex-col justify-between shadow-sm group">
+            {/* NEW: Added pulse animation to background blur circles */}
+            <motion.div 
+              animate={{ opacity: [0.05, 0.15, 0.05] }} 
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} 
+              className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full blur-2xl pointer-events-none"
+            />
+            <motion.div 
+              animate={{ opacity: [0.1, 0.2, 0.1] }} 
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 1 }} 
+              className="absolute -bottom-10 -left-10 w-40 h-40 bg-purple-500 rounded-full blur-2xl pointer-events-none"
+            />
+            
+            {/* NEW: Added glare effect element */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-glare pointer-events-none"></div>
 
             <div className="relative z-10">
-              <div className="inline-flex items-center gap-1 bg-white/10 border border-white/20 rounded-full px-2 py-0.5 mb-3 backdrop-blur-sm">
+              {/* CHANGED: Wrapped in motion.div for slight hover lift */}
+              <motion.div whileHover={{ y: -2 }} className="inline-flex items-center gap-1 bg-white/10 border border-white/20 rounded-full px-2 py-0.5 mb-3 backdrop-blur-sm cursor-default">
                 <Gift className="w-3 h-3 text-yellow-300" />
                 <span className="text-[9px] font-semibold text-yellow-100">Join & Get 100 Credits</span>
-              </div>
+              </motion.div>
 
               <h1 className="text-xl md:text-3xl font-extrabold leading-tight mb-2 tracking-tight">
                 Sell Unused.<br/>Get Anything.
@@ -887,7 +898,6 @@ const HomePage = ({ user, setUser }) => {
 
             <div className="relative z-10 flex flex-col gap-1.5 w-full">
               {/* Step Flow */}
-              {/* CHANGE: Changed items-center to items-start, removed truncate, added line-clamp-2 and leading-tight for proper wrapping */}
               <div className="bg-white/10 backdrop-blur-md rounded-lg p-2 flex items-start justify-between">
                 <div className="flex items-start gap-1.5 flex-1 min-w-0">
                   <Tag className="w-3.5 h-3.5 text-purple-200 flex-shrink-0 mt-[2px]" />
@@ -915,22 +925,21 @@ const HomePage = ({ user, setUser }) => {
               </div>
 
               {/* Perks Row */}
-              {/* CHANGE: Changed alignment to items-start, removed truncate, added min-w-0 and line-clamp-2 */}
               <div className="grid grid-cols-2 gap-1.5">
-                <div className="bg-white/10 backdrop-blur-md rounded-lg p-1.5 flex items-start gap-1.5">
+                <motion.div whileHover={{ scale: 1.02 }} className="bg-white/10 backdrop-blur-md rounded-lg p-1.5 flex items-start gap-1.5 cursor-default">
                   <Gift className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0 mt-[1px]" />
                   <div className="min-w-0">
                     <div className="text-[9px] font-bold leading-tight line-clamp-2">Get 100 credits</div>
                     <div className="text-[7px] text-purple-300 leading-tight mt-0.5">on signup</div>
                   </div>
-                </div>
-                <div className="bg-white/10 backdrop-blur-md rounded-lg p-1.5 flex items-start gap-1.5">
+                </motion.div>
+                <motion.div whileHover={{ scale: 1.02 }} className="bg-white/10 backdrop-blur-md rounded-lg p-1.5 flex items-start gap-1.5 cursor-default">
                   <Coins className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0 mt-[1px]" />
                   <div className="min-w-0">
                     <div className="text-[9px] font-bold leading-tight line-clamp-2">List items</div>
                     <div className="text-[7px] text-purple-300 leading-tight mt-0.5">Get 70 credits each</div>
                   </div>
-                </div>
+                </motion.div>
               </div>
             </div>
           </motion.div>
@@ -946,7 +955,15 @@ const HomePage = ({ user, setUser }) => {
               
               <div>
                 <div className="flex items-baseline gap-1 mb-0.5">
-                  <span className="text-2xl font-bold">{user ? user.account_credits || 0 : 0}</span>
+                  {/* NEW: Added simple number counter effect on credits change */}
+                  <motion.span 
+                    key={user?.account_credits}
+                    initial={{ scale: 1.2, color: "#fef08a" }}
+                    animate={{ scale: 1, color: "#ffffff" }}
+                    className="text-2xl font-bold"
+                  >
+                    {user ? user.account_credits || 0 : 0}
+                  </motion.span>
                   <span className="text-[10px] text-purple-200">Credits</span>
                 </div>
                 <div className="text-[8px] text-purple-300 mb-2">Your balance</div>
@@ -954,94 +971,114 @@ const HomePage = ({ user, setUser }) => {
 
               {user ? (
                 shouldShowClaimButton ? (
-                  <button 
+                  /* CHANGED: Wrapped in motion.button for tap interaction */
+                  <motion.button 
+                    whileTap={{ scale: 0.95 }}
                     onClick={() => claimBonusMutation.mutate()} 
                     disabled={claimBonusMutation.isPending}
                     className="w-full bg-gradient-to-r from-[#FFE28A] via-[#FFF0B3] to-[#FFD75E] text-yellow-900 py-1.5 rounded-lg font-bold text-[10px] shadow-sm disabled:opacity-80"
                   >
                     {claimBonusMutation.isPending ? 'Wait...' : `Claim ${bonusSettings.amount}`}
-                  </button>
+                  </motion.button>
                 ) : (
-                  <Link to="/wallet" className="w-full bg-white/20 hover:bg-white/30 transition-colors py-1.5 rounded-lg font-bold text-[10px] flex items-center justify-center gap-1 border border-white/20">
-                    Earn More <ChevronRight className="w-3 h-3" />
-                  </Link>
+                  <motion.div whileTap={{ scale: 0.95 }}>
+                    <Link to="/wallet" className="w-full bg-white/20 hover:bg-white/30 transition-colors py-1.5 rounded-lg font-bold text-[10px] flex items-center justify-center gap-1 border border-white/20">
+                      Earn More <ChevronRight className="w-3 h-3" />
+                    </Link>
+                  </motion.div>
                 )
               ) : (
                 <div className="flex flex-col gap-1.5">
-                  <Link to="/login" className="w-full bg-white/20 text-center py-1.5 rounded-lg font-bold text-[10px]">Login</Link>
-                  <Link to="/signup" className="w-full bg-white text-[#5a3da6] text-center py-1.5 rounded-lg font-bold text-[10px]">Join</Link>
+                  <motion.div whileTap={{ scale: 0.95 }}>
+                    <Link to="/login" className="w-full block bg-white/20 text-center py-1.5 rounded-lg font-bold text-[10px]">Login</Link>
+                  </motion.div>
+                  <motion.div whileTap={{ scale: 0.95 }}>
+                    <Link to="/signup" className="w-full block bg-white text-[#5a3da6] text-center py-1.5 rounded-lg font-bold text-[10px]">Join</Link>
+                  </motion.div>
                 </div>
               )}
             </div>
 
             {/* Trust Badges */}
             <div className="bg-white rounded-[20px] p-2.5 flex flex-col justify-between gap-1 shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-gray-100 flex-1">
-              <div className="flex items-center gap-2">
+              {/* CHANGED: Added motion.div and hover effects to each badge */}
+              <motion.div whileHover={{ x: 3, backgroundColor: "rgba(243, 232, 255, 0.3)" }} className="flex items-center gap-2 rounded-lg transition-colors p-0.5 cursor-default">
                 <div className="bg-purple-50 p-1.5 rounded-full text-[#6b46c1]"><UserCircle className="w-4 h-4" /></div>
                 <div>
                   <div className="text-[10px] font-bold text-gray-800">Trusted Community</div>
                   <div className="text-[7px] text-gray-500">Verified members</div>
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
+              </motion.div>
+              <motion.div whileHover={{ x: 3, backgroundColor: "rgba(255, 237, 213, 0.3)" }} className="flex items-center gap-2 rounded-lg transition-colors p-0.5 cursor-default">
                 <div className="bg-orange-50 p-1.5 rounded-full text-orange-500"><ShieldCheck className="w-4 h-4" /></div>
                 <div>
                   <div className="text-[10px] font-bold text-gray-800">Secure & Safe</div>
                   <div className="text-[7px] text-gray-500">Protected payments</div>
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
+              </motion.div>
+              <motion.div whileHover={{ x: 3, backgroundColor: "rgba(243, 232, 255, 0.3)" }} className="flex items-center gap-2 rounded-lg transition-colors p-0.5 cursor-default">
                 <div className="bg-purple-50 p-1.5 rounded-full text-[#6b46c1]"><CheckCircle className="w-4 h-4" /></div>
                 <div>
                   <div className="text-[10px] font-bold text-gray-800">Easy & Instant</div>
                   <div className="text-[7px] text-gray-500">Sell & buy in seconds</div>
                 </div>
-              </div>
+              </motion.div>
             </div>
           </motion.div>
         </div>
 
         {/* --- How Dealit Works Section --- */}
         <motion.div variants={itemVariants} className="bg-white rounded-2xl p-4 shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-gray-100 mb-4">
-          <h2 className="text-center font-bold text-gray-800 text-sm mb-4">How <span className="text-[#6b46c1]">Dealit</span> Works?</h2>
+          <h2 className="text-center font-extrabold text-gray-800 text-sm mb-4">How <span className="text-[#6b46c1]">Dealit</span> Works?</h2>
           
-          {/* CHANGE: items-center to items-start for wrapping text support, removed truncate, added line-clamp-2 */}
-          <div className="flex items-start justify-between gap-1.5">
-            <div className="flex items-start gap-2 flex-1 min-w-0">
-              <div className="w-7 h-7 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0 relative">
-                <Tag className="w-3.5 h-3.5 text-[#6b46c1]" />
-                <div className="absolute -top-1.5 -left-1.5 w-4 h-4 rounded-full bg-[#6b46c1] text-white flex items-center justify-center text-[8px] font-bold border border-white">1</div>
-              </div>
-              <div className="min-w-0 mt-0.5">
-                <div className="text-[11px] font-bold text-gray-800 leading-tight">List Items</div>
-                <div className="text-[8px] text-gray-500 leading-tight line-clamp-2 mt-0.5">Upload items you don't use</div>
-              </div>
+          <div className="flex items-start justify-between relative px-1">
+            
+            {/* Step 1 */}
+            {/* CHANGED: Wrapped icon container in motion.div for engaging hover lift */}
+            <div className="flex flex-col items-center text-center flex-1 group">
+              <motion.div 
+                whileHover={{ y: -3, scale: 1.05, rotate: -5 }} 
+                className="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center mb-2 shadow-sm border border-purple-100 relative cursor-default"
+              >
+                <Tag className="w-4 h-4 text-[#6b46c1]" />
+                <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#6b46c1] text-white flex items-center justify-center text-[9px] font-bold border-2 border-white shadow-sm">1</div>
+              </motion.div>
+              <div className="text-[11px] font-bold text-gray-800 mb-0.5 whitespace-nowrap transition-colors group-hover:text-[#6b46c1]">List Items</div>
+              <div className="text-[8px] text-gray-500 leading-tight w-full max-w-[80px]">Upload what you don't use</div>
             </div>
 
-            <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0 mx-0.5 mt-1.5" />
-
-            <div className="flex items-start gap-2 flex-1 min-w-0">
-              <div className="w-7 h-7 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0 relative">
-                <Coins className="w-3.5 h-3.5 text-orange-500" />
-                <div className="absolute -top-1.5 -left-1.5 w-4 h-4 rounded-full bg-[#6b46c1] text-white flex items-center justify-center text-[8px] font-bold border border-white">2</div>
-              </div>
-              <div className="min-w-0 mt-0.5">
-                <div className="text-[11px] font-bold text-gray-800 leading-tight">Earn Credits</div>
-                <div className="text-[8px] text-gray-500 leading-tight line-clamp-2 mt-0.5">Get credits when someone buys</div>
-              </div>
+            <div className="pt-3">
+              <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
             </div>
 
-            <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0 mx-0.5 mt-1.5" />
+            {/* Step 2 */}
+            <div className="flex flex-col items-center text-center flex-1 group">
+              <motion.div 
+                whileHover={{ y: -3, scale: 1.05, rotate: 5 }} 
+                className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center mb-2 shadow-sm border border-orange-100 relative cursor-default"
+              >
+                <Coins className="w-4 h-4 text-orange-500" />
+                <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-orange-500 text-white flex items-center justify-center text-[9px] font-bold border-2 border-white shadow-sm">2</div>
+              </motion.div>
+              <div className="text-[11px] font-bold text-gray-800 mb-0.5 whitespace-nowrap transition-colors group-hover:text-orange-500">Earn Credits</div>
+              <div className="text-[8px] text-gray-500 leading-tight w-full max-w-[80px]">Get credits when sold</div>
+            </div>
 
-            <div className="flex items-start gap-2 flex-1 min-w-0">
-              <div className="w-7 h-7 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0 relative">
-                <ShoppingBag className="w-3.5 h-3.5 text-[#6b46c1]" />
-                <div className="absolute -top-1.5 -left-1.5 w-4 h-4 rounded-full bg-[#6b46c1] text-white flex items-center justify-center text-[8px] font-bold border border-white">3</div>
-              </div>
-              <div className="min-w-0 mt-0.5">
-                <div className="text-[11px] font-bold text-gray-800 leading-tight">Buy Anything</div>
-                <div className="text-[8px] text-gray-500 leading-tight line-clamp-2 mt-0.5">Use credits to buy what you want</div>
-              </div>
+            <div className="pt-3">
+              <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
+            </div>
+
+            {/* Step 3 */}
+            <div className="flex flex-col items-center text-center flex-1 group">
+              <motion.div 
+                whileHover={{ y: -3, scale: 1.05, rotate: -5 }} 
+                className="w-10 h-10 rounded-full bg-pink-50 flex items-center justify-center mb-2 shadow-sm border border-pink-100 relative cursor-default"
+              >
+                <ShoppingBag className="w-4 h-4 text-pink-500" />
+                <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-pink-500 text-white flex items-center justify-center text-[9px] font-bold border-2 border-white shadow-sm">3</div>
+              </motion.div>
+              <div className="text-[11px] font-bold text-gray-800 mb-0.5 whitespace-nowrap transition-colors group-hover:text-pink-500">Buy Anything</div>
+              <div className="text-[8px] text-gray-500 leading-tight w-full max-w-[80px]">Use credits for what you want</div>
             </div>
           </div>
         </motion.div>
@@ -1134,11 +1171,14 @@ const HomePage = ({ user, setUser }) => {
           <h2 className="text-[17px] font-extrabold text-gray-900">
             {activeCategory === 'All' ? 'Popular Right Now' : `Top in ${activeCategory}`}
           </h2>
-          <Link to={activeCategory === 'All' ? '/items' : `/items?category=${activeCategory}`}>
-            <span className="text-xs font-bold text-[#6B46C1] flex items-center gap-0.5">
-              See All <ChevronRight className="w-3.5 h-3.5" />
-            </span>
-          </Link>
+          {/* CHANGED: Wrapped "See All" link in motion.div for tap effect */}
+          <motion.div whileTap={{ scale: 0.9 }}>
+            <Link to={activeCategory === 'All' ? '/items' : `/items?category=${activeCategory}`}>
+              <span className="text-xs font-bold text-[#6B46C1] flex items-center gap-0.5 hover:text-[#5a3da6] transition-colors">
+                See All <ChevronRight className="w-3.5 h-3.5" />
+              </span>
+            </Link>
+          </motion.div>
         </div>
 
         {loadingItems ? (
@@ -1179,9 +1219,13 @@ const HomePage = ({ user, setUser }) => {
           scrollbar-width: none;
         }
 
+        /* CHANGED: Adjusted glare animation timing and coordinates to work cleanly on the banner */
         @keyframes glare {
-          0%, 20% { transform: translateX(-150%) skewX(-20deg); }
-          80%, 100% { transform: translateX(250%) skewX(-20deg); }
+          0%, 15% { transform: translateX(-100%) skewX(-15deg); }
+          85%, 100% { transform: translateX(250%) skewX(-15deg); }
+        }
+        .animate-glare {
+          animation: glare 4s infinite linear;
         }
       `}</style>
     </motion.div>
