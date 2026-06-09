@@ -850,21 +850,14 @@ const HomePage = ({ user, setUser }) => {
 
       <div className="px-3 pt-3 pb-0 relative z-10">
 
-        {/*
-          FIX: `items-stretch` on the parent row makes both children
-          equal height automatically — no hardcoded px needed.
-          Left image gets `h-full` so it fills whatever height the
-          right column naturally grows to on any phone screen.
-        */}
         <div className="flex gap-2.5 mb-4 items-stretch">
 
-          {/* Left Banner */}
           <motion.div
             variants={itemVariants}
             className="w-[60%] rounded-[20px] overflow-hidden shadow-sm"
           >
             <img
-              src="/hero-banner4.png"
+              src="/hero-banner3.png"
               alt="Sell Unused. Get Anything."
               className="w-full h-full"
             />
