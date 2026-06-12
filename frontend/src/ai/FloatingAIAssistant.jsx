@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Sparkles, Maximize2, Minimize2, Mic, User, ArrowRight, WifiOff } from 'lucide-react';
+// MODIFIED: Bot icon wapas add kar diya hai import mein
+import { X, Send, Sparkles, Maximize2, Minimize2, Mic, User, ArrowRight, WifiOff, Bot } from 'lucide-react'; 
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
@@ -835,8 +836,9 @@ const FloatingAIAssistant = ({ user }) => {
           {isOpen ? (
             <motion.div key="close" initial={{ opacity: 0, rotate: -90 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: 90 }} transition={{ duration: 0.2 }}><X className="w-6 h-6" /></motion.div>
           ) : buttonState === 'bot' ? (
-            <motion.div key="bot" initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.5 }} transition={{ duration: 0.2 }} className="w-8 h-8 rounded-full overflow-hidden">
-              <img src="https://res.cloudinary.com/dia3qhc0x/image/upload/v1781289017/ijblexdk51vluv7ku6g9.jpg" alt="Dealit AI" className="w-full h-full object-cover" />
+          
+            <motion.div key="bot" initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.5 }} transition={{ duration: 0.2 }}>
+              <Bot className="w-6 h-6" />
             </motion.div>
           ) : (
             <motion.div key="ask" initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.5 }} transition={{ duration: 0.2 }} className="flex flex-col items-center justify-center"><span className="text-xs font-black tracking-wider leading-none mt-0.5">Ask?</span></motion.div>
