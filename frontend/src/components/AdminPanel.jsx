@@ -186,6 +186,8 @@ const AdminPanel = ({ user }) => {
   const [isOfferModalOpen, setIsOfferModalOpen] = useState(false);
   const [editingOfferId, setEditingOfferId] = useState(null);
   const [offerForm, setOfferForm] = useState({ mobileImage: '', desktopImage: '', isActive: true });
+  
+  // Loading states for image uploads
   const [isUploadingMobile, setIsUploadingMobile] = useState(false);
   const [isUploadingDesktop, setIsUploadingDesktop] = useState(false);
   const [isUploadingHero, setIsUploadingHero] = useState(false);
@@ -311,6 +313,7 @@ const AdminPanel = ({ user }) => {
     fetchData();
   }, [activeTab, currentPage, debouncedSearch]); 
 
+  // ... (Other handlers like handleApprove, handleRejectClick, etc remain exactly the same)
   const handleApprove = async (id) => {
     try {
       await axios.put(`${API_URL}/admin/item-status/${id}`, { status: 'active' }, { withCredentials: true });
@@ -506,24 +509,60 @@ const AdminPanel = ({ user }) => {
     setIsViewUserModalOpen(true);
   };
 
-  const handleImageSelect = (e, imageType) => {
+
+  // ================== IMAGE SELECTION & UPLOAD LOGIC ==================
+  const handleImageSelect = async (e, imageType) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.addEventListener('load', () => {
-        setImageToCrop(reader.result);
-        setCropType(imageType);
-        setCrop({ x: 0, y: 0 });
-        setZoom(1);
-        setCropModalOpen(true);
-      });
-      reader.readAsDataURL(file);
+      
+      // Agar Offers banner hai toh Crop Modal kholo
+      if (imageType === 'mobile' || imageType === 'desktop') {
+        const reader = new FileReader();
+        reader.addEventListener('load', () => {
+          setImageToCrop(reader.result);
+          setCropType(imageType);
+          setCrop({ x: 0, y: 0 });
+          setZoom(1);
+          setCropModalOpen(true);
+        });
+        reader.readAsDataURL(file);
+      } 
+      // Agar naye UI ke images hain, toh DIRECT upload karo bina crop kiye (taaki aspect ratio kharab na ho)
+      else if (imageType === 'heroBanner' || imageType === 'howItWorks') {
+        
+        if (imageType === 'heroBanner') setIsUploadingHero(true);
+        if (imageType === 'howItWorks') setIsUploadingHowItWorks(true);
+        
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('upload_preset', UPLOAD_PRESET);
+          
+          const res = await axios.post(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, formData);
+          
+          if (imageType === 'heroBanner') {
+            setCreditSettings(prev => ({ ...prev, heroBannerImage: res.data.secure_url }));
+          } else if (imageType === 'howItWorks') {
+            setCreditSettings(prev => ({ ...prev, howItWorksImage: res.data.secure_url }));
+          }
+          
+          const typeName = imageType === 'heroBanner' ? 'Hero Banner' : 'Guide Image';
+          toast.success(`${typeName} uploaded successfully!`); 
+        } catch (error) {
+          console.error('Error uploading:', error);
+          toast.error('Failed to upload image. Try again.'); 
+        } finally {
+          if (imageType === 'heroBanner') setIsUploadingHero(false);
+          if (imageType === 'howItWorks') setIsUploadingHowItWorks(false);
+        }
+      }
     }
     e.target.value = null; 
   };
 
   const onCropComplete = (croppedArea, croppedAreaPixels) => setCroppedAreaPixels(croppedAreaPixels);
 
+  // Ye sirf Mobile & Desktop Offers ke banner crops handle karega ab
   const handleCropAndUpload = async () => {
     setIsProcessingCrop(true);
     try {
@@ -531,8 +570,6 @@ const AdminPanel = ({ user }) => {
       
       if (cropType === 'mobile') setIsUploadingMobile(true);
       else if (cropType === 'desktop') setIsUploadingDesktop(true);
-      else if (cropType === 'heroBanner') setIsUploadingHero(true);
-      else if (cropType === 'howItWorks') setIsUploadingHowItWorks(true);
 
       const formData = new FormData();
       formData.append('file', croppedImageBlob);
@@ -544,28 +581,21 @@ const AdminPanel = ({ user }) => {
         setOfferForm(prev => ({ ...prev, mobileImage: res.data.secure_url }));
       } else if (cropType === 'desktop') {
         setOfferForm(prev => ({ ...prev, desktopImage: res.data.secure_url }));
-      } else if (cropType === 'heroBanner') {
-        setCreditSettings(prev => ({ ...prev, heroBannerImage: res.data.secure_url }));
-      } else if (cropType === 'howItWorks') {
-        setCreditSettings(prev => ({ ...prev, howItWorksImage: res.data.secure_url }));
-      }
+      } 
       
       setCropModalOpen(false);
-
-      const typeName = cropType === 'heroBanner' ? 'Hero Banner' : cropType === 'howItWorks' ? 'Guide Image' : cropType === 'mobile' ? 'Mobile Banner' : 'Desktop Banner';
-      toast.success(`${typeName} uploaded successfully!`); 
+      toast.success(`${cropType === 'mobile' ? 'Mobile' : 'Desktop'} banner uploaded!`); 
     } catch (error) {
       console.error('Error cropping/uploading:', error);
-      toast.error('Failed to upload image. Try again.'); 
+      toast.error('Failed to crop and upload image. Try again.'); 
     } finally {
       setIsProcessingCrop(false);
       if (cropType === 'mobile') setIsUploadingMobile(false);
       else if (cropType === 'desktop') setIsUploadingDesktop(false);
-      else if (cropType === 'heroBanner') setIsUploadingHero(false);
-      else if (cropType === 'howItWorks') setIsUploadingHowItWorks(false);
     }
   };
 
+  // ... (Offer, Category, and Save Handlers remain exactly the same)
   const handleAddOfferClick = () => {
     setEditingOfferId(null);
     setOfferForm({ mobileImage: '', desktopImage: '', isActive: true });

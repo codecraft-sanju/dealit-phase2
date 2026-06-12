@@ -228,7 +228,8 @@ const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, aiSetting
                 <div className="bg-white/[0.01] border border-white/5 rounded-2xl p-4 md:p-5 flex flex-col items-center justify-center text-center relative overflow-hidden group">
                   <h3 className="text-xs md:text-sm font-bold text-gray-300 mb-3 uppercase tracking-widest w-full text-left">Hero Banner Image</h3>
                   
-                  <div className="w-full aspect-video bg-black/40 rounded-xl mb-4 border border-white/10 overflow-hidden relative flex items-center justify-center">
+                  {/* Hero banner aspect ratio set to match Homepage exactly (approx 4:3 or slightly wider) */}
+                  <div className="w-full aspect-[4/3] max-h-48 bg-black/40 rounded-xl mb-4 border border-white/10 overflow-hidden relative flex items-center justify-center">
                     {creditSettings.heroBannerImage ? (
                       <img src={creditSettings.heroBannerImage} alt="Hero Banner" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
                     ) : (
@@ -246,21 +247,22 @@ const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, aiSetting
                   <label htmlFor="heroBannerUpload" className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${isUploadingHero ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : 'bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border border-purple-500/20'}`}>
                     <UploadCloud className="w-4 h-4" /> Change Hero Banner
                   </label>
-                  <p className="text-[9px] text-gray-500 mt-2">Recommended: 16:9 aspect ratio, high resolution.</p>
+                  <p className="text-[9px] text-gray-500 mt-2">Any resolution allowed (Auto-fits to container).</p>
                 </div>
 
                 {/* How It Works Upload */}
                 <div className="bg-white/[0.01] border border-white/5 rounded-2xl p-4 md:p-5 flex flex-col items-center justify-center text-center relative overflow-hidden group">
                   <h3 className="text-xs md:text-sm font-bold text-gray-300 mb-3 uppercase tracking-widest w-full text-left">How Dealit Works Image</h3>
                   
-                  <div className="w-full aspect-[4/3] bg-black/40 rounded-xl mb-4 border border-white/10 overflow-hidden relative flex items-center justify-center">
+                  {/* How it works is an infographic, so showing it object-contain */}
+                  <div className="w-full h-48 bg-black/40 rounded-xl mb-4 border border-white/10 overflow-hidden relative flex items-center justify-center p-2">
                     {creditSettings.howItWorksImage ? (
-                      <img src={creditSettings.howItWorksImage} alt="How It Works" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                      <img src={creditSettings.howItWorksImage} alt="How It Works" className="w-full h-full object-contain opacity-80 group-hover:opacity-100 transition-opacity" />
                     ) : (
                       <ImageIcon className="w-10 h-10 text-gray-600" />
                     )}
                     {isUploadingHowItWorks && (
-                      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center z-10">
+                      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center z-10 rounded-xl">
                          <div className="w-6 h-6 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mb-2"></div>
                          <span className="text-[10px] font-bold text-blue-300 animate-pulse">UPLOADING...</span>
                       </div>
@@ -271,7 +273,7 @@ const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, aiSetting
                   <label htmlFor="howItWorksUpload" className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${isUploadingHowItWorks ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : 'bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border border-blue-500/20'}`}>
                     <UploadCloud className="w-4 h-4" /> Change Guide Image
                   </label>
-                  <p className="text-[9px] text-gray-500 mt-2">Recommended: Standard vertical/box format.</p>
+                  <p className="text-[9px] text-gray-500 mt-2">Tall infographics recommended. Width auto-scales.</p>
                 </div>
               </div>
             </div>
