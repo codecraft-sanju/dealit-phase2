@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { ArrowLeft, Send, Sparkles, Menu, Plus, Settings, HelpCircle, MessageSquare, X, Trash2, Minimize2, ChevronDown, Mic, User, WifiOff } from 'lucide-react';
+// CHANGED: Added Copy, Check, CheckCheck to imports
+import { ArrowLeft, Send, Sparkles, Menu, Plus, Settings, HelpCircle, MessageSquare, X, Trash2, Minimize2, ChevronDown, Mic, User, WifiOff, Copy, Check, CheckCheck } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion'; 
 import axios from 'axios';
@@ -244,6 +245,26 @@ const SoundWave = () => (
   </div>
 );
 
+// CHANGED: Added small custom copy button to reuse in AI messages cleanly
+const CopyButton = ({ text }) => {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <button 
+      onClick={handleCopy} 
+      className="flex items-center gap-1 text-gray-500 hover:text-gray-300 transition-colors mr-2 cursor-pointer" 
+      title="Copy response"
+    >
+      {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+      <span className="font-medium">{copied ? 'Copied' : 'Copy'}</span>
+    </button>
+  );
+};
+
 const BotMessage = ({ content, animated, onComplete }) => {
   const [displayedText, setDisplayedText] = useState(animated ? '' : content);
   
@@ -266,7 +287,8 @@ const BotMessage = ({ content, animated, onComplete }) => {
   }, [content, animated]);
   
   return (
-    <div className="break-words leading-relaxed text-sm">
+    // CHANGED: Added overflow styles to handle very long unbroken strings
+    <div className="leading-relaxed text-sm w-full" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
@@ -283,14 +305,14 @@ const BotMessage = ({ content, animated, onComplete }) => {
             inline ? (
               <code className="bg-gray-900 text-purple-300 px-1.5 py-0.5 rounded-md text-xs font-mono border border-gray-700" {...props} />
             ) : (
-              <div className="overflow-hidden rounded-xl border border-gray-700 my-3 bg-gray-950 shadow-inner">
+              <div className="overflow-hidden rounded-xl border border-gray-700 my-3 bg-gray-950 shadow-inner max-w-full">
                 <pre className="p-4 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-800">
                   <code className="text-gray-300 text-xs font-mono" {...props} />
                 </pre>
               </div>
             ),
           table: ({node, ...props}) => (
-            <div className="overflow-x-auto my-4 border border-gray-700 rounded-xl shadow-sm">
+            <div className="overflow-x-auto my-4 border border-gray-700 rounded-xl shadow-sm max-w-full">
               <table className="min-w-full divide-y divide-gray-700 text-sm" {...props} />
             </div>
           ),
@@ -328,6 +350,8 @@ const AiChatPage = ({ user }) => {
   const [viewportHeight, setViewportHeight] = useState('100dvh');
   
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isModeDropdownOpen, setIsModeDropdownOpen] = useState(false);
+
   const [isSmartContextEnabled, setIsSmartContextEnabled] = useState(() => {
     const saved = localStorage.getItem('dealit_ai_context');
     return saved !== null ? JSON.parse(saved) : true;
@@ -408,10 +432,10 @@ const AiChatPage = ({ user }) => {
     localStorage.setItem('dealit_ai_context', JSON.stringify(newVal));
   };
 
-  const handleToggleMode = () => {
-    const newMode = chatMode === 'dealit' ? 'general' : 'dealit';
-    setChatMode(newMode);
-    localStorage.setItem('dealit_ai_mode', newMode);
+  const handleModeChange = (mode) => {
+    setChatMode(mode);
+    localStorage.setItem('dealit_ai_mode', mode);
+    setIsModeDropdownOpen(false);
   };
   
   const handleToggleVoicePref = () => {
@@ -492,7 +516,9 @@ const AiChatPage = ({ user }) => {
             id: msg._id || `hist_${index}`,
             role: msg.role === 'assistant' ? 'bot' : 'user',
             content: msg.content,
-            animated: false 
+            animated: false,
+            // CHANGED: Added timestamp fetching to history
+            timestamp: new Date(msg.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           }));
           setMessages(formattedHistory);
           setHasStartedChat(true);
@@ -772,7 +798,10 @@ const AiChatPage = ({ user }) => {
     abortControllerRef.current = new AbortController();
     
     setHasStartedChat(true);
-    const newMessages = [...messages, { id: Date.now(), role: 'user', content: userMessage }];
+    // CHANGED: Added current timestamp generation
+    const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    const newMessages = [...messages, { id: Date.now(), role: 'user', content: userMessage, timestamp: currentTime }];
     setMessages(newMessages);
     setInput('');
     setIsLoading(true);
@@ -780,7 +809,7 @@ const AiChatPage = ({ user }) => {
     const botMessageId = Date.now() + 1;
     setMessages((prev) => [
       ...prev,
-      { id: botMessageId, role: 'bot', content: '', animated: false } 
+      { id: botMessageId, role: 'bot', content: '', animated: false, timestamp: currentTime } 
     ]);
     
     isStreamingRef.current = true;
@@ -896,10 +925,18 @@ const AiChatPage = ({ user }) => {
       style={{ height: viewportHeight }}
     >
       <MagicButtonStyles />
+      
+      {/* CHANGED: Increased z-index overlay on mobile to z-[55] so it properly covers header */}
       {isSidebarOpen && (
-        <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setIsSidebarOpen(false)} />
+        <div className="fixed inset-0 bg-black/50 z-[55] md:hidden" onClick={() => setIsSidebarOpen(false)} />
       )}
-      <div className={`fixed md:relative z-50 flex flex-col h-full bg-gray-950 border-r border-gray-800 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-72 translate-x-0' : 'w-72 -translate-x-full md:w-0 md:hidden absolute'}`}>
+      
+      {isModeDropdownOpen && (
+        <div className="fixed inset-0 z-[45]" onClick={() => setIsModeDropdownOpen(false)} />
+      )}
+
+      {/* CHANGED: Adjusted z-index to z-[60] so sidebar overlays properly */}
+      <div className={`fixed md:relative z-[60] flex flex-col h-full bg-gray-950 border-r border-gray-800 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-72 translate-x-0' : 'w-72 -translate-x-full md:w-0 md:hidden absolute'}`}>
         <div className="p-3 flex items-center gap-2">
           <button onClick={handleNewChat} className="flex-1 flex items-center gap-3 p-3 rounded-xl bg-gray-800/80 hover:bg-gray-800 text-white transition-all border border-gray-700/50 shadow-sm">
             <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-full p-1 shadow-inner"><Plus className="w-4 h-4 text-white" /></div>
@@ -934,13 +971,6 @@ const AiChatPage = ({ user }) => {
               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                 <div className="p-3 mx-1 mb-1 mt-1 bg-gray-900 border border-gray-700/50 rounded-xl space-y-4">
                   <div className="flex items-center justify-between">
-                    <div><p className="text-sm font-medium text-white">AI Mode</p><p className="text-xs text-gray-400 mt-0.5 capitalize">{chatMode === 'dealit' ? 'Dealit Strict' : 'General AI'}</p></div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" className="sr-only peer" checked={chatMode === 'general'} onChange={handleToggleMode} />
-                      <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
-                    </label>
-                  </div>
-                  <div className="flex items-center justify-between pt-3 border-t border-gray-800/80">
                     <div><p className="text-sm font-medium text-white">Smart Context</p><p className="text-xs text-gray-400 mt-0.5">Read inventory</p></div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input type="checkbox" className="sr-only peer" checked={isSmartContextEnabled} onChange={handleToggleContext} />
@@ -961,22 +991,59 @@ const AiChatPage = ({ user }) => {
           <button onClick={() => navigate('/help-support')} className="flex items-center gap-3 w-full p-2.5 rounded-lg hover:bg-gray-800/50 text-gray-400 hover:text-gray-200 transition-colors"><HelpCircle className="w-5 h-5" /><span className="text-sm font-medium">Help & FAQ</span></button>
         </div>
       </div>
-      <div className="flex-1 flex flex-col min-w-0 h-full relative bg-gray-900">
+      <div className="flex-1 flex flex-col min-w-0 h-full relative bg-[#1A1A1A]"> 
         
-        <div className="bg-gray-800/80 backdrop-blur-md border-b border-purple-500/20 p-4 flex items-center justify-between shadow-sm shadow-purple-900/10 z-10 shrink-0">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 bg-gray-900 hover:bg-gray-700 rounded-lg text-gray-300 transition-colors mr-1" title="Toggle Sidebar"><Menu className="w-5 h-5" /></button>
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500/20 to-emerald-500/10 flex items-center justify-center border border-purple-500/30 shadow-[0_0_15px_rgba(163,136,225,0.2)] hidden sm:flex overflow-hidden">
-              <img src="https://res.cloudinary.com/dia3qhc0x/image/upload/v1781289017/ijblexdk51vluv7ku6g9.jpg" alt="Dealit AI" className="w-full h-full object-cover" />
-            </div>
-            <div>
-              <h1 className="text-white font-bold text-lg leading-tight tracking-wide">Dealit AI</h1>
-              <p className="text-emerald-400 text-xs font-medium flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>Always here to help</p>
+        <div className="bg-[#1A1A1A] p-4 flex items-center justify-between shadow-sm z-50 shrink-0">
+          <div className="flex items-center gap-2 md:gap-4 relative">
+            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-gray-300 hover:text-white transition-colors p-1" title="Toggle Sidebar">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+                <line x1="3" y1="16" x2="21" y2="16"></line>
+              </svg>
+            </button>
+            
+            <div className="relative">
+              <button 
+                onClick={() => setIsModeDropdownOpen(!isModeDropdownOpen)} 
+                className="flex items-center gap-2 text-white font-semibold text-[15px] hover:opacity-80 transition-opacity"
+              >
+                {chatMode === 'dealit' ? 'Dealit Strict' : 'General AI'}
+                <ChevronDown className="w-4 h-4 text-gray-400 mt-0.5" />
+              </button>
+
+              <AnimatePresence>
+                {isModeDropdownOpen && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute top-full left-0 mt-3 w-48 bg-[#2A2A2A] border border-gray-700/50 rounded-xl shadow-2xl overflow-hidden z-50"
+                  >
+                    <button 
+                      onClick={() => handleModeChange('dealit')} 
+                      className={`w-full text-left px-4 py-3 text-sm flex items-center gap-2 transition-colors ${chatMode === 'dealit' ? 'bg-purple-500/20 text-white' : 'text-gray-300 hover:bg-gray-700/50 hover:text-white'}`}
+                    >
+                      Dealit Strict
+                    </button>
+                    <button 
+                      onClick={() => handleModeChange('general')} 
+                      className={`w-full text-left px-4 py-3 text-sm flex items-center gap-2 transition-colors ${chatMode === 'general' ? 'bg-purple-500/20 text-white' : 'text-gray-300 hover:bg-gray-700/50 hover:text-white'}`}
+                    >
+                      General AI
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button onClick={handleMinimize} className="p-2 bg-gray-900 hover:bg-gray-700 rounded-lg text-gray-300 transition-colors" title="Minimize to Widget"><Minimize2 className="w-5 h-5" /></button>
-            <button onClick={handleClose} className="p-2 bg-gray-900 hover:bg-red-500/20 hover:text-red-400 rounded-lg text-gray-300 transition-colors" title="Close Full Chat"><X className="w-5 h-5" /></button>
+
+          <div className="flex items-center gap-3 text-gray-300">
+            <button className="p-2 hover:bg-gray-800 rounded-full transition-colors text-gray-400 hover:text-white">
+              <Sparkles className="w-5 h-5" />
+            </button>
+            <button onClick={handleMinimize} className="p-2 hover:bg-gray-800 rounded-full transition-colors text-gray-400 hover:text-white" title="Minimize to Widget"><Minimize2 className="w-5 h-5" /></button>
+            <button onClick={handleClose} className="p-2 hover:bg-gray-800 rounded-full transition-colors text-gray-400 hover:text-red-400" title="Close Full Chat"><X className="w-5 h-5" /></button>
           </div>
         </div>
 
@@ -995,7 +1062,7 @@ const AiChatPage = ({ user }) => {
               </motion.div>
             )}
           </AnimatePresence>
-       
+        
           <div className={`flex-1 overflow-y-auto p-4 space-y-6 container mx-auto max-w-3xl scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent relative ${!hasStartedChat && 'flex flex-col items-center justify-center'}`}>
             {isLoading && messages.length === 0 ? (
               <GeneratingLoader />
@@ -1059,8 +1126,34 @@ const AiChatPage = ({ user }) => {
                   key={msg.id} 
                   className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-5 py-3.5 text-sm ${msg.role === 'user' ? 'bg-gradient-to-br from-purple-600 to-purple-500 text-white rounded-tr-sm shadow-lg shadow-purple-500/20 break-words whitespace-pre-wrap' : 'bg-gray-800 text-gray-200 border border-gray-700 rounded-tl-sm shadow-md'}`}>
-                    {msg.role === 'bot' ? (msg.content ? <BotMessage content={msg.content} animated={msg.animated} onComplete={() => markAsAnimated(msg.id)} /> : <TypingLoader />) : msg.content}
+                  {/* CHANGED: Updated the message bubble wrapper to support bottom metadata nicely */}
+                  <div className={`flex flex-col max-w-[85%] md:max-w-[70%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                    {/* CHANGED: Added overflow-hidden to main bubble to restrict text bounds */}
+                    <div className={`rounded-2xl px-5 py-3.5 text-sm overflow-hidden flex flex-col ${msg.role === 'user' ? 'bg-gradient-to-br from-purple-600 to-purple-500 text-white rounded-tr-sm shadow-lg shadow-purple-500/20' : 'bg-gray-800 text-gray-200 border border-gray-700 rounded-tl-sm shadow-md'}`}>
+                      
+                      {/* CHANGED: Wrapped message content inside a dedicated flex container with aggressive word wrapping */}
+                      <div className="whitespace-pre-wrap w-full" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                        {msg.role === 'bot' ? (msg.content ? <BotMessage content={msg.content} animated={msg.animated} onComplete={() => markAsAnimated(msg.id)} /> : <TypingLoader />) : msg.content}
+                      </div>
+                      
+                      {/* CHANGED: Added professional footer with metadata/tools, removed user timestamp */}
+                      <div className={`flex items-center mt-2.5 pt-2 border-t text-[10px] select-none ${msg.role === 'user' ? 'border-purple-400/30 text-purple-200 justify-end gap-1.5' : 'border-gray-700/60 text-gray-400 justify-between'}`}>
+                        {msg.role === 'bot' ? (
+                          <>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-gray-300">Dealit AI</span>
+                              <span className="w-1 h-1 rounded-full bg-gray-500"></span>
+                              <span>{msg.timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                            {msg.content && <CopyButton text={msg.content} />}
+                          </>
+                        ) : (
+                          <div className="flex w-full justify-end">
+                            <CheckCheck className="w-3.5 h-3.5 text-purple-300 ml-auto" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </motion.div>
               ))
