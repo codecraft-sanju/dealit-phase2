@@ -21,6 +21,9 @@ const creditSettingSchema = new mongoose.Schema({
     default: 24 
   },
   flatShippingCost: { type: Number, default: 60 },
+  isNewUIEnabled: { type: Boolean, default: true },
+  heroBannerImage: { type: String, default: '' }, 
+  howItWorksImage: { type: String, default: '' },
   
   isReferralSystemEnabled: { type: Boolean, default: true },
   referralRewardCredits: { type: Number, default: 40 }, 

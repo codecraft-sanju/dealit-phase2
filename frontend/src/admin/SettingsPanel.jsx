@@ -1,15 +1,15 @@
-// SettingsPanel.jsx
 import React from 'react';
-import { Coins, ToggleRight, ToggleLeft, Package, List, Gift, Users, Target, Truck, Zap, IndianRupee, Clock, AlertTriangle, Settings, Image as ImageIcon, Bot, Cpu, Database, MessageSquare, Mail } from 'lucide-react';
+import { Coins, ToggleRight, ToggleLeft, Package, List, Gift, Users, Target, Truck, Zap, IndianRupee, Clock, AlertTriangle, Settings, Image as ImageIcon, Bot, Cpu, Database, MessageSquare, Mail, MonitorSmartphone, UploadCloud } from 'lucide-react';
 
-const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, aiSettings, setAiSettings, handleSaveSettings, updating }) => {
+const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, aiSettings, setAiSettings, handleSaveSettings, updating, handleImageSelect, isUploadingHero, isUploadingHowItWorks }) => {
   
-
   const getTabTitle = () => {
     switch(activeTab) {
       case 'settings-credits': 
       case 'settings': 
         return { title: 'Credits & Bonuses', sub: 'Manage listing rewards & welcome gifts' };
+      case 'settings-ui': 
+        return { title: 'Platform UI & Display', sub: 'Manage visual elements and layout toggle' };
       case 'settings-referrals': 
         return { title: 'Referral System', sub: 'Configure refer & earn milestones' };
       case 'settings-shipping': 
@@ -34,9 +34,11 @@ const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, aiSetting
       <div className="max-w-4xl mx-auto bg-white/[0.02] rounded-3xl md:rounded-[2rem] border border-white/10 p-5 md:p-8 lg:p-10 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] backdrop-blur-xl relative overflow-hidden">
         
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8 md:mb-10 border-b border-white/10 pb-5 md:pb-6">
-          <div className={`p-3 md:p-3.5 rounded-xl md:rounded-2xl border inline-flex w-fit shrink-0 ${activeTab === 'settings-ai' ? 'bg-cyan-500/10 border-cyan-500/20 shadow-[0_0_20px_rgba(34,211,238,0.15)]' : 'bg-yellow-500/10 border-yellow-500/20 shadow-[0_0_20px_rgba(234,179,8,0.15)]'}`}>
+          <div className={`p-3 md:p-3.5 rounded-xl md:rounded-2xl border inline-flex w-fit shrink-0 ${activeTab === 'settings-ai' ? 'bg-cyan-500/10 border-cyan-500/20 shadow-[0_0_20px_rgba(34,211,238,0.15)]' : activeTab === 'settings-ui' ? 'bg-purple-500/10 border-purple-500/20 shadow-[0_0_20px_rgba(168,85,247,0.15)]' : 'bg-yellow-500/10 border-yellow-500/20 shadow-[0_0_20px_rgba(234,179,8,0.15)]'}`}>
             {activeTab === 'settings-ai' ? (
               <Bot className="w-6 h-6 md:w-8 md:h-8 text-cyan-400" />
+            ) : activeTab === 'settings-ui' ? (
+              <MonitorSmartphone className="w-6 h-6 md:w-8 md:h-8 text-purple-400" />
             ) : (
               <Settings className="w-6 h-6 md:w-8 md:h-8 text-yellow-400" />
             )}
@@ -203,6 +205,76 @@ const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, aiSetting
                 </div>
               </div>
             </>
+          )}
+
+          {/* ===================== TAB: UI & DISPLAY ===================== */}
+          {activeTab === 'settings-ui' && (
+            <div className="space-y-5 md:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="bg-white/[0.02] p-4 md:p-6 rounded-2xl border border-white/5 flex items-center justify-between cursor-pointer hover:bg-white/[0.04] transition-colors gap-3 md:gap-4" onClick={() => setCreditSettings({ ...creditSettings, isNewUIEnabled: !creditSettings.isNewUIEnabled })}>
+                <div className="flex-1">
+                  <p className="font-bold text-white text-base md:text-lg tracking-tight">Enable New Hero Banner UI</p>
+                  <p className="text-[10px] md:text-xs text-gray-500 mt-0.5 md:mt-1 max-w-md leading-relaxed">If turned on, the homepage will display the new modern hero banner and trust badges instead of the old slider UI.</p>
+                </div>
+                {creditSettings.isNewUIEnabled ? (
+                  <ToggleRight className="w-10 h-10 md:w-14 md:h-14 text-purple-400 drop-shadow-[0_0_10px_rgba(168,85,247,0.4)] shrink-0" />
+                ) : (
+                  <ToggleLeft className="w-10 h-10 md:w-14 md:h-14 text-gray-600 shrink-0" />
+                )}
+              </div>
+
+              {/* Dynamic Image Uploaders */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6 mt-6">
+                {/* Hero Banner Upload */}
+                <div className="bg-white/[0.01] border border-white/5 rounded-2xl p-4 md:p-5 flex flex-col items-center justify-center text-center relative overflow-hidden group">
+                  <h3 className="text-xs md:text-sm font-bold text-gray-300 mb-3 uppercase tracking-widest w-full text-left">Hero Banner Image</h3>
+                  
+                  <div className="w-full aspect-video bg-black/40 rounded-xl mb-4 border border-white/10 overflow-hidden relative flex items-center justify-center">
+                    {creditSettings.heroBannerImage ? (
+                      <img src={creditSettings.heroBannerImage} alt="Hero Banner" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                    ) : (
+                      <ImageIcon className="w-10 h-10 text-gray-600" />
+                    )}
+                    {isUploadingHero && (
+                      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center z-10">
+                         <div className="w-6 h-6 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mb-2"></div>
+                         <span className="text-[10px] font-bold text-purple-300 animate-pulse">UPLOADING...</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <input type="file" id="heroBannerUpload" className="hidden" accept="image/*" onChange={(e) => handleImageSelect(e, 'heroBanner')} disabled={isUploadingHero} />
+                  <label htmlFor="heroBannerUpload" className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${isUploadingHero ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : 'bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border border-purple-500/20'}`}>
+                    <UploadCloud className="w-4 h-4" /> Change Hero Banner
+                  </label>
+                  <p className="text-[9px] text-gray-500 mt-2">Recommended: 16:9 aspect ratio, high resolution.</p>
+                </div>
+
+                {/* How It Works Upload */}
+                <div className="bg-white/[0.01] border border-white/5 rounded-2xl p-4 md:p-5 flex flex-col items-center justify-center text-center relative overflow-hidden group">
+                  <h3 className="text-xs md:text-sm font-bold text-gray-300 mb-3 uppercase tracking-widest w-full text-left">How Dealit Works Image</h3>
+                  
+                  <div className="w-full aspect-[4/3] bg-black/40 rounded-xl mb-4 border border-white/10 overflow-hidden relative flex items-center justify-center">
+                    {creditSettings.howItWorksImage ? (
+                      <img src={creditSettings.howItWorksImage} alt="How It Works" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                    ) : (
+                      <ImageIcon className="w-10 h-10 text-gray-600" />
+                    )}
+                    {isUploadingHowItWorks && (
+                      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center z-10">
+                         <div className="w-6 h-6 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mb-2"></div>
+                         <span className="text-[10px] font-bold text-blue-300 animate-pulse">UPLOADING...</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <input type="file" id="howItWorksUpload" className="hidden" accept="image/*" onChange={(e) => handleImageSelect(e, 'howItWorks')} disabled={isUploadingHowItWorks} />
+                  <label htmlFor="howItWorksUpload" className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${isUploadingHowItWorks ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : 'bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border border-blue-500/20'}`}>
+                    <UploadCloud className="w-4 h-4" /> Change Guide Image
+                  </label>
+                  <p className="text-[9px] text-gray-500 mt-2">Recommended: Standard vertical/box format.</p>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* ===================== TAB 2: REFERRALS ===================== */}
@@ -509,7 +581,6 @@ const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, aiSetting
                 )}
               </div>
 
-              {/* CHANGED: Grid columns handling to adapt smoothly to 5 items layout */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
                 
                 {/* Active Model Input */}
@@ -569,7 +640,6 @@ const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, aiSetting
                   <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider">Number of cleaned logs needed to train.</p>
                 </div>
 
-                {/* CHANGED: Added dynamic field for Data Cleaner Cron script interval execution */}
                 <div className="space-y-2 md:space-y-2.5">
                   <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest">Cleaner Interval (Mins)</label>
                   <div className="relative group">
@@ -588,7 +658,6 @@ const SettingsPanel = ({ activeTab, creditSettings, setCreditSettings, aiSetting
                   <p className="text-[9px] md:text-[10px] text-gray-500 uppercase tracking-wider">Execution gap for cleaning background charts logs.</p>
                 </div>
 
-                {/* CHANGED: Added dynamic field for Fine-tuning execution status API check loop */}
                 <div className="space-y-2 md:space-y-2.5">
                   <label className="block text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest">Status Polling (Mins)</label>
                   <div className="relative group">

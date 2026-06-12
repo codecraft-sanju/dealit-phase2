@@ -37,10 +37,11 @@ const AdminSidebar = ({
       icon: Settings,
       subItems: [
         { id: 'settings-credits', name: 'Credits & Bonus' },
+        { id: 'settings-ui', name: 'Platform UI' }, // <--- NAYA TAB
         { id: 'settings-referrals', name: 'Refer & Earn' },
         { id: 'settings-shipping', name: 'Shipping Rules' },
         { id: 'settings-orders', name: 'Orders & Aura' },
-        { id: 'settings-ai', name: 'AI Training Controls' }, // ADDED: New Settings Tab
+        { id: 'settings-ai', name: 'AI Training Controls' },
       ]
     },
   ];

@@ -130,24 +130,24 @@ const getAllTransactions = async (req, res) => {
     const totalRevenue = walletIncome + shippingIncome;
     const netIncome = totalRevenue - totalRefunds;
 
-    // --> MODIFICATION START: Calculate detailed breakdown for Admin Financials
-    // Assuming 2% Platform Fee and 18% GST on Base Shipping (Total = Base * 1.20)
+  
+
     const baseShippingIncome = Number((shippingIncome / 1.20).toFixed(2));
     const totalPlatformFees = Number((baseShippingIncome * 0.02).toFixed(2));
-    // Calculating GST this way ensures it exactly balances the total shipping income without float errors
+
     const totalGstCollected = Number((shippingIncome - baseShippingIncome - totalPlatformFees).toFixed(2));
-    // --> MODIFICATION END
+   
 
     res.status(200).json({ 
       success: true, 
       financials: {
         walletIncome: walletIncome,
         shippingIncome: shippingIncome,
-        // --> MODIFICATION START: Exposing breakdown to the Admin response
+    
         baseShippingIncome: baseShippingIncome,
         totalPlatformFees: totalPlatformFees,
         totalGstCollected: totalGstCollected,
-        // --> MODIFICATION END
+
         totalRevenue: totalRevenue,
         totalRefunds: totalRefunds,
         netIncome: netIncome
@@ -467,7 +467,12 @@ const updateCreditSettings = async (req, res) => {
       isDiscountSimulationEnabled ,
       isWhatsAppNotificationEnabled,
     
-      isEmailNotificationEnabled
+      isEmailNotificationEnabled,
+    
+      isNewUIEnabled,
+      heroBannerImage,
+      howItWorksImage
+
     } = req.body;
     
     let setting = await CreditSetting.findOne();
@@ -502,8 +507,13 @@ const updateCreditSettings = async (req, res) => {
     if (isDiscountSimulationEnabled !== undefined) setting.isDiscountSimulationEnabled = isDiscountSimulationEnabled;
     if (isWhatsAppNotificationEnabled !== undefined) setting.isWhatsAppNotificationEnabled = isWhatsAppNotificationEnabled;
     
- 
     if (isEmailNotificationEnabled !== undefined) setting.isEmailNotificationEnabled = isEmailNotificationEnabled;
+
+ 
+    if (isNewUIEnabled !== undefined) setting.isNewUIEnabled = isNewUIEnabled;
+    if (heroBannerImage !== undefined) setting.heroBannerImage = heroBannerImage;
+    if (howItWorksImage !== undefined) setting.howItWorksImage = howItWorksImage;
+
 
     setting.updated_at = Date.now();
 
@@ -522,8 +532,9 @@ const updateCreditSettings = async (req, res) => {
 
 const getPublicCreditSettings = async (req, res) => {
   try {
+   
     let setting = await CreditSetting.findOne().select(
-      'isReferralSystemEnabled referralRewardCredits maxAllowedListings maxReferralLimit milestoneReferralReward isWelcomeBonusEnabled welcomeBonusAmount shippingMethod flatShippingCost autoCancelHours auraReward auraPenalty minImagesRequired isDiscountSimulationEnabled isWhatsAppNotificationEnabled isEmailNotificationEnabled'
+      'isReferralSystemEnabled referralRewardCredits maxAllowedListings maxReferralLimit milestoneReferralReward isWelcomeBonusEnabled welcomeBonusAmount shippingMethod flatShippingCost autoCancelHours auraReward auraPenalty minImagesRequired isDiscountSimulationEnabled isWhatsAppNotificationEnabled isEmailNotificationEnabled isNewUIEnabled heroBannerImage howItWorksImage'
     );
     
     if (!setting) {
@@ -543,9 +554,13 @@ const getPublicCreditSettings = async (req, res) => {
         minImagesRequired: 3,
         isDiscountSimulationEnabled: false ,
         isWhatsAppNotificationEnabled: true,
-        isEmailNotificationEnabled: true
+        isEmailNotificationEnabled: true,
+        isNewUIEnabled: true,
+        heroBannerImage: '',
+        howItWorksImage: ''
       };
     }
+ 
     res.status(200).json({ success: true, data: setting });
   } catch (error) {
     console.error(error);

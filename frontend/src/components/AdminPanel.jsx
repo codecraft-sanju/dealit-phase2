@@ -27,9 +27,7 @@ import EditOrderModal from '../admin/EditOrderModal';
 import RejectItemModal from '../admin/RejectItemModal';
 import ImageCropModal from '../admin/ImageCropModal';
 import ViewAILogModal from '../admin/ViewAILogModal';
-// --> MODIFICATION START
 import ResolveRefundModal from '../admin/ResolveRefundModal';
-// --> MODIFICATION END
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -98,7 +96,6 @@ const AdminPanel = ({ user }) => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const [totalIncome, setTotalIncome] = useState(0);
-  // --> MODIFICATION START: Added detailed breakdown fields to initial state
   const [financials, setFinancials] = useState({ 
     walletIncome: 0, 
     shippingIncome: 0, 
@@ -109,12 +106,9 @@ const AdminPanel = ({ user }) => {
     totalRefunds: 0, 
     netIncome: 0 
   });
-  // --> MODIFICATION END
 
-  // ADDED: AI Log Stats State
   const [aiLogStats, setAiLogStats] = useState({ pending: 0, cleaned: 0, rejected: 0, trained: 0 });
 
-  // CHANGED: Added cleanerInterval and pollingInterval to the default state template
   const [aiSettings, setAiSettings] = useState({
     activeModelId: '',
     fallbackModelId: '',
@@ -149,7 +143,10 @@ const AdminPanel = ({ user }) => {
     minImagesRequired: 3,
     isDiscountSimulationEnabled: false,
     isWhatsAppNotificationEnabled: true,
-    isEmailNotificationEnabled: true
+    isEmailNotificationEnabled: true,
+    isNewUIEnabled: true,
+    heroBannerImage: '', 
+    howItWorksImage: ''
   });
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -191,6 +188,9 @@ const AdminPanel = ({ user }) => {
   const [offerForm, setOfferForm] = useState({ mobileImage: '', desktopImage: '', isActive: true });
   const [isUploadingMobile, setIsUploadingMobile] = useState(false);
   const [isUploadingDesktop, setIsUploadingDesktop] = useState(false);
+  const [isUploadingHero, setIsUploadingHero] = useState(false);
+  const [isUploadingHowItWorks, setIsUploadingHowItWorks] = useState(false);
+
   const [cropModalOpen, setCropModalOpen] = useState(false);
   const [imageToCrop, setImageToCrop] = useState(null);
   const [cropType, setCropType] = useState('desktop'); 
@@ -247,13 +247,11 @@ const AdminPanel = ({ user }) => {
       setLoading(true);
       try {
         if (activeTab.startsWith('settings')) {
-          // Fetch Credit Settings
           const response = await axios.get(`${API_URL}/admin/credit-settings`, { withCredentials: true });
           if (response.data.success && response.data.data) {
             setCreditSettings({ ...creditSettings, ...response.data.data });
           }
 
-          
           const aiResponse = await axios.get(`${API_URL}/admin/ai-settings`, { withCredentials: true });
           if (aiResponse.data.success && aiResponse.data.data) {
             setAiSettings(aiResponse.data.data);
@@ -530,8 +528,11 @@ const AdminPanel = ({ user }) => {
     setIsProcessingCrop(true);
     try {
       const croppedImageBlob = await getCroppedImg(imageToCrop, croppedAreaPixels);
+      
       if (cropType === 'mobile') setIsUploadingMobile(true);
-      else setIsUploadingDesktop(true);
+      else if (cropType === 'desktop') setIsUploadingDesktop(true);
+      else if (cropType === 'heroBanner') setIsUploadingHero(true);
+      else if (cropType === 'howItWorks') setIsUploadingHowItWorks(true);
 
       const formData = new FormData();
       formData.append('file', croppedImageBlob);
@@ -539,18 +540,29 @@ const AdminPanel = ({ user }) => {
 
       const res = await axios.post(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, formData);
       
-      if (cropType === 'mobile') setOfferForm(prev => ({ ...prev, mobileImage: res.data.secure_url }));
-      else setOfferForm(prev => ({ ...prev, desktopImage: res.data.secure_url }));
+      if (cropType === 'mobile') {
+        setOfferForm(prev => ({ ...prev, mobileImage: res.data.secure_url }));
+      } else if (cropType === 'desktop') {
+        setOfferForm(prev => ({ ...prev, desktopImage: res.data.secure_url }));
+      } else if (cropType === 'heroBanner') {
+        setCreditSettings(prev => ({ ...prev, heroBannerImage: res.data.secure_url }));
+      } else if (cropType === 'howItWorks') {
+        setCreditSettings(prev => ({ ...prev, howItWorksImage: res.data.secure_url }));
+      }
       
       setCropModalOpen(false);
-      toast.success(`${cropType === 'mobile' ? 'Mobile' : 'Desktop'} banner uploaded!`); 
+
+      const typeName = cropType === 'heroBanner' ? 'Hero Banner' : cropType === 'howItWorks' ? 'Guide Image' : cropType === 'mobile' ? 'Mobile Banner' : 'Desktop Banner';
+      toast.success(`${typeName} uploaded successfully!`); 
     } catch (error) {
       console.error('Error cropping/uploading:', error);
       toast.error('Failed to upload image. Try again.'); 
     } finally {
       setIsProcessingCrop(false);
       if (cropType === 'mobile') setIsUploadingMobile(false);
-      else setIsUploadingDesktop(false);
+      else if (cropType === 'desktop') setIsUploadingDesktop(false);
+      else if (cropType === 'heroBanner') setIsUploadingHero(false);
+      else if (cropType === 'howItWorks') setIsUploadingHowItWorks(false);
     }
   };
 
@@ -785,6 +797,9 @@ const AdminPanel = ({ user }) => {
                 setAiSettings={setAiSettings}
                 handleSaveSettings={handleSaveSettings}
                 updating={updating}
+                handleImageSelect={handleImageSelect}
+                isUploadingHero={isUploadingHero}
+                isUploadingHowItWorks={isUploadingHowItWorks}
               />
             )}
 
@@ -833,7 +848,7 @@ const AdminPanel = ({ user }) => {
               <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden">
                 <div className="flex flex-row gap-2 md:gap-4 mb-3 md:mb-4 shrink-0">
                   
-               
+                
                   <div className="flex-[2] relative overflow-hidden bg-gradient-to-br from-emerald-500/10 to-teal-900/30 rounded-xl md:rounded-2xl p-2.5 md:p-4 border border-emerald-500/20 shadow-sm flex flex-col justify-center gap-2 md:gap-3">
                     <div className="flex items-center gap-2 md:gap-3">
                       <div className="bg-emerald-500/20 p-1.5 md:p-2.5 rounded-lg border border-emerald-500/30 shrink-0">
@@ -851,7 +866,7 @@ const AdminPanel = ({ user }) => {
                       <div className="flex-1 min-w-0">
                         <p className="text-[7px] md:text-[9px] text-emerald-400/70 font-bold uppercase tracking-wider mb-0.5 truncate">Total In</p>
                         <p className="text-[10px] sm:text-xs md:text-sm font-bold text-emerald-300 truncate leading-none mb-1">₹{financials.totalRevenue ? financials.totalRevenue.toLocaleString('en-IN') : '0'}</p>
-                   
+                    
                         <div className="flex flex-col gap-0.5">
                           <p className="text-[7px] md:text-[8px] text-gray-400 truncate leading-none"><span className="text-purple-400 font-semibold">Wallet:</span> ₹{financials.walletIncome ? financials.walletIncome.toLocaleString('en-IN') : '0'}</p>
                           <p className="text-[7px] md:text-[8px] text-blue-400 font-semibold mt-1">Shipping Breakdown:</p>
@@ -860,7 +875,7 @@ const AdminPanel = ({ user }) => {
                           <p className="text-[7px] md:text-[8px] text-gray-500 pl-1.5 border-l border-white/10 ml-1 truncate leading-none">GST (18%): ₹{financials.totalGstCollected ? financials.totalGstCollected.toLocaleString('en-IN') : '0'}</p>
                           <p className="text-[7px] md:text-[8px] text-gray-300 pl-1.5 border-l border-white/10 ml-1 mt-0.5 truncate leading-none font-semibold">= Total Ship: ₹{financials.shippingIncome ? financials.shippingIncome.toLocaleString('en-IN') : '0'}</p>
                         </div>
-         
+          
                       </div>
                       <div className="w-px self-stretch bg-emerald-500/20 shrink-0"></div>
                       <div className="flex-1 min-w-0">
