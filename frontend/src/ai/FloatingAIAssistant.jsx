@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Bot, Sparkles, Maximize2, Minimize2, Mic, User, ArrowRight, WifiOff } from 'lucide-react'; // MODIFIED: Added WifiOff
+import { X, Send, Sparkles, Maximize2, Minimize2, Mic, User, ArrowRight, WifiOff } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
@@ -91,18 +91,15 @@ const MagicButtonStyles = () => (
         align-items: center;
         justify-content: center;
         font-weight: 500;
-        /* CHANGED: Added width and height to ensure perfect flex centering */
         width: 100%;
         height: 100%;
       }
       
       .magic-inner svg.icon {
-        /* CHANGED: Removed transition and added infinite auto-animation */
         fill: transparent;
         animation: magic-auto-draw 2s linear infinite;
       }
       
-      /* CHANGED: New keyframes for automatic 2-second loop instead of hover */
       @keyframes magic-auto-draw {
         0% { stroke-dasharray: 0 0 0 0; fill: transparent; }
         25% { stroke-dasharray: 68 68 0 0; fill: transparent; }
@@ -221,7 +218,6 @@ const FloatingAIAssistant = ({ user }) => {
 
   const [chatMode, setChatMode] = useState(() => localStorage.getItem('dealit_ai_mode') || 'dealit');
   
-  // MODIFIED: Added offline state and listeners
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
   useEffect(() => {
@@ -237,7 +233,6 @@ const FloatingAIAssistant = ({ user }) => {
     };
   }, []);
 
-  // MODIFIED: Cache messages automatically when updated
   useEffect(() => {
     if (currentSessionId && messages.length > 0) {
       localStorage.setItem(`dealit_ai_history_${currentSessionId}`, JSON.stringify(messages));
@@ -367,7 +362,6 @@ const FloatingAIAssistant = ({ user }) => {
       return;
     }
 
-    // MODIFIED: Added offline check
     if (!navigator.onLine) {
       setIsOffline(true);
       setTimeout(() => setIsOffline(false), 4000);
@@ -477,7 +471,6 @@ const FloatingAIAssistant = ({ user }) => {
   const processMessage = async (userMessage) => {
     if (!userMessage.trim()) return;
 
-    // MODIFIED: Added offline check
     if (!navigator.onLine) {
       setIsOffline(true);
       setTimeout(() => setIsOffline(false), 4000);
@@ -603,8 +596,8 @@ const FloatingAIAssistant = ({ user }) => {
           >
             <div className="bg-gray-800/90 backdrop-blur-md border-b border-purple-500/20 p-4 flex justify-between items-center shadow-sm shrink-0 z-10">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500/20 to-emerald-500/10 flex items-center justify-center border border-purple-500/30">
-                  <Bot className="w-4 h-4 text-purple-400" />
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500/20 to-emerald-500/10 flex items-center justify-center border border-purple-500/30 overflow-hidden">
+                  <img src="https://res.cloudinary.com/dia3qhc0x/image/upload/v1781289017/ijblexdk51vluv7ku6g9.jpg" alt="Dealit AI" className="w-full h-full object-cover" />
                 </div>
                 <div>
                   <h3 className="text-white font-bold text-sm tracking-wide">Dealit AI</h3>
@@ -631,7 +624,6 @@ const FloatingAIAssistant = ({ user }) => {
             
             <div className="relative flex-1 flex flex-col overflow-hidden">
               
-              {/* MODIFIED: Added Offline Toast Here */}
               <AnimatePresence>
                 {isOffline && (
                   <motion.div
@@ -646,7 +638,6 @@ const FloatingAIAssistant = ({ user }) => {
                 )}
               </AnimatePresence>
 
-              {/* Main Chat Content always rendered */}
               <div className={`flex-1 overflow-y-auto p-3 space-y-4 scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent relative ${!hasStartedChat && 'flex flex-col items-center justify-center'}`}>
                 {!hasStartedChat ? (
                   <motion.div 
@@ -661,7 +652,7 @@ const FloatingAIAssistant = ({ user }) => {
                       transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.1 }}
                       className="w-12 h-12 mb-3 rounded-full bg-gradient-to-br from-purple-600/20 to-emerald-500/20 flex items-center justify-center border border-purple-500/40 relative shadow-[0_0_20px_rgba(163,136,225,0.1)]"
                     >
-                      <Bot className="w-6 h-6 text-purple-400 drop-shadow-[0_0_8px_rgba(163,136,225,0.4)]" />
+                      <img src="https://res.cloudinary.com/dia3qhc0x/image/upload/v1781289017/ijblexdk51vluv7ku6g9.jpg" alt="Dealit AI" className="w-full h-full rounded-full object-cover" />
                     </motion.div>
                     <motion.h2 
                       initial={{ opacity: 0, y: 5 }}
@@ -717,30 +708,37 @@ const FloatingAIAssistant = ({ user }) => {
                 <div ref={messagesEndRef} />
               </div>
 
-              
-<form onSubmit={handleSendMessage} className="p-3 bg-gray-800/80 backdrop-blur-sm border-t border-purple-500/20 shrink-0 z-10 relative">
+              <form onSubmit={handleSendMessage} className="p-3 shrink-0 z-10 relative">
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1 flex items-center">
+                    <input 
+                      type="text" 
+                      value={input} 
+                      onChange={(e) => setInput(e.target.value)} 
+                      placeholder="Ask about items, Aura, rules..." 
+                      className="w-full bg-gray-900 border border-gray-700 rounded-full py-3 pl-4 pr-10 text-base md:text-sm text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-inner" 
+                    />
+                    
+                    <button 
+                      type="button" 
+                      onClick={handleMicClick} 
+                      className="absolute right-1.5 p-1.5 flex items-center justify-center rounded-full transition-all text-gray-400 hover:bg-gray-800 hover:text-purple-400"
+                    >
+                      <Mic className="w-4 h-4" />
+                    </button>
+                  </div>
+                  
+                  <button type="submit" disabled={isLoading || !input.trim()} className="magic-btn shrink-0 w-10 h-10 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-purple-500/30" style={{ '--round': '9999px', padding: 0 }}>
+                    <div className="magic-points_wrapper">
+                      {[...Array(10)].map((_, i) => <i key={i} className="point"></i>)}
+                    </div>
+                    <span className="magic-inner">
+                      <Send className="w-4 h-4 icon" fill="none" strokeWidth="2.5" />
+                    </span>
+                  </button>
+                </div>
+              </form>
 
-  <div className="flex items-center gap-2">
-
-    <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask about items, Aura, rules..." className="flex-1 bg-gray-900 border border-gray-700 rounded-full py-3 px-4 text-base md:text-sm text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-inner" />
-    
- 
-    <button type="button" onClick={handleMicClick} className="w-10 h-10 shrink-0 flex items-center justify-center rounded-full transition-all text-gray-400 hover:bg-gray-800 hover:text-purple-400">
-      <Mic className="w-4 h-4" />
-    </button>
-    
-  
-    <button type="submit" disabled={isLoading || !input.trim()} className="magic-btn shrink-0 w-10 h-10 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-purple-500/30" style={{ '--round': '9999px', padding: 0 }}>
-      <div className="magic-points_wrapper">
-        {[...Array(10)].map((_, i) => <i key={i} className="point"></i>)}
-      </div>
-      <span className="magic-inner">
-       
-        <Send className="w-4 h-4 icon" fill="none" strokeWidth="2.5" />
-      </span>
-    </button>
-  </div>
-</form>
               <AnimatePresence>
                 {voiceState !== 'idle' && (
                   <motion.div 
@@ -772,8 +770,8 @@ const FloatingAIAssistant = ({ user }) => {
                         {voiceState === 'generating_audio' && (
                           <div className="absolute inset-0 rounded-full bg-blue-500/30 animate-pulse" />
                         )}
-                        <div className="z-10 w-20 h-20 bg-gray-950/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-inner border border-gray-700">
-                          {voiceState === 'listening' ? <Mic className="w-8 h-8 text-red-400 animate-pulse" /> : <Bot className="w-8 h-8 text-purple-400" />}
+                        <div className="z-10 w-20 h-20 bg-gray-950/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-inner border border-gray-700 overflow-hidden">
+                          {voiceState === 'listening' ? <Mic className="w-8 h-8 text-red-400 animate-pulse" /> : <img src="https://res.cloudinary.com/dia3qhc0x/image/upload/v1781289017/ijblexdk51vluv7ku6g9.jpg" alt="Dealit AI" className="w-full h-full object-cover" />}
                         </div>
                       </div>
 
@@ -837,7 +835,9 @@ const FloatingAIAssistant = ({ user }) => {
           {isOpen ? (
             <motion.div key="close" initial={{ opacity: 0, rotate: -90 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: 90 }} transition={{ duration: 0.2 }}><X className="w-6 h-6" /></motion.div>
           ) : buttonState === 'bot' ? (
-            <motion.div key="bot" initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.5 }} transition={{ duration: 0.2 }}><Bot className="w-6 h-6" /></motion.div>
+            <motion.div key="bot" initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.5 }} transition={{ duration: 0.2 }} className="w-8 h-8 rounded-full overflow-hidden">
+              <img src="https://res.cloudinary.com/dia3qhc0x/image/upload/v1781289017/ijblexdk51vluv7ku6g9.jpg" alt="Dealit AI" className="w-full h-full object-cover" />
+            </motion.div>
           ) : (
             <motion.div key="ask" initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.5 }} transition={{ duration: 0.2 }} className="flex flex-col items-center justify-center"><span className="text-xs font-black tracking-wider leading-none mt-0.5">Ask?</span></motion.div>
           )}

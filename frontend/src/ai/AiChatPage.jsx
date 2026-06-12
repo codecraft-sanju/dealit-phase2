@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { ArrowLeft, Send, Bot, Sparkles, Menu, Plus, Settings, HelpCircle, MessageSquare, X, Trash2, Minimize2, ChevronDown, Mic, User, WifiOff } from 'lucide-react'; // MODIFIED: Added WifiOff
+import { ArrowLeft, Send, Sparkles, Menu, Plus, Settings, HelpCircle, MessageSquare, X, Trash2, Minimize2, ChevronDown, Mic, User, WifiOff } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion'; 
 import axios from 'axios';
@@ -91,18 +91,15 @@ const MagicButtonStyles = () => (
         align-items: center;
         justify-content: center;
         font-weight: 500;
-        /* CHANGED: Added width and height to ensure perfect flex centering */
         width: 100%;
         height: 100%;
       }
       
       .magic-inner svg.icon {
-        /* CHANGED: Removed transition and added infinite auto-animation */
         fill: transparent;
         animation: magic-auto-draw 2s linear infinite;
       }
       
-      /* CHANGED: New keyframes for automatic 2-second loop instead of hover */
       @keyframes magic-auto-draw {
         0% { stroke-dasharray: 0 0 0 0; fill: transparent; }
         25% { stroke-dasharray: 68 68 0 0; fill: transparent; }
@@ -342,7 +339,6 @@ const AiChatPage = ({ user }) => {
   const [voicePref, setVoicePref] = useState(() => localStorage.getItem('dealit_ai_voice_pref') || 'female');
   const [isPremiumVoiceLimited, setIsPremiumVoiceLimited] = useState(false);
 
-  // MODIFIED: Added offline state and listeners
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
   useEffect(() => {
@@ -358,7 +354,6 @@ const AiChatPage = ({ user }) => {
     };
   }, []);
 
-  // MODIFIED: Cache messages automatically when updated
   useEffect(() => {
     if (currentSessionId && messages.length > 0) {
       localStorage.setItem(`dealit_ai_history_${currentSessionId}`, JSON.stringify(messages));
@@ -439,7 +434,6 @@ const AiChatPage = ({ user }) => {
     return () => window.removeEventListener('resize', handleResizeSidebar);
   }, []);
   
-  // MODIFIED: Updated fetchSessions for caching
   const fetchSessions = useCallback(async () => {
     try {
       const cached = localStorage.getItem('dealit_ai_sessions');
@@ -465,7 +459,6 @@ const AiChatPage = ({ user }) => {
     fetchSessions();
   }, [fetchSessions]);
   
-  // MODIFIED: Updated loadHistory for Stale-While-Revalidate pattern
   useEffect(() => {
     const loadHistory = async () => {
       if (isStreamingRef.current) return;
@@ -644,7 +637,6 @@ const AiChatPage = ({ user }) => {
       return;
     }
 
-    // MODIFIED: Added offline check
     if (!navigator.onLine) {
       setIsOffline(true);
       setTimeout(() => setIsOffline(false), 4000);
@@ -770,7 +762,6 @@ const AiChatPage = ({ user }) => {
   const processMessage = async (userMessage) => {
     if (!userMessage.trim()) return;
 
-    // MODIFIED: Added offline check
     if (!navigator.onLine) {
       setIsOffline(true);
       setTimeout(() => setIsOffline(false), 4000);
@@ -975,7 +966,9 @@ const AiChatPage = ({ user }) => {
         <div className="bg-gray-800/80 backdrop-blur-md border-b border-purple-500/20 p-4 flex items-center justify-between shadow-sm shadow-purple-900/10 z-10 shrink-0">
           <div className="flex items-center gap-3">
             <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 bg-gray-900 hover:bg-gray-700 rounded-lg text-gray-300 transition-colors mr-1" title="Toggle Sidebar"><Menu className="w-5 h-5" /></button>
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500/20 to-emerald-500/10 flex items-center justify-center border border-purple-500/30 shadow-[0_0_15px_rgba(163,136,225,0.2)] hidden sm:flex"><Bot className="w-6 h-6 text-purple-400" /></div>
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500/20 to-emerald-500/10 flex items-center justify-center border border-purple-500/30 shadow-[0_0_15px_rgba(163,136,225,0.2)] hidden sm:flex overflow-hidden">
+              <img src="https://res.cloudinary.com/dia3qhc0x/image/upload/v1781289017/ijblexdk51vluv7ku6g9.jpg" alt="Dealit AI" className="w-full h-full object-cover" />
+            </div>
             <div>
               <h1 className="text-white font-bold text-lg leading-tight tracking-wide">Dealit AI</h1>
               <p className="text-emerald-400 text-xs font-medium flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>Always here to help</p>
@@ -989,7 +982,6 @@ const AiChatPage = ({ user }) => {
 
         <div className="relative flex-1 flex flex-col overflow-hidden">
 
-          {/* MODIFIED: Added Offline Toast Here */}
           <AnimatePresence>
             {isOffline && (
               <motion.div
@@ -1021,7 +1013,7 @@ const AiChatPage = ({ user }) => {
                   className="w-24 h-24 mb-6 rounded-full bg-gradient-to-br from-purple-600/20 to-emerald-500/20 flex items-center justify-center border border-purple-500/40 shadow-[0_0_40px_rgba(163,136,225,0.15)] relative"
                 >
                   <div className="absolute inset-0 rounded-full border border-purple-400/30 animate-[spin_10s_linear_infinite]" />
-                  <Bot className="w-12 h-12 text-purple-400 drop-shadow-[0_0_10px_rgba(163,136,225,0.5)]" />
+                  <img src="https://res.cloudinary.com/dia3qhc0x/image/upload/v1781289017/ijblexdk51vluv7ku6g9.jpg" alt="Dealit AI" className="w-16 h-16 rounded-full object-cover relative z-10" />
                 </motion.div>
                 <motion.h2 
                   initial={{ opacity: 0, y: 10 }}
@@ -1076,32 +1068,39 @@ const AiChatPage = ({ user }) => {
             <div ref={messagesEndRef} />
           </div>
           
-     
-<div className="shrink-0 bg-gray-900 pb-safe z-10 relative">
-  <div className="bg-gray-800/50 backdrop-blur-sm border-t border-purple-500/20 p-4 container mx-auto max-w-3xl">
-    {/* CHANGED: Added flex items-center gap-2 directly to the form, removed absolute positioning setup */}
-    <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-      {/* CHANGED: Added flex-1 and removed large right padding (pr-24) */}
-      <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask Dealit AI..." className="flex-1 bg-gray-900 border border-gray-700 rounded-full py-4 px-5 text-base md:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-inner" />
-      
-      {/* CHANGED: Removed absolute positioning, added shrink-0 */}
-      <button type="button" onClick={handleMicClick} className="w-12 h-12 shrink-0 flex items-center justify-center rounded-full transition-all text-gray-400 hover:bg-gray-800 hover:text-purple-400">
-        <Mic className="w-5 h-5" />
-      </button>
+          <div className="shrink-0 pb-safe z-10 relative">
+            <div className="p-4 container mx-auto max-w-3xl">
+              <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+                
+                <div className="relative flex-1 flex items-center">
+                  <input 
+                    type="text" 
+                    value={input} 
+                    onChange={(e) => setInput(e.target.value)} 
+                    placeholder="Ask Dealit AI..." 
+                    className="w-full bg-gray-900 border border-gray-700 rounded-full py-4 pl-5 pr-12 text-base md:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-inner" 
+                  />
+                  
+                  <button 
+                    type="button" 
+                    onClick={handleMicClick} 
+                    className="absolute right-2 p-2 flex items-center justify-center rounded-full transition-all text-gray-400 hover:bg-gray-800 hover:text-purple-400"
+                  >
+                    <Mic className="w-5 h-5" />
+                  </button>
+                </div>
 
-      {/* CHANGED: Removed absolute positioning, added shrink-0 */}
-      <button type="submit" disabled={isLoading || !input.trim()} className="magic-btn shrink-0 w-12 h-12 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-purple-500/30" style={{ '--round': '9999px', padding: 0 }}>
-        <div className="magic-points_wrapper">
-          {[...Array(10)].map((_, i) => <i key={i} className="point"></i>)}
-        </div>
-        <span className="magic-inner">
-          {/* CHANGED: Removed ml-1 to fix centering */}
-          <Send className="w-5 h-5 icon" fill="none" strokeWidth="2.5" />
-        </span>
-      </button>
-    </form>
-  </div>
-</div>
+                <button type="submit" disabled={isLoading || !input.trim()} className="magic-btn shrink-0 w-12 h-12 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-purple-500/30" style={{ '--round': '9999px', padding: 0 }}>
+                  <div className="magic-points_wrapper">
+                    {[...Array(10)].map((_, i) => <i key={i} className="point"></i>)}
+                  </div>
+                  <span className="magic-inner">
+                    <Send className="w-5 h-5 icon" fill="none" strokeWidth="2.5" />
+                  </span>
+                </button>
+              </form>
+            </div>
+          </div>
 
         
           <AnimatePresence>
@@ -1135,8 +1134,8 @@ const AiChatPage = ({ user }) => {
                     {voiceState === 'generating_audio' && (
                       <div className="absolute inset-0 rounded-full bg-blue-500/30 animate-pulse" />
                     )}
-                    <div className="z-10 w-24 h-24 bg-gray-950/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-inner border border-gray-700">
-                      {voiceState === 'listening' ? <Mic className="w-10 h-10 text-red-400 animate-pulse" /> : <Bot className="w-10 h-10 text-purple-400" />}
+                    <div className="z-10 w-24 h-24 bg-gray-950/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-inner border border-gray-700 overflow-hidden">
+                      {voiceState === 'listening' ? <Mic className="w-10 h-10 text-red-400 animate-pulse" /> : <img src="https://res.cloudinary.com/dia3qhc0x/image/upload/v1781289017/ijblexdk51vluv7ku6g9.jpg" alt="Dealit AI" className="w-full h-full object-cover" />}
                     </div>
                   </div>
 
@@ -1153,7 +1152,6 @@ const AiChatPage = ({ user }) => {
                     </span>
                   )}
                   
-                  {/* CHANGED HERE: Added text-white so TypingLoader becomes white */}
                   <div className="h-12 flex items-center justify-center w-full mb-10 text-white drop-shadow-md">
                     {voiceState === 'listening' && (
                       <div className="flex gap-2.5">
