@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-
 import { ArrowLeft, Send, Sparkles, Menu, Plus, Settings, HelpCircle, MessageSquare, X, Trash2, Minimize2, ChevronDown, Mic, User, WifiOff, Copy, Check, CheckCheck } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion'; 
@@ -8,6 +7,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 import Lightfall from './Lightfall';
+import AiChatProductCard from '../components/AiChatProductCard';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -15,6 +15,15 @@ const API_URL = `${API_BASE}/api`;
 const MagicButtonStyles = () => (
   <style>
     {`
+      /* NEW: Global class to hide scrollbar but keep functionality */
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+      }
+
       .magic-btn {
         --h-button: auto;
         --w-button: auto;
@@ -265,7 +274,7 @@ const CopyButton = ({ text }) => {
   );
 };
 
-const BotMessage = ({ content, animated, onComplete }) => {
+const BotMessage = ({ content, animated, onComplete, navigate }) => {
   const [displayedText, setDisplayedText] = useState(animated ? '' : content);
   
   useEffect(() => {
@@ -287,7 +296,6 @@ const BotMessage = ({ content, animated, onComplete }) => {
   }, [content, animated]);
   
   return (
-
     <div className="leading-relaxed text-sm w-full" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
@@ -301,18 +309,72 @@ const BotMessage = ({ content, animated, onComplete }) => {
           h3: ({node, ...props}) => <h3 className="text-base font-bold mb-2 mt-3 text-white" {...props} />,
           a: ({node, ...props}) => <a className="text-purple-400 hover:text-purple-300 underline transition-colors" target="_blank" rel="noopener noreferrer" {...props} />,
           strong: ({node, ...props}) => <strong className="font-semibold text-white" {...props} />,
-          code: ({node, inline, ...props}) => 
-            inline ? (
-              <code className="bg-gray-900 text-purple-300 px-1.5 py-0.5 rounded-md text-xs font-mono border border-gray-700" {...props} />
+          
+          code: ({node, inline, className, children, ...props}) => {
+            const codeString = String(children).replace(/\n$/, '');
+            const isJsonBlock = className === 'language-json' || codeString.includes('"ui_type"');
+
+            if (!inline && isJsonBlock) {
+              try {
+                const parsedData = JSON.parse(codeString);
+                
+                // Handle Product Carousel
+                if (parsedData.ui_type === 'product_carousel' && Array.isArray(parsedData.items)) {
+                  return (
+                    <div className="my-4 w-full overflow-hidden">
+                      {/* hidden scrollbar here too */}
+                      <div className="flex gap-3 overflow-x-auto snap-x pb-2 no-scrollbar">
+                        {parsedData.items.map((item, idx) => (
+                          <AiChatProductCard 
+                            key={item._id || idx} 
+                            item={item} 
+                            onClick={(id) => navigate(`/item/${id}`)} 
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+                
+                // Handle Action Button
+                if (parsedData.ui_type === 'action_button' && parsedData.label && parsedData.action) {
+                  return (
+                    <button
+                      onClick={() => navigate(parsedData.action)}
+                      className="mt-3 mb-2 w-full bg-gradient-to-r from-purple-500 to-emerald-500 hover:from-purple-600 hover:to-emerald-600 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      {parsedData.label}
+                    </button>
+                  );
+                }
+              } catch (e) {
+                // JSON is still streaming/incomplete. Show a loading state instead of raw code.
+                return (
+                  <div className="my-3 p-4 bg-gray-900 rounded-xl border border-purple-500/30 flex items-center justify-center gap-2 text-purple-400 text-xs animate-pulse">
+                    <Sparkles className="w-4 h-4" /> Generating Interface...
+                  </div>
+                );
+              }
+            }
+
+            // Standard code block fallback
+            return inline ? (
+              <code className="bg-gray-900 text-purple-300 px-1.5 py-0.5 rounded-md text-xs font-mono border border-gray-700" {...props}>
+                {children}
+              </code>
             ) : (
               <div className="overflow-hidden rounded-xl border border-gray-700 my-3 bg-gray-950 shadow-inner max-w-full">
-                <pre className="p-4 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-800">
-                  <code className="text-gray-300 text-xs font-mono" {...props} />
+                <pre className="p-4 overflow-x-auto no-scrollbar">
+                  <code className="text-gray-300 text-xs font-mono" className={className} {...props}>
+                    {children}
+                  </code>
                 </pre>
               </div>
-            ),
+            );
+          },
           table: ({node, ...props}) => (
-            <div className="overflow-x-auto my-4 border border-gray-700 rounded-xl shadow-sm max-w-full">
+            <div className="overflow-x-auto my-4 border border-gray-700 rounded-xl shadow-sm max-w-full no-scrollbar">
               <table className="min-w-full divide-y divide-gray-700 text-sm" {...props} />
             </div>
           ),
@@ -528,7 +590,7 @@ const AiChatPage = ({ user }) => {
             role: msg.role === 'assistant' ? 'bot' : 'user',
             content: msg.content,
             animated: false,
-           
+            
             timestamp: new Date(msg.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           }));
           setMessages(formattedHistory);
@@ -600,7 +662,6 @@ const AiChatPage = ({ user }) => {
     setMessages((prev) => prev.map((m) => m.id === id ? { ...m, animated: false } : m));
   };
 
- 
   const fallbackToNativeSpeech = (text, pref) => {
     if (window.ReactNativeWebView) {
       setVoiceState('speaking');
@@ -954,7 +1015,6 @@ const AiChatPage = ({ user }) => {
     >
       <MagicButtonStyles />
       
-      {/* CHANGED: Increased z-index overlay on mobile to z-[55] so it properly covers header */}
       {isSidebarOpen && (
         <div className="fixed inset-0 bg-black/50 z-[55] md:hidden" onClick={() => setIsSidebarOpen(false)} />
       )}
@@ -963,7 +1023,6 @@ const AiChatPage = ({ user }) => {
         <div className="fixed inset-0 z-[45]" onClick={() => setIsModeDropdownOpen(false)} />
       )}
 
-      {/* CHANGED: Adjusted z-index to z-[60] so sidebar overlays properly */}
       <div className={`fixed md:relative z-[60] flex flex-col h-full bg-gray-950 border-r border-gray-800 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-72 translate-x-0' : 'w-72 -translate-x-full md:w-0 md:hidden absolute'}`}>
         <div className="p-3 flex items-center gap-2">
           <button onClick={handleNewChat} className="flex-1 flex items-center gap-3 p-3 rounded-xl bg-gray-800/80 hover:bg-gray-800 text-white transition-all border border-gray-700/50 shadow-sm">
@@ -974,7 +1033,7 @@ const AiChatPage = ({ user }) => {
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto px-3 py-2 scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent">
+        <div className="flex-1 overflow-y-auto px-3 py-2 no-scrollbar">
           <div className="text-xs font-bold tracking-wider text-gray-500 mb-3 px-2 uppercase">Recent Chats</div>
           <div className="space-y-1">
             {sessions.map(session => (
@@ -1091,7 +1150,7 @@ const AiChatPage = ({ user }) => {
             )}
           </AnimatePresence>
         
-          <div className={`flex-1 overflow-y-auto p-4 space-y-6 container mx-auto max-w-3xl scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent relative ${!hasStartedChat && 'flex flex-col items-center justify-center'}`}>
+          <div className={`flex-1 overflow-y-auto p-4 space-y-6 container mx-auto max-w-3xl no-scrollbar relative ${!hasStartedChat && 'flex flex-col items-center justify-center'}`}>
             {isLoading && messages.length === 0 ? (
               <GeneratingLoader />
             ) : !hasStartedChat ? (
@@ -1154,17 +1213,13 @@ const AiChatPage = ({ user }) => {
                   key={msg.id} 
                   className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  {/* CHANGED: Updated the message bubble wrapper to support bottom metadata nicely */}
                   <div className={`flex flex-col max-w-[85%] md:max-w-[70%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-                    {/* CHANGED: Added overflow-hidden to main bubble to restrict text bounds */}
                     <div className={`rounded-2xl px-5 py-3.5 text-sm overflow-hidden flex flex-col ${msg.role === 'user' ? 'bg-gradient-to-br from-purple-600 to-purple-500 text-white rounded-tr-sm shadow-lg shadow-purple-500/20' : 'bg-gray-800 text-gray-200 border border-gray-700 rounded-tl-sm shadow-md'}`}>
                       
-                      {/* CHANGED: Wrapped message content inside a dedicated flex container with aggressive word wrapping */}
                       <div className="whitespace-pre-wrap w-full" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
-                        {msg.role === 'bot' ? (msg.content ? <BotMessage content={msg.content} animated={msg.animated} onComplete={() => markAsAnimated(msg.id)} /> : <TypingLoader />) : msg.content}
+                        {msg.role === 'bot' ? (msg.content ? <BotMessage content={msg.content} animated={msg.animated} onComplete={() => markAsAnimated(msg.id)} navigate={navigate} /> : <TypingLoader />) : msg.content}
                       </div>
                       
-                      {/* CHANGED: Added professional footer with metadata/tools, removed user timestamp */}
                       <div className={`flex items-center mt-2.5 pt-2 border-t text-[10px] select-none ${msg.role === 'user' ? 'border-purple-400/30 text-purple-200 justify-end gap-1.5' : 'border-gray-700/60 text-gray-400 justify-between'}`}>
                         {msg.role === 'bot' ? (
                           <>

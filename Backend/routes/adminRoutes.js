@@ -20,7 +20,8 @@ const {
   getAILogs,
   getAISettings,     
   updateAISettings,   
-  getAILogStats       
+  getAILogStats,
+  resetUserAILimits 
 } = require('../controllers/adminController');
 
 const {
@@ -52,6 +53,9 @@ router.route('/users/:id')
 
 router.route('/users/role/:id')
   .put(protect, admin, updateUserRole);
+  
+router.route('/users/:id/reset-ai-limits')
+  .put(protect, admin, resetUserAILimits);
 
 router.route('/offers')
   .get(protect, admin, getAdminOffers)

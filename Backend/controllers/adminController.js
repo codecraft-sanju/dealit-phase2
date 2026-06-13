@@ -1074,6 +1074,29 @@ const getAILogStats = async (req, res) => {
     }
 }
 
+const resetUserAILimits = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    user.aiChatTokensUsed = 0;
+    user.aiVoiceTokensUsed = 0;
+    user.lastAITokenReset = new Date();
+    
+    await user.save();
+    
+    res.status(200).json({ 
+      success: true, 
+      message: `AI limits successfully reset for user: ${user.full_name}` 
+    });
+  } catch (error) {
+    console.error('Error resetting user AI limits:', error);
+    res.status(500).json({ success: false, message: 'Server Error resetting limits' });
+  }
+};
+
 module.exports = {
   getPendingItems,
   updateItemStatus,
@@ -1093,5 +1116,6 @@ module.exports = {
   getAILogs,
   getAISettings, 
   updateAISettings, 
-  getAILogStats 
+  getAILogStats ,
+  resetUserAILimits
 };

@@ -21,6 +21,7 @@ router.delete('/chat/sessions', protect, deleteAllChatSessions);
 router.get('/chat/history/:sessionId', protect, getChatHistory);
 router.delete('/chat/session/:sessionId', protect, deleteChatSession);
 router.post('/chat', protect, processChat);
+
 router.post('/synthesize-voice', protect, synthesizeVoice);
 
 module.exports = router;
