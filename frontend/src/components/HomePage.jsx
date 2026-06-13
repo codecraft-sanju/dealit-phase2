@@ -331,56 +331,97 @@ const HomePage = ({ user, setUser }) => {
                
                <motion.div variants={itemVariants} className="w-[40%] flex flex-col gap-2.5">
 
-                
-                 <div className={`flex-1 bg-gradient-to-br from-[#805ad5] to-[#5a3da6] rounded-[20px] p-3 text-white shadow-sm flex flex-col justify-between relative overflow-hidden transition-all duration-700 ${showCelebration ? 'shadow-[0_0_20px_rgba(250,204,21,0.6)] scale-[1.02]' : ''}`}>
-                   <div className="flex justify-between items-start mb-2">
-                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-300 to-yellow-600 flex items-center justify-center text-yellow-900 font-black text-xs shadow-inner">Cr</div>
-                     <div className="bg-white/20 border border-white/20 backdrop-blur-sm rounded-full px-2 py-0.5 text-[8px] font-semibold">₹1 = 1 Cr</div>
+                 {/* CHANGE START: Applied glossy, shimmer, and 3D coin effects from the old UI to the new UI */}
+                 <div className={`flex-1 bg-gradient-to-br from-[#805ad5] via-[#7551c6] to-[#5a3da6] rounded-[20px] p-3 text-white shadow-[0_8px_20px_rgba(128,90,213,0.4),inset_0_1px_1px_rgba(255,255,255,0.3)] flex flex-col justify-between relative overflow-hidden transition-all duration-700 ${showCelebration ? 'shadow-[0_0_30px_rgba(250,204,21,0.6)] scale-[1.05]' : ''}`}>
+                   
+                   {/* Background Glare Sweep */}
+                   <div className="absolute top-0 left-[-150%] w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-[-25deg] animate-[glare_4s_infinite_ease-in-out] pointer-events-none z-0"></div>
+
+                   <div className="flex justify-between items-start mb-2 relative z-10">
+                     <motion.div 
+                       animate={showCelebration ? { rotateY: 360, scale: 1.2 } : { rotateY: 0, scale: 1 }}
+                       transition={{ duration: 0.8, type: "spring" }}
+                       className="w-max"
+                     >
+                       <div className="relative w-8 h-8 rounded-full shadow-[0_3px_8px_rgba(217,119,6,0.6),inset_0_-2px_4px_rgba(146,64,14,0.6),inset_0_1px_3px_rgba(255,255,255,0.9)] border border-[#FEF08A] bg-gradient-to-br from-[#FEF08A] via-[#F59E0B] to-[#92400E] flex items-center justify-center overflow-hidden">
+                         <div className="absolute inset-[2px] rounded-full border-[0.5px] border-[#92400E]/50 bg-gradient-to-tl from-[#FEF08A]/20 via-transparent to-[#D97706]/40 flex items-center justify-center shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)]">
+                           <span className="font-black text-[#78350F] text-[11px] tracking-tighter drop-shadow-[0_1px_1px_rgba(255,255,255,0.7)]">Cr</span>
+                         </div>
+                         <div className="absolute top-0 left-[-150%] w-full h-full bg-gradient-to-r from-transparent via-white/60 to-transparent skew-x-[-25deg] animate-[glare_3s_infinite_ease-in-out]"></div>
+                       </div>
+                     </motion.div>
+                     <div className="bg-white/20 border border-white/20 backdrop-blur-sm rounded-full px-2 py-0.5 text-[8px] font-semibold shadow-sm">₹1 = 1 Cr</div>
                    </div>
 
-                   <div>
+                   <div className="relative z-10">
                      <div className="flex items-baseline gap-1 mb-0.5">
-                       <motion.span
-                         key={user?.account_credits}
-                         initial={{ scale: 1.2, color: "#fef08a" }}
-                         animate={{ scale: 1, color: "#ffffff" }}
-                         className="text-2xl font-bold"
-                       >
-                         {user ? user.account_credits || 0 : 0}
-                       </motion.span>
+                       <span className="text-2xl font-bold relative drop-shadow-md">
+                         <motion.span
+                           key={user?.account_credits}
+                           initial={{ scale: 1.2, color: "#fef08a" }}
+                           animate={{ scale: 1, color: "#ffffff" }}
+                         >
+                           {user ? user.account_credits || 0 : 0}
+                         </motion.span>
+                         <AnimatePresence>
+                           {showCelebration && (
+                             <motion.span 
+                               initial={{ opacity: 0, y: 10, scale: 0.5 }}
+                               animate={{ opacity: 1, y: -30, scale: 1.2 }}
+                               exit={{ opacity: 0 }}
+                               transition={{ duration: 1.5, ease: "easeOut" }}
+                               className="absolute -top-2 -right-10 text-xs text-yellow-300 font-black drop-shadow-[0_0_10px_rgba(253,224,71,1)] flex items-center z-10 whitespace-nowrap"
+                             >
+                               +{bonusSettings.amount} <Sparkles className="w-2.5 h-2.5 ml-0.5 animate-spin" />
+                             </motion.span>
+                           )}
+                         </AnimatePresence>
+                       </span>
                        <span className="text-[10px] text-purple-200">Credits</span>
                      </div>
                      <div className="text-[8px] text-purple-300 mb-2">Your balance</div>
                    </div>
 
-                   {user ? (
-                     shouldShowClaimButton ? (
-                       <motion.button
-                         whileTap={{ scale: 0.95 }}
-                         onClick={() => claimBonusMutation.mutate()}
-                         disabled={claimBonusMutation.isPending}
-                         className="w-full bg-gradient-to-r from-[#FFE28A] via-[#FFF0B3] to-[#FFD75E] text-yellow-900 py-1.5 rounded-lg font-bold text-[10px] shadow-sm disabled:opacity-80"
-                       >
-                         {claimBonusMutation.isPending ? 'Wait...' : `Claim ${bonusSettings.amount}`}
-                       </motion.button>
+                   <div className="relative z-10">
+                     {user ? (
+                       shouldShowClaimButton ? (
+                         <motion.button
+                           whileTap={{ scale: 0.95 }}
+                           onClick={() => claimBonusMutation.mutate()}
+                           disabled={claimBonusMutation.isPending}
+                           className="w-full bg-gradient-to-r from-[#FFE28A] via-[#FFF0B3] to-[#FFD75E] text-yellow-900 py-1.5 rounded-lg font-bold text-[10px] shadow-[0_4px_10px_rgba(0,0,0,0.1),inset_0_1px_1px_rgba(255,255,255,0.8)] disabled:opacity-80 relative overflow-hidden transition hover:brightness-105"
+                         >
+                           <motion.div 
+                             className="absolute inset-0 bg-gradient-to-r from-transparent via-white/70 to-transparent skew-x-[-20deg]"
+                             animate={{ x: ["-150%", "250%"] }}
+                             transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                           />
+                           <span className="relative z-10 drop-shadow-sm">{claimBonusMutation.isPending ? 'Wait...' : `Claim ${bonusSettings.amount}`}</span>
+                         </motion.button>
+                       ) : (
+                         <motion.div whileTap={{ scale: 0.95 }}>
+                           <Link to="/wallet" className="w-full bg-white/10 hover:bg-white/20 backdrop-blur-md transition-colors py-1.5 rounded-lg font-bold text-[10px] flex items-center justify-center gap-1 border border-white/20 shadow-sm relative overflow-hidden">
+                             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-[-20deg] animate-[glare_3s_infinite_ease-in-out]"></div>
+                             <span className="relative z-10">Earn More</span> <ChevronRight className="w-3 h-3 relative z-10" />
+                           </Link>
+                         </motion.div>
+                       )
                      ) : (
-                       <motion.div whileTap={{ scale: 0.95 }}>
-                         <Link to="/wallet" className="w-full bg-white/20 hover:bg-white/30 transition-colors py-1.5 rounded-lg font-bold text-[10px] flex items-center justify-center gap-1 border border-white/20">
-                           Earn More <ChevronRight className="w-3 h-3" />
-                         </Link>
-                       </motion.div>
-                     )
-                   ) : (
-                     <div className="flex flex-col gap-1.5">
-                       <motion.div whileTap={{ scale: 0.95 }}>
-                         <Link to="/login" className="w-full block bg-white/20 text-center py-1.5 rounded-lg font-bold text-[10px]">Login</Link>
-                       </motion.div>
-                       <motion.div whileTap={{ scale: 0.95 }}>
-                         <Link to="/signup" className="w-full block bg-white text-[#5a3da6] text-center py-1.5 rounded-lg font-bold text-[10px]">Join</Link>
-                       </motion.div>
-                     </div>
-                   )}
+                       <div className="flex flex-col gap-1.5">
+                         <motion.div whileTap={{ scale: 0.95 }}>
+                           <Link to="/login" className="w-full block bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-colors text-center py-1.5 rounded-lg font-bold text-[10px] shadow-sm relative overflow-hidden">
+                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-[-20deg] animate-[glare_3s_infinite_ease-in-out]"></div>
+                              <span className="relative z-10">Login</span>
+                           </Link>
+                         </motion.div>
+                         <motion.div whileTap={{ scale: 0.95 }}>
+                           <Link to="/signup" className="w-full block bg-white text-[#5a3da6] text-center py-1.5 rounded-lg font-bold text-[10px] shadow-sm hover:brightness-105 transition-all">Join</Link>
+                         </motion.div>
+                       </div>
+                     )}
+                   </div>
                  </div>
+                 {/* CHANGE END */}
 
                  {/* Trust Badges */}
                  <div className="bg-white rounded-[20px] p-2.5 flex flex-col justify-between gap-1 shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-gray-100 flex-1">
