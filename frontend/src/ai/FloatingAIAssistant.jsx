@@ -246,6 +246,17 @@ const FloatingAIAssistant = ({ user }) => {
   const [buttonState, setButtonState] = useState('bot');
   const isStreamingRef = useRef(false);
   
+  // CHANGED: Added event listener for Native App speech completion
+  useEffect(() => {
+    const handleNativeAppEvent = (e) => {
+      if (e.detail && e.detail.type === 'SPEECH_FINISHED') {
+        setVoiceState('idle');
+      }
+    };
+    window.addEventListener('NATIVE_APP_EVENT', handleNativeAppEvent);
+    return () => window.removeEventListener('NATIVE_APP_EVENT', handleNativeAppEvent);
+  }, []);
+
   useEffect(() => {
     if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = () => {};
     return () => {
@@ -298,7 +309,18 @@ const FloatingAIAssistant = ({ user }) => {
     localStorage.setItem('dealit_ai_mode', newMode);
   };
 
+  // CHANGED: Updated Fallback Function to bridge with Native App
   const fallbackToNativeSpeech = (text, pref) => {
+    if (window.ReactNativeWebView) {
+      setVoiceState('speaking');
+      window.ReactNativeWebView.postMessage(JSON.stringify({ 
+        type: 'START_NATIVE_SPEECH', 
+        text: text, 
+        pref: pref 
+      }));
+      return;
+    }
+
     if (!window.speechSynthesis) {
       setVoiceState('idle');
       return;
@@ -462,10 +484,16 @@ const FloatingAIAssistant = ({ user }) => {
     recognition.start();
   };
   
+  // CHANGED: Updated Cancel Function to bridge with Native App
   const cancelVoiceMode = () => {
     if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
     if (window.speechSynthesis) window.speechSynthesis.cancel();
     if (abortControllerRef.current) abortControllerRef.current.abort();
+
+    if (window.ReactNativeWebView) {
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'STOP_NATIVE_SPEECH' }));
+    }
+
     setVoiceState('idle');
   };
   

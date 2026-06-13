@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-// CHANGED: Added Copy, Check, CheckCheck to imports
+
 import { ArrowLeft, Send, Sparkles, Menu, Plus, Settings, HelpCircle, MessageSquare, X, Trash2, Minimize2, ChevronDown, Mic, User, WifiOff, Copy, Check, CheckCheck } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion'; 
@@ -245,7 +245,7 @@ const SoundWave = () => (
   </div>
 );
 
-// CHANGED: Added small custom copy button to reuse in AI messages cleanly
+
 const CopyButton = ({ text }) => {
   const [copied, setCopied] = useState(false);
   const handleCopy = () => {
@@ -287,7 +287,7 @@ const BotMessage = ({ content, animated, onComplete }) => {
   }, [content, animated]);
   
   return (
-    // CHANGED: Added overflow styles to handle very long unbroken strings
+
     <div className="leading-relaxed text-sm w-full" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
@@ -389,6 +389,17 @@ const AiChatPage = ({ user }) => {
   const audioRef = useRef(null);
   const isStreamingRef = useRef(false);
   
+
+  useEffect(() => {
+    const handleNativeAppEvent = (e) => {
+      if (e.detail && e.detail.type === 'SPEECH_FINISHED') {
+        setVoiceState('idle');
+      }
+    };
+    window.addEventListener('NATIVE_APP_EVENT', handleNativeAppEvent);
+    return () => window.removeEventListener('NATIVE_APP_EVENT', handleNativeAppEvent);
+  }, []);
+
   useEffect(() => {
     const handleResize = () => {
       if (window.visualViewport) {
@@ -517,7 +528,7 @@ const AiChatPage = ({ user }) => {
             role: msg.role === 'assistant' ? 'bot' : 'user',
             content: msg.content,
             animated: false,
-            // CHANGED: Added timestamp fetching to history
+           
             timestamp: new Date(msg.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           }));
           setMessages(formattedHistory);
@@ -589,7 +600,18 @@ const AiChatPage = ({ user }) => {
     setMessages((prev) => prev.map((m) => m.id === id ? { ...m, animated: false } : m));
   };
 
+ 
   const fallbackToNativeSpeech = (text, pref) => {
+    if (window.ReactNativeWebView) {
+      setVoiceState('speaking');
+      window.ReactNativeWebView.postMessage(JSON.stringify({ 
+        type: 'START_NATIVE_SPEECH', 
+        text: text, 
+        pref: pref 
+      }));
+      return;
+    }
+
     if (!window.speechSynthesis) {
       setVoiceState('idle');
       return;
@@ -775,6 +797,7 @@ const AiChatPage = ({ user }) => {
     recognition.start();
   };
   
+
   const cancelVoiceMode = () => {
     if (audioRef.current) {
       audioRef.current.pause();
@@ -782,6 +805,11 @@ const AiChatPage = ({ user }) => {
     }
     if (window.speechSynthesis) window.speechSynthesis.cancel();
     if (abortControllerRef.current) abortControllerRef.current.abort();
+
+    if (window.ReactNativeWebView) {
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'STOP_NATIVE_SPEECH' }));
+    }
+
     setVoiceState('idle');
   };
   
