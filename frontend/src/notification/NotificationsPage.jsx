@@ -47,6 +47,7 @@ const NotificationsPage = () => {
   const observerTarget = useRef(null);
   const navigate = useNavigate();
 
+  const [activeFilter, setActiveFilter] = useState('All');
   const [isPushEnabled, setIsPushEnabled] = useState(false);
   const [toast, setToast] = useState(null);
   const toastTimeoutRef = useRef(null);
@@ -154,10 +155,10 @@ const NotificationsPage = () => {
     hasNextPage,
     isFetchingNextPage
   } = useInfiniteQuery({
-    queryKey: ['notifications'],
+    queryKey: ['notifications', activeFilter],
     initialPageParam: 1,
     queryFn: async ({ pageParam = 1 }) => {
-      const response = await axios.get(`${API_URL}/notifications?page=${pageParam}&limit=15`, { withCredentials: true });
+      const response = await axios.get(`${API_URL}/notifications?page=${pageParam}&limit=15&filter=${activeFilter}`, { withCredentials: true });
       return response.data;
     },
     getNextPageParam: (lastPage) => {
@@ -208,10 +209,10 @@ const NotificationsPage = () => {
       return await axios.put(`${API_URL}/notifications/${id}/read`, {}, { withCredentials: true });
     },
     onMutate: async (id) => {
-      await queryClient.cancelQueries(['notifications']);
-      const previousData = queryClient.getQueryData(['notifications']);
+      await queryClient.cancelQueries(['notifications', activeFilter]);
+      const previousData = queryClient.getQueryData(['notifications', activeFilter]);
       
-      queryClient.setQueryData(['notifications'], oldData => {
+      queryClient.setQueryData(['notifications', activeFilter], oldData => {
         if (!oldData) return oldData;
         return {
           ...oldData,
@@ -225,7 +226,7 @@ const NotificationsPage = () => {
     },
     onError: (err, id, context) => {
       console.error("Failed to mark as read:", err);
-      queryClient.setQueryData(['notifications'], context.previousData);
+      queryClient.setQueryData(['notifications', activeFilter], context.previousData);
     },
   });
 
@@ -234,10 +235,10 @@ const NotificationsPage = () => {
       return await axios.put(`${API_URL}/notifications/read-all`, {}, { withCredentials: true });
     },
     onMutate: async () => {
-      await queryClient.cancelQueries(['notifications']);
-      const previousData = queryClient.getQueryData(['notifications']);
+      await queryClient.cancelQueries(['notifications', activeFilter]);
+      const previousData = queryClient.getQueryData(['notifications', activeFilter]);
       
-      queryClient.setQueryData(['notifications'], oldData => {
+      queryClient.setQueryData(['notifications', activeFilter], oldData => {
         if (!oldData) return oldData;
         return {
           ...oldData,
@@ -251,7 +252,7 @@ const NotificationsPage = () => {
     },
     onError: (err, newTodo, context) => {
       console.error("Failed to mark all as read:", err);
-      queryClient.setQueryData(['notifications'], context.previousData);
+      queryClient.setQueryData(['notifications', activeFilter], context.previousData);
     },
     onSettled: () => {
       queryClient.invalidateQueries(['notifications']);
@@ -346,7 +347,7 @@ const NotificationsPage = () => {
           </div>
           
           <div className="flex items-center gap-2">
-            {/* CHANGED: Hide the Bell button if inside the mobile app to avoid confusion */}
+          
             {!isMobileApp && (
               <button
                 onClick={handlePushToggle}
@@ -366,6 +367,27 @@ const NotificationsPage = () => {
 
       <main className="flex-1 flex flex-col pt-24 pb-24 px-4 relative z-10 max-w-md mx-auto w-full">
         
+        <div className="flex overflow-x-auto hide-scrollbar gap-2 mb-4 py-2 -mx-4 px-4 sticky top-0 z-20 bg-[#f4f2f9]/90 backdrop-blur-sm">
+          {['All', 'Trades', 'Wallet', 'Orders'].map((filter) => (
+            <button
+              key={filter}
+              onClick={() => setActiveFilter(filter)}
+              className={`relative px-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${
+                activeFilter === filter ? 'text-white' : 'text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 shadow-sm'
+              }`}
+            >
+              {activeFilter === filter && (
+                <motion.div
+                  layoutId="activeNotificationFilter"
+                  className="absolute inset-0 bg-[#6B46C1] rounded-full -z-10 shadow-sm"
+                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                />
+              )}
+              <span className="relative z-10">{filter}</span>
+            </button>
+          ))}
+        </div>
+
         {isLoading ? (
           <NotificationsShimmer />
         ) : isError ? (
@@ -377,8 +399,14 @@ const NotificationsPage = () => {
              <div className="w-24 h-24 bg-[#EBE5F7] rounded-full flex items-center justify-center mb-5 shadow-inner">
                <Bell className="w-12 h-12 text-[#A388E1]" />
              </div>
-             <h3 className="text-2xl font-extrabold text-gray-800 mb-2">All caught up!</h3>
-             <p className="text-gray-500 font-medium text-sm">You have no new notifications right now.</p>
+             <h3 className="text-2xl font-extrabold text-gray-800 mb-2">
+               {activeFilter === 'All' ? 'All caught up!' : `No ${activeFilter} alerts`}
+             </h3>
+             <p className="text-gray-500 font-medium text-sm">
+               {activeFilter === 'All' 
+                 ? "You have no new notifications right now." 
+                 : `We didn't find any notifications for ${activeFilter}.`}
+             </p>
            </div>
         ) : (
           <div className="space-y-3">
@@ -461,7 +489,7 @@ const NotificationsPage = () => {
         )}
       </main>
 
-      {/* Floating Animated Toast */}
+      
       <AnimatePresence>
         {toast && (
           <motion.div
@@ -483,6 +511,15 @@ const NotificationsPage = () => {
         )}
       </AnimatePresence>
 
+      <style>{`
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .hide-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
     </div>
   );
 };

@@ -7,11 +7,25 @@ const getUserNotifications = async (req, res) => {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 20; 
     const skip = (page - 1) * limit;
+    const filterType = req.query.filter || 'All';
 
-    const total = await Notification.countDocuments({ user: req.user._id });
+    // Base query
+    let query = { user: req.user._id };
 
-  
-    const notifications = await Notification.find({ user: req.user._id })
+    // Apply filters based on request
+    if (filterType === 'Unread') {
+      query.isRead = false;
+    } else if (filterType === 'Wallet') {
+      query.type = { $in: ['CREDIT_ADDED', 'CREDIT_DEDUCTED'] };
+    } else if (filterType === 'Trades') {
+      query.type = 'TRADE_ALERT';
+    } else if (filterType === 'Orders') {
+      query.type = 'ORDER_UPDATE';
+    }
+
+    const total = await Notification.countDocuments(query);
+
+    const notifications = await Notification.find(query)
       .sort({ created_at: -1 })
       .skip(skip)
       .limit(limit)
@@ -79,7 +93,6 @@ const markAllAsRead = async (req, res) => {
 
 const subscribePush = async (req, res) => {
   try {
-  
     const { endpoint, keys, expirationTime, type } = req.body;
     
     await PushSubscription.findOneAndUpdate(
