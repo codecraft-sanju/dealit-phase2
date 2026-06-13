@@ -72,6 +72,57 @@ const ModernShimmer = ({ className }) => (
    </div>
 );
 
+const ShimmerImg = ({ src, alt, className, wrapperClassName = "" }) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+  return (
+    <div className={`relative ${wrapperClassName}`}>
+      {!isLoaded && <ModernShimmer className={`absolute inset-0 ${className}`} />}
+      <img
+        src={src}
+        alt={alt}
+        className={`${className} ${isLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}
+        onLoad={() => setIsLoaded(true)}
+      />
+    </div>
+  );
+};
+
+const ShimmerPicture = ({ desktopSrc, mobileSrc, alt, imgClassName, motionProps }) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+  return (
+    <>
+      {!isLoaded && <ModernShimmer className="absolute inset-0 z-0 rounded-none" />}
+      <picture className={`w-full h-full block pointer-events-none relative z-10 ${isLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}>
+        <source media="(min-width: 768px)" srcSet={desktopSrc} />
+        <motion.img
+          {...motionProps}
+          src={mobileSrc}
+          alt={alt}
+          className={imgClassName}
+          onLoad={() => setIsLoaded(true)}
+        />
+      </picture>
+    </>
+  );
+};
+
+const ShimmerMotionImg = ({ src, alt, className, onError, motionProps, wrapperClassName = "" }) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+  return (
+    <div className={`relative ${wrapperClassName}`}>
+      {!isLoaded && <ModernShimmer className="absolute inset-0 rounded-full" />}
+      <motion.img
+        {...motionProps}
+        src={src}
+        alt={alt}
+        className={`${className} ${isLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}
+        onLoad={() => setIsLoaded(true)}
+        onError={onError}
+      />
+    </div>
+  );
+};
+
 let initialAnimationPlayed = false;
 
 const HomePage = ({ user, setUser }) => {
@@ -269,10 +320,11 @@ const HomePage = ({ user, setUser }) => {
                  variants={itemVariants}
                  className="w-[60%] rounded-[20px] overflow-hidden shadow-sm relative bg-white"
                >
-                 <img
+                 <ShimmerImg
                    src={getOptimizedCloudinaryUrl(bonusSettings.heroBannerImage)}
                    alt="Sell Unused. Get Anything."
                    className="w-full h-full object-cover"
+                   wrapperClassName="w-full h-full"
                  />
                </motion.div>
 
@@ -358,10 +410,11 @@ const HomePage = ({ user, setUser }) => {
              </div>
 
              <motion.div variants={itemVariants} className="mb-4 rounded-2xl overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-gray-100 bg-white">
-               <img
+               <ShimmerImg
                  src={getOptimizedCloudinaryUrl(bonusSettings.howItWorksImage)}
                  alt="How Dealit Works"
                  className="w-full h-auto block"
+                 wrapperClassName="w-full h-full block"
                />
              </motion.div>
 
@@ -643,16 +696,16 @@ const HomePage = ({ user, setUser }) => {
                        key={offer._id} 
                        className="w-full aspect-[5/2] md:aspect-[5/1] flex-shrink-0 snap-center rounded-2xl overflow-hidden shadow-[0_4px_15px_rgba(0,0,0,0.05)] border border-white/50 relative bg-gray-50"
                      >
-                       <picture className="w-full h-full block pointer-events-none">
-                         <source media="(min-width: 768px)" srcSet={getOptimizedCloudinaryUrl(offer.desktopImage)} />
-                         <motion.img 
-                           whileHover={{ scale: 1.03 }}
-                           transition={{ duration: 0.5, ease: "easeOut" }}
-                           src={getOptimizedCloudinaryUrl(offer.mobileImage)} 
-                           alt="Special Offer" 
-                           className="w-full h-full object-cover"
-                         />
-                       </picture>
+                       <ShimmerPicture
+                         desktopSrc={getOptimizedCloudinaryUrl(offer.desktopImage)}
+                         mobileSrc={getOptimizedCloudinaryUrl(offer.mobileImage)}
+                         alt="Special Offer"
+                         imgClassName="w-full h-full object-cover"
+                         motionProps={{
+                           whileHover: { scale: 1.03 },
+                           transition: { duration: 0.5, ease: "easeOut" }
+                         }}
+                       />
                        {/* Subtle persistent glossy shine over images */}
                        <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
                      </div>
@@ -850,12 +903,15 @@ const HomePage = ({ user, setUser }) => {
                        const finalSrc = (src && src.includes('ui-avatars.com')) ? DUMMY_AVATARS[i % DUMMY_AVATARS.length] : src;
 
                        return (
-                         <motion.img
-                           whileHover={{ y: -5, scale: 1.1, zIndex: 20 }}
+                         <ShimmerMotionImg
                            key={i}
                            src={finalSrc}
                            alt={`user-${i}`}
-                           className="w-5 h-5 rounded-full border-2 border-white object-cover shadow-[0_2px_5px_rgba(0,0,0,0.1)] relative z-0 bg-white"
+                           wrapperClassName="relative w-5 h-5 rounded-full flex-shrink-0"
+                           className="w-full h-full rounded-full border-2 border-white object-cover shadow-[0_2px_5px_rgba(0,0,0,0.1)] relative z-0 bg-white"
+                           motionProps={{
+                             whileHover: { y: -5, scale: 1.1, zIndex: 20 }
+                           }}
                            onError={(e) => {
                              e.target.onerror = null;
                     
@@ -900,6 +956,12 @@ const HomePage = ({ user, setUser }) => {
          }
          .animate-glare {
            animation: glare-new 4s infinite linear;
+         }
+           
+         /* Added to support the shimmer animation */
+         @keyframes shimmer {
+           0% { transform: translateX(-100%); }
+           100% { transform: translateX(100%); }
          }
        `}</style>
      </motion.div>
