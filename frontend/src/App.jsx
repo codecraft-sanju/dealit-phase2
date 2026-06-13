@@ -11,15 +11,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
-
 import PremiumLoader from './premiumloader/PremiumLoader';
-// CHANGES MADE: Imported the new TopProgressBar
-import TopProgressBar from './components/TopProgressBar'; 
+import TopProgressBar from './premiumloader/TopProgressBar'; 
 
 const TRACKING_ID = "G-1FKF92TWCE";
 ReactGA.initialize(TRACKING_ID);
-
-
 const smartLazy = (importFunc) => {
   return lazy(() =>
     importFunc().catch((error) => {
