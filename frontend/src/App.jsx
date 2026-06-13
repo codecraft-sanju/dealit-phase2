@@ -201,7 +201,7 @@ useEffect(() => {
       <main>
         {/* CHANGES MADE: Replaced PremiumLoader with TopProgressBar for smooth navigation */}
         <Suspense fallback={<TopProgressBar />}>
-          {user && !isAiChatRoute && <FloatingAIAssistant user={user} />}
+        {user && !isAiChatRoute && !location.pathname.startsWith('/admin') && <FloatingAIAssistant user={user} />}
           <Routes>
             <Route path="/" element={
               user ? (
