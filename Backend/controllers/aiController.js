@@ -616,46 +616,47 @@ const aiChatLimiter = rateLimit({
 
 
 const checkAndConsumeAIToken = async (userId, type) => {
-  const user = await User.findById(userId);
-  if (!user) return false;
-
   const now = new Date();
-  const lastReset = user.lastAITokenReset || new Date(0);
-  
+  const startOfToday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 
-  const isNewDay = now.getUTCFullYear() !== lastReset.getUTCFullYear() ||
-                   now.getUTCMonth() !== lastReset.getUTCMonth() ||
-                   now.getUTCDate() !== lastReset.getUTCDate();
+  await User.updateOne(
+    {
+      _id: userId,
+      $or: [
+        { lastAITokenReset: { $lt: startOfToday } },
+        { lastAITokenReset: { $exists: false } }
+      ]
+    },
+    {
+      $set: {
+        lastAITokenReset: now,
+        aiChatTokensUsed: 0,
+        aiVoiceTokensUsed: 0
+      }
+    }
+  );
 
-  let updates = {};
-  
-  if (isNewDay) {
-    updates.lastAITokenReset = now;
-    updates.aiChatTokensUsed = 0;
-    updates.aiVoiceTokensUsed = 0;
-  }
   const DAILY_CHAT_LIMIT = 10; 
   const DAILY_VOICE_LIMIT = 7; 
 
-  if (type === 'chat') {
-    const currentChatUsed = isNewDay ? 0 : (user.aiChatTokensUsed || 0);
-    if (currentChatUsed >= DAILY_CHAT_LIMIT) {
-      if (isNewDay) await User.findByIdAndUpdate(userId, { $set: updates });
-      return false; // Limit Reached
-    }
-    updates.aiChatTokensUsed = currentChatUsed + 1;
-  } 
-  else if (type === 'voice') {
-    const currentVoiceUsed = isNewDay ? 0 : (user.aiVoiceTokensUsed || 0);
-    if (currentVoiceUsed >= DAILY_VOICE_LIMIT) {
-      if (isNewDay) await User.findByIdAndUpdate(userId, { $set: updates });
-      return false; // Limit Reached
-    }
-    updates.aiVoiceTokensUsed = currentVoiceUsed + 1;
-  }
+  const limit = type === 'chat' ? DAILY_CHAT_LIMIT : DAILY_VOICE_LIMIT;
+  const field = type === 'chat' ? 'aiChatTokensUsed' : 'aiVoiceTokensUsed';
 
   // Save the new token counts
-  await User.findByIdAndUpdate(userId, { $set: updates });
+  const updatedUser = await User.findOneAndUpdate(
+    {
+      _id: userId,
+      [field]: { $lt: limit }
+    },
+    {
+      $inc: { [field]: 1 }
+    }
+  );
+
+  if (!updatedUser) {
+    return false; // Limit Reached
+  }
+
   return true;
 };
 

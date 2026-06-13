@@ -1,5 +1,5 @@
 import React from 'react';
-import { Package, ChevronRight } from 'lucide-react';
+import { Package, ChevronRight, Sparkles } from 'lucide-react';
 import { getOptimizedCloudinaryUrl } from './HomePage';
 
 const AiChatProductCard = ({ item, onClick }) => {
@@ -8,12 +8,15 @@ const AiChatProductCard = ({ item, onClick }) => {
   return (
     <div 
       onClick={() => onClick(item._id)}
-      className="w-[140px] sm:w-[160px] flex-shrink-0 bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_20px_rgba(107,70,193,0.12)] hover:border-purple-200 transition-all duration-300 cursor-pointer group flex flex-col snap-center"
+      className="relative w-[140px] sm:w-[160px] flex-shrink-0 rounded-2xl overflow-hidden cursor-pointer group flex flex-col snap-center transition-all duration-500 border border-gray-700/50 bg-gray-900/80 hover:bg-gray-800 hover:border-purple-500/50 hover:shadow-[0_0_20px_rgba(168,85,247,0.25)] backdrop-blur-md"
     >
-      {/* Image Section */}
-      <div className="relative w-full aspect-[4/3] bg-gray-50 overflow-hidden">
+      {/* 🌟 Glossy Top Reflection (Premium Feel) */}
+      <div className="absolute inset-0 bg-gradient-to-br from-white/[0.08] via-transparent to-transparent opacity-100 pointer-events-none z-20" />
+
+      {/* 📸 Image Section */}
+      <div className="relative w-full aspect-[4/3] bg-gray-950 overflow-hidden">
         {item.discount_percentage && (
-          <span className="absolute top-1.5 left-1.5 z-10 text-[8px] font-black text-white bg-red-500 px-1.5 py-0.5 rounded shadow-sm">
+          <span className="absolute top-1.5 left-1.5 z-30 text-[8px] font-black text-white bg-gradient-to-r from-rose-500 to-pink-500 px-1.5 py-0.5 rounded shadow-[0_0_10px_rgba(244,63,94,0.4)] tracking-wider">
             {item.discount_percentage}% OFF
           </span>
         )}
@@ -22,38 +25,38 @@ const AiChatProductCard = ({ item, onClick }) => {
           <img 
             src={getOptimizedCloudinaryUrl(item.images[0])} 
             alt={item.title} 
-            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <Package className="w-6 h-6 text-gray-300" />
+          <div className="w-full h-full flex items-center justify-center bg-gray-900">
+            <Package className="w-6 h-6 text-gray-700" />
           </div>
         )}
         
-        {/* Soft Dark Gradient from bottom for premium look */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+      
+        <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/20 to-transparent z-10" />
       </div>
-
-      {/* Details Section */}
-      <div className="p-2.5 flex flex-col flex-1 justify-between bg-white">
-        <div className="mb-2">
-          <h3 className="text-xs font-bold text-gray-800 line-clamp-1 mb-1 group-hover:text-purple-700 transition-colors">
+      <div className="p-3 flex flex-col flex-1 justify-between relative z-30">
+        <div className="mb-2.5">
+          <h3 className="text-[11px] sm:text-xs font-bold text-gray-200 line-clamp-1 mb-1.5 group-hover:text-purple-300 transition-colors duration-300">
             {item.title}
           </h3>
           
-          <div className="flex items-center gap-1">
-            <span className="font-black text-[13px] sm:text-sm text-purple-600 leading-none">
+          <div className="flex items-end gap-1">
+            <span className="font-black text-[14px] sm:text-[15px] text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-emerald-400 leading-none drop-shadow-sm">
               {item.estimated_value || '0'}
             </span>
-            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider leading-none">
+            <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest leading-none mb-[2px]">
               Credits
             </span>
           </div>
         </div>
 
-        {/* Action Button - Slides up slightly on hover */}
-        <div className="w-full bg-gray-50 group-hover:bg-purple-50 border border-gray-100 group-hover:border-purple-100 text-gray-500 group-hover:text-purple-600 py-1.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-all duration-300">
-          View Deal <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+        {/* 🔘 Action Button (AI Glow Theme) */}
+        <div className="w-full bg-purple-500/10 group-hover:bg-purple-500/25 border border-purple-500/20 group-hover:border-purple-400/50 text-purple-300 py-1.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-all duration-300 shadow-inner">
+          <Sparkles className="w-3 h-3 text-purple-400 group-hover:text-white transition-colors" />
+          <span>View Deal</span>
+          <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
         </div>
       </div>
     </div>
