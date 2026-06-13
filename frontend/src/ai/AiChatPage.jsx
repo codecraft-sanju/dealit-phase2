@@ -1732,6 +1732,19 @@ const AiChatPage = ({ user }) => {
       <div
         className={`fixed md:relative z-[60] flex flex-col h-full bg-gray-950 border-r border-gray-800 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-72 translate-x-0' : 'w-72 -translate-x-full md:w-0 md:hidden absolute'}`}
       >
+        <div className="p-4 pb-0 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full border border-purple-500/40 overflow-hidden shrink-0 shadow-[0_0_10px_rgba(163,136,225,0.15)]">
+            <img
+              src="https://res.cloudinary.com/dia3qhc0x/image/upload/v1781289017/ijblexdk51vluv7ku6g9.jpg"
+              alt="Dealit AI Logo"
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <span className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-emerald-400">
+            Dealit AI
+          </span>
+        </div>
+
         <div className="p-3 flex items-center gap-2">
           <button
             onClick={handleNewChat}
@@ -1949,9 +1962,7 @@ const AiChatPage = ({ user }) => {
           </div>
 
           <div className="flex items-center gap-3 text-gray-300">
-            <button className="p-2 hover:bg-gray-800 rounded-full transition-colors text-gray-400 hover:text-white">
-              <Sparkles className="w-5 h-5" />
-            </button>
+          
 
             <button
               onClick={handleMinimize}
