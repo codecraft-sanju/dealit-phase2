@@ -586,6 +586,12 @@
 //   synthesizeVoice
 // };
 
+
+
+
+
+
+
 const Groq = require('groq-sdk');
 const { GoogleGenerativeAI, SchemaType } = require('@google/generative-ai');
 const axios = require('axios');
