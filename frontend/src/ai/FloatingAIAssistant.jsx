@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Sparkles, Maximize2, Mic, ArrowRight, WifiOff, Bot } from 'lucide-react';
+import { X, Send, Sparkles, Maximize2, Mic, ArrowRight, WifiOff, Bot, Copy, Check, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -10,12 +10,9 @@ import AiChatProductCard from '../components/AiChatProductCard';
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
-/**
- * Splits a bot reply into alternating text and UI blocks.
- * UI blocks are JSON fences with a recognized ui_type.
- */
 const extractCarouselFromReply = (replyText) => {
-  const jsonBlockRegex = /```(?:json)?\s*(\{[\s\S]*?\})\s*```/g;
+  const tick3 = '`' + '`' + '`';
+  const jsonBlockRegex = new RegExp(tick3 + '(?:json)?\\s*(\\{[\\s\\S]*?\\})\\s*' + tick3, 'g');
   const parts = [];
   let lastIndex = 0;
   let match;
@@ -115,10 +112,43 @@ const SoundWave = () => (
   </div>
 );
 
-/**
- * Compact 2-column grid for the floating widget.
- * Keeps cards within the 400px widget width without horizontal scroll.
- */
+const CopyButton = ({ text }) => {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <button onClick={handleCopy} className="flex items-center gap-1 text-gray-500 hover:text-gray-300 transition-colors cursor-pointer" title="Copy response">
+      {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+    </button>
+  );
+};
+
+const MessageFooter = ({ msg, timestamp }) => {
+  const [feedback, setFeedback] = useState(null);
+  
+  return (
+    <div className="flex items-center mt-2 pt-1.5 border-t text-[9px] select-none border-gray-700/60 text-gray-400 justify-between">
+      <div className="flex items-center gap-1.5">
+        <span className="font-semibold text-gray-300">Dealit AI</span>
+        <span className="w-1 h-1 rounded-full bg-gray-500" />
+        <span>{msg.timestamp || timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+      </div>
+      <div className="flex items-center gap-2.5">
+        {msg.content && <CopyButton text={msg.content} />}
+        <button onClick={() => setFeedback(feedback === 'up' ? null : 'up')} className={`transition-colors cursor-pointer ${feedback === 'up' ? 'text-emerald-400' : 'text-gray-500 hover:text-emerald-400'}`} title="Good response">
+          <ThumbsUp className="w-3 h-3" />
+        </button>
+        <button onClick={() => setFeedback(feedback === 'down' ? null : 'down')} className={`transition-colors cursor-pointer ${feedback === 'down' ? 'text-red-400' : 'text-gray-500 hover:text-red-400'}`} title="Bad response">
+          <ThumbsDown className="w-3 h-3" />
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const FloatingProductGrid = ({ items, navigate }) => (
   <div className="w-full">
     <div className="grid grid-cols-2 gap-2 w-full">
@@ -134,11 +164,9 @@ const FloatingProductGrid = ({ items, navigate }) => (
   </div>
 );
 
-/**
- * Renders a bot_ui message as a full-width block inside the floating widget.
- */
 const FloatingBotUIBlock = ({ content, navigate }) => {
-  const codeMatch = content.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+  const tick3 = '`' + '`' + '`';
+  const codeMatch = content.match(new RegExp(tick3 + '(?:json)?\\s*(\\{[\\s\\S]*?\\})\\s*' + tick3));
   if (!codeMatch) return null;
   try {
     const parsedData = JSON.parse(codeMatch[1]);
@@ -205,10 +233,10 @@ const BotMessage = ({ content, animated, onComplete, navigate }) => {
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
-          p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
-          ul: ({ node, ...props }) => <ul className="list-disc pl-5 mb-2 space-y-1" {...props} />,
-          ol: ({ node, ...props }) => <ol className="list-decimal pl-5 mb-2 space-y-1" {...props} />,
-          li: ({ node, ...props }) => <li {...props} />,
+          p: ({ node, ...props }) => <p className="mb-1.5 last:mb-0 leading-relaxed" {...props} />,
+          ul: ({ node, ...props }) => <ul className="list-disc pl-4 mb-1.5 space-y-0.5" {...props} />,
+          ol: ({ node, ...props }) => <ol className="list-decimal pl-4 mb-1.5 space-y-0.5" {...props} />,
+          li: ({ node, ...props }) => <li className="mb-0 leading-relaxed" {...props} />,
           h1: ({ node, ...props }) => <h1 className="text-xl font-bold mb-2 mt-4 text-white" {...props} />,
           h2: ({ node, ...props }) => <h2 className="text-lg font-bold mb-2 mt-4 text-white" {...props} />,
           h3: ({ node, ...props }) => <h3 className="text-base font-bold mb-2 mt-3 text-white" {...props} />,
@@ -218,30 +246,11 @@ const BotMessage = ({ content, animated, onComplete, navigate }) => {
             const codeString = String(children).replace(/\n$/, '');
             const isJsonBlock = className === 'language-json' || codeString.includes('"ui_type"');
             if (!inline && isJsonBlock) {
-              try {
-                const parsedData = JSON.parse(codeString);
-                // Inline fallback for history-loaded messages
-                if (parsedData.ui_type === 'product_carousel' && Array.isArray(parsedData.items)) {
-                  return <FloatingProductGrid items={parsedData.items} navigate={navigate} />;
-                }
-                if (parsedData.ui_type === 'action_button' && parsedData.label && parsedData.action) {
-                  return (
-                    <button
-                      onClick={() => navigate(parsedData.action)}
-                      className="mt-2 mb-1 w-full bg-gradient-to-r from-purple-500 to-emerald-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 active:scale-95 transition-all"
-                    >
-                      <Sparkles className="w-3.5 h-3.5" />
-                      {parsedData.label}
-                    </button>
-                  );
-                }
-              } catch {
-                return (
-                  <div className="my-2 p-3 bg-gray-900 rounded-xl border border-purple-500/30 flex items-center justify-center gap-2 text-purple-400 text-xs animate-pulse">
-                    <Sparkles className="w-3.5 h-3.5" /> Generating Interface...
-                  </div>
-                );
-              }
+              return (
+                <div className="my-2 p-3 bg-gray-900 rounded-xl border border-purple-500/30 flex items-center justify-center gap-2 text-purple-400 text-xs animate-pulse">
+                  <Sparkles className="w-3.5 h-3.5" /> Generating Interface...
+                </div>
+              );
             }
             return inline ? (
               <code className="bg-gray-900 text-purple-300 px-1.5 py-0.5 rounded-md text-xs font-mono border border-gray-700" {...props}>{children}</code>
@@ -551,26 +560,20 @@ const FloatingAIAssistant = ({ user }) => {
             setTimeout(() => {
               const parts = extractCarouselFromReply(botReply);
 
-              if (parts.length === 1) {
-                setMessages((prev) =>
-                  prev.map((msg) => msg.id === botMessageId ? { ...msg, content: botReply } : msg),
-                );
-              } else {
-                setMessages((prev) => {
-                  const withoutPlaceholder = prev.filter((msg) => msg.id !== botMessageId);
-                  const newMsgs = parts
-                    .filter((p) => p.content.trim())
-                    .map((p, idx) => ({
-                      id: botMessageId + idx,
-                      role: p.type === 'ui' ? 'bot_ui' : 'bot',
-                      content: p.content,
-                      animated: false,
-                    }));
-                  return [...withoutPlaceholder, ...newMsgs];
-                });
-              }
+              setMessages((prev) => {
+                const withoutPlaceholder = prev.filter((msg) => msg.id !== botMessageId);
+                const newMsgs = parts
+                  .filter((p) => p.content.trim())
+                  .map((p, idx) => ({
+                    id: botMessageId + idx,
+                    role: p.type === 'ui' ? 'bot_ui' : 'bot',
+                    content: p.content,
+                    animated: false,
+                  }));
+                return [...withoutPlaceholder, ...newMsgs];
+              });
               isStreamingRef.current = false;
-            }, 1000);
+            }, 600);
             break;
           }
 
@@ -745,10 +748,18 @@ const FloatingAIAssistant = ({ user }) => {
                         transition={{ duration: 0.3 }}
                         className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                       >
-                        <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm ${msg.role === 'user' ? 'bg-gradient-to-br from-purple-600 to-purple-500 text-white rounded-tr-sm shadow-md shadow-purple-500/20 break-words whitespace-pre-wrap' : 'bg-gray-800 text-gray-200 border border-gray-700 rounded-tl-sm shadow-sm'}`}>
-                          {msg.role === 'bot'
-                            ? (msg.content ? <BotMessage content={msg.content} animated={msg.animated} onComplete={() => markAsAnimated(msg.id)} navigate={navigate} /> : <TypingLoader />)
-                            : msg.content}
+                        <div className={`flex flex-col max-w-[85%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                          <div className={`rounded-2xl px-4 py-3 text-sm ${msg.role === 'user' ? 'bg-gradient-to-br from-purple-600 to-purple-500 text-white rounded-tr-sm shadow-md shadow-purple-500/20 break-words whitespace-pre-wrap' : 'bg-gray-800 text-gray-200 border border-gray-700 rounded-tl-sm shadow-sm'}`}>
+                            <div className="whitespace-pre-wrap w-full" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                              {msg.role === 'bot'
+                                ? (msg.content ? <BotMessage content={msg.content} animated={msg.animated} onComplete={() => markAsAnimated(msg.id)} navigate={navigate} /> : <TypingLoader />)
+                                : msg.content}
+                            </div>
+                            
+                            {msg.role === 'bot' && msg.content && (
+                              <MessageFooter msg={msg} timestamp={msg.timestamp} />
+                            )}
+                          </div>
                         </div>
                       </motion.div>
                     );

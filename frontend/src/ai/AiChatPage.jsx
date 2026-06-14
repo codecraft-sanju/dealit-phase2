@@ -1,24 +1,7 @@
-import React, {useState,useRef, useEffect,
-  useCallback,
-} from 'react';
-import {Send,
-  Sparkles,
-  Plus,
-  Settings,
-  HelpCircle,
-  MessageSquare,
-  X,
-  Trash2,
-  Minimize2,
-  ChevronDown,
-  Mic,
-  User,
-  WifiOff,
-  Copy,
-  Check,
-  ThumbsUp,
-  ThumbsDown,
-  Unlock
+import React, {useState,useRef, useEffect, useCallback} from 'react';
+import {
+  Send, Sparkles, Plus, Settings, HelpCircle, MessageSquare, X, Trash2,
+  Minimize2, ChevronDown, Mic, User, WifiOff, Copy, Check, ThumbsUp, ThumbsDown, Unlock
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -31,11 +14,6 @@ import AiChatProductCard from '../components/AiChatProductCard';
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
-/**
- * Splits a bot reply string into alternating text and UI blocks.
- * UI blocks are JSON fences containing a recognized ui_type.
- * Returns an array of { type: 'text' | 'ui', content: string }.
- */
 const extractCarouselFromReply = (replyText) => {
   const tick3 = '`' + '`' + '`';
   const jsonBlockRegex = new RegExp(tick3 + '(?:json)?\\s*(\\{[\\s\\S]*?\\})\\s*' + tick3, 'g');
@@ -211,7 +189,7 @@ const CopyButton = ({ text }) => {
       className="flex items-center gap-1 text-gray-500 hover:text-gray-300 transition-colors cursor-pointer"
       title="Copy response"
     >
-      {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+      {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
     </button>
   );
 };
@@ -234,10 +212,29 @@ const CopyCodeButton = ({ text }) => {
   );
 };
 
-/**
- * Renders a horizontal snap-scroll product carousel for AiChatPage.
- * Sits outside the message bubble at full container width.
- */
+const MessageFooter = ({ msg, timestamp }) => {
+  const [feedback, setFeedback] = useState(null);
+  
+  return (
+    <div className="flex items-center mt-2.5 pt-2 border-t text-[10px] select-none border-gray-700/60 text-gray-400 justify-between">
+      <div className="flex items-center gap-2">
+        <span className="font-semibold text-gray-300">Dealit AI</span>
+        <span className="w-1 h-1 rounded-full bg-gray-500" />
+        <span>{msg.timestamp || timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+      </div>
+      <div className="flex items-center gap-3">
+        {msg.content && <CopyButton text={msg.content} />}
+        <button onClick={() => setFeedback(feedback === 'up' ? null : 'up')} className={`transition-colors cursor-pointer ${feedback === 'up' ? 'text-emerald-400' : 'text-gray-500 hover:text-emerald-400'}`} title="Good response">
+          <ThumbsUp className="w-3.5 h-3.5" />
+        </button>
+        <button onClick={() => setFeedback(feedback === 'down' ? null : 'down')} className={`transition-colors cursor-pointer ${feedback === 'down' ? 'text-red-400' : 'text-gray-500 hover:text-red-400'}`} title="Bad response">
+          <ThumbsDown className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const ProductCarousel = ({ items, navigate }) => (
   <div className="w-full">
     <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-3 no-scrollbar">
@@ -278,10 +275,10 @@ const BotMessage = ({ content, animated, onComplete, navigate }) => {
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
-          p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
-          ul: ({ node, ...props }) => <ul className="list-disc pl-5 mb-2 space-y-1" {...props} />,
-          ol: ({ node, ...props }) => <ol className="list-decimal pl-5 mb-2 space-y-1" {...props} />,
-          li: ({ node, ...props }) => <li {...props} />,
+          p: ({ node, ...props }) => <p className="mb-1.5 last:mb-0 leading-relaxed" {...props} />,
+          ul: ({ node, ...props }) => <ul className="list-disc pl-4 mb-1.5 space-y-0.5" {...props} />,
+          ol: ({ node, ...props }) => <ol className="list-decimal pl-4 mb-1.5 space-y-0.5" {...props} />,
+          li: ({ node, ...props }) => <li className="mb-0 leading-relaxed" {...props} />,
           h1: ({ node, ...props }) => <h1 className="text-xl font-bold mb-2 mt-4 text-white" {...props} />,
           h2: ({ node, ...props }) => <h2 className="text-lg font-bold mb-2 mt-4 text-white" {...props} />,
           h3: ({ node, ...props }) => <h3 className="text-base font-bold mb-2 mt-3 text-white" {...props} />,
@@ -291,29 +288,11 @@ const BotMessage = ({ content, animated, onComplete, navigate }) => {
             const codeString = String(children).replace(/\n$/, '');
             const isJsonBlock = className === 'language-json' || codeString.includes('"ui_type"');
             if (!inline && isJsonBlock) {
-              try {
-                const parsedData = JSON.parse(codeString);
-                if (parsedData.ui_type === 'product_carousel' && Array.isArray(parsedData.items)) {
-                  return <ProductCarousel items={parsedData.items} navigate={navigate} />;
-                }
-                if (parsedData.ui_type === 'action_button' && parsedData.label && parsedData.action) {
-                  return (
-                    <button
-                      onClick={() => navigate(parsedData.action)}
-                      className="mt-3 mb-2 w-full bg-gradient-to-r from-purple-500 to-emerald-500 hover:from-purple-600 hover:to-emerald-600 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
-                    >
-                      <Sparkles className="w-4 h-4" />
-                      {parsedData.label}
-                    </button>
-                  );
-                }
-              } catch {
-                return (
-                  <div className="my-3 p-4 bg-gray-900 rounded-xl border border-purple-500/30 flex items-center justify-center gap-2 text-purple-400 text-xs animate-pulse">
-                    <Sparkles className="w-4 h-4" /> Generating Interface...
-                  </div>
-                );
-              }
+              return (
+                <div className="my-3 p-4 bg-gray-900 rounded-xl border border-purple-500/30 flex items-center justify-center gap-2 text-purple-400 text-xs animate-pulse">
+                  <Sparkles className="w-4 h-4" /> Generating Interface...
+                </div>
+              );
             }
             return inline ? (
               <code className="bg-gray-900 text-purple-300 px-1.5 py-0.5 rounded-md text-xs font-mono border border-gray-700" {...props}>
@@ -347,10 +326,6 @@ const BotMessage = ({ content, animated, onComplete, navigate }) => {
   );
 };
 
-/**
- * Renders a bot_ui message (carousel/action) as a standalone full-width block
- * with a subtle entry animation. Lives outside the chat bubble.
- */
 const BotUIBlock = ({ content, navigate }) => {
   const tick3 = '`' + '`' + '`';
   const codeMatch = content.match(new RegExp(tick3 + '(?:json)?\\s*(\\{[\\s\\S]*?\\})\\s*' + tick3));
@@ -861,27 +836,21 @@ const AiChatPage = ({ user }) => {
             setTimeout(() => {
               const parts = extractCarouselFromReply(botReply);
 
-              if (parts.length === 1) {
-                setMessages((prev) =>
-                  prev.map((msg) => msg.id === botMessageId ? { ...msg, content: botReply } : msg),
-                );
-              } else {
-                setMessages((prev) => {
-                  const withoutPlaceholder = prev.filter((msg) => msg.id !== botMessageId);
-                  const newMsgs = parts
-                    .filter((p) => p.content.trim())
-                    .map((p, idx) => ({
-                      id: botMessageId + idx,
-                      role: p.type === 'ui' ? 'bot_ui' : 'bot',
-                      content: p.content,
-                      animated: false,
-                      timestamp: currentTime,
-                    }));
-                  return [...withoutPlaceholder, ...newMsgs];
-                });
-              }
+              setMessages((prev) => {
+                const withoutPlaceholder = prev.filter((msg) => msg.id !== botMessageId);
+                const newMsgs = parts
+                  .filter((p) => p.content.trim())
+                  .map((p, idx) => ({
+                    id: botMessageId + idx,
+                    role: p.type === 'ui' ? 'bot_ui' : 'bot',
+                    content: p.content,
+                    animated: false,
+                    timestamp: currentTime,
+                  }));
+                return [...withoutPlaceholder, ...newMsgs];
+              });
               isStreamingRef.current = false;
-            }, 1000);
+            }, 600);
             break;
           }
 
@@ -1308,23 +1277,8 @@ const AiChatPage = ({ user }) => {
                           )}
                         </div>
 
-                        {msg.role === 'bot' && (
-                          <div className="flex items-center mt-2.5 pt-2 border-t text-[10px] select-none border-gray-700/60 text-gray-400 justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold text-gray-300">Dealit AI</span>
-                              <span className="w-1 h-1 rounded-full bg-gray-500" />
-                              <span>{msg.timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              {msg.content && <CopyButton text={msg.content} />}
-                              <button className="text-gray-500 hover:text-emerald-400 transition-colors cursor-pointer" title="Good response">
-                                <ThumbsUp className="w-3.5 h-3.5" />
-                              </button>
-                              <button className="text-gray-500 hover:text-red-400 transition-colors cursor-pointer" title="Bad response">
-                                <ThumbsDown className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </div>
+                        {msg.role === 'bot' && msg.content && (
+                          <MessageFooter msg={msg} />
                         )}
                       </div>
                     </div>

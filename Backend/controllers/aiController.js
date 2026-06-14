@@ -887,7 +887,8 @@ const processChat = async (req, res) => {
       "What is my Aura Score?": (user) => `Your current Aura Score is **${user.aura_points || 0}**. Keep making successful deliveries and referrals to increase it!`,
       "How do I earn more Credits?": () => `You can earn more credits by:\n1. Listing unused items for barter or sale.\n2. Completing successful trades.\n3. Referring friends using your referral code.`,
       "Explain OTP delivery verification": () => `OTP delivery verification ensures safe trades. When a buyer receives an item, they get an OTP. They must share this OTP with the delivery partner to confirm successful handover. Once verified, the seller gets their credits!`,
-     "Tell me my account details": (user) => `Here is your account summary:\n- **Name:** ${user.full_name} ${user.isVerified ? '(Verified)' : '(Unverified)'}\n- **Credits:** ${user.account_credits || 0}\n- **Aura Score:** ${user.aura_points || 0}\n- **Active Listings:** ${user.listedProductsCount || 0}\n- **Total Referrals:** ${user.totalReferrals || 0}`
+      // Changed the formatting to single \n to render a properly spaced Markdown list
+      "Tell me my account details": (user) => `Here is your account summary:\n- **Name:** ${user.full_name} ${user.isVerified ? '(Verified)' : '(Unverified)'}\n- **Credits:** ${user.account_credits || 0}\n- **Aura Score:** ${user.aura_points || 0}\n- **Active Listings:** ${user.listedProductsCount || 0}\n- **Total Referrals:** ${user.totalReferrals || 0}`
     };
 
     const isPreset = PRESET_RESPONSES[cleanMessage] !== undefined;
@@ -904,7 +905,6 @@ const processChat = async (req, res) => {
           return res.end();
         }
         
-        // MODIFIED: Return proper JSON 429 status for frontend to trigger the banner
         return res.status(429).json({ 
           success: false, 
           errorCode: 'DAILY_CHAT_LIMIT_REACHED', 
