@@ -3,7 +3,6 @@ const crypto = require('crypto');
 const User = require('../models/User'); 
 const Transaction = require('../models/Transaction');
 
-// CHANGED: Notification model hata kar queue service add ki hai
 const { queueNotification } = require('../services/queue');
 
 const Order = require('../models/Order');
@@ -12,7 +11,6 @@ const razorpayInstance = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
-/* MODIFIED: Added CREDIT_PACKS constant for secure backend pricing */
 const CREDIT_PACKS = {
   'starter': { price: 49, credits: 50 },
   'popular': { price: 99, credits: 110 },
@@ -42,7 +40,6 @@ const refundRazorpayPayment = async (paymentId, amount) => {
   }
 };
 
-/* --- NAYA CHANGE START: Razorpay se exact amount verify karne ka function --- */
 const fetchRazorpayPaymentInfo = async (paymentId) => {
   try {
     const payment = await razorpayInstance.payments.fetch(paymentId);
@@ -52,9 +49,7 @@ const fetchRazorpayPaymentInfo = async (paymentId) => {
     return { success: false, error };
   }
 };
-/* --- NAYA CHANGE END --- */
 
-/* MODIFIED: createOrder function to handle packId and customAmount safely */
 const createOrder = async (req, res) => {
   try {
     const { packId, customAmount, amount } = req.body; 
@@ -100,7 +95,6 @@ const createOrder = async (req, res) => {
   }
 };
 
-/* MODIFIED: verifyPayment function to read exact credits from order notes */
 const verifyPayment = async (req, res) => {
   try {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
@@ -181,7 +175,6 @@ const verifyPayment = async (req, res) => {
   }
 };
 
-/* MODIFIED: razorpayWebhook to apply correct bonus credits in background */
 const razorpayWebhook = async (req, res) => {
   try {
     const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
@@ -247,15 +240,12 @@ const razorpayWebhook = async (req, res) => {
       const refundEntity = req.body.payload.refund.entity;
       const paymentId = refundEntity.payment_id;
 
-      // CHANGED: populate('item') add kiya taaki notification me photo bheji ja sake
       const order = await Order.findOne({ razorpay_payment_id: paymentId, paymentStatus: 'refund_processing' }).populate('item');
       
       if (order) {
          order.paymentStatus = 'refunded';
          await order.save();
 
-       
-         // CHANGED: imageUrl add kiya order ki item se nikal ke
          queueNotification({
            user: order.buyer,
            type: 'CREDIT_ADDED',
@@ -270,15 +260,11 @@ const razorpayWebhook = async (req, res) => {
       const refundEntity = req.body.payload.refund.entity;
       const paymentId = refundEntity.payment_id;
 
-      // CHANGED: populate('item') add kiya
       const order = await Order.findOne({ razorpay_payment_id: paymentId, paymentStatus: 'refund_processing' }).populate('item');
       
       if (order) {
          order.paymentStatus = 'refund_failed';
          await order.save();
-
-        
-         // CHANGED: imageUrl add kiya
          queueNotification({
            user: order.buyer,
            type: 'SYSTEM_ALERT',

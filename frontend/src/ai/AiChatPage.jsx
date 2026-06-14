@@ -1,11 +1,7 @@
-import React, {
-  useState,
-  useRef,
-  useEffect,
+import React, {useState,useRef, useEffect,
   useCallback,
 } from 'react';
-import {
-  Send,
+import {Send,
   Sparkles,
   Plus,
   Settings,
@@ -22,6 +18,7 @@ import {
   Check,
   ThumbsUp,
   ThumbsDown,
+  Unlock
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -40,7 +37,8 @@ const API_URL = `${API_BASE}/api`;
  * Returns an array of { type: 'text' | 'ui', content: string }.
  */
 const extractCarouselFromReply = (replyText) => {
-  const jsonBlockRegex = /```(?:json)?\s*(\{[\s\S]*?\})\s*```/g;
+  const tick3 = '`' + '`' + '`';
+  const jsonBlockRegex = new RegExp(tick3 + '(?:json)?\\s*(\\{[\\s\\S]*?\\})\\s*' + tick3, 'g');
   const parts = [];
   let lastIndex = 0;
   let match;
@@ -296,8 +294,6 @@ const BotMessage = ({ content, animated, onComplete, navigate }) => {
               try {
                 const parsedData = JSON.parse(codeString);
                 if (parsedData.ui_type === 'product_carousel' && Array.isArray(parsedData.items)) {
-                  // This path is only hit for inline-rendered content (e.g. history reload).
-                  // Live messages use the bot_ui breakout path in processMessage.
                   return <ProductCarousel items={parsedData.items} navigate={navigate} />;
                 }
                 if (parsedData.ui_type === 'action_button' && parsedData.label && parsedData.action) {
@@ -356,7 +352,8 @@ const BotMessage = ({ content, animated, onComplete, navigate }) => {
  * with a subtle entry animation. Lives outside the chat bubble.
  */
 const BotUIBlock = ({ content, navigate }) => {
-  const codeMatch = content.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+  const tick3 = '`' + '`' + '`';
+  const codeMatch = content.match(new RegExp(tick3 + '(?:json)?\\s*(\\{[\\s\\S]*?\\})\\s*' + tick3));
   if (!codeMatch) return null;
   try {
     const parsedData = JSON.parse(codeMatch[1]);
@@ -442,6 +439,11 @@ const AiChatPage = ({ user }) => {
     () => localStorage.getItem('dealit_ai_voice_pref') || 'female',
   );
   const [isPremiumVoiceLimited, setIsPremiumVoiceLimited] = useState(false);
+  
+  const [isChatLimited, setIsChatLimited] = useState(false);
+  const [isPurchasingReset, setIsPurchasingReset] = useState(false);
+  const [showSuccessAnim, setShowSuccessAnim] = useState(false);
+
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
   const abortControllerRef = useRef(null);
@@ -694,7 +696,9 @@ const AiChatPage = ({ user }) => {
       });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        if (errorData.errorCode === 'DAILY_VOICE_LIMIT_REACHED' || response.status === 429) setIsPremiumVoiceLimited(true);
+        if (errorData.errorCode === 'DAILY_VOICE_LIMIT_REACHED' || response.status === 429) {
+          setIsPremiumVoiceLimited(true);
+        }
         throw new Error(errorData.errorCode || 'API_FAILED');
       }
       const blob = await response.blob();
@@ -729,10 +733,18 @@ const AiChatPage = ({ user }) => {
         body: JSON.stringify({ message: userMessage, sessionId: currentSessionId, isSmartContextEnabled: smartContext, chatMode }),
         signal: abortControllerRef.current.signal,
       });
+
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
+        if (response.status === 429 || errData.errorCode === 'DAILY_CHAT_LIMIT_REACHED') {
+           setIsChatLimited(true);
+           setVoiceState('idle');
+           isStreamingRef.current = false;
+           return;
+        }
         throw new Error(errData.reply || errData.message || 'Voice chat failed.');
       }
+
       const reader = response.body.getReader();
       const decoder = new TextDecoder('utf-8');
       let botReply = '';
@@ -822,6 +834,13 @@ const AiChatPage = ({ user }) => {
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
+        if (response.status === 429 || errData.errorCode === 'DAILY_CHAT_LIMIT_REACHED') {
+           setIsChatLimited(true);
+           setIsLoading(false);
+           isStreamingRef.current = false;
+           setMessages((prev) => prev.filter((msg) => msg.id !== botMessageId));
+           return;
+        }
         throw new Error(errData.reply || errData.message || 'Server connection failed.');
       }
 
@@ -843,12 +862,10 @@ const AiChatPage = ({ user }) => {
               const parts = extractCarouselFromReply(botReply);
 
               if (parts.length === 1) {
-                // No UI blocks — simple text replace
                 setMessages((prev) =>
                   prev.map((msg) => msg.id === botMessageId ? { ...msg, content: botReply } : msg),
                 );
               } else {
-                // Split into text + ui messages, remove placeholder
                 setMessages((prev) => {
                   const withoutPlaceholder = prev.filter((msg) => msg.id !== botMessageId);
                   const newMsgs = parts
@@ -924,6 +941,35 @@ const AiChatPage = ({ user }) => {
     }
   };
 
+  const handleUnlockAI = async () => {
+    setIsPurchasingReset(true);
+    try {
+      const token = localStorage.getItem('dealit_token');
+      const response = await fetch(`${API_URL}/ai/reset-limit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.message || 'Failed to unlock limits');
+        setIsPurchasingReset(false);
+        return;
+      }
+
+      setIsChatLimited(false);
+      setIsPremiumVoiceLimited(false);
+      setIsPurchasingReset(false);
+      
+      setShowSuccessAnim(true);
+      setTimeout(() => setShowSuccessAnim(false), 3500);
+
+    } catch (error) {
+      alert('Network error. Please try again.');
+      setIsPurchasingReset(false);
+    }
+  };
+
   return (
     <div
       className="fixed top-0 left-0 right-0 flex bg-gray-900 z-50 overflow-hidden overscroll-none"
@@ -937,6 +983,56 @@ const AiChatPage = ({ user }) => {
       {isModeDropdownOpen && (
         <div className="fixed inset-0 z-[45]" onClick={() => setIsModeDropdownOpen(false)} />
       )}
+
+      <AnimatePresence>
+        {showSuccessAnim && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md pointer-events-none"
+          >
+            <div className="relative">
+              <motion.div
+                initial={{ scale: 0.8, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.8, y: -20 }}
+                transition={{ type: "spring", duration: 0.7, bounce: 0.4 }}
+                className="bg-gradient-to-br from-gray-900 to-gray-800 border border-emerald-500/30 p-10 rounded-3xl flex flex-col items-center justify-center shadow-[0_0_50px_rgba(16,185,129,0.3)] relative overflow-hidden"
+              >
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-emerald-500/20 blur-3xl rounded-full" />
+                
+                <motion.div
+                  initial={{ scale: 0, rotate: -90 }}
+                  animate={{ scale: [0, 1.2, 1], rotate: 0 }}
+                  transition={{ type: "spring", duration: 0.8, delay: 0.2 }}
+                  className="relative z-10 w-24 h-24 bg-gradient-to-tr from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-emerald-500/40"
+                >
+                  <Check className="w-12 h-12 text-white" strokeWidth={3} />
+                </motion.div>
+                
+                <motion.h2
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4, duration: 0.4 }}
+                  className="relative z-10 text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-200 mb-2"
+                >
+                  Payment Successful!
+                </motion.h2>
+                
+                <motion.p
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5, duration: 0.4 }}
+                  className="relative z-10 text-gray-300 font-medium text-center"
+                >
+                  Your daily limits have been fully restored.
+                </motion.p>
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Sidebar */}
       <div className={`fixed md:relative z-[60] flex flex-col h-full bg-gray-950 border-r border-gray-800 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-72 translate-x-0' : 'w-72 -translate-x-full md:w-0 md:hidden absolute'}`}>
@@ -1182,7 +1278,6 @@ const AiChatPage = ({ user }) => {
               </motion.div>
             ) : (
               messages.map((msg) => {
-                // bot_ui messages break out of the bubble and render full-width
                 if (msg.role === 'bot_ui') {
                   return (
                     <div key={msg.id} className="w-full">
@@ -1243,6 +1338,40 @@ const AiChatPage = ({ user }) => {
           {/* Input */}
           <div className="shrink-0 pb-safe z-10 relative">
             <div className="p-4 container mx-auto max-w-3xl relative">
+              
+              <AnimatePresence>
+                {(isChatLimited || isPremiumVoiceLimited) && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 20 }}
+                    className="absolute bottom-full left-0 right-0 mb-4 mx-4 z-20"
+                  >
+                    <div className="bg-[#242424] border border-gray-700/80 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl backdrop-blur-md">
+                      <div className="flex items-center gap-4 w-full">
+                        <div className="p-2.5 bg-gradient-to-br from-purple-500/10 to-emerald-500/10 rounded-xl border border-gray-600/30">
+                          <Unlock className="w-5 h-5 text-emerald-400" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="text-sm font-semibold text-white">Dealit AI limit reached</h4>
+                          <p className="text-xs text-gray-400 mt-0.5">Use credits to continue chatting without limits today.</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleUnlockAI}
+                        disabled={isPurchasingReset}
+                        className="w-full sm:w-auto whitespace-nowrap bg-white text-black hover:bg-gray-200 font-bold py-2.5 px-5 rounded-xl text-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        {isPurchasingReset ? (
+                           <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                        ) : null}
+                        Unlock for 50 Credits
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               <form onSubmit={handleSendMessage} className="relative z-10 flex items-center gap-2">
                 <div className="relative flex-1 flex items-center group">
                   <div

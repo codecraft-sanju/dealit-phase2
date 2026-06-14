@@ -7,7 +7,8 @@ const {
   getChatSessions, 
   deleteChatSession,
   deleteAllChatSessions,
-  synthesizeVoice 
+  synthesizeVoice,
+  purchaseAILimitReset
 } = require('../controllers/aiController');
 const { protect } = require('../middleware/authMiddleware'); 
 
@@ -23,5 +24,7 @@ router.delete('/chat/session/:sessionId', protect, deleteChatSession);
 router.post('/chat', protect, processChat);
 
 router.post('/synthesize-voice', protect, synthesizeVoice);
+
+router.post('/reset-limit', protect, purchaseAILimitReset);
 
 module.exports = router;

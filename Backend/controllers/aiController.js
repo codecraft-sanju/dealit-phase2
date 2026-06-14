@@ -648,7 +648,6 @@ const checkAndConsumeAIToken = async (userId, type) => {
   const limit = type === 'chat' ? DAILY_CHAT_LIMIT : DAILY_VOICE_LIMIT;
   const field = type === 'chat' ? 'aiChatTokensUsed' : 'aiVoiceTokensUsed';
 
-  // Save the new token counts
   const updatedUser = await User.findOneAndUpdate(
     {
       _id: userId,
@@ -660,7 +659,7 @@ const checkAndConsumeAIToken = async (userId, type) => {
   );
 
   if (!updatedUser) {
-    return false; // Limit Reached
+    return false;
   }
 
   return true;
@@ -861,13 +860,10 @@ const processChat = async (req, res) => {
   try {
     const { message, sessionId, isSmartContextEnabled, chatMode } = req.body;
     const userId = req.user._id;
-    const userRole = req.user.role; // Fetch user role from middleware
+    const userRole = req.user.role; 
     
     const cleanMessage = message.trim();
 
-    // ==========================================
-    // 🚀 NEW: ADMIN CHEAT CODE FOR LIMIT RESET
-    // ==========================================
     if (userRole === 'admin' && (cleanMessage.toLowerCase() === 'clear limits' || cleanMessage.toLowerCase() === 'reset limits')) {
       await User.findByIdAndUpdate(userId, { 
         aiChatTokensUsed: 0, 
@@ -879,7 +875,6 @@ const processChat = async (req, res) => {
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
       
-      // Send session id back so frontend doesn't break
       res.write(`data: ${JSON.stringify({ type: 'session_id', sessionId: sessionId || 'new' })}\n\n`);
       
       await new Promise(resolve => setTimeout(resolve, 300));
@@ -887,7 +882,6 @@ const processChat = async (req, res) => {
       res.write('data: [DONE]\n\n');
       return res.end();
     }
-    // ==========================================
 
     const PRESET_RESPONSES = {
       "What is my Aura Score?": (user) => `Your current Aura Score is **${user.aura_points || 0}**. Keep making successful deliveries and referrals to increase it!`,
@@ -901,17 +895,21 @@ const processChat = async (req, res) => {
       const hasTokens = await checkAndConsumeAIToken(userId, 'chat');
       
       if (!hasTokens) {
-        let replyMsg = "\n\n⚠️ **Daily Limit Reached:** You have exhausted your AI Chat tokens for today. Please return tomorrow to chat more!";
-        
-        // Only show this bypass option to Admins
         if (userRole === 'admin') {
+          let replyMsg = "\n\n⚠️ **Daily Limit Reached:** You have exhausted your AI Chat tokens for today. Please return tomorrow to chat more!";
           replyMsg += "\n\n🔑 **Admin Options:** Type `Clear limits` in the chat to instantly reset your quota and continue testing.";
+          res.setHeader('Content-Type', 'text/event-stream');
+          res.write(`data: ${JSON.stringify({ content: replyMsg })}\n\n`);
+          res.write('data: [DONE]\n\n');
+          return res.end();
         }
-
-        res.setHeader('Content-Type', 'text/event-stream');
-        res.write(`data: ${JSON.stringify({ content: replyMsg })}\n\n`);
-        res.write('data: [DONE]\n\n');
-        return res.end();
+        
+        // MODIFIED: Return proper JSON 429 status for frontend to trigger the banner
+        return res.status(429).json({ 
+          success: false, 
+          errorCode: 'DAILY_CHAT_LIMIT_REACHED', 
+          message: 'Daily limit reached.' 
+        });
       }
     }
 
@@ -1163,7 +1161,6 @@ const synthesizeVoice = async (req, res) => {
 
     const hasTokens = await checkAndConsumeAIToken(req.user._id, 'voice');
     if (!hasTokens) {
-      // NOTE: We do not add the cheat code logic here because voice limits just fallback to the browser's standard voice in UI
       return res.status(429).json({ 
         success: false, 
         errorCode: 'DAILY_VOICE_LIMIT_REACHED', 
@@ -1236,6 +1233,37 @@ const synthesizeVoice = async (req, res) => {
   }
 };
 
+const purchaseAILimitReset = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const RESET_COST = 50; 
+    
+    const user = await User.findById(userId);
+
+    if (user.account_credits < RESET_COST) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Insufficient balance. You need ${RESET_COST} credits to unlock.` 
+      });
+    }
+
+    user.account_credits -= RESET_COST;
+    user.aiChatTokensUsed = 0;
+    user.aiVoiceTokensUsed = 0;
+    user.lastAITokenReset = new Date();
+    await user.save();
+
+    res.status(200).json({ 
+      success: true, 
+      message: 'AI Limits reset successfully!', 
+      account_credits: user.account_credits 
+    });
+  } catch (error) {
+    console.error('Error resetting AI limits:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
 module.exports = {
   generateItemDescription,
   analyzeImages,
@@ -1245,5 +1273,6 @@ module.exports = {
   deleteAllChatSessions, 
   processChat,
   aiChatLimiter,
-  synthesizeVoice
+  synthesizeVoice,
+  purchaseAILimitReset
 };
