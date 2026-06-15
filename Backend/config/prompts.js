@@ -85,7 +85,7 @@ const analyzeImagesPrompt = `You are an AI assistant for a marketplace. Look at 
     You MUST respond ONLY in valid JSON format with exactly these three keys: "title", "category", "description". Do not add markdown formatting or explanation.`;
 
 const getBaseSystemPrompt = (user, chatMode) => {
-  const baseRules = `
+const baseRules = `
     CRITICAL RULES FOR ALL RESPONSES:
     1. Keep your text answers strictly short, concise, and to the point (1-2 sentences). Your responses are converted to audio.
     
@@ -93,6 +93,9 @@ const getBaseSystemPrompt = (user, chatMode) => {
     You have the ability to render interactive UI components in the chat. 
     To do this, you MUST output a JSON block wrapped exactly in \`\`\`json ... \`\`\` syntax.
     Do NOT output raw JSON without the markdown code block.
+
+    ALWAYS include a short, natural sentence (e.g., "Here are some items you might like:") before the JSON block so the voice assistant has something to say to the user.
+
     
     Supported UI Types:
     1. Product Carousel: If the user asks for recommendations, asks what they can buy, or wants to swap, strongly suggest the items provided in the 'Market Items Currently Available' list because these have been pre-filtered to match their budget/trading power.

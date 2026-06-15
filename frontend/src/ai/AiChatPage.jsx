@@ -561,12 +561,37 @@ const AiChatPage = ({ user }) => {
         const lines = streamBuffer.split('\n');
         streamBuffer = lines.pop();
 
-        for (const line of lines) {
+       for (const line of lines) {
           if (!line.startsWith('data: ')) continue;
           const dataStr = line.slice(6);
           if (dataStr === '[DONE]') {
             setTimeout(() => {
-              botReply.trim() ? speakText(botReply) : setVoiceState('idle');
+              // CHANGES MADE: Extracted UI blocks before passing text to the TTS engine
+              if (botReply.trim()) {
+                const parts = extractCarouselFromReply(botReply);
+                
+                const textToSpeak = parts
+                  .filter((p) => p.type === 'text')
+                  .map((p) => p.content)
+                  .join(' ')
+                  .trim();
+                
+                const hasUI = parts.some((p) => p.type === 'ui');
+
+                let finalSpeech = textToSpeak;
+                if (!finalSpeech && hasUI) {
+                  finalSpeech = "Here are the items I found for you.";
+                }
+
+                if (finalSpeech) {
+                  speakText(finalSpeech);
+                } else {
+                  setVoiceState('idle');
+                }
+              } else {
+                setVoiceState('idle');
+              }
+         
               isStreamingRef.current = false;
             }, 300);
             break outer;
