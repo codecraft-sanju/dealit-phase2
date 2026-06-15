@@ -223,6 +223,10 @@ const AiChatPage = ({ user }) => {
   const [showSuccessAnim,      setShowSuccessAnim]     = useState(false);
   const [isOffline,            setIsOffline]           = useState(!navigator.onLine);
 
+  // ---------- auto mic state ----------
+  const autoMicRef = useRef(false);
+  const handleMicClickRef = useRef(null);
+
   const abortControllerRef = useRef(null);
   const messagesEndRef     = useRef(null);
   const audioRef           = useRef(null);
@@ -244,9 +248,22 @@ const AiChatPage = ({ user }) => {
     }
   }, [messages, currentSessionId]);
 
+  // Keep handleMicClickRef updated to prevent stale closures
+  useEffect(() => {
+    handleMicClickRef.current = handleMicClick;
+  });
+
   // ---------- native speech bridge ----------
   useEffect(() => {
-    const handler = (e) => { if (e.detail?.type === 'SPEECH_FINISHED') setVoiceState('idle'); };
+    const handler = (e) => { 
+      if (e.detail?.type === 'SPEECH_FINISHED') {
+        if (autoMicRef.current && handleMicClickRef.current) {
+          handleMicClickRef.current();
+        } else {
+          setVoiceState('idle');
+        }
+      } 
+    };
     window.addEventListener('NATIVE_APP_EVENT', handler);
     return () => window.removeEventListener('NATIVE_APP_EVENT', handler);
   }, []);
@@ -441,6 +458,8 @@ const AiChatPage = ({ user }) => {
 
   // ---------- voice action controllers ----------
   const stopVoiceAction = () => {
+    autoMicRef.current = false;
+    
     audioRef.current?.pause();
     audioRef.current = null;
     window.speechSynthesis?.cancel();
@@ -456,6 +475,7 @@ const AiChatPage = ({ user }) => {
 
   const startVoiceInteraction = () => {
     setIsVoiceOverlayOpen(true);
+    autoMicRef.current = true;
     handleMicClick();
   };
 
@@ -476,8 +496,14 @@ const AiChatPage = ({ user }) => {
     );
     if (preferred) utterance.voice = preferred;
     utterance.onstart = () => setVoiceState('speaking');
-    utterance.onend   = () => setVoiceState('idle');
-    utterance.onerror = () => setVoiceState('idle');
+    utterance.onend   = () => {
+      if (autoMicRef.current && handleMicClickRef.current) handleMicClickRef.current();
+      else setVoiceState('idle');
+    };
+    utterance.onerror = () => {
+      if (autoMicRef.current && handleMicClickRef.current) handleMicClickRef.current();
+      else setVoiceState('idle');
+    };
     window.speechSynthesis.speak(utterance);
   };
 
@@ -505,8 +531,16 @@ const AiChatPage = ({ user }) => {
       const audioUrl = URL.createObjectURL(blob);
       const audio    = new Audio(audioUrl);
       audioRef.current = audio;
-      audio.onended = () => { setVoiceState('idle'); URL.revokeObjectURL(audioUrl); };
-      audio.onerror = () => { setVoiceState('idle'); URL.revokeObjectURL(audioUrl); };
+      audio.onended = () => { 
+        URL.revokeObjectURL(audioUrl); 
+        if (autoMicRef.current && handleMicClickRef.current) handleMicClickRef.current();
+        else setVoiceState('idle');
+      };
+      audio.onerror = () => { 
+        URL.revokeObjectURL(audioUrl); 
+        if (autoMicRef.current && handleMicClickRef.current) handleMicClickRef.current();
+        else setVoiceState('idle');
+      };
       setVoiceState('speaking');
       await audio.play();
     } catch {
@@ -566,7 +600,6 @@ const AiChatPage = ({ user }) => {
           const dataStr = line.slice(6);
           if (dataStr === '[DONE]') {
             setTimeout(() => {
-              // CHANGES MADE: Extracted UI blocks before passing text to the TTS engine
               if (botReply.trim()) {
                 const parts = extractCarouselFromReply(botReply);
                 
@@ -586,10 +619,18 @@ const AiChatPage = ({ user }) => {
                 if (finalSpeech) {
                   speakText(finalSpeech);
                 } else {
-                  setVoiceState('idle');
+                  if (autoMicRef.current && handleMicClickRef.current) {
+                    handleMicClickRef.current();
+                  } else {
+                    setVoiceState('idle');
+                  }
                 }
               } else {
-                setVoiceState('idle');
+                if (autoMicRef.current && handleMicClickRef.current) {
+                  handleMicClickRef.current();
+                } else {
+                  setVoiceState('idle');
+                }
               }
          
               isStreamingRef.current = false;
@@ -615,6 +656,7 @@ const AiChatPage = ({ user }) => {
     if (!SR) { alert('Your browser does not support voice input.'); return; }
     
     stopVoiceAction(); // Clear any ongoing playback before listening again
+    autoMicRef.current = true; // Auto-Mic is ON when user manually clicks mic
     
     const recognition    = new SR();
     recognition.lang     = 'en-IN';
