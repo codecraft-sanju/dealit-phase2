@@ -1099,9 +1099,13 @@ const processChat = async (req, res) => {
 
     res.write(`data: ${JSON.stringify({ type: 'session_id', sessionId: currentSessionId })}\n\n`);
 
-    try {
+try {
       for await (const chunk of chatCompletion) {
-        if (isClientDisconnected) break;
+        // ADDED: Check if the underlying socket was destroyed by the network
+        if (isClientDisconnected || req.socket.destroyed) {
+          abortController.abort();
+          break;
+        }
         const content = chunk.choices[0]?.delta?.content || '';
         if (content) {
           fullBotReply += content;
