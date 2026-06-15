@@ -6,7 +6,6 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
-import Lightfall from './Lightfall';
 
 import {
   SharedStyles, MagicPoints,
@@ -17,6 +16,105 @@ import {
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL  = `${API_BASE}/api`;
+
+// ---------------------------------------------------------------------------
+// Voice Animation Styles (User provided loader animation)
+// ---------------------------------------------------------------------------
+const VoiceAnimationStyles = () => (
+  <style>{`
+    .loader-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 180px;
+      height: 180px;
+      font-family: "Inter", sans-serif;
+      font-size: 1.2em;
+      font-weight: 300;
+      color: white;
+      border-radius: 50%;
+      background-color: transparent;
+      user-select: none;
+    }
+
+    .loader {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border-radius: 50%;
+      background-color: transparent;
+      animation: loader-rotate 2s linear infinite;
+      z-index: 0;
+    }
+
+    @keyframes loader-rotate {
+      0% {
+        transform: rotate(90deg);
+        box-shadow:
+          0 10px 20px 0 #fff inset,
+          0 20px 30px 0 #ad5fff inset,
+          0 60px 60px 0 #471eec inset;
+      }
+      50% {
+        transform: rotate(270deg);
+        box-shadow:
+          0 10px 20px 0 #fff inset,
+          0 20px 10px 0 #d60a47 inset,
+          0 40px 60px 0 #311e80 inset;
+      }
+      100% {
+        transform: rotate(450deg);
+        box-shadow:
+          0 10px 20px 0 #fff inset,
+          0 20px 30px 0 #ad5fff inset,
+          0 60px 60px 0 #471eec inset;
+      }
+    }
+
+    .loader-letter {
+      display: inline-block;
+      opacity: 0.4;
+      transform: translateY(0);
+      animation: loader-letter-anim 2s infinite;
+      z-index: 1;
+      border-radius: 50ch;
+      border: none;
+      margin: 0 1px;
+    }
+
+    .loader-letter:nth-child(1) { animation-delay: 0s; }
+    .loader-letter:nth-child(2) { animation-delay: 0.1s; }
+    .loader-letter:nth-child(3) { animation-delay: 0.2s; }
+    .loader-letter:nth-child(4) { animation-delay: 0.3s; }
+    .loader-letter:nth-child(5) { animation-delay: 0.4s; }
+    .loader-letter:nth-child(6) { animation-delay: 0.5s; }
+    .loader-letter:nth-child(7) { animation-delay: 0.6s; }
+    .loader-letter:nth-child(8) { animation-delay: 0.7s; }
+    .loader-letter:nth-child(9) { animation-delay: 0.8s; }
+    .loader-letter:nth-child(10) { animation-delay: 0.9s; }
+    .loader-letter:nth-child(11) { animation-delay: 1.0s; }
+    .loader-letter:nth-child(12) { animation-delay: 1.1s; }
+
+    @keyframes loader-letter-anim {
+      0%,
+      100% {
+        opacity: 0.4;
+        transform: translateY(0);
+      }
+      20% {
+        opacity: 1;
+        transform: scale(1.15);
+      }
+      40% {
+        opacity: 0.7;
+        transform: translateY(0);
+      }
+    }
+  `}</style>
+);
 
 // ---------------------------------------------------------------------------
 // Full-page loader shown while history is being fetched
@@ -112,6 +210,9 @@ const AiChatPage = ({ user }) => {
   const [chatMode, setChatMode] = useState(
     () => localStorage.getItem('dealit_ai_mode') || 'dealit',
   );
+  
+  // New state to keep the voice overlay open even when voiceState is 'idle'
+  const [isVoiceOverlayOpen,   setIsVoiceOverlayOpen]  = useState(false);
   const [voiceState,           setVoiceState]          = useState('idle');
   const [voicePref,            setVoicePref]           = useState(
     () => localStorage.getItem('dealit_ai_voice_pref') || 'female',
@@ -338,7 +439,26 @@ const AiChatPage = ({ user }) => {
     }
   };
 
-  // ---------- voice ----------
+  // ---------- voice action controllers ----------
+  const stopVoiceAction = () => {
+    audioRef.current?.pause();
+    audioRef.current = null;
+    window.speechSynthesis?.cancel();
+    abortControllerRef.current?.abort();
+    window.ReactNativeWebView?.postMessage(JSON.stringify({ type: 'STOP_NATIVE_SPEECH' }));
+    setVoiceState('idle');
+  };
+
+  const closeVoiceOverlay = () => {
+    stopVoiceAction();
+    setIsVoiceOverlayOpen(false);
+  };
+
+  const startVoiceInteraction = () => {
+    setIsVoiceOverlayOpen(true);
+    handleMicClick();
+  };
+
   const fallbackToNativeSpeech = (text, pref) => {
     if (window.ReactNativeWebView) {
       setVoiceState('speaking');
@@ -394,15 +514,6 @@ const AiChatPage = ({ user }) => {
     }
   };
 
-  const cancelVoiceMode = () => {
-    audioRef.current?.pause();
-    audioRef.current = null;
-    window.speechSynthesis?.cancel();
-    abortControllerRef.current?.abort();
-    window.ReactNativeWebView?.postMessage(JSON.stringify({ type: 'STOP_NATIVE_SPEECH' }));
-    setVoiceState('idle');
-  };
-
   // ---------- voice message (no bubble — just speaks the reply) ----------
   const processVoiceMessage = async (userMessage) => {
     if (!userMessage.trim())    { setVoiceState('idle'); return; }
@@ -440,14 +551,12 @@ const AiChatPage = ({ user }) => {
       const reader  = response.body.getReader();
       const decoder = new TextDecoder('utf-8');
       let botReply  = '';
-      // FIX: Added streamBuffer to handle network chunking
       let streamBuffer = '';
 
       outer: while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        // FIX: Buffer implementation
         streamBuffer += decoder.decode(value, { stream: true });
         const lines = streamBuffer.split('\n');
         streamBuffer = lines.pop();
@@ -479,7 +588,9 @@ const AiChatPage = ({ user }) => {
   const handleMicClick = () => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { alert('Your browser does not support voice input.'); return; }
-    audioRef.current?.pause();
+    
+    stopVoiceAction(); // Clear any ongoing playback before listening again
+    
     const recognition    = new SR();
     recognition.lang     = 'en-IN';
     recognition.onstart  = () => setVoiceState('listening');
@@ -494,22 +605,6 @@ const AiChatPage = ({ user }) => {
   };
 
   // ---------- text message ----------
-  /**
-   * FIX: The core race condition was:
-   * 1. Stream chunks update `msg.content` in real-time (correct).
-   * 2. On [DONE], a 600ms setTimeout ran `extractCarouselFromReply` and
-   * replaced the placeholder — but by then React may have re-rendered
-   * multiple times, and the closure over `botMessageId` was stale.
-   * 3. During streaming, ReactMarkdown saw partial ```json blocks and
-   * either showed them as text or flickered.
-   *
-   * Fix:
-   * - Keep one streaming placeholder (role:'bot', streaming:true).
-   * - On [DONE], synchronously (no setTimeout) parse the complete reply
-   * and replace the placeholder with the final parts.
-   * - BotMessage now strips any residual ```json blocks before rendering.
-   * - `streaming:true` is used to show TypingLoader while content is empty.
-   */
   const processMessage = async (userMessage) => {
     if (!userMessage.trim()) return;
     if (!navigator.onLine)   { setIsOffline(true); setTimeout(() => setIsOffline(false), 4000); return; }
@@ -559,7 +654,6 @@ const AiChatPage = ({ user }) => {
       const reader  = response.body.getReader();
       const decoder = new TextDecoder('utf-8');
       let botReply  = '';
-      // FIX: Added streamBuffer to handle network chunking
       let streamBuffer = '';
       setIsLoading(false);
 
@@ -567,7 +661,6 @@ const AiChatPage = ({ user }) => {
         const { done, value } = await reader.read();
         if (done) break;
 
-        // FIX: Buffer implementation
         streamBuffer += decoder.decode(value, { stream: true });
         const lines = streamBuffer.split('\n');
         streamBuffer = lines.pop();
@@ -577,7 +670,6 @@ const AiChatPage = ({ user }) => {
           const dataStr = line.slice(6);
 
           if (dataStr === '[DONE]') {
-            // FIX: parse synchronously here — no setTimeout, no stale closure
             const parts = extractCarouselFromReply(botReply);
 
             setMessages((prev) => {
@@ -605,7 +697,6 @@ const AiChatPage = ({ user }) => {
               fetchSessions();
               continue;
             }
-            // Accumulate and update placeholder content
             botReply += parsed.content;
             setMessages((prev) =>
               prev.map((m) =>
@@ -633,24 +724,20 @@ const AiChatPage = ({ user }) => {
 
   // ---------- navigation ----------
   const handleMinimize = () => {
-    abortControllerRef.current?.abort();
+    closeVoiceOverlay();
     localStorage.setItem('dealit_open_floating_ai', 'true');
-    audioRef.current?.pause();
-    window.speechSynthesis?.cancel();
     if (window.history.state?.idx > 0) navigate(-1);
     else navigate('/');
   };
 
   const handleClose = () => {
-    abortControllerRef.current?.abort();
-    audioRef.current?.pause();
-    window.speechSynthesis?.cancel();
+    closeVoiceOverlay();
     navigate('/');
   };
 
   const handleSendMessage = (e) => {
     e.preventDefault();
-    if (voiceState !== 'idle') cancelVoiceMode();
+    closeVoiceOverlay();
     processMessage(input);
     setIsInputFocused(false);
   };
@@ -677,11 +764,14 @@ const AiChatPage = ({ user }) => {
     }
   };
 
-  const getLightfallConfig = (state) => {
+  // Helper to dynamically set text for our cool loader
+  const getSpinnerText = (state) => {
     switch (state) {
-      case 'listening': return { colors: ['#f87171', '#ef4444', '#b91c1c'], speed: 1.5, zoom: 4 };
-      case 'speaking':  return { colors: ['#c084fc', '#a855f7', '#7e22ce'], speed: 1.2, zoom: 3 };
-      default:          return { colors: ['#60a5fa', '#3b82f6', '#1d4ed8'], speed: 0.8, zoom: 3 };
+      case 'listening': return 'Listening';
+      case 'thinking': return 'Analyzing';
+      case 'generating_audio': return 'Preparing';
+      case 'speaking': return 'Speaking';
+      default: return 'Dealit AI';
     }
   };
 
@@ -1118,7 +1208,7 @@ const AiChatPage = ({ user }) => {
                   />
                   <button
                     type="button"
-                    onClick={handleMicClick}
+                    onClick={startVoiceInteraction}
                     className="absolute right-2 z-20 p-2 flex items-center justify-center rounded-full transition-all text-gray-400 hover:bg-gray-800 hover:text-purple-400"
                   >
                     <Mic className="w-5 h-5" />
@@ -1139,69 +1229,109 @@ const AiChatPage = ({ user }) => {
             </div>
           </div>
 
-          {/* Voice overlay */}
+          {/* Voice overlay (Stays open until explicitly closed) */}
           <AnimatePresence>
-            {voiceState !== 'idle' && (
+            {isVoiceOverlayOpen && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="absolute inset-0 z-50 flex flex-col items-center justify-center w-full h-full overflow-hidden bg-gray-900/85 backdrop-blur-md"
+                className="fixed inset-0 z-[100] flex flex-col items-center justify-between py-12 w-full h-full overflow-hidden bg-[#1A1A1A]"
               >
-                <div className="absolute inset-0 z-0 opacity-40 mix-blend-screen pointer-events-none">
-                  <Lightfall
-                    colors={getLightfallConfig(voiceState).colors}
-                    backgroundColor="#000000"
-                    speed={getLightfallConfig(voiceState).speed}
-                    zoom={getLightfallConfig(voiceState).zoom}
-                    glow={1.2}
-                    twinkle={1.5}
-                    mouseInteraction
-                  />
+                <VoiceAnimationStyles />
+                
+                {/* Clean Close Button at Top Right */}
+                <button 
+                  onClick={closeVoiceOverlay} 
+                  className="absolute top-6 right-6 p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-full transition-colors z-50"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+
+                {/* Top Spacer */}
+                <div className="h-10"></div>
+
+                {/* Center Content: Either Custom Loader (Active) or Avatar (Idle) */}
+                <div className="flex flex-col items-center w-full max-w-md px-6 text-center z-10 flex-1 justify-center">
+                  {voiceState !== 'idle' ? (
+                    <>
+                      <div className="loader-wrapper mb-8 scale-[1.2]">
+                        {getSpinnerText(voiceState).split('').map((char, i) => (
+                          <span key={i} className="loader-letter">
+                            {char === ' ' ? '\u00A0' : char}
+                          </span>
+                        ))}
+                        <div className="loader"></div>
+                      </div>
+
+                      <h2 className="text-2xl font-bold text-white mb-3 drop-shadow-md">
+                        {voiceState === 'listening'        && 'Listening to you...'}
+                        {voiceState === 'thinking'         && 'Analyzing...'}
+                        {voiceState === 'generating_audio' && 'Preparing voice...'}
+                        {voiceState === 'speaking'         && (isPremiumVoiceLimited ? 'Speaking (Standard)...' : 'Speaking...')}
+                      </h2>
+                      
+                      {voiceState === 'speaking' && isPremiumVoiceLimited && (
+                        <span className="text-xs text-amber-400 font-medium px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full mb-4 animate-pulse">
+                          Daily Premium Limit Reached
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="flex flex-col items-center"
+                    >
+                      <div className="w-32 h-32 mb-8 rounded-full border border-gray-700 bg-[#2A2A2A] flex items-center justify-center shadow-lg overflow-hidden opacity-80">
+                        <img src="https://res.cloudinary.com/dia3qhc0x/image/upload/v1781289017/ijblexdk51vluv7ku6g9.jpg" alt="Dealit AI" className="w-full h-full object-cover grayscale-[20%]" />
+                      </div>
+                      <h2 className="text-2xl font-bold text-gray-300 mb-2 drop-shadow-md">
+                        Ready to assist
+                      </h2>
+                      <p className="text-sm text-gray-400">Tap 'Speak Again' below to continue</p>
+                    </motion.div>
+                  )}
                 </div>
-                <div className="z-10 flex flex-col items-center w-full max-w-md px-6 text-center">
-                  <div className="relative flex items-center justify-center w-32 h-32 mb-8">
-                    {voiceState === 'listening'        && <div className="absolute inset-0 rounded-full bg-red-500/30    animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite]" />}
-                    {voiceState === 'speaking'         && <div className="absolute inset-0 rounded-full bg-purple-500/30 animate-pulse" />}
-                    {voiceState === 'generating_audio' && <div className="absolute inset-0 rounded-full bg-blue-500/30   animate-pulse" />}
-                    <div className="z-10 w-24 h-24 bg-gray-950/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-inner border border-gray-700 overflow-hidden">
+
+                {/* Bottom Controls (Dynamic Mic / Stop) */}
+                <div className="shrink-0 flex flex-col items-center gap-6 pb-6 z-10 w-full px-6">
+                  {/* Pulse Mic Indicator - only pulse when listening */}
+                  <div className="relative flex items-center justify-center w-16 h-16">
+                    {voiceState === 'listening' && (
+                      <div className="absolute inset-0 rounded-full bg-red-500/30 animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite]" />
+                    )}
+                    <div className={`z-10 w-12 h-12 bg-[#2A2A2A] rounded-full flex items-center justify-center shadow-inner border border-gray-700 overflow-hidden ${voiceState === 'idle' ? 'opacity-50' : ''}`}>
                       {voiceState === 'listening'
-                        ? <Mic className="w-10 h-10 text-red-400 animate-pulse" />
-                        : <img src="https://res.cloudinary.com/dia3qhc0x/image/upload/v1781289017/ijblexdk51vluv7ku6g9.jpg" alt="Dealit AI" className="w-full h-full object-cover" />}
+                        ? <Mic className="w-5 h-5 text-red-400 animate-pulse" />
+                        : <img src="https://res.cloudinary.com/dia3qhc0x/image/upload/v1781289017/ijblexdk51vluv7ku6g9.jpg" alt="Dealit AI" className="w-full h-full object-cover opacity-50" />}
                     </div>
                   </div>
-                  <h2 className="text-2xl font-bold text-white mb-3 drop-shadow-md">
-                    {voiceState === 'listening'        && 'Listening to you...'}
-                    {voiceState === 'thinking'         && 'Analyzing...'}
-                    {voiceState === 'generating_audio' && 'Preparing voice...'}
-                    {voiceState === 'speaking'         && (isPremiumVoiceLimited ? 'Speaking (Standard Voice)...' : 'Speaking...')}
-                  </h2>
-                  {voiceState === 'speaking' && isPremiumVoiceLimited && (
-                    <span className="text-xs text-amber-400 font-medium px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full mb-4 animate-pulse">
-                      Daily Premium Limit Reached
-                    </span>
+
+                  {/* Dynamic Button */}
+                  {voiceState === 'idle' ? (
+                    <button
+                      type="button"
+                      onClick={handleMicClick}
+                      className="magic-btn text-sm w-52 mx-auto shadow-[0_0_15px_rgba(168,85,247,0.3)]"
+                    >
+                      <MagicPoints />
+                      <span className="magic-inner text-white font-medium tracking-wide">
+                        <Mic className="w-5 h-5 icon mr-2" fill="none" strokeWidth="2.5" /> Speak Again
+                      </span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={stopVoiceAction}
+                      className="magic-btn text-sm w-48 mx-auto shadow-[0_0_15px_rgba(239,68,68,0.2)]"
+                    >
+                      <MagicPoints />
+                      <span className="magic-inner text-gray-100">
+                        <X className="w-5 h-5 icon mr-2" fill="none" strokeWidth="2.5" /> Stop
+                      </span>
+                    </button>
                   )}
-                  <div className="h-12 flex items-center justify-center w-full mb-10 text-white drop-shadow-md">
-                    {voiceState === 'listening' && (
-                      <div className="flex gap-2.5">
-                        {[0, 0.2, 0.4].map((d, i) => (
-                          <span key={i} className="w-2.5 h-2.5 bg-red-400 rounded-full animate-bounce" style={{ animationDelay: `${d}s` }} />
-                        ))}
-                      </div>
-                    )}
-                    {(voiceState === 'thinking' || voiceState === 'generating_audio') && <SidebarTypingLoader />}
-                    {voiceState === 'speaking' && <SoundWave />}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={cancelVoiceMode}
-                    className="magic-btn text-sm w-48 mx-auto shadow-[0_0_15px_rgba(239,68,68,0.2)]"
-                  >
-                    <MagicPoints />
-                    <span className="magic-inner">
-                      <X className="w-5 h-5 icon" fill="none" strokeWidth="2.5" /> Stop Listening
-                    </span>
-                  </button>
                 </div>
               </motion.div>
             )}
