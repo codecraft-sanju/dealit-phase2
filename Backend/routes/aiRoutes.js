@@ -2,7 +2,8 @@ const express = require('express');
 const { 
   generateItemDescription, 
   analyzeImages, 
-  processChat, 
+  processChat,
+  processCodeChat, 
   getChatHistory, 
   getChatSessions, 
   deleteChatSession,
@@ -22,6 +23,7 @@ router.delete('/chat/sessions', protect, deleteAllChatSessions);
 router.get('/chat/history/:sessionId', protect, getChatHistory);
 router.delete('/chat/session/:sessionId', protect, deleteChatSession);
 router.post('/chat', protect, processChat);
+router.post('/chat/code', protect, processCodeChat);
 
 router.post('/synthesize-voice', protect, synthesizeVoice);
 
