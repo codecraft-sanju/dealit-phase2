@@ -613,16 +613,48 @@ export const BotUIBlock = ({ content, navigate, variant = 'full' }) => {
 // Image Generation UI Components [NEW]
 // ---------------------------------------------------------------------------
 
+/* --- CHANGED: Updated ImageGenLoader to use the animated cube loader --- */
 export const ImageGenLoader = () => (
   <div className="w-full max-w-sm rounded-2xl border border-purple-500/30 bg-[#0A0A0A] p-3 shadow-[0_0_30px_rgba(168,85,247,0.1)] relative overflow-hidden my-2">
-    <div className="w-full aspect-square rounded-xl bg-gray-900 border border-gray-800 relative overflow-hidden flex flex-col items-center justify-center gap-4">
-      <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-purple-500 to-transparent shadow-[0_0_15px_rgba(168,85,247,0.8)] animate-[image-scan-line_2s_linear_infinite]" />
-      <ImageIcon className="w-8 h-8 text-purple-500/50 animate-pulse" />
+    <div className="w-full aspect-square rounded-xl bg-gray-900 border border-gray-800 relative overflow-hidden flex flex-col items-center justify-center gap-6">
+      <style>{`
+        .custom_cube_loader {
+          width: 100px;
+          height: 100px;
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .custom_cube_loader_cube {
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          border-radius: 20px;
+        }
+        .custom_cube_loader_cube--glowing {
+          z-index: 2;
+          background-color: rgba(255, 255, 255, 0.2);
+          border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        .custom_cube_loader_cube--color {
+          z-index: 1;
+          filter: blur(2px);
+          background: linear-gradient(135deg, #1afbf0, #da00ff);
+          animation: custom_cube_loadtwo 2.5s ease-in-out infinite;
+        }
+        @keyframes custom_cube_loadtwo {
+          50% { transform: rotate(-80deg); }
+        }
+      `}</style>
+      <div className="custom_cube_loader">
+        <div className="custom_cube_loader_cube custom_cube_loader_cube--color" />
+        <div className="custom_cube_loader_cube custom_cube_loader_cube--glowing" />
+      </div>
       <span className="text-xs font-semibold text-purple-400 tracking-wider uppercase animate-pulse">Rendering Image</span>
     </div>
   </div>
 );
-
 
 export const BotImageMessage = ({ imageUrl, prompt }) => {
   const [isLoaded, setIsLoaded] = useState(false);

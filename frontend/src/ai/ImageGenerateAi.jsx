@@ -75,7 +75,7 @@ const ImageGenerateAi = ({ isOpen, onClose }) => {
             <div className="flex items-center gap-3">
               <div className="p-2 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-xl border border-purple-500/30">
                 <ImageIcon className="w-5 h-5 text-purple-400" />
-              </div>
+               </div>
               <div>
                 <h2 className="text-lg font-bold text-white tracking-wide">Image Generator</h2>
                 <p className="text-xs text-gray-400">Powered by Dealit AI</p>
@@ -97,9 +97,43 @@ const ImageGenerateAi = ({ isOpen, onClose }) => {
               
               {/* Loader tab tak dikhega jab tak dono loading or isImageLoading mein se koi bhi true hoga */}
               {loading || isImageLoading ? (
-                <div className="flex flex-col items-center gap-4">
-                  <div className="w-10 h-10 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
-                  <p className="text-sm font-medium text-purple-400 animate-pulse">
+                <div className="flex flex-col items-center gap-6">
+                  {/* --- CHANGED: Inserted cube loader instead of normal spinner --- */}
+                  <style>{`
+                    .custom_cube_loader {
+                      width: 80px;
+                      height: 80px;
+                      position: relative;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                    }
+                    .custom_cube_loader_cube {
+                      position: absolute;
+                      width: 100%;
+                      height: 100%;
+                      border-radius: 16px;
+                    }
+                    .custom_cube_loader_cube--glowing {
+                      z-index: 2;
+                      background-color: rgba(255, 255, 255, 0.2);
+                      border: 2px solid rgba(255, 255, 255, 0.3);
+                    }
+                    .custom_cube_loader_cube--color {
+                      z-index: 1;
+                      filter: blur(2px);
+                      background: linear-gradient(135deg, #1afbf0, #da00ff);
+                      animation: custom_cube_loadtwo 2.5s ease-in-out infinite;
+                    }
+                    @keyframes custom_cube_loadtwo {
+                      50% { transform: rotate(-80deg); }
+                    }
+                  `}</style>
+                  <div className="custom_cube_loader">
+                    <div className="custom_cube_loader_cube custom_cube_loader_cube--color" />
+                    <div className="custom_cube_loader_cube custom_cube_loader_cube--glowing" />
+                  </div>
+                  <p className="text-sm font-medium text-purple-400 animate-pulse mt-2">
                     {loading ? 'Generating your masterpiece...' : 'Downloading image...'}
                   </p>
                 </div>

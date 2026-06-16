@@ -842,34 +842,53 @@ const generateMarketImage = async (req, res) => {
     const { prompt } = req.body;
     if (!prompt) return res.status(400).json({ success: false, message: 'Prompt is required' });
 
+    let finalPrompt = prompt;
+    if (prompt.length < 50) {
+      try {
+        const enhanceCompletion = await groq.chat.completions.create({
+          messages: [
+            { role: "system", content: "You are an expert prompt engineer. Enhance the user's idea into a highly detailed, cinematic, photorealistic image generation prompt. Output ONLY the prompt. Max 50 words." },
+            { role: "user", content: prompt }
+          ],
+          model: "llama-3.1-8b-instant",
+          temperature: 0.7,
+          max_tokens: 100,
+        });
+        const enhanced = enhanceCompletion.choices[0]?.message?.content?.trim();
+        if (enhanced) finalPrompt = enhanced;
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    const randomSeed = Math.floor(Math.random() * 1000000000);
+
     try {
-      console.log(`[ImageGen] Trying Hugging Face for prompt: "${prompt}"`);
       const hfResponse = await axios.post(
-        'https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-2-1',
-        { inputs: prompt },
+        'https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0',
+        {
+          inputs: finalPrompt,
+          parameters: { seed: randomSeed }
+        },
         {
           headers: { Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY}` },
-          responseType: 'arraybuffer'
+          responseType: 'arraybuffer',
+          timeout: 15000
         }
       );
 
       const base64Image = Buffer.from(hfResponse.data, 'binary').toString('base64');
       const imageUrl = `data:image/jpeg;base64,${base64Image}`;
-      
-      console.log(`[ImageGen] Success! Image generated using Hugging Face.`);
-      return res.status(200).json({ success: true, imageUrl, source: 'huggingface' });
-      
+
+      return res.status(200).json({ success: true, imageUrl, source: 'huggingface', prompt: finalPrompt });
+
     } catch (primaryError) {
-      console.error(`[ImageGen] Hugging Face failed: ${primaryError.message}. Switching to Fallback.`);
-      
-      const fallbackUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?nologo=true`;
-      console.log(`[ImageGen] Success! Image generated using Fallback (Pollinations).`);
-      
-      return res.status(200).json({ success: true, imageUrl: fallbackUrl, source: 'pollinations' });
+      const fallbackUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(finalPrompt)}?nologo=true&seed=${randomSeed}&width=1024&height=1024&enhance=false`;
+
+      return res.status(200).json({ success: true, imageUrl: fallbackUrl, source: 'pollinations', prompt: finalPrompt });
     }
 
   } catch (error) {
-    console.error(`[ImageGen] Critical Error: ${error.message}`);
     return res.status(500).json({ success: false, message: 'Failed to generate image from both providers.' });
   }
 };
