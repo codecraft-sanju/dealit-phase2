@@ -1,1 +1,311 @@
 @import "tailwindcss";
+
+
+
+/* 
+import React, { useEffect, useRef } from 'react';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import Lenis from '@studio-freight/lenis';
+import { ShoppingBag, Pill, Utensils, Zap, Sparkles, ArrowRight, MapPin, Send } from 'lucide-react';
+
+gsap.registerPlugin(ScrollTrigger);
+
+export default function App() {
+  const containerRef = useRef(null);
+  const heroTextRef = useRef(null);
+  const featuresRef = useRef([]);
+  const mockUpRef = useRef(null);
+
+  useEffect(() => {
+    // 1. Smooth Scrolling Setup (Lenis)
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      direction: 'vertical',
+      gestureDirection: 'vertical',
+      smooth: true,
+      mouseMultiplier: 1,
+      smoothTouch: false,
+      touchMultiplier: 2,
+      infinite: false,
+    });
+
+    function raf(time) {
+      lenis.raf(time);
+      requestAnimationFrame(raf);
+    }
+    requestAnimationFrame(raf);
+
+    // 2. Initial Hero Animations
+    const tl = gsap.timeline();
+    tl.fromTo(
+      '.hero-element',
+      { y: 50, opacity: 0 },
+      { y: 0, opacity: 1, duration: 1, stagger: 0.2, ease: 'power3.out', delay: 0.2 }
+    );
+
+    // 3. Scroll Micro-interactions for Features
+    featuresRef.current.forEach((feature, index) => {
+      gsap.fromTo(
+        feature,
+        { opacity: 0, y: 50, scale: 0.95 },
+        {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.8,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: feature,
+            start: 'top 85%',
+            toggleActions: 'play none none reverse',
+          },
+        }
+      );
+    });
+
+    // 4. Parallax & Scale effect on the Mockup Section
+    gsap.fromTo(
+      mockUpRef.current,
+      { scale: 0.9, opacity: 0, rotationX: 10 },
+      {
+        scale: 1,
+        opacity: 1,
+        rotationX: 0,
+        duration: 1.2,
+        ease: 'power3.out',
+        scrollTrigger: {
+          trigger: mockUpRef.current,
+          start: 'top 80%',
+          end: 'bottom 20%',
+          scrub: 1, 
+        },
+      }
+    );
+
+    return () => {
+      lenis.destroy();
+      ScrollTrigger.getAll().forEach(t => t.kill());
+    };
+  }, []);
+
+  const addToFeaturesRef = (el) => {
+    if (el && !featuresRef.current.includes(el)) {
+      featuresRef.current.push(el);
+    }
+  };
+
+  return (
+    <div ref={containerRef} className="bg-[#0a0a0a] text-white min-h-screen font-sans selection:bg-white selection:text-black overflow-hidden">
+      
+      <nav className="fixed top-6 left-1/2 -translate-x-1/2 w-[90%] max-w-5xl z-50 bg-black/40 backdrop-blur-xl border border-white/10 px-6 py-4 rounded-full flex justify-between items-center hero-element">
+        <div className="text-xl font-bold tracking-tight flex items-center gap-2">
+          <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center">
+            <div className="w-2 h-2 bg-black rounded-full"></div>
+          </div>
+          AI.Local
+        </div>
+        <div className="hidden md:flex items-center gap-8 text-sm font-medium text-zinc-400">
+          <a href="#" className="hover:text-white transition-colors">How it Works</a>
+          <a href="#" className="hover:text-white transition-colors">Rani Stores</a>
+          <a href="#" className="hover:text-white transition-colors">Pricing</a>
+        </div>
+        <button className="bg-white text-black px-5 py-2 rounded-full text-sm font-medium hover:scale-105 transition-transform duration-300">
+          Open App
+        </button>
+      </nav>
+
+      <section className="relative min-h-screen pt-40 pb-20 px-4 md:px-12 max-w-[1400px] mx-auto flex flex-col lg:flex-row items-center gap-16">
+        <div ref={heroTextRef} className="flex-1 relative z-10 w-full">
+          <div className="hero-element inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-zinc-900 border border-white/5 mb-8">
+            <MapPin className="w-3 h-3 text-zinc-400" />
+            <span className="text-xs font-medium text-zinc-300 uppercase tracking-wider">Now live in Rani</span>
+          </div>
+          
+          <h1 className="hero-element text-5xl md:text-7xl lg:text-[5.5rem] font-semibold tracking-tighter leading-[0.95] mb-8">
+            Skip the market. <br />
+            <span className="text-zinc-500">Just ask the AI.</span>
+          </h1>
+          
+          <p className="hero-element text-lg md:text-xl text-zinc-400 max-w-xl mb-12 font-normal leading-relaxed">
+            Drop your grocery list, upload a medical slip, or type what you are craving. The AI handles the stores, coordinates the delivery, and brings it to your door.
+          </p>
+          
+          <div className="hero-element flex flex-col sm:flex-row items-start gap-4">
+            <button className="bg-white text-black h-14 px-8 rounded-full text-base font-semibold hover:bg-zinc-200 transition-colors flex items-center gap-2 w-full sm:w-auto justify-center">
+              Start your first order <ArrowRight className="w-4 h-4" />
+            </button>
+            <div className="h-14 px-6 flex items-center justify-center text-sm text-zinc-500">
+              Free delivery on first 3 orders
+            </div>
+          </div>
+        </div>
+
+        <div className="flex-1 w-full relative perspective-1000 hero-element">
+          <div className="absolute inset-0 bg-gradient-to-br from-zinc-800 to-transparent blur-3xl opacity-20 rounded-full"></div>
+          <div className="relative bg-[#111] border border-white/10 rounded-[2rem] p-6 shadow-2xl transform rotate-y-[-5deg] rotate-x-[5deg]">
+            <div className="flex items-center gap-4 mb-6 border-b border-white/5 pb-4">
+              <div className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <div className="font-medium text-sm">AI Concierge</div>
+                <div className="text-xs text-green-400 flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div> Online
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-4 mb-6">
+              <div className="bg-zinc-800/50 p-4 rounded-2xl rounded-tr-sm ml-auto max-w-[85%] text-sm text-zinc-200">
+                Hey, I need 2 packets of milk, a strip of Dolo 650, and 1kg onions from the main market.
+              </div>
+              <div className="bg-black border border-white/5 p-4 rounded-2xl rounded-tl-sm mr-auto max-w-[90%]">
+                <div className="flex items-center gap-2 mb-3">
+                  <Zap className="w-4 h-4 text-zinc-400" />
+                  <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Processing</span>
+                </div>
+                <div className="space-y-2 text-sm text-zinc-300">
+                  <div className="flex justify-between items-center bg-zinc-900/50 p-2 rounded-lg">
+                    <span>Milk & Onions</span>
+                    <span className="text-zinc-500">₹140</span>
+                  </div>
+                  <div className="flex justify-between items-center bg-zinc-900/50 p-2 rounded-lg">
+                    <span>Dolo 650</span>
+                    <span className="text-zinc-500">₹30</span>
+                  </div>
+                </div>
+                <button className="w-full mt-4 bg-white text-black py-2 rounded-xl text-xs font-bold">
+                  Confirm & Pay ₹170
+                </button>
+              </div>
+            </div>
+            
+            <div className="relative">
+              <input type="text" placeholder="Type your list here..." className="w-full bg-black border border-white/10 rounded-full py-3 px-5 text-sm outline-none focus:border-zinc-500 transition-colors" />
+              <button className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full flex items-center justify-center">
+                <Send className="w-3 h-3 text-black ml-0.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-24 px-4 md:px-12 max-w-[1400px] mx-auto">
+        <div className="mb-16">
+          <h2 className="text-3xl md:text-5xl font-semibold tracking-tighter mb-4">Not just a delivery app.<br />An intelligent logistics engine.</h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 grid-rows-2 gap-4 h-auto md:h-[600px]">
+          <div ref={addToFeaturesRef} className="md:col-span-2 md:row-span-2 bg-[#111] border border-white/5 rounded-3xl p-8 md:p-12 flex flex-col justify-between group overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-zinc-800 rounded-full blur-[80px] opacity-0 group-hover:opacity-30 transition-opacity duration-700"></div>
+            <div className="relative z-10">
+              <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center mb-6">
+                <Pill className="w-5 h-5 text-white" />
+              </div>
+              <h3 className="text-3xl font-semibold mb-4">Medical Vision</h3>
+              <p className="text-zinc-400 text-lg max-w-md">Our AI can read handwritten prescriptions. Just take a photo, and we will cross-reference it with pharmacies in Rani to find exact matches immediately.</p>
+            </div>
+            <div className="relative mt-8 h-48 w-full bg-black rounded-xl border border-white/5 overflow-hidden flex items-center justify-center">
+               <div className="text-zinc-600 font-mono text-sm">Scanning prescription.jpg...</div>
+            </div>
+          </div>
+
+          <div ref={addToFeaturesRef} className="md:col-span-2 bg-[#111] border border-white/5 rounded-3xl p-8 flex flex-col justify-center relative overflow-hidden group">
+            <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center mb-4">
+              <ShoppingBag className="w-4 h-4 text-white" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Smart Kirana Routing</h3>
+            <p className="text-zinc-400 text-sm">We don't just go to one shop. The AI splits your list to get the freshest vegetables from the mandi and packaged goods from the supermarket simultaneously.</p>
+          </div>
+
+          <div ref={addToFeaturesRef} className="md:col-span-1 bg-[#111] border border-white/5 rounded-3xl p-8 flex flex-col justify-center">
+            <div className="text-4xl font-bold mb-2">15m</div>
+            <p className="text-zinc-400 text-sm font-medium">Average local delivery time within city limits.</p>
+          </div>
+
+          <div ref={addToFeaturesRef} className="md:col-span-1 bg-[#111] border border-white/5 rounded-3xl p-8 flex flex-col justify-center">
+            <div className="w-10 h-10 bg-white text-black rounded-full flex items-center justify-center mb-4">
+              <Utensils className="w-4 h-4" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Food Delivery</h3>
+            <p className="text-zinc-400 text-sm">Partnered with all major restaurants in town.</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-32 px-4 relative">
+        <div ref={mockUpRef} className="max-w-[1400px] mx-auto bg-white text-black rounded-[3rem] p-12 md:p-24 flex flex-col items-center text-center">
+          <h2 className="text-4xl md:text-6xl font-bold tracking-tighter mb-6 max-w-3xl">
+            Ready to change how you shop locally?
+          </h2>
+          <p className="text-lg text-zinc-600 mb-10 max-w-xl">
+            Join the beta today. Upload your list and let the system do the heavy lifting.
+          </p>
+          <button className="bg-black text-white px-10 py-5 rounded-full text-lg font-medium hover:scale-105 transition-transform duration-300">
+            Create Free Account
+          </button>
+        </div>
+      </section>
+
+      <footer className="bg-[#050505] pt-20 pb-10 px-4 md:px-12 border-t border-white/5">
+        <div className="max-w-[1400px] mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-12 mb-16">
+            <div className="md:col-span-2">
+              <div className="text-2xl font-bold tracking-tighter flex items-center gap-2 mb-6">
+                <div className="w-6 h-6 bg-white rounded-full"></div>
+                AI.Local
+              </div>
+              <p className="text-zinc-500 text-sm max-w-xs mb-6">
+                The first artificial intelligence logistics layer built specifically for local Indian markets. Starting right here.
+              </p>
+              <div className="flex items-center gap-2 text-sm text-zinc-400">
+                <MapPin className="w-4 h-4" />
+                Operating in Rani, Rajasthan
+              </div>
+            </div>
+            
+            <div>
+              <h4 className="text-white font-medium mb-4">Product</h4>
+              <ul className="space-y-3 text-sm text-zinc-500">
+                <li><a href="#" className="hover:text-white transition-colors">Order Food</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Grocery List</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Pharmacy Upload</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Pricing & Fees</a></li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="text-white font-medium mb-4">Company</h4>
+              <ul className="space-y-3 text-sm text-zinc-500">
+                <li><a href="#" className="hover:text-white transition-colors">About Us</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Partner Stores</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Careers</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Contact Support</a></li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="text-white font-medium mb-4">Stay Updated</h4>
+              <p className="text-sm text-zinc-500 mb-4">Get notified about new features and store additions.</p>
+              <div className="flex gap-2">
+                <input type="email" placeholder="Email address" className="bg-[#111] border border-white/10 rounded-lg px-4 py-2 text-sm w-full outline-none focus:border-zinc-500" />
+                <button className="bg-white text-black px-4 py-2 rounded-lg text-sm font-medium">Join</button>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col md:flex-row justify-between items-center pt-8 border-t border-white/5 text-sm text-zinc-600 gap-4">
+            <div>© 2026 AI.Local. All rights reserved.</div>
+            <div className="flex gap-6">
+              <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
+              <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
+              <a href="#" className="hover:text-white transition-colors">Shipping Policy</a>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+} */

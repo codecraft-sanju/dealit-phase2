@@ -10,7 +10,7 @@ import {
   SharedStyles, MagicPoints,
   SUGGESTIONS, extractCarouselFromReply,
   TypingLoader, SoundWave,
-  BotMessage, BotUIBlock, MessageFooter,
+  BotMessage, MessageFooter,
 } from './AiChatShared';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
@@ -29,11 +29,11 @@ const FloatingAIAssistant = ({ user }) => {
   const [voiceState,            setVoiceState]            = useState('idle');
   const [isPremiumVoiceLimited, setIsPremiumVoiceLimited] = useState(false);
   const [isChatLimited,         setIsChatLimited]         = useState(false);
-  const [chatMode,              setChatMode]              = useState(
-    () => localStorage.getItem('dealit_ai_mode') || 'dealit',
-  );
   const [isOffline,             setIsOffline]             = useState(!navigator.onLine);
   const [buttonState,           setButtonState]           = useState('bot');
+
+  // Hardcoded to always be in strict mode for the floating assistant
+  const chatMode = 'dealit';
 
   const messagesEndRef    = useRef(null);
   const abortControllerRef = useRef(null);
@@ -88,25 +88,12 @@ const FloatingAIAssistant = ({ user }) => {
     return () => clearInterval(id);
   }, [isOpen]);
 
-  // ---------- sync chat mode ----------
-  useEffect(() => {
-    const sync = () => setChatMode(localStorage.getItem('dealit_ai_mode') || 'dealit');
-    window.addEventListener('storage', sync);
-    return () => window.removeEventListener('storage', sync);
-  }, []);
-
   // ---------- scroll ----------
   const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   useEffect(() => {
     if (isOpen && voiceState === 'idle') scrollToBottom();
   }, [messages, isOpen, isLoading, voiceState]);
 
-  // ---------- mode toggle ----------
-  const handleToggleMode = () => {
-    const next = chatMode === 'dealit' ? 'general' : 'dealit';
-    setChatMode(next);
-    localStorage.setItem('dealit_ai_mode', next);
-  };
 
   // ---------- voice ----------
   const fallbackToNativeSpeech = (text, pref) => {
@@ -189,13 +176,18 @@ const FloatingAIAssistant = ({ user }) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         credentials: 'include',
-        body: JSON.stringify({ message: userMessage, sessionId: currentSessionId, isSmartContextEnabled: smartContext, chatMode }),
+        body: JSON.stringify({ 
+          message: userMessage, 
+          sessionId: currentSessionId, 
+          isSmartContextEnabled: smartContext, 
+          chatMode: chatMode,
+          disableUI: true 
+        }),
         signal: abortControllerRef.current.signal,
       });
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        // FIX: floating AI was missing 429 handling entirely
         if (response.status === 429 || errData.errorCode === 'DAILY_CHAT_LIMIT_REACHED') {
           setIsChatLimited(true);
           setVoiceState('idle');
@@ -208,14 +200,12 @@ const FloatingAIAssistant = ({ user }) => {
       const reader  = response.body.getReader();
       const decoder = new TextDecoder('utf-8');
       let botReply  = '';
-      // FIX: Added streamBuffer to handle network chunking
       let streamBuffer = '';
 
       outer: while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        // FIX: Buffer implementation
         streamBuffer += decoder.decode(value, { stream: true });
         const lines = streamBuffer.split('\n');
         streamBuffer = lines.pop();
@@ -276,7 +266,6 @@ const FloatingAIAssistant = ({ user }) => {
     setMessages((prev) => [
       ...prev,
       { id: Date.now(), role: 'user', content: userMessage, timestamp: ts },
-      // Streaming placeholder — role 'bot', content empty, streaming flag
       { id: botMsgId, role: 'bot', content: '', streaming: true, timestamp: ts },
     ]);
     setInput('');
@@ -291,7 +280,13 @@ const FloatingAIAssistant = ({ user }) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         credentials: 'include',
-        body: JSON.stringify({ message: userMessage, sessionId: currentSessionId, isSmartContextEnabled: smartContext, chatMode }),
+        body: JSON.stringify({ 
+          message: userMessage, 
+          sessionId: currentSessionId, 
+          isSmartContextEnabled: smartContext, 
+          chatMode: chatMode,
+          disableUI: true
+        }),
         signal: abortControllerRef.current.signal,
       });
 
@@ -301,7 +296,7 @@ const FloatingAIAssistant = ({ user }) => {
           setIsChatLimited(true);
           setIsLoading(false);
           isStreamingRef.current = false;
-       
+        
           setMessages((prev) => prev.filter((m) => m.id !== botMsgId));
           return;
         }
@@ -311,7 +306,6 @@ const FloatingAIAssistant = ({ user }) => {
       const reader  = response.body.getReader();
       const decoder = new TextDecoder('utf-8');
       let botReply  = '';
-      // FIX: Added streamBuffer to handle network chunking
       let streamBuffer = '';
       setIsLoading(false);
 
@@ -319,7 +313,6 @@ const FloatingAIAssistant = ({ user }) => {
         const { done, value } = await reader.read();
         if (done) break;
 
-        // FIX: Buffer implementation
         streamBuffer += decoder.decode(value, { stream: true });
         const lines = streamBuffer.split('\n');
         streamBuffer = lines.pop();
@@ -338,7 +331,7 @@ const FloatingAIAssistant = ({ user }) => {
                 .filter((p) => p.content.trim())
                 .map((p, idx) => ({
                   id: `${botMsgId}_${idx}`,
-                  role: p.type === 'ui' ? 'bot_ui' : 'bot',
+                  role: 'bot', 
                   content: p.content,
                   timestamp: ts,
                 }));
@@ -355,7 +348,7 @@ const FloatingAIAssistant = ({ user }) => {
               setCurrentSessionId(parsed.sessionId);
               continue;
             }
-       
+        
             botReply += parsed.content;
             setMessages((prev) =>
               prev.map((m) =>
@@ -436,16 +429,9 @@ const FloatingAIAssistant = ({ user }) => {
                       <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
                       Online
                     </p>
-                    <button
-                      onClick={handleToggleMode}
-                      className={`text-[9px] px-1.5 py-0.5 rounded border transition-colors
-                        ${chatMode === 'general'
-                          ? 'bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20'
-                          : 'bg-purple-500/10 border-purple-500/30 text-purple-400 hover:bg-purple-500/20'}`}
-                      title="Toggle AI mode"
-                    >
-                      {chatMode === 'general' ? 'General Mode' : 'Dealit Mode'}
-                    </button>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded border bg-purple-500/10 border-purple-500/30 text-purple-400">
+                      Dealit Mode
+                    </span>
                   </div>
                 </div>
               </div>
@@ -533,14 +519,6 @@ const FloatingAIAssistant = ({ user }) => {
                   </motion.div>
                 ) : (
                   messages.map((msg) => {
-                    if (msg.role === 'bot_ui') {
-                      return (
-                        <div key={msg.id} className="w-full">
-                          <BotUIBlock content={msg.content} navigate={navigate} variant="compact" />
-                        </div>
-                      );
-                    }
-
                     return (
                       <motion.div
                         key={msg.id}

@@ -24,9 +24,22 @@ const CODE_SUGGESTIONS = [
   "How do I fix a CORS error in my API?"
 ];
 
-// ---------------------------------------------------------------------------
-// Payment Processing Animation (User Provided)
-// ---------------------------------------------------------------------------
+const GENERAL_SUGGESTIONS = [
+  "Explain quantum computing simply",
+  "Give me a 3 day workout plan",
+  "Write a short story about space",
+  "What are some healthy dinner ideas?"
+];
+
+
+const SidebarTooltip = ({ text }) => (
+  <div className="absolute left-full ml-4 px-3.5 py-2 bg-[#e5e7eb] text-gray-900 text-[13px] font-bold tracking-wide rounded-[10px] opacity-0 group-hover:opacity-100 pointer-events-none z-[100] whitespace-nowrap shadow-lg transition-all duration-200 translate-x-[-8px] group-hover:translate-x-0 flex items-center">
+    {text}
+    <div className="absolute left-[-4px] top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-[#e5e7eb] rotate-45 rounded-[1px]" />
+  </div>
+);
+
+
 const PaymentCarLoader = () => (
   <>
     <style>{`
@@ -176,7 +189,6 @@ const PaymentCarLoader = () => (
     </motion.div>
   </>
 );
-
 
 // ---------------------------------------------------------------------------
 // Voice Animation Styles
@@ -333,8 +345,11 @@ const AiChatPage = ({ user }) => {
   const isStreamingRef     = useRef(false);
   const textareaRef        = useRef(null);
 
-  // Setup dynamic suggestions based on the mode
-  const currentSuggestions = chatMode === 'code' ? CODE_SUGGESTIONS : SUGGESTIONS;
+  const currentSuggestions = chatMode === 'code' 
+    ? CODE_SUGGESTIONS 
+    : chatMode === 'general' 
+      ? GENERAL_SUGGESTIONS 
+      : SUGGESTIONS;
 
   useEffect(() => {
     if (user?.account_credits !== undefined) {
@@ -505,7 +520,6 @@ const AiChatPage = ({ user }) => {
   }, [routeSessionId, navigate]);
 
   const handleNewChat = () => {
-    // If they were in code mode, gently push back to default mode on New Chat
     if (chatMode === 'code') {
       setChatMode('dealit');
       localStorage.setItem('dealit_ai_mode', 'dealit');
@@ -938,7 +952,6 @@ const AiChatPage = ({ user }) => {
     }
   };
 
-  // ---------- Premium Unlock Implementation ----------
   const handleUnlockAI = async () => {
     setIsPurchasingReset(true);
     try {
@@ -961,7 +974,6 @@ const AiChatPage = ({ user }) => {
         return; 
       }
       
-      // Update Live Balance from API response
       if (data.account_credits !== undefined) {
         setLocalCredits(data.account_credits);
       }
@@ -995,7 +1007,6 @@ const AiChatPage = ({ user }) => {
     >
       <SharedStyles />
 
-      {/* Sidebar backdrop */}
       {isSidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-[55] md:hidden"
@@ -1011,7 +1022,7 @@ const AiChatPage = ({ user }) => {
         {isPurchasingReset && <PaymentCarLoader />}
       </AnimatePresence>
 
-      {/* ── NEW PREMIUM SUCCESS ANIMATION (Receipt Style) ── */}
+      {/* Premium Success Animation */}
       <AnimatePresence>
         {showSuccessAnim && !isPurchasingReset && (
           <motion.div
@@ -1027,11 +1038,9 @@ const AiChatPage = ({ user }) => {
               transition={{ type: 'spring', damping: 20, stiffness: 300 }}
               className="relative w-[90%] max-w-sm overflow-hidden rounded-[2rem] bg-[#0A0A0A] border border-white/10 p-8 shadow-[0_0_80px_-15px_rgba(168,85,247,0.4)]"
             >
-              {/* Animated Background Glow Orbs */}
               <div className="absolute -top-24 -right-24 w-48 h-48 bg-purple-500/30 blur-[60px] rounded-full" />
               <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-emerald-500/20 blur-[60px] rounded-full" />
 
-              {/* Central Premium Icon */}
               <div className="flex justify-center mb-6 relative z-10">
                 <motion.div
                   initial={{ scale: 0, rotate: -180 }}
@@ -1045,7 +1054,6 @@ const AiChatPage = ({ user }) => {
                 </motion.div>
               </div>
 
-              {/* Text Content */}
               <div className="text-center relative z-10">
                 <motion.h2
                   initial={{ opacity: 0, y: 10 }}
@@ -1064,7 +1072,6 @@ const AiChatPage = ({ user }) => {
                   Your daily AI tokens have been fully restored.
                 </motion.p>
 
-                {/* Receipt / Details Box */}
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -1087,94 +1094,120 @@ const AiChatPage = ({ user }) => {
         )}
       </AnimatePresence>
 
-      {/* ── Sidebar ── */}
+      {/* ── [MODIFIED] Removed overflow-hidden from sidebar wrapper to allow Tooltips ── */}
       <div
         className={`fixed md:relative z-[60] flex flex-col h-full bg-gray-950 border-r border-gray-800 transition-all duration-300 ease-in-out
-          ${isSidebarOpen ? 'w-72 translate-x-0' : 'w-72 -translate-x-full md:w-0 md:hidden absolute'}`}
+          ${isSidebarOpen 
+            ? 'w-72 translate-x-0' 
+            : '-translate-x-full w-72 md:translate-x-0 md:w-[80px]'
+          }`}
       >
-        <div className="p-4 pb-0 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full border border-purple-500/40 overflow-hidden shrink-0 shadow-[0_0_10px_rgba(163,136,225,0.15)]">
+        <div className={`p-4 pb-0 flex items-center ${isSidebarOpen ? 'gap-3' : 'justify-center'}`}>
+          <div className="w-8 h-8 rounded-full border border-purple-500/40 overflow-hidden shrink-0 shadow-[0_0_10px_rgba(163,136,225,0.15)] relative group cursor-default">
             <img src="https://res.cloudinary.com/dia3qhc0x/image/upload/v1781289017/ijblexdk51vluv7ku6g9.jpg" alt="Dealit AI" className="w-full h-full object-cover" />
+            {!isSidebarOpen && <SidebarTooltip text="Dealit AI" />}
           </div>
-          <span className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-emerald-400">Dealit AI</span>
+          {isSidebarOpen && (
+            <span className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-emerald-400 whitespace-nowrap">
+              Dealit AI
+            </span>
+          )}
         </div>
 
-        <div className="p-3 flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleNewChat}
-              className="flex-1 flex items-center gap-3 p-3 rounded-xl bg-gray-800/80 hover:bg-gray-800 text-white transition-all border border-gray-700/50 shadow-sm"
-            >
-              <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-full p-1 shadow-inner">
+        <div className={`p-3 flex flex-col ${isSidebarOpen ? 'gap-2' : 'gap-4 items-center'}`}>
+          <div className="flex items-center gap-2 w-full">
+          
+          <button
+  onClick={handleNewChat}
+  className={`relative group flex items-center rounded-xl bg-[#030712] hover:bg-gray-900 text-white transition-all  shadow-sm
+    ${isSidebarOpen ? 'p-3 gap-3 w-full' : 'justify-center w-12 h-12'}`}
+>
+              <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-full p-1 shadow-inner shrink-0">
                 <Plus className="w-4 h-4 text-white" />
               </div>
-              <span className="font-semibold text-sm">New Chat</span>
-            </button>
-            <button
-              onClick={() => setIsSidebarOpen(false)}
-              className="md:hidden p-3 bg-gray-800 hover:bg-gray-700 rounded-xl text-gray-400 hover:text-white transition-colors border border-gray-700/50"
-            >
-              <X className="w-5 h-5" />
+              {isSidebarOpen && <span className="font-semibold text-sm whitespace-nowrap">New Chat</span>}
+              {!isSidebarOpen && <SidebarTooltip text="New chat" />}
             </button>
           </div>
-          <button
-            onClick={handleCodeChat}
-            className="w-full flex items-center gap-3 p-3 rounded-xl bg-gray-800/80 hover:bg-gray-800 text-white transition-all border border-gray-700/50 shadow-sm"
-          >
-            <div className="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-full p-1 shadow-inner">
+          
+      
+      <button
+  onClick={handleCodeChat}
+  className={`relative group flex items-center rounded-xl bg-[#030712] hover:bg-gray-900 text-white transition-all  shadow-sm
+    ${isSidebarOpen ? 'p-3 gap-3 w-full' : 'justify-center w-12 h-12'}`}
+>
+            <div className="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-full p-1 shadow-inner shrink-0">
               <Code className="w-4 h-4 text-white" />
             </div>
-            <span className="font-semibold text-sm">&lt;/&gt; Code Assistant</span>
+            {isSidebarOpen && <span className="font-semibold text-sm whitespace-nowrap">&lt;/&gt; Code Assistant</span>}
+            {!isSidebarOpen && <SidebarTooltip text="Code Assistant" />}
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-3 py-2 ai-no-scrollbar">
-          <div className="text-xs font-bold tracking-wider text-gray-500 mb-3 px-2 uppercase">Recent Chats</div>
-          <div className="space-y-1">
-            {sessions.map((session) => (
-              <div
-                key={session._id}
-                onClick={() => selectSession(session._id)}
-                className={`group flex items-center justify-between w-full p-2.5 rounded-lg cursor-pointer transition-colors border
-                  ${routeSessionId === session._id || currentSessionId === session._id
-                    ? 'bg-gray-800/80 text-gray-200 border-gray-700/50'
-                    : 'hover:bg-gray-800/50 text-gray-400 hover:text-gray-200 border-transparent'}`}
-              >
-                <div className="flex items-center gap-3 overflow-hidden">
-                  <MessageSquare className="w-4 h-4 flex-shrink-0" />
-                  <span className="truncate text-sm font-medium text-left">{session.title || 'Chat Session'}</span>
-                </div>
-                <button
-                  onClick={(e) => deleteSession(e, session._id)}
-                  className="p-1 text-gray-500 hover:bg-red-500/20 hover:text-red-400 rounded transition-all"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+        {/* [MODIFIED] Wrapped recent chats block entirely inside {isSidebarOpen} to hide it completely when collapsed */}
+        <div className={`flex-1 overflow-y-auto px-3 py-2 ai-no-scrollbar`}>
+          {isSidebarOpen && (
+            <>
+              <div className="text-xs font-bold tracking-wider text-gray-500 mb-3 px-2 uppercase">Recent Chats</div>
+              <div className="space-y-1">
+                {sessions.map((session) => (
+                  <div
+                    key={session._id}
+                    onClick={() => selectSession(session._id)}
+                    className={`group flex items-center justify-between w-full p-2.5 rounded-lg cursor-pointer transition-colors border
+                      ${routeSessionId === session._id || currentSessionId === session._id
+                        ? 'bg-gray-800/80 text-gray-200 border-gray-700/50'
+                        : 'hover:bg-gray-800/50 text-gray-400 hover:text-gray-200 border-transparent'}`}
+                  >
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <MessageSquare className="w-4 h-4 flex-shrink-0" />
+                      <span className="truncate text-sm font-medium text-left">{session.title || 'Chat Session'}</span>
+                    </div>
+                    <button
+                      onClick={(e) => deleteSession(e, session._id)}
+                      className="p-1 text-gray-500 hover:bg-red-500/20 hover:text-red-400 rounded transition-all"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+                {sessions.length === 0 && (
+                  <p className="text-xs text-gray-600 text-center mt-4">No recent chats found.</p>
+                )}
               </div>
-            ))}
-            {sessions.length === 0 && (
-              <p className="text-xs text-gray-600 text-center mt-4">No recent chats found.</p>
-            )}
-          </div>
+            </>
+          )}
         </div>
 
-        <div className="p-3 border-t border-gray-800/80 space-y-1 bg-gray-950 flex-shrink-0">
+        <div className={`p-3 border-t border-gray-800/80 space-y-2 bg-gray-950 flex-shrink-0 ${isSidebarOpen ? '' : 'flex flex-col items-center'}`}>
+          {/* [MODIFIED] Added group + Tooltip for Settings */}
           <button
-            onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-            className={`flex items-center justify-between w-full p-2.5 rounded-lg transition-colors
-              ${isSettingsOpen ? 'bg-gray-800/80 text-white' : 'hover:bg-gray-800/50 text-gray-400 hover:text-gray-200'}`}
+            onClick={() => {
+              if (!isSidebarOpen) {
+                setIsSidebarOpen(true);
+                setIsSettingsOpen(true);
+              } else {
+                setIsSettingsOpen(!isSettingsOpen);
+              }
+            }}
+            className={`relative group flex items-center transition-colors rounded-lg
+              ${isSettingsOpen ? 'bg-gray-800/80 text-white' : 'hover:bg-gray-800/50 text-gray-400 hover:text-gray-200'}
+              ${isSidebarOpen ? 'justify-between w-full p-2.5' : 'justify-center w-12 h-12'}`}
           >
-            <div className="flex items-center gap-3">
-              <Settings className="w-5 h-5" />
-              <span className="text-sm font-medium">Settings</span>
+            <div className={`flex items-center ${isSidebarOpen ? 'gap-3' : 'justify-center'}`}>
+              <Settings className="w-5 h-5 shrink-0" />
+              {isSidebarOpen && <span className="text-sm font-medium whitespace-nowrap">Settings</span>}
             </div>
-            <motion.div animate={{ rotate: isSettingsOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
-              <ChevronDown className="w-4 h-4" />
-            </motion.div>
+            {isSidebarOpen && (
+              <motion.div animate={{ rotate: isSettingsOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                <ChevronDown className="w-4 h-4 shrink-0" />
+              </motion.div>
+            )}
+            {!isSidebarOpen && <SidebarTooltip text="Settings" />}
           </button>
 
           <AnimatePresence>
-            {isSettingsOpen && (
+            {isSidebarOpen && isSettingsOpen && (
               <motion.div
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
@@ -1217,12 +1250,15 @@ const AiChatPage = ({ user }) => {
             )}
           </AnimatePresence>
 
+          {/* [MODIFIED] Added group + Tooltip for Help & FAQ */}
           <button
             onClick={() => navigate('/help-support')}
-            className="flex items-center gap-3 w-full p-2.5 rounded-lg hover:bg-gray-800/50 text-gray-400 hover:text-gray-200 transition-colors"
+            className={`relative group flex items-center transition-colors rounded-lg hover:bg-gray-800/50 text-gray-400 hover:text-gray-200
+              ${isSidebarOpen ? 'gap-3 w-full p-2.5' : 'justify-center w-12 h-12'}`}
           >
-            <HelpCircle className="w-5 h-5" />
-            <span className="text-sm font-medium">Help & FAQ</span>
+            <HelpCircle className="w-5 h-5 shrink-0" />
+            {isSidebarOpen && <span className="text-sm font-medium whitespace-nowrap">Help & FAQ</span>}
+            {!isSidebarOpen && <SidebarTooltip text="Help & FAQ" />}
           </button>
         </div>
       </div>
@@ -1257,18 +1293,21 @@ const AiChatPage = ({ user }) => {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute top-full left-0 mt-3 w-48 bg-[#2A2A2A] border border-gray-700/50 rounded-xl shadow-2xl overflow-hidden z-50"
+                    className="absolute top-full left-0 mt-3 w-56 bg-[#2A2A2A] border border-gray-700/50 rounded-xl shadow-2xl overflow-hidden z-50"
                   >
                     {['dealit', 'general', 'code'].map((mode) => (
                       <button
                         key={mode}
                         onClick={() => handleModeChange(mode)}
-                        className={`w-full text-left px-4 py-3 text-sm transition-colors
+                        className={`w-full text-left px-4 py-3 text-sm transition-colors border-b border-gray-700/30 last:border-0
                           ${chatMode === mode
                             ? 'bg-purple-500/20 text-white'
                             : 'text-gray-300 hover:bg-gray-700/50 hover:text-white'}`}
                       >
-                        {mode === 'dealit' ? 'Dealit Strict' : mode === 'code' ? 'Code Assistant' : 'General AI'}
+                        <div className="font-semibold">{mode === 'dealit' ? 'Dealit Strict' : mode === 'code' ? 'Code Assistant' : 'General AI'}</div>
+                        <div className="text-xs text-gray-400 mt-0.5">
+                          {mode === 'dealit' ? 'Focused on marketplace & trades' : mode === 'code' ? 'Programming & debug help' : 'Open-ended general chat'}
+                        </div>
                       </button>
                     ))}
                   </motion.div>
@@ -1336,6 +1375,7 @@ const AiChatPage = ({ user }) => {
                     <img src="https://res.cloudinary.com/dia3qhc0x/image/upload/v1781289017/ijblexdk51vluv7ku6g9.jpg" alt="Dealit AI" className="w-16 h-16 rounded-full object-cover relative z-10" />
                   )}
                 </motion.div>
+                
                 <motion.h2
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -1345,8 +1385,13 @@ const AiChatPage = ({ user }) => {
                       ? 'bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-400' 
                       : 'bg-gradient-to-r from-purple-400 via-emerald-400 to-purple-400'}`}
                 >
-                  {chatMode === 'code' ? 'Code Assistant' : `Welcome to Dealit AI${user?.full_name ? `, ${user.full_name.split(' ')[0]}` : ''}!`}
+                  {chatMode === 'code' 
+                    ? 'Code Assistant' 
+                    : chatMode === 'general' 
+                      ? 'General AI' 
+                      : `Welcome to Dealit AI${user?.full_name ? `, ${user.full_name.split(' ')[0]}` : ''}!`}
                 </motion.h2>
+
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -1355,7 +1400,9 @@ const AiChatPage = ({ user }) => {
                 >
                   {chatMode === 'code' 
                     ? 'Your unrestricted expert for writing, debugging, and refactoring code.' 
-                    : 'Your personal assistant for trades, credits, and navigating the Dealit marketplace.'}
+                    : chatMode === 'general'
+                      ? 'Your versatile AI assistant. Ask me anything outside of the marketplace!'
+                      : 'Your personal assistant for trades, credits, and navigating the Dealit marketplace.'}
                 </motion.p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
                   {currentSuggestions.map((text, i) => (
@@ -1483,7 +1530,11 @@ const AiChatPage = ({ user }) => {
                     onKeyDown={handleKeyDown}
                     onFocus={() => setIsInputFocused(true)}
                     onBlur={() => setIsInputFocused(false)}
-                    placeholder={chatMode === 'code' ? "Ask Code Assistant..." : "Ask Dealit AI..."}
+                    placeholder={
+                      chatMode === 'code' ? "Ask Code Assistant..." : 
+                      chatMode === 'general' ? "Ask me anything..." : 
+                      "Ask about trades, items, credits..."
+                    }
                     className="relative z-10 w-full bg-gray-900 border border-gray-700 rounded-[24px] py-[14px] pl-5 pr-12 text-base md:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-transparent transition-all shadow-inner resize-none overflow-y-auto ai-no-scrollbar max-h-[80px]"
                     style={{ minHeight: '52px' }}
                   />

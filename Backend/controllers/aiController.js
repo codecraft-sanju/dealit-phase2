@@ -26,7 +26,6 @@ const aiChatLimiter = rateLimit({
   }
 });
 
-
 const checkAndConsumeAIToken = async (userId, type) => {
   const now = new Date();
   const startOfToday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
@@ -264,7 +263,8 @@ const processChat = async (req, res) => {
   });
 
   try {
-    const { message, sessionId, isSmartContextEnabled, chatMode } = req.body;
+    // MODIFIED: Destructure disableUI from body
+    const { message, sessionId, isSmartContextEnabled, chatMode, disableUI } = req.body;
     const userId = req.user._id;
     const userRole = req.user.role; 
     
@@ -411,7 +411,8 @@ const processChat = async (req, res) => {
       return res.end();
     }
 
-    let systemPrompt = prompts.getBaseSystemPrompt(user, chatMode);
+    // MODIFIED: Pass disableUI flag here
+    let systemPrompt = prompts.getBaseSystemPrompt(user, chatMode, disableUI);
 
     if (isSmartContextEnabled !== false) {
       const activeInventoryStr = myItems.length > 0 ? myItems.map(i => `- ${i.title} (${i.estimated_value} credits)`).join('\n') : 'No active items listed.';
@@ -716,58 +717,84 @@ const synthesizeVoice = async (req, res) => {
 
     const MALE_VOICE_ID = 'pNInz6obpgDQGcFmaJgB';
     const FEMALE_VOICE_ID = 'EXAVITQu4vr4xnSDxMaL';
-
     const voiceId = voicePref === 'male' ? MALE_VOICE_ID : FEMALE_VOICE_ID;
     const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
 
-    if (!ELEVENLABS_API_KEY) {
-      return res.status(500).json({ success: false, message: 'API Key missing' });
-    }
+    try {
+      if (!ELEVENLABS_API_KEY) {
+        throw new Error('ElevenLabs API Key missing');
+      }
 
-    const response = await axios({
-      method: 'POST',
-      url: `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
-      headers: {
-        'Accept': 'audio/mpeg',
-        'xi-api-key': ELEVENLABS_API_KEY,
-        'Content-Type': 'application/json',
-      },
-      data: {
-        text: text,
-        model_id: 'eleven_multilingual_v2',
-        voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.75,
+      const response = await axios({
+        method: 'POST',
+        url: `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
+        headers: {
+          'Accept': 'audio/mpeg',
+          'xi-api-key': ELEVENLABS_API_KEY,
+          'Content-Type': 'application/json',
+        },
+        data: {
+          text: text,
+          model_id: 'eleven_multilingual_v2',
+          voice_settings: {
+            stability: 0.5,
+            similarity_boost: 0.75,
+          }
+        },
+        responseType: 'stream'
+      });
+
+      console.log('🟢 [TTS] SUCCESS: Using ElevenLabs API');
+      
+      res.setHeader('Content-Type', 'audio/mpeg');
+      return response.data.pipe(res);
+
+    } catch (elevenLabsError) {
+      console.log('⚠️ [TTS] ElevenLabs failed/credits exhausted. Falling back to Deepgram...');
+
+      const DEEPGRAM_API_KEY = process.env.DEEPGRAM_API_KEY;
+      const deepgramVoiceId = voicePref === 'male' ? 'aura-orion-en' : 'aura-asteria-en';
+
+      try {
+        if (!DEEPGRAM_API_KEY) {
+          throw new Error('Deepgram API Key missing');
         }
-      },
-      responseType: 'stream'
-    });
 
-    res.setHeader('Content-Type', 'audio/mpeg');
-    response.data.pipe(res);
+        const deepgramResponse = await axios({
+          method: 'POST',
+          url: `https://api.deepgram.com/v1/speak?model=${deepgramVoiceId}`,
+          headers: {
+            'Authorization': `Token ${DEEPGRAM_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          data: {
+            text: text
+          },
+          responseType: 'stream'
+        });
+
+        console.log('🟢 [TTS] SUCCESS: Using Deepgram API');
+        
+        res.setHeader('Content-Type', 'audio/mpeg');
+        return deepgramResponse.data.pipe(res);
+
+      } catch (deepgramError) {
+        console.log('🔴 [TTS] Deepgram also failed. Using Chrome/Client Native API.');
+        
+        if (!res.headersSent) {
+          return res.status(503).json({
+            success: false,
+            errorCode: 'USE_CLIENT_TTS',
+            message: 'All premium voice providers failed. Please use native browser TTS.'
+          });
+        }
+      }
+    }
   } catch (error) {
     let errorCode = 'SERVER_ERROR';
     let statusCode = 500;
-
-    if (error.response) {
-      statusCode = error.response.status;
-      
-      if (statusCode === 401 || statusCode === 429) {
-        errorCode = 'QUOTA_EXCEEDED';
-      }
-
-      if (error.response.data && typeof error.response.data.on === 'function') {
-        let errorMsg = '';
-        error.response.data.on('data', chunk => {
-          errorMsg += chunk.toString();
-        });
-        error.response.data.on('end', () => {
-          console.error(' ElevenLabs Exact Error:', errorMsg);
-        });
-      }
-    } else {
-      console.error('ElevenLabs API error:', error.message);
-    }
+    
+    console.error('Voice system critical error:', error.message);
     
     if (!res.headersSent) {
       res.status(statusCode).json({ 
