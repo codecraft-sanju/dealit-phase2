@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Send, Sparkles, Plus, Settings, HelpCircle, MessageSquare, X, Trash2,
-  Minimize2, ChevronDown, Mic, User, WifiOff, Check, Unlock, Code
+  Minimize2, ChevronDown, Mic, User, WifiOff, Check, Unlock, Code, Image as ImageIcon
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -12,6 +12,7 @@ import {
   SUGGESTIONS, extractCarouselFromReply,
   TypingLoader, SoundWave,
   BotMessage, BotUIBlock, MessageFooter,
+  ImageGenLoader, BotImageMessage // [NEW] Imported from Shared
 } from './AiChatShared';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
@@ -31,6 +32,12 @@ const GENERAL_SUGGESTIONS = [
   "What are some healthy dinner ideas?"
 ];
 
+const IMAGE_SUGGESTIONS = [
+  "A detailed photorealistic cyberpunk anime portrait",
+  "Cinematic 3D motion graphics of a tech gadget",
+  "A futuristic smart city rendered in Octane",
+  "Premium commercial product photography of a watch"
+];
 
 const SidebarTooltip = ({ text }) => (
   <div className="absolute left-full ml-4 px-3.5 py-2 bg-[#e5e7eb] text-gray-900 text-[13px] font-bold tracking-wide rounded-[10px] opacity-0 group-hover:opacity-100 pointer-events-none z-[100] whitespace-nowrap shadow-lg transition-all duration-200 translate-x-[-8px] group-hover:translate-x-0 flex items-center">
@@ -38,7 +45,6 @@ const SidebarTooltip = ({ text }) => (
     <div className="absolute left-[-4px] top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-[#e5e7eb] rotate-45 rounded-[1px]" />
   </div>
 );
-
 
 const PaymentCarLoader = () => (
   <>
@@ -51,41 +57,30 @@ const PaymentCarLoader = () => (
       }
 
       .pay-car {
-        position: absolute;
-        top: 50%; left: 50%;
-        margin-left: -50px;
-        animation: pay-speeder 0.4s linear infinite;
-        z-index: 10;
+        position: absolute; top: 50%; left: 50%; margin-left: -50px;
+        animation: pay-speeder 0.4s linear infinite; z-index: 10;
       }
 
       .pay-car > span {
-        height: 5px; width: 35px;
-        background: #f51313;
-        position: absolute;
-        top: -19px; left: 60px;
-        border-radius: 2px 10px 1px 0;
+        height: 5px; width: 35px; background: #f51313; position: absolute;
+        top: -19px; left: 60px; border-radius: 2px 10px 1px 0;
       }
 
       .pay-base span {
-        position: absolute;
-        width: 0; height: 0;
-        border-top: 6px solid transparent;
-        border-right: 100px solid #f3cfcf;
+        position: absolute; width: 0; height: 0;
+        border-top: 6px solid transparent; border-right: 100px solid #f3cfcf;
         border-bottom: 6px solid transparent;
       }
 
       .pay-base span:before {
-        content: ""; height: 22px; width: 22px;
-        border-radius: 50%; background: #f3cfcf;
-        position: absolute; right: -110px; top: -16px;
+        content: ""; height: 22px; width: 22px; border-radius: 50%;
+        background: #f3cfcf; position: absolute; right: -110px; top: -16px;
       }
 
       .pay-base span:after {
         content: ""; position: absolute; width: 0; height: 0;
-        border-top: 0 solid transparent;
-        border-right: 55px solid #f3cfcf;
-        border-bottom: 16px solid transparent;
-        top: -16px; right: -98px;
+        border-top: 0 solid transparent; border-right: 55px solid #f3cfcf;
+        border-bottom: 16px solid transparent; top: -16px; right: -98px;
       }
 
       .pay-face {
@@ -95,15 +90,13 @@ const PaymentCarLoader = () => (
       }
 
       .pay-face:after {
-        content: ""; height: 12px; width: 12px;
-        background: #f51313; right: 4px; top: 7px;
-        position: absolute; transform: rotate(40deg);
+        content: ""; height: 12px; width: 12px; background: #f51313;
+        right: 4px; top: 7px; position: absolute; transform: rotate(40deg);
         transform-origin: 50% 50%; border-radius: 0 0 2px 2px;
       }
 
       .pay-car > span > span {
-        width: 30px; height: 1px;
-        background: #ffffff; position: absolute;
+        width: 30px; height: 1px; background: #ffffff; position: absolute;
       }
 
       .pay-car > span > span:nth-child(1) { animation: pay-fazer1 0.2s linear infinite; }
@@ -189,7 +182,6 @@ const PaymentCarLoader = () => (
     </motion.div>
   </>
 );
-
 
 const VoiceAnimationStyles = () => (
   <style>{`
@@ -307,6 +299,8 @@ const AiChatPage = ({ user }) => {
     const saved = localStorage.getItem('dealit_ai_context');
     return saved !== null ? JSON.parse(saved) : true;
   });
+  
+  // [MODIFIED] Using 'image' as a standard chat mode now instead of a popup
   const [chatMode, setChatMode] = useState(
     () => localStorage.getItem('dealit_ai_mode') || 'dealit',
   );
@@ -334,9 +328,11 @@ const AiChatPage = ({ user }) => {
 
   const currentSuggestions = chatMode === 'code' 
     ? CODE_SUGGESTIONS 
-    : chatMode === 'general' 
-      ? GENERAL_SUGGESTIONS 
-      : SUGGESTIONS;
+    : chatMode === 'image' // [NEW] Suggestions for Image Mode
+      ? IMAGE_SUGGESTIONS
+      : chatMode === 'general' 
+        ? GENERAL_SUGGESTIONS 
+        : SUGGESTIONS;
 
   useEffect(() => {
     if (user?.account_credits !== undefined) {
@@ -485,6 +481,9 @@ const AiChatPage = ({ user }) => {
             id: msg._id || `hist_${idx}`,
             role: msg.role === 'assistant' ? 'bot' : msg.role,
             content: msg.content,
+            type: msg.type || 'text', // Handle legacy texts
+            imageUrl: msg.imageUrl, // Handle stored images
+            prompt: msg.prompt,
             timestamp: new Date(msg.createdAt || Date.now()).toLocaleTimeString([], {
               hour: '2-digit', minute: '2-digit',
             }),
@@ -507,7 +506,7 @@ const AiChatPage = ({ user }) => {
   }, [routeSessionId, navigate]);
 
   const handleNewChat = () => {
-    if (chatMode === 'code') {
+    if (chatMode === 'code' || chatMode === 'image') {
       setChatMode('dealit');
       localStorage.setItem('dealit_ai_mode', 'dealit');
     }
@@ -522,6 +521,18 @@ const AiChatPage = ({ user }) => {
   const handleCodeChat = () => {
     setChatMode('code');
     localStorage.setItem('dealit_ai_mode', 'code');
+    setCurrentSessionId(null);
+    setIsLoading(false);
+    setHasStartedChat(false);
+    setMessages([]);
+    navigate('/ai-chat', { replace: true });
+    if (window.innerWidth <= 768) setIsSidebarOpen(false);
+  };
+
+  // [NEW] Added handler for switching to Image mode from sidebar
+  const handleImageChat = () => {
+    setChatMode('image');
+    localStorage.setItem('dealit_ai_mode', 'image');
     setCurrentSessionId(null);
     setIsLoading(false);
     setHasStartedChat(false);
@@ -783,6 +794,7 @@ const AiChatPage = ({ user }) => {
     recognition.start();
   };
 
+  // [MODIFIED] Process Message now handles Image Mode directly
   const processMessage = async (userMessage) => {
     if (!userMessage.trim()) return;
     if (!navigator.onLine)   { setIsOffline(true); setTimeout(() => setIsOffline(false), 4000); return; }
@@ -797,11 +809,62 @@ const AiChatPage = ({ user }) => {
     setMessages((prev) => [
       ...prev,
       { id: Date.now(), role: 'user', content: userMessage, timestamp: ts },
-      { id: botMsgId, role: 'bot', content: '', streaming: true, timestamp: ts },
     ]);
     setInput('');
     setIsLoading(true);
     isStreamingRef.current = true;
+
+    // --- Image Generation Logic ---
+    if (chatMode === 'image') {
+      // Add a loader block immediately to the chat
+      setMessages((prev) => [
+        ...prev,
+        { id: botMsgId, role: 'bot', type: 'image_loader', timestamp: ts }
+      ]);
+
+      try {
+        const token = localStorage.getItem('dealit_token');
+        const res = await axios.post(
+          `${API_URL}/ai/generate-image`,
+          { prompt: userMessage, sessionId: currentSessionId },
+          { headers: { Authorization: `Bearer ${token}` }, withCredentials: true }
+        );
+
+        if (res.data.success) {
+          if (res.data.sessionId) {
+             setCurrentSessionId(res.data.sessionId);
+             fetchSessions();
+          }
+          
+          // Replace the loader with the final image block
+          setMessages((prev) => prev.map((m) => 
+            m.id === botMsgId 
+              ? { id: botMsgId, role: 'bot', type: 'image', imageUrl: res.data.imageUrl, prompt: userMessage, timestamp: ts } 
+              : m
+          ));
+        } else {
+          // Fallback to text error if failed
+          setMessages((prev) => prev.map((m) => 
+            m.id === botMsgId ? { ...m, type: 'text', content: `⚠️ Error: ${res.data.message || 'Failed to generate image.'}` } : m
+          ));
+        }
+      } catch (err) {
+        setMessages((prev) => prev.map((m) => 
+          m.id === botMsgId ? { ...m, type: 'text', content: '⚠️ Server connection failed while generating image.' } : m
+        ));
+      } finally {
+        setIsLoading(false);
+        isStreamingRef.current = false;
+      }
+      return; // End image process
+    }
+    // --------------------------------
+
+    // Standard Chat Streaming Logic (dealit, general, code)
+    setMessages((prev) => [
+      ...prev,
+      { id: botMsgId, role: 'bot', content: '', streaming: true, timestamp: ts, type: 'text' },
+    ]);
 
     try {
       const token        = localStorage.getItem('dealit_token');
@@ -857,6 +920,7 @@ const AiChatPage = ({ user }) => {
                   id: `${botMsgId}_${idx}`,
                   role: p.type === 'ui' ? 'bot_ui' : 'bot',
                   content: p.content,
+                  type: 'text',
                   timestamp: ts,
                 }));
               return [...withoutPlaceholder, ...newMsgs];
@@ -1081,7 +1145,6 @@ const AiChatPage = ({ user }) => {
         )}
       </AnimatePresence>
 
-      {/* ── [MODIFIED] Removed overflow-hidden from sidebar wrapper to allow Tooltips ── */}
       <div
         className={`fixed md:relative z-[60] flex flex-col h-full bg-gray-950 border-r border-gray-800 transition-all duration-300 ease-in-out
           ${isSidebarOpen 
@@ -1105,10 +1168,10 @@ const AiChatPage = ({ user }) => {
           <div className="flex items-center gap-2 w-full">
           
           <button
-  onClick={handleNewChat}
-  className={`relative group flex items-center rounded-xl bg-[#030712] hover:bg-gray-900 text-white transition-all  shadow-sm
-    ${isSidebarOpen ? 'p-3 gap-3 w-full' : 'justify-center w-12 h-12'}`}
->
+            onClick={handleNewChat}
+            className={`relative group flex items-center rounded-xl bg-[#030712] hover:bg-gray-900 text-white transition-all  shadow-sm
+              ${isSidebarOpen ? 'p-3 gap-3 w-full' : 'justify-center w-12 h-12'}`}
+          >
               <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-full p-1 shadow-inner shrink-0">
                 <Plus className="w-4 h-4 text-white" />
               </div>
@@ -1118,20 +1181,32 @@ const AiChatPage = ({ user }) => {
           </div>
           
       
-      <button
-  onClick={handleCodeChat}
-  className={`relative group flex items-center rounded-xl bg-[#030712] hover:bg-gray-900 text-white transition-all  shadow-sm
-    ${isSidebarOpen ? 'p-3 gap-3 w-full' : 'justify-center w-12 h-12'}`}
->
+          <button
+            onClick={handleCodeChat}
+            className={`relative group flex items-center rounded-xl bg-[#030712] hover:bg-gray-900 text-white transition-all  shadow-sm
+              ${isSidebarOpen ? 'p-3 gap-3 w-full' : 'justify-center w-12 h-12'}`}
+          >
             <div className="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-full p-1 shadow-inner shrink-0">
               <Code className="w-4 h-4 text-white" />
             </div>
             {isSidebarOpen && <span className="font-semibold text-sm whitespace-nowrap">&lt;/&gt; Code Assistant</span>}
             {!isSidebarOpen && <SidebarTooltip text="Code Assistant" />}
           </button>
+
+          {/* [MODIFIED] Image Generator button now changes chatMode to 'image' */}
+          <button
+            onClick={handleImageChat}
+            className={`relative group flex items-center rounded-xl bg-[#030712] hover:bg-gray-900 text-white transition-all shadow-sm
+              ${isSidebarOpen ? 'p-3 gap-3 w-full' : 'justify-center w-12 h-12'}`}
+          >
+            <div className="bg-gradient-to-br from-purple-500 to-blue-500 rounded-full p-1 shadow-inner shrink-0">
+              <ImageIcon className="w-4 h-4 text-white" />
+            </div>
+            {isSidebarOpen && <span className="font-semibold text-sm whitespace-nowrap">Image Generator</span>}
+            {!isSidebarOpen && <SidebarTooltip text="Image Generator" />}
+          </button>
         </div>
 
-        {/* [MODIFIED] Wrapped recent chats block entirely inside {isSidebarOpen} to hide it completely when collapsed */}
         <div className={`flex-1 overflow-y-auto px-3 py-2 ai-no-scrollbar`}>
           {isSidebarOpen && (
             <>
@@ -1167,7 +1242,6 @@ const AiChatPage = ({ user }) => {
         </div>
 
         <div className={`p-3 border-t border-gray-800/80 space-y-2 bg-gray-950 flex-shrink-0 ${isSidebarOpen ? '' : 'flex flex-col items-center'}`}>
-          {/* [MODIFIED] Added group + Tooltip for Settings */}
           <button
             onClick={() => {
               if (!isSidebarOpen) {
@@ -1237,7 +1311,6 @@ const AiChatPage = ({ user }) => {
             )}
           </AnimatePresence>
 
-          {/* [MODIFIED] Added group + Tooltip for Help & FAQ */}
           <button
             onClick={() => navigate('/help-support')}
             className={`relative group flex items-center transition-colors rounded-lg hover:bg-gray-800/50 text-gray-400 hover:text-gray-200
@@ -1250,7 +1323,6 @@ const AiChatPage = ({ user }) => {
         </div>
       </div>
 
-      {/* ── Main area ── */}
       <div className="flex-1 flex flex-col min-w-0 h-full relative bg-[#1A1A1A]">
         {/* Header */}
         <div className="bg-[#1A1A1A] p-4 flex items-center justify-between shadow-sm z-50 shrink-0">
@@ -1270,7 +1342,8 @@ const AiChatPage = ({ user }) => {
                 onClick={() => setIsModeDropdownOpen(!isModeDropdownOpen)}
                 className="flex items-center gap-2 text-white font-semibold text-[15px] hover:opacity-80 transition-opacity"
               >
-                {chatMode === 'dealit' ? 'Dealit Strict' : chatMode === 'code' ? 'Code Assistant' : 'General AI'}
+                {/* [MODIFIED] Added 'image' to header text map */}
+                {chatMode === 'dealit' ? 'Dealit Strict' : chatMode === 'code' ? 'Code Assistant' : chatMode === 'image' ? 'Image Generator' : 'General AI'}
                 <ChevronDown className="w-4 h-4 text-gray-400 mt-0.5" />
               </button>
               <AnimatePresence>
@@ -1282,7 +1355,8 @@ const AiChatPage = ({ user }) => {
                     transition={{ duration: 0.15 }}
                     className="absolute top-full left-0 mt-3 w-56 bg-[#2A2A2A] border border-gray-700/50 rounded-xl shadow-2xl overflow-hidden z-50"
                   >
-                    {['dealit', 'general', 'code'].map((mode) => (
+                    {/* [MODIFIED] Added 'image' to dropdown options */}
+                    {['dealit', 'general', 'code', 'image'].map((mode) => (
                       <button
                         key={mode}
                         onClick={() => handleModeChange(mode)}
@@ -1291,9 +1365,11 @@ const AiChatPage = ({ user }) => {
                             ? 'bg-purple-500/20 text-white'
                             : 'text-gray-300 hover:bg-gray-700/50 hover:text-white'}`}
                       >
-                        <div className="font-semibold">{mode === 'dealit' ? 'Dealit Strict' : mode === 'code' ? 'Code Assistant' : 'General AI'}</div>
+                        <div className="font-semibold">
+                          {mode === 'dealit' ? 'Dealit Strict' : mode === 'code' ? 'Code Assistant' : mode === 'image' ? 'Image Generator' : 'General AI'}
+                        </div>
                         <div className="text-xs text-gray-400 mt-0.5">
-                          {mode === 'dealit' ? 'Focused on marketplace & trades' : mode === 'code' ? 'Programming & debug help' : 'Open-ended general chat'}
+                          {mode === 'dealit' ? 'Focused on marketplace & trades' : mode === 'code' ? 'Programming & debug help' : mode === 'image' ? 'Generate stunning visuals' : 'Open-ended general chat'}
                         </div>
                       </button>
                     ))}
@@ -1314,7 +1390,6 @@ const AiChatPage = ({ user }) => {
         </div>
 
         <div className="relative flex-1 flex flex-col overflow-hidden">
-          {/* Offline banner */}
           <AnimatePresence>
             {isOffline && (
               <motion.div
@@ -1329,7 +1404,7 @@ const AiChatPage = ({ user }) => {
             )}
           </AnimatePresence>
 
-          {/* Messages */}
+          {/* Messages Container */}
           <div
             className={`flex-1 overflow-y-auto p-4 space-y-4 container mx-auto max-w-3xl ai-no-scrollbar relative
               ${!hasStartedChat ? 'flex flex-col items-center justify-center' : ''}`}
@@ -1337,7 +1412,6 @@ const AiChatPage = ({ user }) => {
             {isLoading && messages.length === 0 ? (
               <GeneratingLoader />
             ) : !hasStartedChat ? (
-              /* Welcome screen */
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -1351,13 +1425,17 @@ const AiChatPage = ({ user }) => {
                   className={`w-24 h-24 mb-6 rounded-full flex items-center justify-center relative shadow-lg
                     ${chatMode === 'code' 
                       ? 'bg-gradient-to-br from-blue-600/20 to-cyan-500/20 border border-blue-500/40 shadow-[0_0_40px_rgba(59,130,246,0.15)]' 
-                      : 'bg-gradient-to-br from-purple-600/20 to-emerald-500/20 border border-purple-500/40 shadow-[0_0_40px_rgba(163,136,225,0.15)]'}`}
+                      : chatMode === 'image'
+                        ? 'bg-gradient-to-br from-purple-600/20 to-blue-500/20 border border-purple-500/40 shadow-[0_0_40px_rgba(168,85,247,0.15)]'
+                        : 'bg-gradient-to-br from-purple-600/20 to-emerald-500/20 border border-purple-500/40 shadow-[0_0_40px_rgba(163,136,225,0.15)]'}`}
                 >
                   <div className={`absolute inset-0 rounded-full border animate-[spin_10s_linear_infinite]
                     ${chatMode === 'code' ? 'border-blue-400/30' : 'border-purple-400/30'}`} 
                   />
                   {chatMode === 'code' ? (
                     <Code className="w-12 h-12 text-blue-400 relative z-10" />
+                  ) : chatMode === 'image' ? (
+                    <ImageIcon className="w-12 h-12 text-purple-400 relative z-10" />
                   ) : (
                     <img src="https://res.cloudinary.com/dia3qhc0x/image/upload/v1781289017/ijblexdk51vluv7ku6g9.jpg" alt="Dealit AI" className="w-16 h-16 rounded-full object-cover relative z-10" />
                   )}
@@ -1370,13 +1448,17 @@ const AiChatPage = ({ user }) => {
                   className={`text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text mb-3
                     ${chatMode === 'code' 
                       ? 'bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-400' 
-                      : 'bg-gradient-to-r from-purple-400 via-emerald-400 to-purple-400'}`}
+                      : chatMode === 'image'
+                        ? 'bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400'
+                        : 'bg-gradient-to-r from-purple-400 via-emerald-400 to-purple-400'}`}
                 >
                   {chatMode === 'code' 
                     ? 'Code Assistant' 
-                    : chatMode === 'general' 
-                      ? 'General AI' 
-                      : `Welcome to Dealit AI${user?.full_name ? `, ${user.full_name.split(' ')[0]}` : ''}!`}
+                    : chatMode === 'image'
+                      ? 'Image Generator'
+                      : chatMode === 'general' 
+                        ? 'General AI' 
+                        : `Welcome to Dealit AI`}
                 </motion.h2>
 
                 <motion.p
@@ -1387,9 +1469,11 @@ const AiChatPage = ({ user }) => {
                 >
                   {chatMode === 'code' 
                     ? 'Your unrestricted expert for writing, debugging, and refactoring code.' 
-                    : chatMode === 'general'
-                      ? 'Your versatile AI assistant. Ask me anything outside of the marketplace!'
-                      : 'Your personal assistant for trades, credits, and navigating the Dealit marketplace.'}
+                    : chatMode === 'image'
+                      ? 'Describe what you want to see. I will bring it to life with cinematic visuals.'
+                      : chatMode === 'general'
+                        ? 'Your versatile AI assistant. Ask me anything outside of the marketplace!'
+                        : 'Your personal assistant for trades, credits, and navigating the Dealit marketplace.'}
                 </motion.p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
                   {currentSuggestions.map((text, i) => (
@@ -1404,6 +1488,8 @@ const AiChatPage = ({ user }) => {
                       <div className="p-2 rounded-lg bg-gray-900 group-hover:bg-purple-500/20 transition-colors">
                         {chatMode === 'code' ? (
                           <Code className="w-4 h-4 text-blue-400" />
+                        ) : chatMode === 'image' ? (
+                          <ImageIcon className="w-4 h-4 text-pink-400" />
                         ) : (
                           <Sparkles className="w-4 h-4 text-purple-400" />
                         )}
@@ -1419,6 +1505,28 @@ const AiChatPage = ({ user }) => {
                   return (
                     <div key={msg.id} className="w-full">
                       <BotUIBlock content={msg.content} navigate={navigate} variant="full" />
+                    </div>
+                  );
+                }
+
+                // [NEW] Render the animated Image loader in the chat flow
+                if (msg.type === 'image_loader') {
+                   return (
+                     <div key={msg.id} className="flex w-full justify-start">
+                       <div className="w-full px-2 md:px-4 items-start">
+                         <ImageGenLoader />
+                       </div>
+                     </div>
+                   );
+                }
+
+                // [NEW] Render the final generated image
+                if (msg.type === 'image') {
+                  return (
+                    <div key={msg.id} className="flex w-full justify-start">
+                      <div className="w-full px-2 md:px-4 items-start">
+                        <BotImageMessage imageUrl={msg.imageUrl} prompt={msg.prompt} />
+                      </div>
                     </div>
                   );
                 }
@@ -1448,7 +1556,6 @@ const AiChatPage = ({ user }) => {
                           )}
                         </div>
 
-                        {/* Footer only on completed bot messages */}
                         {msg.role === 'bot' && msg.content && !msg.streaming && (
                           <MessageFooter msg={msg} />
                         )}
@@ -1461,11 +1568,9 @@ const AiChatPage = ({ user }) => {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input bar */}
           <div className="shrink-0 pb-safe z-10 relative">
             <div className="p-4 container mx-auto max-w-3xl relative">
 
-              {/* ── UPDATE: Limit banner with Wallet Balance ── */}
               <AnimatePresence>
                 {(isChatLimited || isPremiumVoiceLimited) && (
                   <motion.div
@@ -1519,6 +1624,7 @@ const AiChatPage = ({ user }) => {
                     onBlur={() => setIsInputFocused(false)}
                     placeholder={
                       chatMode === 'code' ? "Ask Code Assistant..." : 
+                      chatMode === 'image' ? "Describe the image you want to generate..." :
                       chatMode === 'general' ? "Ask me anything..." : 
                       "Ask about trades, items, credits..."
                     }
@@ -1548,7 +1654,6 @@ const AiChatPage = ({ user }) => {
             </div>
           </div>
 
-          {/* Voice overlay (Stays open until explicitly closed) */}
           <AnimatePresence>
             {isVoiceOverlayOpen && (
               <motion.div
@@ -1559,7 +1664,6 @@ const AiChatPage = ({ user }) => {
               >
                 <VoiceAnimationStyles />
                 
-                {/* Clean Close Button at Top Right */}
                 <button 
                   onClick={closeVoiceOverlay} 
                   className="absolute top-6 right-6 p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-full transition-colors z-50"
@@ -1567,10 +1671,8 @@ const AiChatPage = ({ user }) => {
                   <X className="w-6 h-6" />
                 </button>
 
-                {/* Top Spacer */}
                 <div className="h-10"></div>
 
-                {/* Center Content: Either Custom Loader (Active) or Avatar (Idle) */}
                 <div className="flex flex-col items-center w-full max-w-md px-6 text-center z-10 flex-1 justify-center">
                   {voiceState !== 'idle' ? (
                     <>
@@ -1613,9 +1715,7 @@ const AiChatPage = ({ user }) => {
                   )}
                 </div>
 
-                {/* Bottom Controls (Dynamic Mic / Stop) */}
                 <div className="shrink-0 flex flex-col items-center gap-6 pb-6 z-10 w-full px-6">
-                  {/* Pulse Mic Indicator - only pulse when listening */}
                   <div className="relative flex items-center justify-center w-16 h-16">
                     {voiceState === 'listening' && (
                       <div className="absolute inset-0 rounded-full bg-red-500/30 animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite]" />
@@ -1627,7 +1727,6 @@ const AiChatPage = ({ user }) => {
                     </div>
                   </div>
 
-                  {/* Dynamic Button */}
                   {voiceState === 'idle' ? (
                     <button
                       type="button"

@@ -7,13 +7,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Sparkles, Copy, Check, ThumbsUp, ThumbsDown,
+  Sparkles, Copy, Check, ThumbsUp, ThumbsDown, Download, Image as ImageIcon
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-// react-syntax-highlighter — light-weight Prism build with tree-shaking.
-// Only the languages we actually need are registered to keep bundle size minimal.
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
@@ -38,11 +36,7 @@ export const SUGGESTIONS = [
 
 export const extractCarouselFromReply = (replyText) => {
   const tick3 = '`'.repeat(3);
-  // Match ```json { ... } ``` or ``` { ... } ```
-  const jsonBlockRegex = new RegExp(
-    `${tick3}(?:json)?\\s*(\\{[\\s\\S]*?\\})\\s*${tick3}`,
-    'g',
-  );
+  const jsonBlockRegex = new RegExp(`${tick3}(?:json)?\\s*(\\{[\\s\\S]*?\\})\\s*${tick3}`, 'g');
 
   const parts = [];
   let lastIndex = 0;
@@ -183,6 +177,14 @@ export const SharedStyles = () => (
     .ai-code-block > div {
       background: transparent !important;
     }
+
+    /* Scanner Animation for Image Generation Loader */
+    @keyframes image-scan-line {
+      0% { top: -10%; opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { top: 110%; opacity: 0; }
+    }
   `}</style>
 );
 
@@ -296,8 +298,7 @@ export const MessageFooter = ({ msg, timestamp, compact = false }) => {
 };
 
 // ---------------------------------------------------------------------------
-// Language label map — maps fence identifiers to human-readable labels.
-// Prism handles syntax; this is purely for the UI badge in the header.
+// Language label map
 // ---------------------------------------------------------------------------
 
 const LANG_LABELS = {
@@ -328,15 +329,7 @@ const LANG_LABELS = {
 };
 
 // ---------------------------------------------------------------------------
-// Highlighted code block — self-contained so it can be tested in isolation.
-//
-// Design decisions:
-//   • oneDark theme — closest to the app's #1A1A1A / gray-950 palette.
-//   • Header bar shows language badge + copy button, mimicking VS Code style.
-//   • `compact` mode (FloatingAI) hides the header to save vertical space.
-//   • SyntaxHighlighter renders with `useInlineStyles` so Tailwind purge
-//     won't accidentally strip Prism token classes that appear in CSS files.
-//   • Scrollable horizontally on mobile; never wraps long lines.
+// Highlighted code block
 // ---------------------------------------------------------------------------
 
 const HighlightedCodeBlock = ({ language, codeString, compact }) => {
@@ -348,7 +341,6 @@ const HighlightedCodeBlock = ({ language, codeString, compact }) => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Normalise aliases: 'js' → 'javascript', 'py' → 'python', etc.
   const normalisedLang = (() => {
     const alias = {
       js:  'javascript',
@@ -364,8 +356,6 @@ const HighlightedCodeBlock = ({ language, codeString, compact }) => {
 
   const label = LANG_LABELS[language] || LANG_LABELS[normalisedLang] || normalisedLang.toUpperCase();
 
-  // Custom oneDark override — strip the default background so our container
-  // controls the bg colour, keeping the palette consistent.
   const theme = {
     ...oneDark,
     'pre[class*="language-"]': {
@@ -382,7 +372,6 @@ const HighlightedCodeBlock = ({ language, codeString, compact }) => {
 
   return (
     <div className="relative overflow-hidden rounded-xl border border-gray-700/80 my-3 bg-gray-950 shadow-inner max-w-full ai-code-block">
-      {/* Header bar — language badge + copy button */}
       {!compact && (
         <div className="flex items-center justify-between px-4 py-2 bg-gray-900/80 border-b border-gray-700/60">
           <span className="text-[10px] font-semibold tracking-widest uppercase text-gray-500 select-none">
@@ -400,7 +389,6 @@ const HighlightedCodeBlock = ({ language, codeString, compact }) => {
         </div>
       )}
 
-      {/* Syntax-highlighted code */}
       <div className="overflow-x-auto ai-no-scrollbar">
         <SyntaxHighlighter
           language={normalisedLang}
@@ -419,7 +407,6 @@ const HighlightedCodeBlock = ({ language, codeString, compact }) => {
               fontSize:   'inherit',
             },
           }}
-          // showLineNumbers on blocks with more than 8 lines improves readability
           showLineNumbers={codeString.split('\n').length > 8}
           lineNumberStyle={{
             color:       '#4b5563',
@@ -438,21 +425,13 @@ const HighlightedCodeBlock = ({ language, codeString, compact }) => {
 };
 
 // ---------------------------------------------------------------------------
-// BotMessage — renders markdown from a COMPLETED content string.
-//
-// KEY FIX: this component no longer drives a typewriter effect internally.
-// Streaming content is fed from the parent via `content` prop updates.
-// The `animated` flag is kept for API compat but does nothing here —
-// the parent controls what it passes, so there's no fighting with the stream.
+// BotMessage
 // ---------------------------------------------------------------------------
 
 export const BotMessage = ({ content, navigate, compact = false }) => {
-  // Strip any raw ```json blocks that survived — they should have been parsed
-  // by extractCarouselFromReply before reaching this component, but guard anyway.
-  const safeContent = content.replace(
-    /```(?:json)?\s*\{[\s\S]*?\}\s*```/g,
-    '',
-  ).trim();
+  const tick3 = '`'.repeat(3);
+  const jsonRegex = new RegExp(`${tick3}(?:json)?\\s*\\{[\\s\\S]*?\\}\\s*${tick3}`, 'g');
+  const safeContent = content.replace(jsonRegex, '').trim();
 
   return (
     <div
@@ -478,25 +457,16 @@ export const BotMessage = ({ content, navigate, compact = false }) => {
             <blockquote className="border-l-4 border-purple-500 pl-4 py-1 my-3 bg-gray-900/50 rounded-r-lg italic text-gray-400" {...props} />
           ),
 
-          // ── CODE RENDERER ──────────────────────────────────────────────
-          // Inline `code` → simple pill badge (unchanged).
-          // Fenced blocks → HighlightedCodeBlock with Prism syntax colours.
-          // JSON UI blocks are suppressed here — BotUIBlock handles them.
-          // ───────────────────────────────────────────────────────────────
           code: ({ node, inline, className, children, ...props }) => {
             const codeString = String(children).replace(/\n$/, '');
-
-            // Extract language from remark's className: "language-js" → "js"
             const language = className?.replace('language-', '') ?? '';
 
-            // Suppress JSON UI blocks — rendered via BotUIBlock instead
             const isJsonUIBlock =
               !inline &&
               (language === 'json' && codeString.includes('"ui_type"'));
 
             if (isJsonUIBlock) return null;
 
-            // Inline code — simple pill, no syntax highlighting needed
             if (inline) {
               return (
                 <code
@@ -508,7 +478,6 @@ export const BotMessage = ({ content, navigate, compact = false }) => {
               );
             }
 
-            // Fenced code block — full syntax highlighting
             return (
               <HighlightedCodeBlock
                 language={language}
@@ -575,14 +544,12 @@ export const FloatingProductGrid = ({ items, navigate }) => (
 
 // ---------------------------------------------------------------------------
 // BotUIBlock — renders a parsed UI block.
-// `variant` = 'full' (AiChatPage carousel) | 'compact' (FloatingAI grid)
 // ---------------------------------------------------------------------------
 
 export const BotUIBlock = ({ content, navigate, variant = 'full' }) => {
   const tick3 = '`'.repeat(3);
-  const codeMatch = content.match(
-    new RegExp(`${tick3}(?:json)?\\s*(\\{[\\s\\S]*?\\})\\s*${tick3}`),
-  );
+  const codeMatch = content.match(new RegExp(`${tick3}(?:json)?\\s*(\\{[\\s\\S]*?\\})\\s*${tick3}`));
+  
   if (!codeMatch) return null;
 
   let parsed;
@@ -640,4 +607,65 @@ export const BotUIBlock = ({ content, navigate, variant = 'full' }) => {
   }
 
   return null;
+};
+
+// ---------------------------------------------------------------------------
+// Image Generation UI Components [NEW]
+// ---------------------------------------------------------------------------
+
+export const ImageGenLoader = () => (
+  <div className="w-full max-w-sm rounded-2xl border border-purple-500/30 bg-[#0A0A0A] p-3 shadow-[0_0_30px_rgba(168,85,247,0.1)] relative overflow-hidden my-2">
+    <div className="w-full aspect-square rounded-xl bg-gray-900 border border-gray-800 relative overflow-hidden flex flex-col items-center justify-center gap-4">
+      <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-purple-500 to-transparent shadow-[0_0_15px_rgba(168,85,247,0.8)] animate-[image-scan-line_2s_linear_infinite]" />
+      <ImageIcon className="w-8 h-8 text-purple-500/50 animate-pulse" />
+      <span className="text-xs font-semibold text-purple-400 tracking-wider uppercase animate-pulse">Rendering Image</span>
+    </div>
+  </div>
+);
+
+
+export const BotImageMessage = ({ imageUrl, prompt }) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  const handleDownload = () => {
+    const link = document.createElement('a');
+    link.href = imageUrl;
+    link.download = `Dealit_AI_Image_${Date.now()}.jpg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  return (
+    <>
+      {/* Jab tak image browser fetch nahi kar leta, loader dikhega */}
+      {!isLoaded && <ImageGenLoader />}
+      
+      {/* Div render hota rahega par dikhega nahi jab tak load true na ho, isse DOM mein background image fetching kaam karti rahegi */}
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }} 
+        animate={{ opacity: isLoaded ? 1 : 0, scale: isLoaded ? 1 : 0.95 }} 
+        className={`w-full max-w-sm rounded-2xl border border-gray-700/80 bg-gray-900 p-2 shadow-xl group my-2 ${!isLoaded ? 'hidden' : 'block'}`}
+      >
+        <div className="w-full aspect-square rounded-xl overflow-hidden relative bg-[#0A0A0A]">
+          <img 
+            src={imageUrl} 
+            alt={prompt || 'Generated by Dealit AI'} 
+            onLoad={() => setIsLoaded(true)}
+            onError={() => setIsLoaded(true)} // Fail hone par loader hata dega
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+          />
+          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+            <button 
+              onClick={handleDownload} 
+              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white px-4 py-2 rounded-xl font-medium transition-all transform translate-y-4 group-hover:translate-y-0 shadow-lg"
+            >
+              <Download className="w-4 h-4" />
+              Save High-Res
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </>
+  );
 };

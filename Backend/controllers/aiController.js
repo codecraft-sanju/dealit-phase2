@@ -837,6 +837,43 @@ const purchaseAILimitReset = async (req, res) => {
   }
 };
 
+const generateMarketImage = async (req, res) => {
+  try {
+    const { prompt } = req.body;
+    if (!prompt) return res.status(400).json({ success: false, message: 'Prompt is required' });
+
+    try {
+      console.log(`[ImageGen] Trying Hugging Face for prompt: "${prompt}"`);
+      const hfResponse = await axios.post(
+        'https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-2-1',
+        { inputs: prompt },
+        {
+          headers: { Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY}` },
+          responseType: 'arraybuffer'
+        }
+      );
+
+      const base64Image = Buffer.from(hfResponse.data, 'binary').toString('base64');
+      const imageUrl = `data:image/jpeg;base64,${base64Image}`;
+      
+      console.log(`[ImageGen] Success! Image generated using Hugging Face.`);
+      return res.status(200).json({ success: true, imageUrl, source: 'huggingface' });
+      
+    } catch (primaryError) {
+      console.error(`[ImageGen] Hugging Face failed: ${primaryError.message}. Switching to Fallback.`);
+      
+      const fallbackUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?nologo=true`;
+      console.log(`[ImageGen] Success! Image generated using Fallback (Pollinations).`);
+      
+      return res.status(200).json({ success: true, imageUrl: fallbackUrl, source: 'pollinations' });
+    }
+
+  } catch (error) {
+    console.error(`[ImageGen] Critical Error: ${error.message}`);
+    return res.status(500).json({ success: false, message: 'Failed to generate image from both providers.' });
+  }
+};
+
 module.exports = {
   generateItemDescription,
   analyzeImages,
@@ -848,5 +885,6 @@ module.exports = {
   processCodeChat,
   aiChatLimiter,
   synthesizeVoice,
-  purchaseAILimitReset
+  purchaseAILimitReset,
+  generateMarketImage
 };

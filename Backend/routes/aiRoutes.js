@@ -9,7 +9,8 @@ const {
   deleteChatSession,
   deleteAllChatSessions,
   synthesizeVoice,
-  purchaseAILimitReset
+  purchaseAILimitReset,
+  generateMarketImage
 } = require('../controllers/aiController');
 const { protect } = require('../middleware/authMiddleware'); 
 
@@ -17,7 +18,7 @@ const router = express.Router();
 
 router.post('/generate-description', generateItemDescription);
 router.post('/analyze-images', analyzeImages);
-
+router.post('/generate-image', protect, generateMarketImage);
 router.get('/chat/sessions', protect, getChatSessions);
 router.delete('/chat/sessions', protect, deleteAllChatSessions);
 router.get('/chat/history/:sessionId', protect, getChatHistory);
