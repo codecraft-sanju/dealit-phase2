@@ -190,9 +190,7 @@ const PaymentCarLoader = () => (
   </>
 );
 
-// ---------------------------------------------------------------------------
-// Voice Animation Styles
-// ---------------------------------------------------------------------------
+
 const VoiceAnimationStyles = () => (
   <style>{`
     .loader-wrapper {
@@ -227,9 +225,6 @@ const VoiceAnimationStyles = () => (
   `}</style>
 );
 
-// ---------------------------------------------------------------------------
-// Full-page loader
-// ---------------------------------------------------------------------------
 const GeneratingLoader = () => (
   <>
     <style>{`
@@ -264,9 +259,6 @@ const GeneratingLoader = () => (
   </>
 );
 
-// ---------------------------------------------------------------------------
-// Sidebar typing-style loader
-// ---------------------------------------------------------------------------
 const SidebarTypingLoader = () => (
   <>
     <style>{`
@@ -296,9 +288,6 @@ const SidebarTypingLoader = () => (
   </>
 );
 
-// ---------------------------------------------------------------------------
-// AiChatPage
-// ---------------------------------------------------------------------------
 const AiChatPage = ({ user }) => {
   const navigate = useNavigate();
   const { sessionId: routeSessionId } = useParams();
@@ -332,8 +321,6 @@ const AiChatPage = ({ user }) => {
   const [isPurchasingReset,     setIsPurchasingReset]   = useState(false);
   const [showSuccessAnim,       setShowSuccessAnim]     = useState(false);
   const [isOffline,             setIsOffline]           = useState(!navigator.onLine);
-
-  // Local credits state
   const [localCredits, setLocalCredits] = useState(user?.account_credits || 0);
 
   const autoMicRef = useRef(false);

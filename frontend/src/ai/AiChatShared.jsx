@@ -11,6 +11,12 @@ import {
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+
+// react-syntax-highlighter — light-weight Prism build with tree-shaking.
+// Only the languages we actually need are registered to keep bundle size minimal.
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+
 import AiChatProductCard from '../components/AiChatProductCard';
 
 // ---------------------------------------------------------------------------
@@ -162,6 +168,21 @@ export const SharedStyles = () => (
       50%  { background-position: 100% 50%; }
       100% { background-position: 0% 50%; }
     }
+
+    /* Syntax highlighter overrides — match the app's dark bg exactly */
+    .ai-code-block pre[class*="language-"],
+    .ai-code-block code[class*="language-"] {
+      background: transparent !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      font-size: 0.75rem !important;
+      line-height: 1.6 !important;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace !important;
+    }
+    /* Remove SyntaxHighlighter's own wrapper background so our container controls it */
+    .ai-code-block > div {
+      background: transparent !important;
+    }
   `}</style>
 );
 
@@ -275,23 +296,144 @@ export const MessageFooter = ({ msg, timestamp, compact = false }) => {
 };
 
 // ---------------------------------------------------------------------------
-// Copy-code button (inside code blocks)
+// Language label map — maps fence identifiers to human-readable labels.
+// Prism handles syntax; this is purely for the UI badge in the header.
 // ---------------------------------------------------------------------------
 
-const CopyCodeButton = ({ text }) => {
+const LANG_LABELS = {
+  js:         'JavaScript',
+  jsx:        'React JSX',
+  ts:         'TypeScript',
+  tsx:        'React TSX',
+  javascript: 'JavaScript',
+  typescript: 'TypeScript',
+  python:     'Python',
+  py:         'Python',
+  bash:       'Bash',
+  sh:         'Shell',
+  zsh:        'Zsh',
+  css:        'CSS',
+  html:       'HTML',
+  json:       'JSON',
+  sql:        'SQL',
+  java:       'Java',
+  cpp:        'C++',
+  c:          'C',
+  go:         'Go',
+  rust:       'Rust',
+  yaml:       'YAML',
+  yml:        'YAML',
+  md:         'Markdown',
+  markdown:   'Markdown',
+};
+
+// ---------------------------------------------------------------------------
+// Highlighted code block — self-contained so it can be tested in isolation.
+//
+// Design decisions:
+//   • oneDark theme — closest to the app's #1A1A1A / gray-950 palette.
+//   • Header bar shows language badge + copy button, mimicking VS Code style.
+//   • `compact` mode (FloatingAI) hides the header to save vertical space.
+//   • SyntaxHighlighter renders with `useInlineStyles` so Tailwind purge
+//     won't accidentally strip Prism token classes that appear in CSS files.
+//   • Scrollable horizontally on mobile; never wraps long lines.
+// ---------------------------------------------------------------------------
+
+const HighlightedCodeBlock = ({ language, codeString, compact }) => {
   const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(codeString);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Normalise aliases: 'js' → 'javascript', 'py' → 'python', etc.
+  const normalisedLang = (() => {
+    const alias = {
+      js:  'javascript',
+      ts:  'typescript',
+      py:  'python',
+      sh:  'bash',
+      zsh: 'bash',
+      yml: 'yaml',
+      md:  'markdown',
+    };
+    return alias[language] || language || 'text';
+  })();
+
+  const label = LANG_LABELS[language] || LANG_LABELS[normalisedLang] || normalisedLang.toUpperCase();
+
+  // Custom oneDark override — strip the default background so our container
+  // controls the bg colour, keeping the palette consistent.
+  const theme = {
+    ...oneDark,
+    'pre[class*="language-"]': {
+      ...oneDark['pre[class*="language-"]'],
+      background: 'transparent',
+      margin: 0,
+      padding: 0,
+    },
+    'code[class*="language-"]': {
+      ...oneDark['code[class*="language-"]'],
+      background: 'transparent',
+    },
+  };
+
   return (
-    <button
-      onClick={() => {
-        navigator.clipboard.writeText(text);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      }}
-      className="absolute top-2 right-2 bg-gray-800 hover:bg-gray-700 text-gray-300 px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all shadow-sm border border-gray-700 cursor-pointer z-10"
-    >
-      {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-      {copied ? 'Copied!' : 'Copy Code'}
-    </button>
+    <div className="relative overflow-hidden rounded-xl border border-gray-700/80 my-3 bg-gray-950 shadow-inner max-w-full ai-code-block">
+      {/* Header bar — language badge + copy button */}
+      {!compact && (
+        <div className="flex items-center justify-between px-4 py-2 bg-gray-900/80 border-b border-gray-700/60">
+          <span className="text-[10px] font-semibold tracking-widest uppercase text-gray-500 select-none">
+            {label}
+          </span>
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1.5 text-gray-400 hover:text-white text-xs font-medium transition-colors cursor-pointer px-2 py-1 rounded-md hover:bg-gray-700/60"
+          >
+            {copied
+              ? <Check className="w-3 h-3 text-emerald-400" />
+              : <Copy className="w-3 h-3" />}
+            <span className="text-[11px]">{copied ? 'Copied!' : 'Copy'}</span>
+          </button>
+        </div>
+      )}
+
+      {/* Syntax-highlighted code */}
+      <div className="overflow-x-auto ai-no-scrollbar">
+        <SyntaxHighlighter
+          language={normalisedLang}
+          style={theme}
+          customStyle={{
+            background:  'transparent',
+            margin:      0,
+            padding:     '1rem',
+            fontSize:    '0.75rem',
+            lineHeight:  '1.65',
+            fontFamily:  "'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace",
+          }}
+          codeTagProps={{
+            style: {
+              fontFamily: 'inherit',
+              fontSize:   'inherit',
+            },
+          }}
+          // showLineNumbers on blocks with more than 8 lines improves readability
+          showLineNumbers={codeString.split('\n').length > 8}
+          lineNumberStyle={{
+            color:       '#4b5563',
+            fontSize:    '0.7rem',
+            paddingRight: '1.25rem',
+            userSelect:  'none',
+            minWidth:    '2.5rem',
+          }}
+          wrapLongLines={false}
+        >
+          {codeString}
+        </SyntaxHighlighter>
+      </div>
+    </div>
   );
 };
 
@@ -335,19 +477,26 @@ export const BotMessage = ({ content, navigate, compact = false }) => {
           blockquote: ({ node, ...props }) => (
             <blockquote className="border-l-4 border-purple-500 pl-4 py-1 my-3 bg-gray-900/50 rounded-r-lg italic text-gray-400" {...props} />
           ),
+
+          // ── CODE RENDERER ──────────────────────────────────────────────
+          // Inline `code` → simple pill badge (unchanged).
+          // Fenced blocks → HighlightedCodeBlock with Prism syntax colours.
+          // JSON UI blocks are suppressed here — BotUIBlock handles them.
+          // ───────────────────────────────────────────────────────────────
           code: ({ node, inline, className, children, ...props }) => {
             const codeString = String(children).replace(/\n$/, '');
 
-            // Suppress JSON UI blocks — they render via BotUIBlock instead
+            // Extract language from remark's className: "language-js" → "js"
+            const language = className?.replace('language-', '') ?? '';
+
+            // Suppress JSON UI blocks — rendered via BotUIBlock instead
             const isJsonUIBlock =
               !inline &&
-              (className === 'language-json' || codeString.includes('"ui_type"'));
+              (language === 'json' && codeString.includes('"ui_type"'));
 
-            if (isJsonUIBlock) {
-              // Return nothing — the parent already rendered or will render the UI block
-              return null;
-            }
+            if (isJsonUIBlock) return null;
 
+            // Inline code — simple pill, no syntax highlighting needed
             if (inline) {
               return (
                 <code
@@ -359,17 +508,16 @@ export const BotMessage = ({ content, navigate, compact = false }) => {
               );
             }
 
+            // Fenced code block — full syntax highlighting
             return (
-              <div className="relative overflow-hidden rounded-xl border border-gray-700 my-3 bg-gray-950 shadow-inner max-w-full">
-                {!compact && <CopyCodeButton text={codeString} />}
-                <pre className={`p-4 ${!compact ? 'pt-12' : ''} overflow-x-auto ai-no-scrollbar`}>
-                  <code className={`text-gray-300 text-xs font-mono ${className || ''}`} {...props}>
-                    {children}
-                  </code>
-                </pre>
-              </div>
+              <HighlightedCodeBlock
+                language={language}
+                codeString={codeString}
+                compact={compact}
+              />
             );
           },
+
           table: ({ node, ...props }) => (
             <div className="overflow-x-auto my-4 border border-gray-700 rounded-xl shadow-sm max-w-full ai-no-scrollbar">
               <table className="min-w-full divide-y divide-gray-700 text-sm" {...props} />
