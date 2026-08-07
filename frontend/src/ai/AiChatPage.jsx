@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Send, Sparkles, Plus, Settings, HelpCircle, MessageSquare, X, Trash2,
-  Minimize2, ChevronDown, Mic, User, WifiOff, Check, Unlock, Code, Image as ImageIcon
+  Minimize2, ChevronDown, Mic, User, WifiOff, Check, Unlock, Code, Image as ImageIcon, Wand2 // CHANGED: Imported Wand2 for Create AI button
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -12,7 +12,7 @@ import {
   SUGGESTIONS, extractCarouselFromReply,
   TypingLoader, SoundWave,
   BotMessage, BotUIBlock, MessageFooter,
-  ImageGenLoader, BotImageMessage // [NEW] Imported from Shared
+  ImageGenLoader, BotImageMessage 
 } from './AiChatShared';
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
@@ -300,7 +300,6 @@ const AiChatPage = ({ user }) => {
     return saved !== null ? JSON.parse(saved) : true;
   });
   
-  // [MODIFIED] Using 'image' as a standard chat mode now instead of a popup
   const [chatMode, setChatMode] = useState(
     () => localStorage.getItem('dealit_ai_mode') || 'dealit',
   );
@@ -328,7 +327,7 @@ const AiChatPage = ({ user }) => {
 
   const currentSuggestions = chatMode === 'code' 
     ? CODE_SUGGESTIONS 
-    : chatMode === 'image' // [NEW] Suggestions for Image Mode
+    : chatMode === 'image' 
       ? IMAGE_SUGGESTIONS
       : chatMode === 'general' 
         ? GENERAL_SUGGESTIONS 
@@ -529,7 +528,6 @@ const AiChatPage = ({ user }) => {
     if (window.innerWidth <= 768) setIsSidebarOpen(false);
   };
 
-  // [NEW] Added handler for switching to Image mode from sidebar
   const handleImageChat = () => {
     setChatMode('image');
     localStorage.setItem('dealit_ai_mode', 'image');
@@ -794,7 +792,6 @@ const AiChatPage = ({ user }) => {
     recognition.start();
   };
 
-  // [MODIFIED] Process Message now handles Image Mode directly
   const processMessage = async (userMessage) => {
     if (!userMessage.trim()) return;
     if (!navigator.onLine)   { setIsOffline(true); setTimeout(() => setIsOffline(false), 4000); return; }
@@ -816,7 +813,6 @@ const AiChatPage = ({ user }) => {
 
     // --- Image Generation Logic ---
     if (chatMode === 'image') {
-      // Add a loader block immediately to the chat
       setMessages((prev) => [
         ...prev,
         { id: botMsgId, role: 'bot', type: 'image_loader', timestamp: ts }
@@ -836,14 +832,12 @@ const AiChatPage = ({ user }) => {
              fetchSessions();
           }
           
-          // Replace the loader with the final image block
           setMessages((prev) => prev.map((m) => 
             m.id === botMsgId 
               ? { id: botMsgId, role: 'bot', type: 'image', imageUrl: res.data.imageUrl, prompt: userMessage, timestamp: ts } 
               : m
           ));
         } else {
-          // Fallback to text error if failed
           setMessages((prev) => prev.map((m) => 
             m.id === botMsgId ? { ...m, type: 'text', content: `⚠️ Error: ${res.data.message || 'Failed to generate image.'}` } : m
           ));
@@ -856,11 +850,10 @@ const AiChatPage = ({ user }) => {
         setIsLoading(false);
         isStreamingRef.current = false;
       }
-      return; // End image process
+      return; 
     }
     // --------------------------------
 
-    // Standard Chat Streaming Logic (dealit, general, code)
     setMessages((prev) => [
       ...prev,
       { id: botMsgId, role: 'bot', content: '', streaming: true, timestamp: ts, type: 'text' },
@@ -1180,7 +1173,7 @@ const AiChatPage = ({ user }) => {
             </button>
           </div>
           
-      
+        
           <button
             onClick={handleCodeChat}
             className={`relative group flex items-center rounded-xl bg-[#030712] hover:bg-gray-900 text-white transition-all  shadow-sm
@@ -1193,7 +1186,6 @@ const AiChatPage = ({ user }) => {
             {!isSidebarOpen && <SidebarTooltip text="Code Assistant" />}
           </button>
 
-          {/* [MODIFIED] Image Generator button now changes chatMode to 'image' */}
           <button
             onClick={handleImageChat}
             className={`relative group flex items-center rounded-xl bg-[#030712] hover:bg-gray-900 text-white transition-all shadow-sm
@@ -1205,6 +1197,23 @@ const AiChatPage = ({ user }) => {
             {isSidebarOpen && <span className="font-semibold text-sm whitespace-nowrap">Image Generator</span>}
             {!isSidebarOpen && <SidebarTooltip text="Image Generator" />}
           </button>
+
+       
+          <button
+            onClick={() => {
+              navigate('/create-ai');
+              if (window.innerWidth <= 768) setIsSidebarOpen(false);
+            }}
+            className={`relative group flex items-center rounded-xl bg-[#030712] hover:bg-gray-900 text-white transition-all shadow-sm
+              ${isSidebarOpen ? 'p-3 gap-3 w-full' : 'justify-center w-12 h-12'}`}
+          >
+            <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full p-1 shadow-inner shrink-0">
+              <Wand2 className="w-4 h-4 text-white" />
+            </div>
+            {isSidebarOpen && <span className="font-semibold text-sm whitespace-nowrap">Create AI Agent</span>}
+            {!isSidebarOpen && <SidebarTooltip text="Create AI Agent" />}
+          </button>
+      
         </div>
 
         <div className={`flex-1 overflow-y-auto px-3 py-2 ai-no-scrollbar`}>

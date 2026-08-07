@@ -26,17 +26,16 @@ const smartLazy = (importFunc) => {
   );
 };
 
+// ... existing lazy imports ...
 const OffersPage = smartLazy(() => import('./offer/OffersPage'));
 const PromoAlert = smartLazy(() => import('./popup/PromoAlert'));
 const IosInstallPopup = smartLazy(() => import('./components/IosInstallPopup'));
 const DesktopLandingPage = smartLazy(() => import('./Desktop/DesktopLandingPage'));
 const PrivacyPage = smartLazy(() => import('./components/PrivacyPage'));
-
 const TermsPage = smartLazy(() => import('./components/TermsPage'));
 const RefundPolicyPage = smartLazy(() => import('./components/RefundPolicyPage'));
 const CancellationPolicyPage = smartLazy(() => import('./components/CancellationPolicyPage'));
 const HelpSupportPage = smartLazy(()=>import('./helpandSupport/HelpSupportPage'));
-
 const AuraPage = smartLazy(() => import('./components/AuraPage'));
 const AuraLeadershipPage = smartLazy(() => import('./components/AuraLeadershipPage'));
 const AuthPage = smartLazy(() => import('./components/AuthPage'));
@@ -56,18 +55,16 @@ const DealDetailsPage = smartLazy(() => import('./components/DealDetailsPage'));
 const WishlistPage = smartLazy(() => import('./components/WishlistPage'));
 const CheckoutPage = smartLazy(() => import('./components/CheckoutPage'));
 const OrdersPage = smartLazy(() => import('./components/OrdersPage'));
-
 const OrderDetailsPage = smartLazy(() => import('./components/OrderDetailsPage'));
-
 const DeleteAccountPage = smartLazy(() => import('./components/DeleteAccountPage'));
 const NotificationsPage = smartLazy(() => import('./notification/NotificationsPage'));
 const EditItemPage = smartLazy(() => import('./components/EditItemPage'));
-
 const FloatingAIAssistant = smartLazy(() => import('./ai/FloatingAIAssistant'));
 const AiChatPage = smartLazy(() => import('./ai/AiChatPage'));
 const RecentlyViewedPage = smartLazy(() => import('./components/RecentlyViewedPage'));
-
 const CompleteProfilePopup = smartLazy(() => import('./components/CompleteProfilePopup'));
+const CreateAIPage = smartLazy(() => import('./ai/CreateAIPage'));
+const PublicAiChatPage = smartLazy(() => import('./ai/PublicAiChatPage'));
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
@@ -86,7 +83,6 @@ const MainAppContent = ({ user, handleLogout, setUser }) => {
   const navigate = useNavigate(); 
   const [isDesktop, setIsDesktop] = useState(window.innerWidth > 1024);
 
-
 useEffect(() => {
   ReactGA.send({ 
     hitType: "pageview", 
@@ -94,7 +90,6 @@ useEffect(() => {
     title: document.title 
   });
 }, [location]);
-
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {
@@ -173,7 +168,8 @@ useEffect(() => {
     }
   }, [navigate]);
 
-  const isAiChatRoute = location.pathname.startsWith('/ai-chat');
+ // CHANGED: Added '/create-ai' to bypass desktop landing page
+  const isAiChatRoute = location.pathname.startsWith('/ai-chat') || location.pathname.startsWith('/ai/') || location.pathname.startsWith('/create-ai');
   const hideNavbarRoutes = ['/login', '/signup', '/forgot-password'];
   const shouldShowBottomNav = !hideNavbarRoutes.includes(location.pathname) && !location.pathname.startsWith('/admin') && !isAiChatRoute;
   
@@ -193,13 +189,11 @@ useEffect(() => {
       
       <Suspense fallback={null}>
         <CompleteProfilePopup user={user} setUser={setUser} />
-
         <PromoAlert user={user} setUser={setUser} />
         <IosInstallPopup />
       </Suspense>
       
       <main>
-       
         <Suspense fallback={<TopProgressBar />}>
         {user && !isAiChatRoute && !location.pathname.startsWith('/admin') && <FloatingAIAssistant user={user} />}
           <Routes>
@@ -219,13 +213,10 @@ useEffect(() => {
             <Route path="/forgot-password" element={user ? <Navigate to="/" replace /> : <ForgotPasswordPage setUser={setUser} />} />
           
             <Route path="/profile" element={user ? <ProfilePage user={user} setUser={setUser} onLogout={handleLogout} /> : <Navigate to="/login" />} />
-            
             <Route path="/dashboard" element={user ? <DashboardPage user={user} setUser={setUser} /> : <Navigate to="/login" />} />
-            
             <Route path="/edit-item/:id" element={user ? <EditItemPage /> : <Navigate to="/login" />} />
             <Route path="/wishlist" element={user ? <WishlistPage user={user} /> : <Navigate to="/login" />} />
             <Route path="/privacy" element={<PrivacyPage />} />
-
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/refund-policy" element={<RefundPolicyPage />} />
             <Route path="/cancellation-policy" element={<CancellationPolicyPage />} />
@@ -244,7 +235,6 @@ useEffect(() => {
             
             <Route path="/orders" element={user ? <OrdersPage user={user} /> : <Navigate to="/login" />} />
             <Route path="/order/:orderId" element={user ? <OrderDetailsPage user={user} /> : <Navigate to="/login" />} />
-            
             <Route path="/add-item" element={user ? <AddItemPage user={user} setUser={setUser} /> : <Navigate to="/login" />} />
             <Route path="/delete-account" element={user ? <DeleteAccountPage user={user} /> : <Navigate to="/login" />} />
             
@@ -264,9 +254,15 @@ useEffect(() => {
             <Route path="/deal/:id" element={user ? <DealDetailsPage user={user} /> : <Navigate to="/login" />} />
             <Route path="/notifications" element={user ? <NotificationsPage /> : <Navigate to="/login" />} />
             <Route path="/help-support" element={user ? <HelpSupportPage /> : <Navigate to="/login" />} />
+            <Route path="/recently-viewed" element={<RecentlyViewedPage />} />
+            
+            {/* AI Routes */}
             <Route path="/ai-chat" element={user ? <AiChatPage user={user} /> : <Navigate to="/login" />} />
             <Route path="/ai-chat/:sessionId" element={user ? <AiChatPage user={user} /> : <Navigate to="/login" />} />
-            <Route path="/recently-viewed" element={<RecentlyViewedPage />} />
+            
+            {/* CHANGED: New Routes for Personal AI */}
+            <Route path="/create-ai" element={user ? <CreateAIPage user={user} /> : <Navigate to="/login" />} />
+            <Route path="/ai/:username" element={<PublicAiChatPage />} />
             
             <Route path="*" element={<div className="text-white text-center mt-20 text-xl">404 - Page Not Found</div>} />
           </Routes>

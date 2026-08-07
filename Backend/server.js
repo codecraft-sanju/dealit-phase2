@@ -17,6 +17,7 @@ const categoryRoutes = require('./routes/categoryRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const aiRoutes = require('./routes/aiRoutes')
 const notificationRoutes = require('./routes/notificationRoutes');
+const personalAiRoutes = require('./routes/personalAiRoutes'); 
 require('./workers/notificationWorker');
 const { verifyShiprocketConnection } = require('./utils/shiprocket');
 const { verifyRazorpayConnection } = require('./controllers/paymentController');
@@ -24,7 +25,7 @@ const { startAITrainingCron } = require('./services/aiTrainingCron');
 
 const cron = require('node-cron');
 const { autoCancelOverdueOrders } = require('./controllers/orderController');
-// CHANGED: Imported autoCancelIncompleteDispatches
+
 const { autoCancelOverdueBarters, autoCancelIncompleteDispatches } = require('./controllers/barterController');
 
 const User = require('./models/User');
@@ -76,6 +77,7 @@ app.use('/api/offers', offerRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/personal-ai', personalAiRoutes); 
 app.use('/api/notifications', notificationRoutes);
 
 app.use((err, req, res, next) => {
