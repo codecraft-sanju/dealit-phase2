@@ -15,14 +15,22 @@ const personalAISchema = new mongoose.Schema({
   isActive: { type: Boolean, default: true },
   totalChats: { type: Number, default: 0 },
   
-
+  // --- VISUAL PERSONALIZATION ---
   theme: { 
     type: String, 
-    enum: ['midnight-glass', 'minimal-snow', 'cyberpunk-neon'], 
+    enum: ['midnight-glass', 'minimal-snow', 'cyberpunk-neon', 'custom'], 
     default: 'midnight-glass' 
   },
-  
- 
+  primaryColor: {
+    type: String,
+    default: '#A855F7',
+    match: [/^#(?:[0-9a-fA-F]{3}){1,2}$/, 'Invalid hex color format']
+  },
+  fontFamily: {
+    type: String,
+    enum: ['Inter', 'Space Grotesk', 'Playfair Display', 'Poppins'],
+    default: 'Inter'
+  },
   layout: {
     type: String,
     enum: ['center', 'left', 'right'],

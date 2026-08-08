@@ -9,7 +9,7 @@ const prompts = require('../config/prompts');
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-// Middleware: Public chat ko spam se bachane ke liye
+
 const visitorChatLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 20,
@@ -206,34 +206,46 @@ const getAnalytics = async (req, res) => {
   }
 };
 
-const updateTheme = async (req, res) => {
+const updateDesign = async (req, res) => {
   try {
-    const { theme } = req.body;
+    const { theme, primaryColor, fontFamily, layout } = req.body;
+    
+    // Validate hex format manually before DB validation (for clean error messages)
+    if (primaryColor && !/^#(?:[0-9a-fA-F]{3}){1,2}$/.test(primaryColor)) {
+      return res.status(400).json({ success: false, message: "Invalid hex color format. Use e.g., #A855F7" });
+    }
+
+    // Build update object dynamically to only update provided fields
+    const updateData = {};
+    if (theme) updateData.theme = theme;
+    if (primaryColor) updateData.primaryColor = primaryColor;
+    if (fontFamily) updateData.fontFamily = fontFamily;
+    if (layout) updateData.layout = layout;
+
     const personalAI = await PersonalAI.findOneAndUpdate(
       { user: req.user._id }, 
-      { theme }, 
-      { returnDocument: 'after' } 
+      { $set: updateData }, 
+      { new: true, runValidators: true } // 'new: true' is the standard Mongoose equivalent to returnDocument: 'after'
     );
-    res.status(200).json({ success: true, theme: personalAI.theme, message: "Theme updated!" });
+
+    res.status(200).json({ 
+      success: true, 
+      message: "AI Design updated successfully!",
+      design: {
+        theme: personalAI.theme,
+        primaryColor: personalAI.primaryColor,
+        fontFamily: personalAI.fontFamily,
+        layout: personalAI.layout
+      }
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Failed to update theme." });
+    console.error("updateDesign Error:", error);
+    res.status(500).json({ success: false, message: "Failed to update design settings." });
   }
 };
 
-// NEW: Update Layout Controller
-const updateLayout = async (req, res) => {
-  try {
-    const { layout } = req.body;
-    const personalAI = await PersonalAI.findOneAndUpdate(
-      { user: req.user._id }, 
-      { layout }, 
-      { returnDocument: 'after' } 
-    );
-    res.status(200).json({ success: true, layout: personalAI.layout, message: "Layout updated!" });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Failed to update layout." });
-  }
-};
+
+
 
 const getAIProfile = async (req, res) => {
   try {
@@ -252,8 +264,12 @@ const getAIProfile = async (req, res) => {
       creatorPic: personalAI.user.profilePic,
       creatorId: personalAI.user._id, 
       aiId: personalAI._id,
+      
+      // Included new design fields
       theme: personalAI.theme,
-      layout: personalAI.layout // NEW: Added layout to profile data response
+      primaryColor: personalAI.primaryColor,
+      fontFamily: personalAI.fontFamily,
+      layout: personalAI.layout
     };
 
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
@@ -269,10 +285,7 @@ const getAIProfile = async (req, res) => {
       }
     }
 
-    res.status(200).json({
-      success: true,
-      data: responseData
-    });
+    res.status(200).json({ success: true, data: responseData });
   } catch (error) {
     console.error("getAIProfile Error:", error);
     res.status(500).json({ success: false, message: 'Server error fetching profile.' });
@@ -397,7 +410,6 @@ const updateSystemPrompt = async (req, res) => {
     res.status(500).json({ success: false, message: "Failed to update prompt." });
   }
 };
-
 const getMyAI = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -413,6 +425,8 @@ const getMyAI = async (req, res) => {
       data: {
         username: personalAI.username,
         theme: personalAI.theme,
+        primaryColor: personalAI.primaryColor,
+        fontFamily: personalAI.fontFamily,
         layout: personalAI.layout, 
         setupStatus: personalAI.setupStatus
       }
@@ -431,8 +445,8 @@ module.exports = {
   visitorChatLimiter,
   uploadKnowledgeBase,
   getAnalytics,
-  updateTheme,
-  updateLayout, 
+  updateDesign,
+  
   updateSystemPrompt,
   getMyAI
 };

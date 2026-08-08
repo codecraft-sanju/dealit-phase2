@@ -9,7 +9,6 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { toast } from 'react-toastify';
 
-// Lazy load the Creator Studio
 const CreatorStudio = lazy(() => import('./CreatorStudio'));
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
@@ -17,39 +16,26 @@ const API_BASE = import.meta.env.VITE_BACKEND_API;
 const themeConfig = {
   'midnight-glass': {
     wrapper: 'bg-[#0c0c0c] border-gray-800/80 sm:shadow-2xl text-white',
-    glowTop: 'bg-purple-600/15 via-purple-600/5',
-    userBubble: 'bg-gradient-to-br from-gray-100 to-gray-300 text-black',
     botBubble: 'bg-[#181818] text-gray-200 border border-gray-800/80',
-    inputWrap: 'bg-[#1A1A1A] border-gray-700/80 focus-within:border-purple-500/50',
+    inputWrap: 'bg-[#1A1A1A] border-gray-700/80',
     inputText: 'text-white placeholder-gray-500',
-    inputBtn: 'bg-white text-black hover:bg-gray-200',
-    tag: 'text-purple-400 bg-purple-500/10 border-purple-500/20'
   },
   'minimal-snow': {
     wrapper: 'bg-[#f8fafc] border-gray-200 sm:shadow-[0_20px_50px_rgba(0,0,0,0.1)] text-gray-900',
-    glowTop: 'bg-transparent via-transparent',
-    userBubble: 'bg-blue-600 text-white shadow-sm',
     botBubble: 'bg-white text-gray-800 border border-gray-200 shadow-sm',
-    inputWrap: 'bg-white border-gray-300 focus-within:border-blue-500 shadow-sm',
+    inputWrap: 'bg-white border-gray-300 shadow-sm',
     inputText: 'text-gray-900 placeholder-gray-400',
-    inputBtn: 'bg-blue-600 text-white hover:bg-blue-700',
-    tag: 'text-blue-600 bg-blue-500/10 border-blue-500/20'
   },
   'cyberpunk-neon': {
-    wrapper: 'bg-black border-cyan-500/50 sm:shadow-[0_0_30px_rgba(6,182,212,0.15)] text-cyan-50',
-    glowTop: 'bg-pink-600/10 via-cyan-600/5',
-    userBubble: 'bg-pink-600 text-white shadow-[0_0_10px_rgba(219,39,119,0.3)]',
-    botBubble: 'bg-black text-cyan-300 border border-cyan-500/50 shadow-[inset_0_0_15px_rgba(6,182,212,0.1)]',
-    inputWrap: 'bg-black border-pink-500/50 focus-within:border-cyan-400 focus-within:shadow-[0_0_15px_rgba(6,182,212,0.3)]',
+    wrapper: 'bg-black border-[var(--ai-primary-50)] sm:shadow-[0_0_30px_var(--ai-primary-20)] text-cyan-50',
+    botBubble: 'bg-black text-gray-200 border border-[var(--ai-primary-50)]',
+    inputWrap: 'bg-black border-[var(--ai-primary-50)]',
     inputText: 'text-cyan-300 placeholder-cyan-800',
-    inputBtn: 'bg-cyan-400 text-black hover:bg-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.5)]',
-    tag: 'text-pink-400 bg-pink-500/10 border-pink-500/30 shadow-[0_0_10px_rgba(219,39,119,0.2)]'
   }
 };
 
 const PublicAiChatPage = ({ user }) => {
   const { username } = useParams();
-  const navigate = useNavigate();
   const location = useLocation(); 
   
   const [profile, setProfile] = useState(null);
@@ -61,12 +47,12 @@ const PublicAiChatPage = ({ user }) => {
   const [isTyping, setIsTyping] = useState(false);
   const [visitorId, setVisitorId] = useState('');
 
-  // Ownership State
   const [isOwner, setIsOwner] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
-  // Check if we are viewing this inside the split-screen preview iframe
-  const isPreviewMode = new URLSearchParams(location.search).get('preview') === 'true';
+  // --- NEW: Parse URL for Live Unsaved Previews ---
+  const queryParams = new URLSearchParams(location.search);
+  const isPreviewMode = queryParams.get('preview') === 'true';
 
   const messagesEndRef = useRef(null);
   const abortControllerRef = useRef(null);
@@ -80,7 +66,6 @@ const PublicAiChatPage = ({ user }) => {
     setVisitorId(vid);
   }, []);
 
-  // Fetch AI Profile Details
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -97,7 +82,6 @@ const PublicAiChatPage = ({ user }) => {
             { id: 'greet', role: 'assistant', content: `Hi there! I'm the AI assistant for **${res.data.data.creatorName}**. How can I help you today?` }
           ]);
           
-          // Check Ownership
           if (user && (user.username === username || user._id === res.data.data.creatorId)) {
             setIsOwner(true);
           }
@@ -206,72 +190,87 @@ const PublicAiChatPage = ({ user }) => {
     );
   }
 
-  const theme = profile.theme || 'midnight-glass';
-  const layout = profile.layout || 'center'; 
+  // --- NEW: Read from URL if in Preview Mode, otherwise use DB Profile ---
+  const theme = (isPreviewMode ? queryParams.get('theme') : null) || profile.theme || 'midnight-glass';
+  const layout = (isPreviewMode ? queryParams.get('layout') : null) || profile.layout || 'center'; 
+  const primaryColor = (isPreviewMode ? queryParams.get('primaryColor') : null) || profile.primaryColor || '#A855F7';
+  const fontFamily = (isPreviewMode ? queryParams.get('fontFamily') : null) || profile.fontFamily || 'Inter';
+  
   const style = themeConfig[theme] || themeConfig['midnight-glass'];
+  const fontUrl = `https://fonts.googleapis.com/css2?family=${fontFamily.replace(/ /g, '+')}:wght@400;500;600;700&display=swap`;
 
   return (
-    <div className={`fixed inset-0 flex justify-center items-center z-[100] selection:bg-purple-500/30 font-sans ${theme === 'minimal-snow' ? 'bg-slate-200' : 'bg-[#050505]'}`}>
+    <div className={`fixed inset-0 flex justify-center items-center z-[100] font-sans ${theme === 'minimal-snow' ? 'bg-slate-200' : 'bg-[#050505]'}`}>
+      
       <style>{`
+        @import url('${fontUrl}');
+        
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        :root {
+          --ai-primary: ${primaryColor};
+          --ai-primary-10: ${primaryColor}1A;
+          --ai-primary-20: ${primaryColor}33;
+          --ai-primary-50: ${primaryColor}80;
+        }
+
+        .ai-font-custom {
+          font-family: '${fontFamily}', sans-serif;
+        }
       `}</style>
 
-      {/* Background Glows */}
       {theme !== 'minimal-snow' && (
         <>
-          <div className="hidden sm:block absolute top-[15%] left-[20%] w-[400px] h-[400px] bg-purple-600/10 rounded-full blur-[120px] pointer-events-none" />
-          <div className="hidden sm:block absolute bottom-[15%] right-[20%] w-[400px] h-[400px] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none" />
+          <div className="hidden sm:block absolute top-[15%] left-[20%] w-[400px] h-[400px] rounded-full blur-[120px] pointer-events-none transition-colors duration-700" style={{ backgroundColor: 'var(--ai-primary-20)' }} />
+          <div className="hidden sm:block absolute bottom-[15%] right-[20%] w-[400px] h-[400px] rounded-full blur-[120px] pointer-events-none transition-colors duration-700" style={{ backgroundColor: 'var(--ai-primary-20)' }} />
         </>
       )}
 
-      {/* Main Responsive Phone View Box */}
-      <div className={`w-full h-[100dvh] sm:h-[90dvh] sm:max-h-[850px] sm:max-w-[420px] sm:rounded-[2.5rem] sm:border flex flex-col relative overflow-hidden z-10 transition-colors duration-500 ${style.wrapper}`}>
+      <div className={`w-full h-[100dvh] sm:h-[90dvh] sm:max-h-[850px] sm:max-w-[420px] sm:rounded-[2.5rem] sm:border flex flex-col relative overflow-hidden z-10 transition-all duration-500 ai-font-custom ${style.wrapper}`}>
         
-        <div className={`absolute top-0 left-0 right-0 h-48 bg-gradient-to-b to-transparent pointer-events-none z-0 ${style.glowTop}`} />
+        <div className={`absolute top-0 left-0 right-0 h-48 bg-gradient-to-b to-transparent pointer-events-none z-0 transition-colors duration-500`} style={{ backgroundImage: `linear-gradient(to bottom, var(--ai-primary-10), transparent)` }} />
 
-        {/* Dynamic Profile Header Layout */}
-        <div className={`pt-10 pb-4 px-6 flex shrink-0 z-10 relative ${
+        <div className={`pt-10 pb-4 px-6 flex shrink-0 z-10 relative transition-all duration-500 ${
           layout === 'left' ? 'flex-row items-center justify-start gap-4 text-left' :
           layout === 'right' ? 'flex-row-reverse items-center justify-start gap-4 text-right' :
           'flex-col items-center justify-center text-center'
         }`}>
           
-          {/* Subtle Copy Link Button - Adjusts position based on layout */}
           {!isPreviewMode && (
             <button 
               onClick={copyPageLink}
-              className={`absolute top-6 ${layout === 'right' ? 'left-6' : 'right-6'} p-2 bg-black/20 hover:bg-black/40 border border-white/10 rounded-full backdrop-blur-md transition-all text-gray-300 z-20`}
+              className={`absolute top-6 ${layout === 'right' ? 'left-6' : 'right-6'} p-2 bg-black/20 hover:bg-black/40 border border-white/10 rounded-full backdrop-blur-md transition-all active:scale-95 text-gray-300 z-20 hover:shadow-lg`}
               title="Copy Profile Link"
             >
               {isCopied ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
             </button>
           )}
 
-          {/* Profile Picture */}
-          <div className={`w-20 h-20 shrink-0 rounded-full p-[3px] bg-gradient-to-br from-purple-500 via-pink-500 to-blue-500 shadow-lg ${layout === 'center' ? 'mb-3' : ''}`}>
+          <div className={`w-20 h-20 shrink-0 rounded-full p-[3px] shadow-[0_0_20px_var(--ai-primary-20)] transition-all duration-500 hover:scale-105 ${layout === 'center' ? 'mb-3' : ''}`} style={{ background: `linear-gradient(to bottom right, var(--ai-primary), var(--ai-primary-50))` }}>
             <div className="w-full h-full rounded-full overflow-hidden bg-gray-900 border-2 border-transparent">
-              <img src={profile.creatorPic || "https://res.cloudinary.com/dia3qhc0x/image/upload/v1781289017/ijblexdk51vluv7ku6g9.jpg"} alt={profile.creatorName} className="w-full h-full object-cover" />
+              <img src={profile.creatorPic || "https://res.cloudinary.com/dia3qhc0x/image/upload/v1781289017/ijblexdk51vluv7ku6g9.jpg"} alt={profile.creatorName} className="w-full h-full object-cover hover:scale-110 transition-transform duration-500" />
             </div>
           </div>
           
-          {/* Profile Name and Tag */}
           <div className={`flex flex-col ${layout === 'left' ? 'items-start' : layout === 'right' ? 'items-end' : 'items-center'}`}>
             <h1 className="text-lg font-bold mb-1 tracking-wide">@{profile.username}</h1>
-            <div className={`flex items-center gap-1.5 text-[10px] font-semibold tracking-wider px-3 py-1 rounded-full border uppercase ${style.tag}`}>
+            <div 
+              className="flex items-center gap-1.5 text-[10px] font-semibold tracking-wider px-3 py-1 rounded-full border uppercase shadow-sm transition-colors duration-500"
+              style={{ color: 'var(--ai-primary)', backgroundColor: 'var(--ai-primary-10)', borderColor: 'var(--ai-primary-20)' }}
+            >
               <Sparkles className="w-3 h-3" /> AI Agent
             </div>
           </div>
         </div>
 
-        {/* Chat Scroll Container */}
         <div className="flex-1 overflow-y-auto px-4 pb-2 space-y-5 no-scrollbar z-10">
           <AnimatePresence>
             {messages.map((msg) => (
               <motion.div key={msg.id} initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} className={`flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div 
-                  className={`max-w-[85%] px-4 py-3.5 text-sm leading-relaxed ${msg.role === 'user' ? `rounded-2xl rounded-tr-sm font-medium ${style.userBubble}` : `rounded-2xl rounded-tl-sm ${style.botBubble}`}`}
-                  style={{ wordBreak: 'break-word' }}
+                  className={`max-w-[85%] px-4 py-3.5 text-sm leading-relaxed ${msg.role === 'user' ? 'rounded-2xl rounded-tr-sm font-medium shadow-md' : `rounded-2xl rounded-tl-sm ${style.botBubble}`}`}
+                  style={msg.role === 'user' ? { backgroundColor: 'var(--ai-primary)', color: '#fff' } : { wordBreak: 'break-word' }}
                 >
                   {msg.role === 'assistant' ? (
                     msg.content === '' && msg.isStreaming ? (
@@ -304,9 +303,12 @@ const PublicAiChatPage = ({ user }) => {
           <div ref={messagesEndRef} className="h-4" />
         </div>
 
-        {/* Input Bar */}
         <div className={`p-4 shrink-0 bg-gradient-to-t to-transparent z-20 pb-safe ${theme === 'minimal-snow' ? 'from-[#f8fafc] via-[#f8fafc]' : 'from-[#0c0c0c] via-[#0c0c0c]'}`}>
-          <form onSubmit={handleSendMessage} className={`relative flex items-center border rounded-full p-1.5 transition-colors ${style.inputWrap}`}>
+          <form 
+            onSubmit={handleSendMessage} 
+            className={`relative flex items-center border rounded-full p-1.5 transition-colors duration-300 hover:shadow-[0_0_15px_var(--ai-primary-20)] focus-within:ring-1 focus-within:shadow-[0_0_15px_var(--ai-primary-20)] ${style.inputWrap}`}
+            style={{ '--tw-ring-color': 'var(--ai-primary)' }}
+          >
             <input 
               type="text" value={input} onChange={(e) => setInput(e.target.value)}
               placeholder="Message..." disabled={isTyping}
@@ -314,22 +316,16 @@ const PublicAiChatPage = ({ user }) => {
             />
             <button 
               type="submit" disabled={isTyping || !input.trim()}
-              className={`w-10 h-10 rounded-full flex items-center justify-center transition-transform active:scale-95 disabled:opacity-50 shrink-0 ${style.inputBtn}`}
+              className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-105 active:scale-95 disabled:opacity-50 shrink-0 text-white shadow-lg"
+              style={{ backgroundColor: 'var(--ai-primary)' }}
             >
               <Send className="w-4 h-4 ml-0.5" />
             </button>
           </form>
-          
-          <div className="text-center mt-4 mb-1">
-            <a href="https://dealiit.com" target="_blank" rel="noreferrer" className="text-[10px] text-gray-500 hover:text-gray-400 transition-colors font-semibold uppercase tracking-wider flex items-center justify-center gap-1">
-              Powered by <span className="font-bold flex items-center gap-1.5 opacity-90"><img src="https://res.cloudinary.com/dia3qhc0x/image/upload/v1781289017/ijblexdk51vluv7ku6g9.jpg" alt="Dealit" className="w-3.5 h-3.5 rounded-full object-cover" /> Dealit AI</span>
-            </a>
-          </div>
         </div>
 
       </div>
 
-      {/* Portal/Lazy Component Trigger */}
       {isOwner && profile && !isPreviewMode && (
         <Suspense fallback={null}>
            <CreatorStudio 
