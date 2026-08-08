@@ -1,5 +1,7 @@
 const Groq = require('groq-sdk');
+const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
+const pdfParse = require('pdf-parse'); 
 const PersonalAI = require('../models/PersonalAI');
 const VisitorAIChat = require('../models/VisitorAIChat');
 const User = require('../models/User');
@@ -121,7 +123,6 @@ const submitContextAnswers = async (req, res) => {
     personalAI.setupStatus = 'completed';
     await personalAI.save();
 
-    // CHANGED: Using process.env.FRONTEND_URL so it works on localhost and production dynamically
     const baseUrl = process.env.FRONTEND_URL || 'https://dealiit.com';
 
     res.status(200).json({ 
@@ -135,26 +136,126 @@ const submitContextAnswers = async (req, res) => {
   }
 };
 
-// 3. Get Public Profile: Visitor jab link open karega
+// 3. Upload Knowledge Base (PDF)
+const uploadKnowledgeBase = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    if (!req.file) return res.status(400).json({ success: false, message: "No file uploaded. Please upload a PDF." });
+
+    if (req.file.mimetype !== 'application/pdf') {
+      return res.status(400).json({ success: false, message: "Only PDF files are supported." });
+    }
+
+    const data = await pdfParse(req.file.buffer);
+    const extractedText = data.text.trim();
+
+    if (!extractedText) return res.status(400).json({ success: false, message: "Could not extract text. The PDF might be an image." });
+
+    const personalAI = await PersonalAI.findOne({ user: userId });
+    if (!personalAI) return res.status(404).json({ success: false, message: "AI Profile not found." });
+
+    // Limit to ~20,000 characters to stay safely within AI token limits
+    personalAI.knowledgeBaseText = extractedText.substring(0, 20000);
+    await personalAI.save();
+
+    res.status(200).json({ success: true, message: "Knowledge Base updated successfully!" });
+  } catch (error) {
+    console.error("PDF Upload Error:", error);
+    res.status(500).json({ success: false, message: "Failed to process PDF." });
+  }
+};
+
+// 4. Fetch Analytics & Chat Logs
+const getAnalytics = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const personalAI = await PersonalAI.findOne({ user: userId });
+    
+    if (!personalAI) return res.status(404).json({ success: false, message: "AI Profile not found." });
+
+    const visitors = await VisitorAIChat.find({ personalAI: personalAI._id }).sort({ updatedAt: -1 });
+
+    let totalMessages = 0;
+    visitors.forEach(v => {
+      // Count only user messages
+      totalMessages += v.messages.filter(m => m.role === 'user').length;
+    });
+
+    res.status(200).json({
+      success: true,
+      stats: {
+        totalVisitors: visitors.length,
+        totalMessagesReceived: totalMessages,
+        totalInteractions: personalAI.totalChats
+      },
+      // Sending top 15 recent chat sessions for the creator to review
+      recentChats: visitors.slice(0, 15)
+    });
+  } catch (error) {
+    console.error("Analytics Error:", error);
+    res.status(500).json({ success: false, message: "Failed to load analytics." });
+  }
+};
+
+// 5. Update Theme
+const updateTheme = async (req, res) => {
+  try {
+    const { theme } = req.body;
+    const personalAI = await PersonalAI.findOneAndUpdate(
+      { user: req.user._id }, 
+      { theme }, 
+      { new: true }
+    );
+    res.status(200).json({ success: true, theme: personalAI.theme, message: "Theme updated!" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to update theme." });
+  }
+};
+
+// 6. Get Public Profile (Includes Theme)
+// 6. Get Public Profile (Includes Theme & securely attaches Prompt for Owner)
 const getAIProfile = async (req, res) => {
   try {
     const { username } = req.params;
     
     const personalAI = await PersonalAI.findOne({ username, isActive: true, setupStatus: 'completed' })
-      .populate('user', 'full_name profilePic'); // Fetch creator's basic info for the UI
+      .populate('user', 'full_name profilePic');
 
     if (!personalAI) {
       return res.status(404).json({ success: false, message: 'AI Profile not found or inactive.' });
     }
 
+    // Default Public Data (Visitor ko yahi dikhega)
+    let responseData = {
+      username: personalAI.username,
+      creatorName: personalAI.user.full_name,
+      creatorPic: personalAI.user.profilePic,
+      creatorId: personalAI.user._id, // Frontend isOwner check ke liye
+      aiId: personalAI._id,
+      theme: personalAI.theme 
+    };
+
+    // 🔒 SECURITY CHECK: Read Token to identify if the requester is the Owner
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+      try {
+        const token = req.headers.authorization.split(' ')[1];
+        // Ensure your JWT_SECRET matches the one used during user login
+        const decoded = jwt.verify(token, process.env.JWT_SECRET); 
+        
+        // Agar logged-in user hi is AI ka creator hai
+        if (decoded.id === personalAI.user._id.toString()) {
+          // Sirf tabhi finalSystemPrompt attach karo
+          responseData.finalSystemPrompt = personalAI.finalSystemPrompt;
+        }
+      } catch (err) {
+        // Token invalid ya expire ho gaya hai, just ignore it and treat as visitor.
+        console.log("Visitor profile fetch - No valid token found.");
+      }
+    }
+
     res.status(200).json({
       success: true,
-      data: {
-        username: personalAI.username,
-        creatorName: personalAI.user.full_name,
-        creatorPic: personalAI.user.profilePic,
-        aiId: personalAI._id
-      }
+      data: responseData
     });
   } catch (error) {
     console.error("getAIProfile Error:", error);
@@ -162,7 +263,7 @@ const getAIProfile = async (req, res) => {
   }
 };
 
-// 4. Process Visitor Chat: Handle the actual chat with streaming (SSE)
+// 7. Process Visitor Chat (Includes Knowledge Base & Streaming)
 const processVisitorChat = async (req, res) => {
   let isClientDisconnected = false;
   const abortController = new AbortController();
@@ -173,7 +274,7 @@ const processVisitorChat = async (req, res) => {
   });
 
   try {
-    const { message, aiId, visitorId } = req.body; // visitorId frontend se aayega (e.g. UUID)
+    const { message, aiId, visitorId } = req.body; 
     
     if (!message || !aiId || !visitorId) {
       return res.status(400).json({ success: false, message: 'Missing required parameters.' });
@@ -197,7 +298,8 @@ const processVisitorChat = async (req, res) => {
       pastMessages = recentHistory.map(msg => ({ role: msg.role, content: msg.content }));
     }
 
-    const systemPrompt = prompts.getVisitorChatPrompt(personalAI.finalSystemPrompt);
+    // Injecting knowledgeBaseText dynamically
+    const systemPrompt = prompts.getVisitorChatPrompt(personalAI.finalSystemPrompt, personalAI.knowledgeBaseText);
 
     const messagesArray = [
       { role: "system", content: systemPrompt },
@@ -267,11 +369,35 @@ const processVisitorChat = async (req, res) => {
     }
   }
 };
+const updateSystemPrompt = async (req, res) => {
+  try {
+    const { newPrompt } = req.body;
+    
+    // Strict Backend Auth: Find by user._id directly ensures ownership
+    const personalAI = await PersonalAI.findOneAndUpdate(
+      { user: req.user._id }, 
+      { finalSystemPrompt: newPrompt }, 
+      { new: true }
+    );
+
+    if (!personalAI) {
+      return res.status(403).json({ success: false, message: "Unauthorized or AI not found." });
+    }
+
+    res.status(200).json({ success: true, message: "System prompt updated instantly!" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to update prompt." });
+  }
+};
 
 module.exports = {
   initPersonalAI,
   submitContextAnswers,
   getAIProfile,
   processVisitorChat,
-  visitorChatLimiter
+  visitorChatLimiter,
+  uploadKnowledgeBase,
+  getAnalytics,
+  updateTheme,
+  updateSystemPrompt
 };
