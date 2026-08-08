@@ -1,7 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings2, X, BarChart3, Palette, FileText, CheckCircle2, UploadCloud, MessageSquare, Loader2 } from 'lucide-react';
+import { 
+  Settings2, X, BarChart3, Palette, FileText, CheckCircle2, 
+  UploadCloud, MessageSquare, Loader2, AlignCenter, AlignLeft, AlignRight, LayoutPanelTop
+} from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
@@ -12,17 +15,20 @@ const THEMES = [
   { id: 'cyberpunk-neon', name: 'Cyberpunk Neon' }
 ];
 
-// Ye component lazy load hoga
+const LAYOUTS = [
+  { id: 'center', name: 'Center', icon: AlignCenter },
+  { id: 'left', name: 'Left', icon: AlignLeft },
+  { id: 'right', name: 'Right', icon: AlignRight }
+];
+
 const CreatorStudio = ({ profile, setProfile, username, initialPrompt }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('analytics');
+  const [activeTab, setActiveTab] = useState('theme'); // Defaulting to theme for faster UX
   
   // States for features
   const [analytics, setAnalytics] = useState(null);
   const [promptText, setPromptText] = useState(initialPrompt || "");
   const [isLoading, setIsLoading] = useState(false);
-  const [pdfFile, setPdfFile] = useState(null);
-  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (isOpen && activeTab === 'analytics' && !analytics) {
@@ -42,10 +48,9 @@ const CreatorStudio = ({ profile, setProfile, username, initialPrompt }) => {
     }
   };
 
-  // Optimistic UI Update for Theme
   const handleUpdateTheme = async (themeId) => {
     const previousTheme = profile.theme;
-    setProfile(prev => ({ ...prev, theme: themeId })); // Instant UI change
+    setProfile(prev => ({ ...prev, theme: themeId })); 
     
     try {
       const token = localStorage.getItem('dealit_token');
@@ -54,8 +59,24 @@ const CreatorStudio = ({ profile, setProfile, username, initialPrompt }) => {
       });
       toast.success("Theme applied live!");
     } catch (err) {
-      setProfile(prev => ({ ...prev, theme: previousTheme })); // Revert on fail
+      setProfile(prev => ({ ...prev, theme: previousTheme })); 
       toast.error("Failed to save theme");
+    }
+  };
+
+  const handleUpdateLayout = async (layoutId) => {
+    const previousLayout = profile.layout;
+    setProfile(prev => ({ ...prev, layout: layoutId })); 
+    
+    try {
+      const token = localStorage.getItem('dealit_token');
+      await axios.put(`${API_BASE}/api/personal-ai/layout`, { layout: layoutId }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Layout applied live!");
+    } catch (err) {
+      setProfile(prev => ({ ...prev, layout: previousLayout })); 
+      toast.error("Failed to save layout");
     }
   };
 
@@ -74,10 +95,8 @@ const CreatorStudio = ({ profile, setProfile, username, initialPrompt }) => {
     }
   };
 
-  // Render outside main DOM tree via Portal
   return ReactDOM.createPortal(
     <>
-      {/* Subtle FAB (Floating Action Button) */}
       {!isOpen && (
         <motion.button 
           initial={{ scale: 0 }} animate={{ scale: 1 }}
@@ -88,20 +107,45 @@ const CreatorStudio = ({ profile, setProfile, username, initialPrompt }) => {
         </motion.button>
       )}
 
-      {/* Glassmorphism Drawer */}
       <AnimatePresence>
         {isOpen && (
-          <div className="fixed inset-0 z-[1000] flex justify-end bg-black/40 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[1000] flex flex-col lg:flex-row justify-end bg-black/40 backdrop-blur-sm pointer-events-none">
+            
+            {/* Click outside to close (Desktop) */}
+            <div className="absolute inset-0 pointer-events-auto hidden lg:block" onClick={() => setIsOpen(false)} />
+
             <motion.div 
-              initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+              initial={{ y: "100%" }} 
+              animate={{ y: 0 }} 
+              exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="w-full max-w-md bg-white/5 backdrop-blur-2xl border-l border-white/10 h-full flex flex-col text-white shadow-2xl relative"
+              drag={window.innerWidth < 1024 ? "y" : false}
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={0.2}
+              onDragEnd={(e, info) => {
+                if (info.offset.y > 100 || info.velocity.y > 500) {
+                  setIsOpen(false);
+                }
+              }}
+              className="w-full lg:max-w-md bg-[#0F0F12] border-t lg:border-t-0 lg:border-l border-white/10 h-[65vh] lg:h-full flex flex-col text-white shadow-[0_-15px_40px_rgba(0,0,0,0.8)] rounded-t-[1.5rem] lg:rounded-none relative overflow-hidden mt-auto lg:mt-0 pointer-events-auto"
             >
-              {/* Drawer Header */}
-              <div className="p-6 border-b border-white/10 flex items-center justify-between">
+              {/* Drag Handle & Close Button (Mobile) */}
+              <div className="lg:hidden w-full flex items-center justify-between pt-4 pb-2 px-5 shrink-0 cursor-grab active:cursor-grabbing">
+                <div className="w-8 h-8" />
+                <div className="w-12 h-1.5 bg-gray-600 rounded-full hover:bg-gray-500 transition-colors" />
+                <button 
+                  onClick={() => setIsOpen(false)}
+                  className="w-8 h-8 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-full transition-colors active:scale-95"
+                >
+                  <X className="w-4 h-4 text-gray-400 hover:text-white" />
+                </button>
+              </div>
+
+              {/* Desktop Header */}
+              <div className="hidden lg:flex p-6 border-b border-white/10 items-center justify-between shrink-0">
                 <div>
                   <h2 className="text-lg font-bold flex items-center gap-2">
-                    <Settings2 className="w-5 h-5 text-purple-400" /> Creator Studio
+                    <img src="https://res.cloudinary.com/dia3qhc0x/image/upload/v1781289017/ijblexdk51vluv7ku6g9.jpg" alt="Dealit AI" className="w-5 h-5 rounded-full object-cover border border-white/10" /> Creator Studio
                   </h2>
                   <p className="text-xs text-gray-400">Manage @{username} inline.</p>
                 </div>
@@ -111,12 +155,11 @@ const CreatorStudio = ({ profile, setProfile, username, initialPrompt }) => {
               </div>
 
               {/* Tabs */}
-              <div className="flex border-b border-white/10 bg-black/20">
+              <div className="flex border-b border-white/10 bg-black/20 shrink-0">
                 {[
+                  { id: 'theme', icon: Palette, label: 'Look' },
                   { id: 'analytics', icon: BarChart3, label: 'Stats' },
-                  { id: 'theme', icon: Palette, label: 'Theme' },
-                  { id: 'prompt', icon: MessageSquare, label: 'Prompt' },
-                  { id: 'knowledge', icon: FileText, label: 'Docs' }
+                  { id: 'prompt', icon: MessageSquare, label: 'Prompt' }
                 ].map(tab => (
                   <button
                     key={tab.id} onClick={() => setActiveTab(tab.id)}
@@ -130,16 +173,51 @@ const CreatorStudio = ({ profile, setProfile, username, initialPrompt }) => {
               </div>
 
               {/* Drawer Content */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-6 no-scrollbar">
+              <div 
+                className="flex-1 overflow-y-auto p-5 lg:p-6 space-y-6 no-scrollbar pb-10 lg:pb-6"
+                onPointerDown={(e) => e.stopPropagation()} // Prevents scrolling from triggering the drag
+              >
                 
+                {/* --- APPEARANCE TAB (Themes + Layouts) --- */}
                 {activeTab === 'theme' && (
-                  <div className="space-y-3">
-                    {THEMES.map(t => (
-                      <div key={t.id} onClick={() => handleUpdateTheme(t.id)} className={`p-4 rounded-xl border-2 cursor-pointer flex items-center justify-between transition-all ${ profile.theme === t.id ? 'border-purple-500 bg-purple-500/10' : 'border-white/10 bg-black/20 hover:border-white/30'}`}>
-                        <span className="text-sm font-semibold">{t.name}</span>
-                        {profile.theme === t.id && <CheckCircle2 className="w-5 h-5 text-purple-400" />}
+                  <div className="space-y-8">
+                    
+                    {/* Theme Section */}
+                    <div>
+                      <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <Palette className="w-3.5 h-3.5"/> Color Theme
+                      </h3>
+                      <div className="space-y-2">
+                        {THEMES.map(t => (
+                          <div key={t.id} onClick={() => handleUpdateTheme(t.id)} className={`p-4 rounded-xl border-2 cursor-pointer flex items-center justify-between transition-all ${ profile.theme === t.id ? 'border-purple-500 bg-purple-500/10 text-purple-300' : 'border-white/10 bg-black/20 hover:border-white/30 text-gray-300'}`}>
+                            <span className="text-sm font-semibold">{t.name}</span>
+                            {profile.theme === t.id && <CheckCircle2 className="w-5 h-5" />}
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    </div>
+
+                    {/* Layout Section */}
+                    <div className="pt-2">
+                      <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <LayoutPanelTop className="w-3.5 h-3.5"/> Header Layout
+                      </h3>
+                      <div className="grid grid-cols-3 gap-2">
+                        {LAYOUTS.map(l => (
+                          <div 
+                            key={l.id} 
+                            onClick={() => handleUpdateLayout(l.id)} 
+                            className={`p-3 rounded-xl border-2 flex flex-col items-center gap-2 cursor-pointer transition-all ${
+                              (profile.layout || 'center') === l.id ? 'border-purple-500 bg-purple-500/10 text-purple-300' : 'border-white/10 bg-black/20 hover:bg-white/5 text-gray-400'
+                            }`}
+                          >
+                            <l.icon className="w-5 h-5" />
+                            <span className="text-[11px] font-semibold">{l.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
                   </div>
                 )}
 
@@ -155,8 +233,6 @@ const CreatorStudio = ({ profile, setProfile, username, initialPrompt }) => {
                     </button>
                   </div>
                 )}
-                
-                {/* Analytics and Knowledge tab content remains similar to your original code, bas unko yaha paste kar lena */}
 
               </div>
             </motion.div>

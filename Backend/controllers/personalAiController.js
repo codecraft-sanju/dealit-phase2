@@ -1,7 +1,7 @@
 const Groq = require('groq-sdk');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
-const pdfParse = require('pdf-parse'); 
+const pdfParse = require('pdf-parse');
 const PersonalAI = require('../models/PersonalAI');
 const VisitorAIChat = require('../models/VisitorAIChat');
 const User = require('../models/User');
@@ -9,18 +9,16 @@ const prompts = require('../config/prompts');
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-// Middleware: Public chat ko spam se bachane ke liye (20 msgs per hour per IP)
+// Middleware: Public chat ko spam se bachane ke liye
 const visitorChatLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 20,
   message: { success: false, message: 'Rate limit exceeded. Please try again later.' },
   keyGenerator: (req) => {
-    // Fallback to visitorId if IP is behind proxy
     return req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.body.visitorId || 'anonymous';
   }
 });
 
-// Helper: Groq kabhi-kabhi markdown me JSON deta hai, usko clean karne ke liye
 const parseAIJson = (text) => {
   try {
     const cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim();
@@ -30,7 +28,6 @@ const parseAIJson = (text) => {
   }
 };
 
-// 1. Initial Setup: Base idea receive karke 4-5 questions generate karna
 const initPersonalAI = async (req, res) => {
   try {
     const { baseIdea, username } = req.body;
@@ -40,12 +37,10 @@ const initPersonalAI = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Base idea and username are required.' });
     }
 
-    // Check if username format is valid (alphanumeric and underscores)
     if (!/^[a-zA-Z0-9_]+$/.test(username)) {
       return res.status(400).json({ success: false, message: 'Username can only contain letters, numbers, and underscores.' });
     }
 
-    // Check if username is already taken by someone else
     const existingUsername = await PersonalAI.findOne({ username });
     if (existingUsername && existingUsername.user.toString() !== userId.toString()) {
       return res.status(400).json({ success: false, message: 'This username is already taken.' });
@@ -57,7 +52,7 @@ const initPersonalAI = async (req, res) => {
     const chatCompletion = await groq.chat.completions.create({
       messages: [{ role: "user", content: prompt }],
       model: "llama-3.1-8b-instant",
-      temperature: 0.5, // Keep it focused
+      temperature: 0.5, 
     });
 
     const generatedText = chatCompletion.choices[0]?.message?.content;
@@ -67,7 +62,6 @@ const initPersonalAI = async (req, res) => {
       throw new Error("Invalid questions array generated.");
     }
 
-    // Save or Update PersonalAI config
     let personalAI = await PersonalAI.findOne({ user: userId });
     if (personalAI) {
       personalAI.baseIdea = baseIdea;
@@ -92,7 +86,6 @@ const initPersonalAI = async (req, res) => {
   }
 };
 
-// 2. Submit Answers: User ke answers le kar master System Prompt banana
 const submitContextAnswers = async (req, res) => {
   try {
     const { answers } = req.body;
@@ -136,7 +129,7 @@ const submitContextAnswers = async (req, res) => {
   }
 };
 
-// 3. Upload Knowledge Base (PDF)
+
 const uploadKnowledgeBase = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -146,26 +139,44 @@ const uploadKnowledgeBase = async (req, res) => {
       return res.status(400).json({ success: false, message: "Only PDF files are supported." });
     }
 
-    const data = await pdfParse(req.file.buffer);
-    const extractedText = data.text.trim();
+    let extractedText = "";
+    try {
+      if (typeof pdfParse === 'object' && pdfParse !== null) {}
 
-    if (!extractedText) return res.status(400).json({ success: false, message: "Could not extract text. The PDF might be an image." });
+      // Direct call fixes the TypeError
+      const parseFunction = typeof pdfParse === 'function' ? pdfParse : (pdfParse.default || pdfParse.pdfParse);
+      
+      if (typeof parseFunction !== 'function') {
+        throw new Error("PDF parser object details logged above. Need to check terminal to find the right function name.");
+      }
+
+      const data = await parseFunction(req.file.buffer);
+      extractedText = data.text ? data.text.trim() : "";
+      
+    } catch (parseError) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Failed to read this PDF. Please check backend terminal for detailed debug logs." 
+      });
+    }
+
+    if (!extractedText || extractedText.length < 10) {
+      return res.status(400).json({ success: false, message: "Could not extract text. The PDF might be an image." });
+    }
 
     const personalAI = await PersonalAI.findOne({ user: userId });
     if (!personalAI) return res.status(404).json({ success: false, message: "AI Profile not found." });
 
-    // Limit to ~20,000 characters to stay safely within AI token limits
     personalAI.knowledgeBaseText = extractedText.substring(0, 20000);
     await personalAI.save();
 
     res.status(200).json({ success: true, message: "Knowledge Base updated successfully!" });
   } catch (error) {
-    console.error("PDF Upload Error:", error);
+    console.error("PDF Upload System Error:", error);
     res.status(500).json({ success: false, message: "Failed to process PDF." });
   }
 };
 
-// 4. Fetch Analytics & Chat Logs
 const getAnalytics = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -177,7 +188,6 @@ const getAnalytics = async (req, res) => {
 
     let totalMessages = 0;
     visitors.forEach(v => {
-      // Count only user messages
       totalMessages += v.messages.filter(m => m.role === 'user').length;
     });
 
@@ -188,7 +198,6 @@ const getAnalytics = async (req, res) => {
         totalMessagesReceived: totalMessages,
         totalInteractions: personalAI.totalChats
       },
-      // Sending top 15 recent chat sessions for the creator to review
       recentChats: visitors.slice(0, 15)
     });
   } catch (error) {
@@ -197,14 +206,13 @@ const getAnalytics = async (req, res) => {
   }
 };
 
-// 5. Update Theme
 const updateTheme = async (req, res) => {
   try {
     const { theme } = req.body;
     const personalAI = await PersonalAI.findOneAndUpdate(
       { user: req.user._id }, 
       { theme }, 
-      { new: true }
+      { returnDocument: 'after' } 
     );
     res.status(200).json({ success: true, theme: personalAI.theme, message: "Theme updated!" });
   } catch (error) {
@@ -212,8 +220,21 @@ const updateTheme = async (req, res) => {
   }
 };
 
-// 6. Get Public Profile (Includes Theme)
-// 6. Get Public Profile (Includes Theme & securely attaches Prompt for Owner)
+// NEW: Update Layout Controller
+const updateLayout = async (req, res) => {
+  try {
+    const { layout } = req.body;
+    const personalAI = await PersonalAI.findOneAndUpdate(
+      { user: req.user._id }, 
+      { layout }, 
+      { returnDocument: 'after' } 
+    );
+    res.status(200).json({ success: true, layout: personalAI.layout, message: "Layout updated!" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to update layout." });
+  }
+};
+
 const getAIProfile = async (req, res) => {
   try {
     const { username } = req.params;
@@ -225,30 +246,25 @@ const getAIProfile = async (req, res) => {
       return res.status(404).json({ success: false, message: 'AI Profile not found or inactive.' });
     }
 
-    // Default Public Data (Visitor ko yahi dikhega)
     let responseData = {
       username: personalAI.username,
       creatorName: personalAI.user.full_name,
       creatorPic: personalAI.user.profilePic,
-      creatorId: personalAI.user._id, // Frontend isOwner check ke liye
+      creatorId: personalAI.user._id, 
       aiId: personalAI._id,
-      theme: personalAI.theme 
+      theme: personalAI.theme,
+      layout: personalAI.layout // NEW: Added layout to profile data response
     };
 
-    // 🔒 SECURITY CHECK: Read Token to identify if the requester is the Owner
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
       try {
         const token = req.headers.authorization.split(' ')[1];
-        // Ensure your JWT_SECRET matches the one used during user login
         const decoded = jwt.verify(token, process.env.JWT_SECRET); 
         
-        // Agar logged-in user hi is AI ka creator hai
         if (decoded.id === personalAI.user._id.toString()) {
-          // Sirf tabhi finalSystemPrompt attach karo
           responseData.finalSystemPrompt = personalAI.finalSystemPrompt;
         }
       } catch (err) {
-        // Token invalid ya expire ho gaya hai, just ignore it and treat as visitor.
         console.log("Visitor profile fetch - No valid token found.");
       }
     }
@@ -263,7 +279,6 @@ const getAIProfile = async (req, res) => {
   }
 };
 
-// 7. Process Visitor Chat (Includes Knowledge Base & Streaming)
 const processVisitorChat = async (req, res) => {
   let isClientDisconnected = false;
   const abortController = new AbortController();
@@ -285,20 +300,17 @@ const processVisitorChat = async (req, res) => {
       return res.status(404).json({ success: false, message: 'AI is unavailable.' });
     }
 
-    // Fetch or create visitor chat history
     let chatSession = await VisitorAIChat.findOne({ personalAI: aiId, visitorId });
     if (!chatSession) {
       chatSession = await VisitorAIChat.create({ personalAI: aiId, visitorId, messages: [] });
     }
 
-    // Build Messages Array
     let pastMessages = [];
     if (chatSession.messages.length > 0) {
-      const recentHistory = chatSession.messages.slice(-8); // Get last 8 messages for context
+      const recentHistory = chatSession.messages.slice(-8); 
       pastMessages = recentHistory.map(msg => ({ role: msg.role, content: msg.content }));
     }
 
-    // Injecting knowledgeBaseText dynamically
     const systemPrompt = prompts.getVisitorChatPrompt(personalAI.finalSystemPrompt, personalAI.knowledgeBaseText);
 
     const messagesArray = [
@@ -307,7 +319,6 @@ const processVisitorChat = async (req, res) => {
       { role: "user", content: message }
     ];
 
-    // Setup Streaming via Groq
     const chatCompletion = await groq.chat.completions.create({
       messages: messagesArray,
       model: "llama-3.1-8b-instant",
@@ -316,7 +327,6 @@ const processVisitorChat = async (req, res) => {
 
     if (isClientDisconnected) return;
 
-    // Setting headers for Server-Sent Events (SSE)
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
@@ -340,13 +350,11 @@ const processVisitorChat = async (req, res) => {
       if (streamError.name !== 'AbortError') throw streamError;
     }
 
-    // Save history to DB after streaming completes
     if (fullBotReply.trim() !== "") {
       chatSession.messages.push({ role: 'user', content: message });
       chatSession.messages.push({ role: 'assistant', content: fullBotReply });
       await chatSession.save();
 
-      // Update Analytics
       personalAI.totalChats += 1;
       await personalAI.save();
     }
@@ -369,15 +377,15 @@ const processVisitorChat = async (req, res) => {
     }
   }
 };
+
 const updateSystemPrompt = async (req, res) => {
   try {
     const { newPrompt } = req.body;
     
-    // Strict Backend Auth: Find by user._id directly ensures ownership
     const personalAI = await PersonalAI.findOneAndUpdate(
       { user: req.user._id }, 
       { finalSystemPrompt: newPrompt }, 
-      { new: true }
+      { returnDocument: 'after' } 
     );
 
     if (!personalAI) {
@@ -390,6 +398,31 @@ const updateSystemPrompt = async (req, res) => {
   }
 };
 
+const getMyAI = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const personalAI = await PersonalAI.findOne({ user: userId });
+    
+    if (!personalAI) {
+      return res.status(200).json({ success: true, hasAgent: false });
+    }
+
+    res.status(200).json({ 
+      success: true, 
+      hasAgent: true, 
+      data: {
+        username: personalAI.username,
+        theme: personalAI.theme,
+        layout: personalAI.layout, 
+        setupStatus: personalAI.setupStatus
+      }
+    });
+  } catch (error) {
+    console.error("getMyAI Error:", error);
+    res.status(500).json({ success: false, message: 'Server error checking AI status.' });
+  }
+};
+
 module.exports = {
   initPersonalAI,
   submitContextAnswers,
@@ -399,5 +432,7 @@ module.exports = {
   uploadKnowledgeBase,
   getAnalytics,
   updateTheme,
-  updateSystemPrompt
+  updateLayout, 
+  updateSystemPrompt,
+  getMyAI
 };

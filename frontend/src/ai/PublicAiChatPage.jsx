@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
-import { useParams, useNavigate } from 'react-router-dom'; 
+import { useParams, useNavigate, useLocation } from 'react-router-dom'; 
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -9,7 +9,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { toast } from 'react-toastify';
 
-// 1. Lazy load the Creator Studio
+// Lazy load the Creator Studio
 const CreatorStudio = lazy(() => import('./CreatorStudio'));
 
 const API_BASE = import.meta.env.VITE_BACKEND_API;
@@ -50,6 +50,7 @@ const themeConfig = {
 const PublicAiChatPage = ({ user }) => {
   const { username } = useParams();
   const navigate = useNavigate();
+  const location = useLocation(); 
   
   const [profile, setProfile] = useState(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
@@ -64,6 +65,9 @@ const PublicAiChatPage = ({ user }) => {
   const [isOwner, setIsOwner] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
+  // Check if we are viewing this inside the split-screen preview iframe
+  const isPreviewMode = new URLSearchParams(location.search).get('preview') === 'true';
+
   const messagesEndRef = useRef(null);
   const abortControllerRef = useRef(null);
 
@@ -77,15 +81,12 @@ const PublicAiChatPage = ({ user }) => {
   }, []);
 
   // Fetch AI Profile Details
-// Fetch AI Profile Details
   useEffect(() => {
     const fetchProfile = async () => {
       try {
         setIsLoadingProfile(true);
-        // NEW: Check if token exists in localStorage
         const token = localStorage.getItem('dealit_token'); 
         
-        // NEW: Send token in headers if it exists
         const res = await axios.get(`${API_BASE}/api/personal-ai/profile/${username}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
@@ -206,6 +207,7 @@ const PublicAiChatPage = ({ user }) => {
   }
 
   const theme = profile.theme || 'midnight-glass';
+  const layout = profile.layout || 'center'; 
   const style = themeConfig[theme] || themeConfig['midnight-glass'];
 
   return (
@@ -228,26 +230,37 @@ const PublicAiChatPage = ({ user }) => {
         
         <div className={`absolute top-0 left-0 right-0 h-48 bg-gradient-to-b to-transparent pointer-events-none z-0 ${style.glowTop}`} />
 
-        {/* Profile Header */}
-        <div className="pt-10 pb-4 px-6 flex flex-col items-center shrink-0 z-10 relative">
+        {/* Dynamic Profile Header Layout */}
+        <div className={`pt-10 pb-4 px-6 flex shrink-0 z-10 relative ${
+          layout === 'left' ? 'flex-row items-center justify-start gap-4 text-left' :
+          layout === 'right' ? 'flex-row-reverse items-center justify-start gap-4 text-right' :
+          'flex-col items-center justify-center text-center'
+        }`}>
           
-          {/* Subtle Copy Link Button (Moved here since top bar is removed) */}
-          <button 
-            onClick={copyPageLink}
-            className="absolute top-6 right-6 p-2 bg-black/20 hover:bg-black/40 border border-white/10 rounded-full backdrop-blur-md transition-all text-gray-300"
-            title="Copy Profile Link"
-          >
-            {isCopied ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-          </button>
+          {/* Subtle Copy Link Button - Adjusts position based on layout */}
+          {!isPreviewMode && (
+            <button 
+              onClick={copyPageLink}
+              className={`absolute top-6 ${layout === 'right' ? 'left-6' : 'right-6'} p-2 bg-black/20 hover:bg-black/40 border border-white/10 rounded-full backdrop-blur-md transition-all text-gray-300 z-20`}
+              title="Copy Profile Link"
+            >
+              {isCopied ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+            </button>
+          )}
 
-          <div className="w-20 h-20 rounded-full p-[3px] bg-gradient-to-br from-purple-500 via-pink-500 to-blue-500 mb-3 shadow-lg">
+          {/* Profile Picture */}
+          <div className={`w-20 h-20 shrink-0 rounded-full p-[3px] bg-gradient-to-br from-purple-500 via-pink-500 to-blue-500 shadow-lg ${layout === 'center' ? 'mb-3' : ''}`}>
             <div className="w-full h-full rounded-full overflow-hidden bg-gray-900 border-2 border-transparent">
               <img src={profile.creatorPic || "https://res.cloudinary.com/dia3qhc0x/image/upload/v1781289017/ijblexdk51vluv7ku6g9.jpg"} alt={profile.creatorName} className="w-full h-full object-cover" />
             </div>
           </div>
-          <h1 className="text-lg font-bold mb-1 tracking-wide">@{profile.username}</h1>
-          <div className={`flex items-center gap-1.5 text-[10px] font-semibold tracking-wider px-3 py-1 rounded-full border uppercase ${style.tag}`}>
-            <Sparkles className="w-3 h-3" /> AI Agent
+          
+          {/* Profile Name and Tag */}
+          <div className={`flex flex-col ${layout === 'left' ? 'items-start' : layout === 'right' ? 'items-end' : 'items-center'}`}>
+            <h1 className="text-lg font-bold mb-1 tracking-wide">@{profile.username}</h1>
+            <div className={`flex items-center gap-1.5 text-[10px] font-semibold tracking-wider px-3 py-1 rounded-full border uppercase ${style.tag}`}>
+              <Sparkles className="w-3 h-3" /> AI Agent
+            </div>
           </div>
         </div>
 
@@ -309,15 +322,15 @@ const PublicAiChatPage = ({ user }) => {
           
           <div className="text-center mt-4 mb-1">
             <a href="https://dealiit.com" target="_blank" rel="noreferrer" className="text-[10px] text-gray-500 hover:text-gray-400 transition-colors font-semibold uppercase tracking-wider flex items-center justify-center gap-1">
-              Powered by <span className="font-bold flex items-center gap-0.5 opacity-80"><Sparkles className="w-2.5 h-2.5"/> Dealit AI</span>
+              Powered by <span className="font-bold flex items-center gap-1.5 opacity-90"><img src="https://res.cloudinary.com/dia3qhc0x/image/upload/v1781289017/ijblexdk51vluv7ku6g9.jpg" alt="Dealit" className="w-3.5 h-3.5 rounded-full object-cover" /> Dealit AI</span>
             </a>
           </div>
         </div>
 
       </div>
 
-      {/* 2. End of component - Portal/Lazy Component Trigger */}
-      {isOwner && profile && (
+      {/* Portal/Lazy Component Trigger */}
+      {isOwner && profile && !isPreviewMode && (
         <Suspense fallback={null}>
            <CreatorStudio 
              profile={profile} 

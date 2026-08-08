@@ -15,13 +15,21 @@ const personalAISchema = new mongoose.Schema({
   isActive: { type: Boolean, default: true },
   totalChats: { type: Number, default: 0 },
   
-  // NEW: Themes & Knowledge Base
+
   theme: { 
     type: String, 
     enum: ['midnight-glass', 'minimal-snow', 'cyberpunk-neon'], 
     default: 'midnight-glass' 
   },
-  knowledgeBaseText: { type: String, default: "" } // PDF se extract kiya hua data
+  
+ 
+  layout: {
+    type: String,
+    enum: ['center', 'left', 'right'],
+    default: 'center'
+  },
+  
+  knowledgeBaseText: { type: String, default: "" } 
 }, { timestamps: true });
 
 module.exports = mongoose.model('PersonalAI', personalAISchema);

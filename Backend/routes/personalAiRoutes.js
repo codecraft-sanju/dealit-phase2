@@ -1,5 +1,5 @@
 const express = require('express');
-const multer = require('multer'); // NEW: For PDF Uploads
+const multer = require('multer'); 
 const { protect } = require('../middleware/authMiddleware');
 const { 
   initPersonalAI, 
@@ -9,8 +9,10 @@ const {
   visitorChatLimiter,
   uploadKnowledgeBase, 
   getAnalytics,        
-  updateTheme   ,
-  updateSystemPrompt       
+  updateTheme,
+  updateLayout,    
+  updateSystemPrompt,
+  getMyAI
 } = require('../controllers/personalAiController');
 
 const router = express.Router();
@@ -21,18 +23,19 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
 });
 
-// Creator Routes
 router.post('/init', protect, initPersonalAI);
 router.post('/submit-answers', protect, submitContextAnswers);
 
-// NEW: Premium Features Routes
+
 router.post('/upload-pdf', protect, upload.single('document'), uploadKnowledgeBase);
 router.get('/analytics', protect, getAnalytics);
 router.put('/theme', protect, updateTheme);
+router.put('/layout', protect, updateLayout); 
 
-// Public Routes
+
 router.get('/profile/:username', getAIProfile);
 router.post('/chat', visitorChatLimiter, processVisitorChat);
 router.put('/prompt', protect, updateSystemPrompt);
+router.get('/me', protect, getMyAI);
 
 module.exports = router;
