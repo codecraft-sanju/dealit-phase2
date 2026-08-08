@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Sparkles, ArrowRight, Bot, Link as LinkIcon, CheckCircle2, Copy, 
   Loader2, Check, User, MessageSquareText, Globe, FileText, UploadCloud, 
-  Palette, BarChart3, Activity, RefreshCw, X, AlignCenter, AlignLeft, AlignRight, LayoutPanelTop, Type, Save, AlertCircle
+  Palette, BarChart3, Activity, RefreshCw, X, AlignCenter, AlignLeft, AlignRight, LayoutPanelTop, Type, Save, AlertCircle, ShieldAlert
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
@@ -605,6 +605,16 @@ const CreateAIPage = ({ user }) => {
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
+
+      {/* ADMIN PANEL FLOATING BUTTON */}
+      {user?.role === 'admin' && (
+        <button
+          onClick={() => navigate('/admin/ai-agents')}
+          className="absolute top-4 right-4 z-[100] flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-sm shadow-[0_0_20px_rgba(79,70,229,0.5)] transition-all active:scale-95"
+        >
+          <ShieldAlert className="w-4 h-4" /> Admin Panel
+        </button>
+      )}
 
       <div className="absolute top-[-10%] left-[20%] w-[500px] h-[500px] bg-purple-600/15 blur-[140px] rounded-full pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[20%] w-[500px] h-[500px] bg-blue-600/10 blur-[140px] rounded-full pointer-events-none" />

@@ -9,6 +9,8 @@ const Notification = require('../models/Notification');
 const AuraLog = require('../models/AuraLog'); 
 const AITrainingLog = require('../models/AITrainingLog');
 const AISetting = require('../models/AISetting');
+const PersonalAI = require('../models/PersonalAI'); // Added PersonalAI
+const VisitorAIChat = require('../models/VisitorAIChat'); // Added VisitorAIChat
 
 const { queueNotification } = require('../services/queue');
 const { refundRazorpayPayment } = require('./paymentController');
@@ -130,14 +132,11 @@ const getAllTransactions = async (req, res) => {
     const totalRevenue = walletIncome + shippingIncome;
     const netIncome = totalRevenue - totalRefunds;
 
-  
-
     const baseShippingIncome = Number((shippingIncome / 1.20).toFixed(2));
     const totalPlatformFees = Number((baseShippingIncome * 0.02).toFixed(2));
 
     const totalGstCollected = Number((shippingIncome - baseShippingIncome - totalPlatformFees).toFixed(2));
    
-
     res.status(200).json({ 
       success: true, 
       financials: {
@@ -697,7 +696,8 @@ const getDashboardStats = async (req, res) => {
       recentSwaps,
       recentItemsList,
       recentTxnsList, 
-      recentOrdersList
+      recentOrdersList,
+      totalAIAgents // Added metric for Personal AI
     ] = await Promise.all([
       User.countDocuments(),
       User.countDocuments({ isVerified: true }),
@@ -718,7 +718,8 @@ const getDashboardStats = async (req, res) => {
       BarterRequest.find({ status: 'ACCEPTED' }).sort({ updated_at: -1 }).limit(3).populate('item'),
       Item.find().sort({ created_at: -1 }).limit(3),
       Transaction.find({ status: 'success', transactionType: { $in: ['wallet_recharge', 'shipping_fee', 'shipping_refund'] } }).sort({ created_at: -1 }).limit(3),
-      Order.find({ orderStatus: 'delivered' }).sort({ updated_at: -1 }).limit(3).populate('item')
+      Order.find({ orderStatus: 'delivered' }).sort({ updated_at: -1 }).limit(3).populate('item'),
+      PersonalAI.countDocuments() // Added query
     ]);
 
     const startOfMonth = new Date();
@@ -863,6 +864,7 @@ const getDashboardStats = async (req, res) => {
           totalRefunds,
           netIncome
         },
+        aiAgents: { total: totalAIAgents }, // Exporting AI Count
         revenue: netIncome, 
         recentUsers,
         performanceData, 
@@ -1097,6 +1099,105 @@ const resetUserAILimits = async (req, res) => {
   }
 };
 
+
+
+// 1. Get all Personal AI Agents with Pagination & Search
+const getAllPersonalAIs = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+    const searchQuery = req.query.search || '';
+
+    let filter = {};
+
+    if (searchQuery) {
+      const searchRegex = new RegExp(searchQuery, 'i');
+      
+      // Find users matching search
+      const matchingUsers = await User.find({
+        $or: [{ full_name: searchRegex }, { email: searchRegex }]
+      }).select('_id');
+      const userIds = matchingUsers.map(u => u._id);
+
+      filter.$or = [
+        { username: searchRegex },
+        { baseIdea: searchRegex },
+        { user: { $in: userIds } }
+      ];
+    }
+
+    const total = await PersonalAI.countDocuments(filter);
+    const agents = await PersonalAI.find(filter)
+      .populate('user', 'full_name email profilePic phone')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    res.status(200).json({
+      success: true,
+      count: agents.length,
+      totalRecords: total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      data: agents
+    });
+  } catch (error) {
+    console.error('Error fetching Personal AIs:', error);
+    res.status(500).json({ success: false, message: 'Server Error fetching AI Agents' });
+  }
+};
+
+// 2. Toggle Status (Block / Unblock Agent)
+const togglePersonalAIStatus = async (req, res) => {
+  try {
+    const agentId = req.params.id;
+    const agent = await PersonalAI.findById(agentId);
+
+    if (!agent) {
+      return res.status(404).json({ success: false, message: 'AI Agent not found' });
+    }
+
+    agent.isActive = !agent.isActive; // Toggle boolean
+    await agent.save();
+
+    res.status(200).json({ 
+      success: true, 
+      message: `AI Agent successfully marked as ${agent.isActive ? 'Active' : 'Inactive'}`, 
+      data: agent 
+    });
+  } catch (error) {
+    console.error('Error toggling AI status:', error);
+    res.status(500).json({ success: false, message: 'Server Error updating AI status' });
+  }
+};
+
+// 3. Delete AI Agent (Admin Override)
+const deletePersonalAIByAdmin = async (req, res) => {
+  try {
+    const agentId = req.params.id;
+    const agent = await PersonalAI.findById(agentId);
+
+    if (!agent) {
+      return res.status(404).json({ success: false, message: 'AI Agent not found' });
+    }
+
+    // Clean up related chat history first
+    await VisitorAIChat.deleteMany({ personalAI: agent._id });
+    
+    // Delete the agent
+    await agent.deleteOne();
+
+    res.status(200).json({ 
+      success: true, 
+      message: 'AI Agent & related data successfully deleted by Admin' 
+    });
+  } catch (error) {
+    console.error('Error deleting AI by admin:', error);
+    res.status(500).json({ success: false, message: 'Server Error deleting AI Agent' });
+  }
+};
+
 module.exports = {
   getPendingItems,
   updateItemStatus,
@@ -1117,5 +1218,10 @@ module.exports = {
   getAISettings, 
   updateAISettings, 
   getAILogStats ,
-  resetUserAILimits
+  resetUserAILimits,
+
+
+  getAllPersonalAIs,
+  togglePersonalAIStatus,
+  deletePersonalAIByAdmin
 };

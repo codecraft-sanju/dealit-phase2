@@ -26,7 +26,7 @@ const smartLazy = (importFunc) => {
   );
 };
 
-// ... existing lazy imports ...
+
 const OffersPage = smartLazy(() => import('./offer/OffersPage'));
 const PromoAlert = smartLazy(() => import('./popup/PromoAlert'));
 const IosInstallPopup = smartLazy(() => import('./components/IosInstallPopup'));
@@ -41,6 +41,7 @@ const AuraLeadershipPage = smartLazy(() => import('./components/AuraLeadershipPa
 const AuthPage = smartLazy(() => import('./components/AuthPage'));
 const SearchPage = smartLazy(() => import('./components/SearchPage'));
 const AdminPanel = smartLazy(() => import('./components/AdminPanel'));
+const AdminAIAgents = smartLazy(() => import('./ai/AdminAIAgents'));
 const ItemDetailPage = smartLazy(() => import('./components/ItemDetailPage'));
 const ChatPage = smartLazy(() => import('./components/ChatPage'));
 const WalletPage = smartLazy(() => import('./components/WalletPage'));
@@ -229,6 +230,18 @@ useEffect(() => {
                 <Suspense fallback={<TopProgressBar />}>
                   <AdminPanel user={user} />
                 </Suspense>
+              } 
+            />
+            <Route 
+              path="/admin/ai-agents" 
+              element={
+                user && user.role === 'admin' ? (
+                  <Suspense fallback={<TopProgressBar />}>
+                    <AdminAIAgents />
+                  </Suspense>
+                ) : (
+                  <Navigate to="/" replace />
+                )
               } 
             />
             <Route path="/checkout/:itemId" element={user ? <CheckoutPage user={user} setUser={setUser} /> : <Navigate to="/login" />} />

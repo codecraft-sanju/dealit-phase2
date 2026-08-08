@@ -3,7 +3,8 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Send, Sparkles, AlertCircle, RefreshCw, Copy, CheckCircle2 
+  Send, Sparkles, AlertCircle, RefreshCw, Copy, CheckCircle2, 
+  Mic, MicOff, Volume2, VolumeX
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -50,12 +51,16 @@ const PublicAiChatPage = ({ user }) => {
   const [isOwner, setIsOwner] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
-  // --- NEW: Parse URL for Live Unsaved Previews ---
+  // Voice Features States
+  const [isListening, setIsListening] = useState(false);
+  const [isVoiceMode, setIsVoiceMode] = useState(false); // Controls Text-to-Speech
+
   const queryParams = new URLSearchParams(location.search);
   const isPreviewMode = queryParams.get('preview') === 'true';
 
   const messagesEndRef = useRef(null);
   const abortControllerRef = useRef(null);
+  const recognitionRef = useRef(null);
 
   useEffect(() => {
     let vid = localStorage.getItem('dealit_visitor_id');
@@ -64,7 +69,76 @@ const PublicAiChatPage = ({ user }) => {
       localStorage.setItem('dealit_visitor_id', vid);
     }
     setVisitorId(vid);
+
+    // Initialize Web Speech API for Mic
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = true;
+      recognitionRef.current.lang = 'en-US'; // Default to English, change to 'hi-IN' if you want Hindi priority
+
+      recognitionRef.current.onresult = (event) => {
+        let currentTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          currentTranscript += event.results[i][0].transcript;
+        }
+        setInput(currentTranscript);
+      };
+
+      recognitionRef.current.onerror = (event) => {
+        console.error("Speech recognition error", event.error);
+        setIsListening(false);
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+      };
+    }
   }, []);
+
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, isTyping]);
+
+  // Clean Markdown & Speak Function (Text-to-Speech)
+  const speakAIResponse = (text) => {
+    if (!isVoiceMode || !window.speechSynthesis) return;
+    
+    // Stop any ongoing speech
+    window.speechSynthesis.cancel();
+    
+    // Remove Markdown formatting so it sounds natural (*, #, _, etc.)
+    const cleanText = text.replace(/([*#_`~>])/g, '');
+    
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+    
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+    } else {
+      // Stop TTS if user starts speaking
+      window.speechSynthesis?.cancel();
+      setInput('');
+      recognitionRef.current?.start();
+      setIsListening(true);
+    }
+  };
+
+  const toggleVoiceMode = () => {
+    if (isVoiceMode) {
+      window.speechSynthesis?.cancel(); // Stop talking immediately if turned off
+    }
+    setIsVoiceMode(!isVoiceMode);
+  };
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -78,9 +152,8 @@ const PublicAiChatPage = ({ user }) => {
 
         if (res.data.success) {
           setProfile(res.data.data);
-          setMessages([
-            { id: 'greet', role: 'assistant', content: `Hi there! I'm the AI assistant for **${res.data.data.creatorName}**. How can I help you today?` }
-          ]);
+          const greetingMsg = `Hi there! I'm the AI assistant for **${res.data.data.creatorName}**. How can I help you today?`;
+          setMessages([{ id: 'greet', role: 'assistant', content: greetingMsg }]);
           
           if (user && (user.username === username || user._id === res.data.data.creatorId)) {
             setIsOwner(true);
@@ -93,17 +166,18 @@ const PublicAiChatPage = ({ user }) => {
       }
     };
     fetchProfile();
+    
+    // Cleanup Speech Synth on unmount
+    return () => window.speechSynthesis?.cancel();
   }, [username, user]);
-
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages, isTyping]);
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!input.trim() || isTyping) return;
+
+    // Stop listening/speaking if new message is sent
+    if (isListening) recognitionRef.current?.stop();
+    window.speechSynthesis?.cancel();
 
     const userMessage = input.trim();
     setInput('');
@@ -157,6 +231,10 @@ const PublicAiChatPage = ({ user }) => {
         }
       }
       setMessages(prev => prev.map(m => m.id === botMsgId ? { ...m, isStreaming: false } : m));
+      
+      // AI Finished Streaming -> Speak Response if Voice Mode is ON
+      speakAIResponse(botReply);
+
     } catch (err) {
       if (err.name === 'AbortError') return;
       setMessages(prev => prev.map(m => m.id === botMsgId ? { ...m, content: `⚠️ ${err.message}`, isStreaming: false } : m));
@@ -190,7 +268,6 @@ const PublicAiChatPage = ({ user }) => {
     );
   }
 
-  // --- NEW: Read from URL if in Preview Mode, otherwise use DB Profile ---
   const theme = (isPreviewMode ? queryParams.get('theme') : null) || profile.theme || 'midnight-glass';
   const layout = (isPreviewMode ? queryParams.get('layout') : null) || profile.layout || 'center'; 
   const primaryColor = (isPreviewMode ? queryParams.get('primaryColor') : null) || profile.primaryColor || '#A855F7';
@@ -237,15 +314,27 @@ const PublicAiChatPage = ({ user }) => {
           'flex-col items-center justify-center text-center'
         }`}>
           
-          {!isPreviewMode && (
+          {/* Header Controls (Copy Link & Voice Toggle) */}
+          <div className={`absolute top-6 ${layout === 'right' ? 'left-6' : 'right-6'} flex items-center gap-2 z-20`}>
+            {/* Voice Toggle Button */}
             <button 
-              onClick={copyPageLink}
-              className={`absolute top-6 ${layout === 'right' ? 'left-6' : 'right-6'} p-2 bg-black/20 hover:bg-black/40 border border-white/10 rounded-full backdrop-blur-md transition-all active:scale-95 text-gray-300 z-20 hover:shadow-lg`}
-              title="Copy Profile Link"
+              onClick={toggleVoiceMode}
+              className={`p-2 rounded-full backdrop-blur-md transition-all active:scale-95 border ${isVoiceMode ? 'bg-[var(--ai-primary)] text-white border-[var(--ai-primary)] shadow-[0_0_15px_var(--ai-primary-50)]' : 'bg-black/20 hover:bg-black/40 text-gray-300 border-white/10 hover:shadow-lg'}`}
+              title={isVoiceMode ? "Voice Response ON" : "Voice Response OFF"}
             >
-              {isCopied ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+              {isVoiceMode ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
             </button>
-          )}
+
+            {!isPreviewMode && (
+              <button 
+                onClick={copyPageLink}
+                className="p-2 bg-black/20 hover:bg-black/40 border border-white/10 rounded-full backdrop-blur-md transition-all active:scale-95 text-gray-300 hover:shadow-lg"
+                title="Copy Profile Link"
+              >
+                {isCopied ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+              </button>
+            )}
+          </div>
 
           <div className={`w-20 h-20 shrink-0 rounded-full p-[3px] shadow-[0_0_20px_var(--ai-primary-20)] transition-all duration-500 hover:scale-105 ${layout === 'center' ? 'mb-3' : ''}`} style={{ background: `linear-gradient(to bottom right, var(--ai-primary), var(--ai-primary-50))` }}>
             <div className="w-full h-full rounded-full overflow-hidden bg-gray-900 border-2 border-transparent">
@@ -309,11 +398,24 @@ const PublicAiChatPage = ({ user }) => {
             className={`relative flex items-center border rounded-full p-1.5 transition-colors duration-300 hover:shadow-[0_0_15px_var(--ai-primary-20)] focus-within:ring-1 focus-within:shadow-[0_0_15px_var(--ai-primary-20)] ${style.inputWrap}`}
             style={{ '--tw-ring-color': 'var(--ai-primary)' }}
           >
+            {/* STT Mic Button */}
+            {window.SpeechRecognition || window.webkitSpeechRecognition ? (
+              <button 
+                type="button" 
+                onClick={toggleListening}
+                className={`w-10 h-10 flex items-center justify-center rounded-full transition-all duration-300 shrink-0 ${isListening ? 'text-red-500 bg-red-500/10 animate-pulse' : 'text-gray-400 hover:text-[var(--ai-primary)] hover:bg-[var(--ai-primary-10)]'}`}
+                title="Hold to Speak"
+              >
+                {isListening ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+              </button>
+            ) : null}
+
             <input 
               type="text" value={input} onChange={(e) => setInput(e.target.value)}
-              placeholder="Message..." disabled={isTyping}
-              className={`flex-1 bg-transparent border-none outline-none text-[15px] px-4 disabled:opacity-50 ${style.inputText}`}
+              placeholder={isListening ? "Listening..." : "Message..."} disabled={isTyping}
+              className={`flex-1 bg-transparent border-none outline-none text-[15px] px-3 disabled:opacity-50 ${style.inputText} ${isListening ? 'text-[var(--ai-primary)] placeholder-[var(--ai-primary)]' : ''}`}
             />
+            
             <button 
               type="submit" disabled={isTyping || !input.trim()}
               className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-105 active:scale-95 disabled:opacity-50 shrink-0 text-white shadow-lg"

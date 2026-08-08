@@ -21,7 +21,12 @@ const {
   getAISettings,     
   updateAISettings,   
   getAILogStats,
-  resetUserAILimits 
+  resetUserAILimits,
+  
+  
+  getAllPersonalAIs,
+  togglePersonalAIStatus,
+  deletePersonalAIByAdmin
 } = require('../controllers/adminController');
 
 const {
@@ -89,5 +94,15 @@ router.route('/ai-settings')
   .put(protect, admin, updateAISettings);
 
 router.get('/ai-log-stats', protect, admin, getAILogStats);
+
+
+router.route('/personal-ais')
+  .get(protect, admin, getAllPersonalAIs);
+
+router.route('/personal-ais/:id/toggle-status')
+  .put(protect, admin, togglePersonalAIStatus);
+
+router.route('/personal-ais/:id')
+  .delete(protect, admin, deletePersonalAIByAdmin);
 
 module.exports = router;
