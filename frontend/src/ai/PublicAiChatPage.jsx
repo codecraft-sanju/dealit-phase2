@@ -269,8 +269,8 @@ const PublicAiChatPage = ({ user }) => {
             {messages.map((msg) => (
               <motion.div key={msg.id} initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} className={`flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div 
-                  className={`max-w-[85%] px-4 py-3.5 text-sm leading-relaxed ${msg.role === 'user' ? 'rounded-2xl rounded-tr-sm font-medium shadow-md' : `rounded-2xl rounded-tl-sm ${style.botBubble}`}`}
-                  style={msg.role === 'user' ? { backgroundColor: 'var(--ai-primary)', color: '#fff' } : { wordBreak: 'break-word' }}
+                  className={`max-w-[85%] px-4 py-3.5 text-sm leading-relaxed break-words ${msg.role === 'user' ? 'rounded-2xl rounded-tr-sm font-medium shadow-md' : `rounded-2xl rounded-tl-sm ${style.botBubble}`}`}
+                  style={msg.role === 'user' ? { backgroundColor: 'var(--ai-primary)', color: '#fff' } : {}}
                 >
                   {msg.role === 'assistant' ? (
                     msg.content === '' && msg.isStreaming ? (

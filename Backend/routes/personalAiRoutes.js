@@ -11,7 +11,8 @@ const {
   getAnalytics,        
   updateDesign, 
   updateSystemPrompt,
-  getMyAI
+  getMyAI,
+  deletePersonalAI
 } = require('../controllers/personalAiController');
 
 const router = express.Router();
@@ -26,7 +27,7 @@ router.post('/submit-answers', protect, submitContextAnswers);
 router.post('/upload-pdf', protect, upload.single('document'), uploadKnowledgeBase);
 
 router.get('/analytics', protect, getAnalytics);
-
+router.delete('/delete', protect, deletePersonalAI);
 
 router.put('/design', protect, updateDesign); 
 

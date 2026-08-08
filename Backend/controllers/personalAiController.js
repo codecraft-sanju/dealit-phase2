@@ -436,6 +436,24 @@ const getMyAI = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error checking AI status.' });
   }
 };
+const deletePersonalAI = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const personalAI = await PersonalAI.findOne({ user: userId });
+
+    if (!personalAI) {
+      return res.status(404).json({ success: false, message: "AI Agent not found." });
+    }
+
+    await VisitorAIChat.deleteMany({ personalAI: personalAI._id });
+    await PersonalAI.findByIdAndDelete(personalAI._id);
+
+    res.status(200).json({ success: true, message: "AI Agent deleted successfully." });
+  } catch (error) {
+    console.error("deletePersonalAI Error:", error);
+    res.status(500).json({ success: false, message: "Failed to delete AI Agent." });
+  }
+};
 
 module.exports = {
   initPersonalAI,
@@ -446,7 +464,7 @@ module.exports = {
   uploadKnowledgeBase,
   getAnalytics,
   updateDesign,
-  
+  deletePersonalAI,
   updateSystemPrompt,
   getMyAI
 };

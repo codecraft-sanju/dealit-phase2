@@ -113,7 +113,6 @@ const CreateAIPage = ({ user }) => {
   };
 
   const handleInitAI = async (e) => {
-    // ... [Unchanged] ...
     e.preventDefault();
     if (!baseIdea.trim() || !username.trim()) return toast.error("Please fill all fields");
     if (!/^[a-z0-9_]+$/.test(username)) return toast.error("Username can only contain lowercase letters, numbers, and underscores.");
@@ -138,7 +137,6 @@ const CreateAIPage = ({ user }) => {
   };
 
   const handleSubmitAnswers = async (e) => {
-    // ... [Unchanged] ...
     e.preventDefault();
     if (answers.some(ans => !ans.trim())) return toast.error("Please answer all questions.");
 
@@ -161,7 +159,6 @@ const CreateAIPage = ({ user }) => {
   };
 
   const handlePdfUpload = async (e) => {
-    // ... [Unchanged] ...
     e.preventDefault();
     if (!pdfFile) return toast.error("Please select a PDF file first.");
 
@@ -188,7 +185,6 @@ const CreateAIPage = ({ user }) => {
     }
   };
 
-  // --- NEW: Handle Local Design Changes Without Saving ---
   const handleDesignChange = (field, value) => {
     if (field === 'theme') setCurrentTheme(value);
     if (field === 'layout') setCurrentLayout(value);
@@ -196,7 +192,6 @@ const CreateAIPage = ({ user }) => {
     if (field === 'fontFamily') setCurrentFontFamily(value);
   };
 
-  // --- NEW: Save Design to Database ---
   const handleSaveDesign = async () => {
     setIsSavingDesign(true);
     try {
@@ -211,7 +206,6 @@ const CreateAIPage = ({ user }) => {
       });
       
       toast.success("Design saved successfully!");
-      // Update our source of truth
       setMyAgentData(prev => ({
         ...prev,
         theme: currentTheme,
@@ -227,6 +221,32 @@ const CreateAIPage = ({ user }) => {
     }
   };
 
+  const handleDeleteAgent = async () => {
+    if (!window.confirm("Are you sure you want to delete your AI Agent? This action will permanently remove all chat history and settings.")) return;
+
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem('dealit_token');
+      const res = await axios.delete(`${API_BASE}/api/personal-ai/delete`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.success) {
+        toast.success("AI Agent deleted successfully!");
+        setHasAgent(false);
+        setMyAgentData(null);
+        setAnalytics(null);
+        setActiveTab('wizard');
+        setStep(1);
+        setBaseIdea('');
+        setUsername(user?.username || '');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to delete AI Agent");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const copyToClipboard = () => {
     navigator.clipboard.writeText(finalLink);
     setIsCopied(true);
@@ -234,7 +254,6 @@ const CreateAIPage = ({ user }) => {
     setTimeout(() => setIsCopied(false), 2500);
   };
 
-  // Check if there are unsaved changes
   const hasUnsavedChanges = myAgentData && (
     currentTheme !== myAgentData.theme ||
     currentLayout !== myAgentData.layout ||
@@ -242,7 +261,6 @@ const CreateAIPage = ({ user }) => {
     currentFontFamily !== myAgentData.fontFamily
   );
 
-  // DYNAMIC IFRAME URL: Passes local state as query params for live unsaved preview
   const iframeSrc = myAgentData 
     ? `/ai/${myAgentData.username}?preview=true&theme=${currentTheme}&layout=${currentLayout}&primaryColor=${encodeURIComponent(currentPrimaryColor)}&fontFamily=${encodeURIComponent(currentFontFamily)}`
     : '';
@@ -267,7 +285,6 @@ const CreateAIPage = ({ user }) => {
 
   const renderTabContent = () => (
     <AnimatePresence mode="wait">
-      {/* ... [WIZARD TAB REMAINS SAME] ... */}
       {activeTab === 'wizard' && !hasAgent && (
         <motion.div key="wizard" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="max-w-2xl mx-auto w-full flex flex-col h-full justify-center py-6">
           <div className="text-center mb-10 mt-6 lg:mt-0">
@@ -466,6 +483,18 @@ const CreateAIPage = ({ user }) => {
                 </div>
               ))}
             </div>
+          </div>
+
+          <div className="pt-8 mt-8 border-t border-white/10">
+            <h3 className="text-sm font-semibold text-red-400 mb-2">Danger Zone</h3>
+            <p className="text-xs text-gray-400 mb-4">Permanently delete your AI agent and all chat history to create a new one.</p>
+            <button 
+              onClick={handleDeleteAgent} 
+              disabled={isLoading} 
+              className="w-full flex items-center justify-center gap-2 px-4 py-3.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl transition-all text-sm font-bold border border-red-500/20 active:scale-95"
+            >
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Delete AI Agent'}
+            </button>
           </div>
 
           {/* STICKY SAVE BUTTON FOR UNSAVED CHANGES */}
@@ -719,9 +748,13 @@ const CreateAIPage = ({ user }) => {
             </div>
 
             <div className="mt-auto pt-4 border-t border-white/10 shrink-0">
-              <button onClick={copyToClipboard} className="w-full flex items-center justify-center gap-2 px-4 py-3.5 bg-white/5 hover:bg-white/10 rounded-xl transition-all text-sm font-semibold border border-white/10 active:scale-95 group">
+              <button onClick={copyToClipboard} className="w-full flex items-center justify-center gap-2 px-4 py-3.5 bg-white/5 hover:bg-white/10 rounded-xl transition-all text-sm font-semibold border border-white/10 active:scale-95 group mb-2">
                 {isCopied ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <LinkIcon className="w-4 h-4 text-gray-400 group-hover:text-white transition-colors" />} 
                 {isCopied ? 'Link Copied!' : 'Copy Public Link'}
+              </button>
+              
+              <button onClick={handleDeleteAgent} disabled={isLoading} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl transition-all text-sm font-semibold border border-red-500/20 active:scale-95 group">
+                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Delete Agent'}
               </button>
             </div>
           </div>
@@ -773,7 +806,6 @@ const CreateAIPage = ({ user }) => {
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
             className="absolute inset-x-0 bottom-0 top-[10%] lg:inset-auto lg:top-1/2 lg:left-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2 z-50 flex flex-col bg-[#0F0F12]/95 lg:w-full lg:max-w-xl lg:h-[80vh] lg:rounded-3xl rounded-t-3xl border border-white/10 overflow-hidden shadow-[0_-10px_50px_rgba(0,0,0,0.5)] lg:shadow-2xl backdrop-blur-2xl"
           >
-             {/* ... [ANALYTICS MODAL REMAINS UNCHANGED] ... */}
              <div className="p-4 lg:p-5 border-b border-white/10 flex justify-between items-center bg-black/40">
               <div>
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
@@ -789,7 +821,7 @@ const CreateAIPage = ({ user }) => {
             <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-4 no-scrollbar pb-[calc(1rem+env(safe-area-inset-bottom))]">
               {selectedChat.messages.map((msg, idx) => (
                 <div key={idx} className={`flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[85%] lg:max-w-[80%] p-3.5 lg:p-4 text-[13px] lg:text-sm leading-relaxed ${
+                  <div className={`max-w-[85%] lg:max-w-[80%] p-3.5 lg:p-4 text-[13px] lg:text-sm leading-relaxed break-words ${
                     msg.role === 'user' 
                       ? 'bg-purple-600/20 border border-purple-500/30 text-purple-100 rounded-2xl rounded-tr-sm shadow-sm' 
                       : 'bg-white/5 border border-white/10 text-gray-300 rounded-2xl rounded-tl-sm shadow-sm'
