@@ -109,7 +109,8 @@ const createItem = async (req, res) => {
 
 const getItems = async (req, res) => {
   try {
-    const { category } = req.query;
+    // CHANGES MADE HERE: Extract sort from query
+    const { category, sort } = req.query;
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 20;
     const skip = (page - 1) * limit;
@@ -123,16 +124,28 @@ const getItems = async (req, res) => {
       queryCondition.category = category;
     }
 
+    // CHANGES MADE HERE: Dynamic sorting mapping for MongoDB
+    let sortCondition = { created_at: -1 }; // Default: Newest First
+    if (sort === 'value_asc') sortCondition = { estimated_value: 1 };
+    if (sort === 'value_desc') sortCondition = { estimated_value: -1 };
+    // 'discount_desc' is handled after DB fetch because it is simulated dynamically
+
     const total = await Item.countDocuments(queryCondition);
 
+    // CHANGES MADE HERE: Pass sortCondition to MongoDB query
     const items = await Item.find(queryCondition)
       .populate('owner', 'full_name city email')
-      .sort({ created_at: -1 })
+      .sort(sortCondition)
       .skip(skip)
       .limit(limit);
     
     const setting = await CreditSetting.findOne();
     const modifiedItems = items.map(item => applyDiscountSimulation(item, setting?.isDiscountSimulationEnabled || false));
+
+    // CHANGES MADE HERE: Handle discount sorting in memory
+    if (sort === 'discount_desc') {
+      modifiedItems.sort((a, b) => (Number(b.discount_percentage) || 0) - (Number(a.discount_percentage) || 0));
+    }
 
     res.status(200).json({ 
       success: true, 
