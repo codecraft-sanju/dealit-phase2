@@ -15,11 +15,9 @@ const applyDiscountSimulation = (item, isEnabled) => {
   const charCode = String(itemObj._id).slice(-1).charCodeAt(0);
   let discount = 0;
   
-  // NAYA CHANGE: Changed to % 5 so that more items (approx 40%) show NO discount.
   if (charCode % 5 === 0) discount = 18;
   else if (charCode % 5 === 1) discount = 10;
   else if (charCode % 5 === 2) discount = 15;
-  // If % 5 is 3 or 4, discount stays 0 (No discount)
 
   if (discount > 0) {
     itemObj.discount_percentage = discount;
@@ -109,10 +107,10 @@ const createItem = async (req, res) => {
 
 const getItems = async (req, res) => {
   try {
-    // CHANGES MADE HERE: Extract sort from query
     const { category, sort } = req.query;
+    // CHANGES MADE HERE: Setup for pagination. Default limit is 20 for infinite scroll.
     const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 20;
+    const limit = parseInt(req.query.limit, 10) || 20; 
     const skip = (page - 1) * limit;
 
     let queryCondition = { 
@@ -124,15 +122,13 @@ const getItems = async (req, res) => {
       queryCondition.category = category;
     }
 
-    // CHANGES MADE HERE: Dynamic sorting mapping for MongoDB
-    let sortCondition = { created_at: -1 }; // Default: Newest First
+    let sortCondition = { created_at: -1 }; 
     if (sort === 'value_asc') sortCondition = { estimated_value: 1 };
     if (sort === 'value_desc') sortCondition = { estimated_value: -1 };
-    // 'discount_desc' is handled after DB fetch because it is simulated dynamically
 
     const total = await Item.countDocuments(queryCondition);
 
-    // CHANGES MADE HERE: Pass sortCondition to MongoDB query
+    // Fetch strictly paginated items
     const items = await Item.find(queryCondition)
       .populate('owner', 'full_name city email')
       .sort(sortCondition)
@@ -142,7 +138,6 @@ const getItems = async (req, res) => {
     const setting = await CreditSetting.findOne();
     const modifiedItems = items.map(item => applyDiscountSimulation(item, setting?.isDiscountSimulationEnabled || false));
 
-    // CHANGES MADE HERE: Handle discount sorting in memory
     if (sort === 'discount_desc') {
       modifiedItems.sort((a, b) => (Number(b.discount_percentage) || 0) - (Number(a.discount_percentage) || 0));
     }
@@ -226,14 +221,12 @@ const updateItem = async (req, res) => {
     }
 
     updateData.updated_at = Date.now();
-    
 
     if (updateData.status === 'active' && item.status !== 'active') { 
       try {
         const owner = await User.findById(item.owner);
         
         if (owner) {
-    
           owner.aura_points = (owner.aura_points || 0) + 10;
 
           await AuraLog.create({
@@ -243,7 +236,6 @@ const updateItem = async (req, res) => {
             type: "positive"
           });
 
-        
           queueNotification({
             user: owner._id,
             type: 'AURA_UPDATE',
@@ -252,7 +244,6 @@ const updateItem = async (req, res) => {
             metadata: { reason: 'item_approved', referenceId: item._id, imageUrl: item.images?.[0] }
           });
 
-         
           let setting = await CreditSetting.findOne();
           if (!setting) {
             setting = { isCreditSystemEnabled: true, creditsPerListing: 50, maxListingsRewarded: 3 };
@@ -266,14 +257,11 @@ const updateItem = async (req, res) => {
               creditsToGive = Number(awarded_credits);
               detailedMessage = `Admin has manually awarded you ${creditsToGive} credits for your approved item "${item.title}".`;
             } else {
-            
               const rewardedCount = owner.rewardedListingsCount || 0;
 
               if (rewardedCount < setting.maxListingsRewarded) {
                 creditsToGive = setting.creditsPerListing;
                 detailedMessage = `You received the standard reward of ${creditsToGive} credits for successfully listing your item "${item.title}".`;
-                
-            
                 owner.rewardedListingsCount = rewardedCount + 1;
               } else {
                 creditsToGive = 0;
@@ -283,8 +271,6 @@ const updateItem = async (req, res) => {
 
             if (creditsToGive > 0) {
               owner.account_credits = (owner.account_credits || 0) + creditsToGive;
-              
-            
               queueNotification({
                 user: owner._id,
                 type: 'CREDIT_ADDED',
@@ -293,7 +279,6 @@ const updateItem = async (req, res) => {
                 metadata: { referenceId: item._id, amount: creditsToGive, imageUrl: item.images?.[0] }
               });
             } else {
-              
               queueNotification({
                 user: owner._id,
                 type: 'SYSTEM_ALERT',
@@ -303,7 +288,6 @@ const updateItem = async (req, res) => {
               });
             }
           } else {
-            
             queueNotification({
               user: owner._id,
               type: 'SYSTEM_ALERT',
@@ -313,7 +297,6 @@ const updateItem = async (req, res) => {
             });
           }
 
-         
           await owner.save();
         }
       } catch (rewardError) {
@@ -476,7 +459,6 @@ const getExploreData = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
-
 
 const getItemsByIds = async (req, res) => {
   try {

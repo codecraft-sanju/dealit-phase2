@@ -1,9 +1,10 @@
 // ItemsPage.jsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-// CHANGES MADE HERE: Imported Layout icons (List for 1, Grid2X2 for 2, Grid3X3 for 3)
-import { Package, ChevronLeft, Clock, SlidersHorizontal, ChevronDown, Check, TrendingUp, TrendingDown, Tag, List, Grid2X2, Grid3X3 } from 'lucide-react'; 
-import { useQuery } from '@tanstack/react-query'; 
+// CHANGES MADE HERE: Added Loader2 for loading spinner
+import { Package, ChevronLeft, Clock, SlidersHorizontal, ChevronDown, Check, TrendingUp, TrendingDown, Tag, List, Grid2X2, Grid3X3, Loader2 } from 'lucide-react'; 
+// CHANGES MADE HERE: Imported useInfiniteQuery
+import { useInfiniteQuery } from '@tanstack/react-query'; 
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProductCard from './ProductCard';
@@ -25,12 +26,10 @@ const ItemsPage = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  // CHANGES MADE HERE: State for Grid Layout (Auto-load from localStorage, default is '2')
   const [gridCols, setGridCols] = useState(() => {
     return localStorage.getItem('dealit_grid_layout') || '2';
   });
 
-  // CHANGES MADE HERE: Save Grid preference to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('dealit_grid_layout', gridCols);
   }, [gridCols]);
@@ -45,30 +44,63 @@ const ItemsPage = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const { data: items = [], isLoading: loading } = useQuery({
+  // CHANGES MADE HERE: Switched from useQuery to useInfiniteQuery
+  const { 
+    data, 
+    isLoading, 
+    fetchNextPage, 
+    hasNextPage, 
+    isFetchingNextPage 
+  } = useInfiniteQuery({
     queryKey: ['allItems', sortOption],
-    queryFn: async () => {
-      const response = await axios.get(`${API_URL}/items?limit=100&sort=${sortOption}`);
-      return response.data.data || [];
+    initialPageParam: 1,
+    queryFn: async ({ pageParam = 1 }) => {
+      // limit=20 passed so we only load a small chunk at a time
+      const response = await axios.get(`${API_URL}/items?limit=20&page=${pageParam}&sort=${sortOption}`);
+      return response.data;
+    },
+    getNextPageParam: (lastPage) => {
+      if (lastPage.currentPage < lastPage.totalPages) {
+        return lastPage.currentPage + 1;
+      }
+      return undefined;
     },
     staleTime: 1000 * 60 * 5, 
   });
+
+  // CHANGES MADE HERE: Flatten all loaded pages into a single items array
+  const items = data ? data.pages.flatMap(page => page.data) : [];
 
   const recentlyViewedStr = localStorage.getItem('dealit_recently_viewed_ids');
   const recentlyViewedIds = recentlyViewedStr ? JSON.parse(recentlyViewedStr) : [];
   
   const showRecentlyViewedBanner = items.length > 50 && recentlyViewedIds.length > 0;
 
-  // CHANGES MADE HERE: Dynamic Grid Classes based on user selection
-  let dynamicGridClass = 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'; // Default (2)
+  let dynamicGridClass = 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'; 
   if (gridCols === '1') {
     dynamicGridClass = 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3';
   } else if (gridCols === '3') {
-    dynamicGridClass = 'grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2'; // Reduced gap for 3 cols to fit nicely
+    dynamicGridClass = 'grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2'; 
   }
 
+  // CHANGES MADE HERE: Intersection Observer logic to trigger fetchNextPage
+  const observer = useRef();
+  const lastItemRef = useCallback(node => {
+    if (isLoading || isFetchingNextPage) return;
+    if (observer.current) observer.current.disconnect();
+    
+    observer.current = new IntersectionObserver(entries => {
+      // Jab loading trigger viewport me aaye aur next page available ho, next page layo
+      if (entries[0].isIntersecting && hasNextPage) {
+        fetchNextPage();
+      }
+    });
+    
+    if (node) observer.current.observe(node);
+  }, [isLoading, isFetchingNextPage, hasNextPage, fetchNextPage]);
+
   return (
-    <div className="max-w-md mx-auto bg-white min-h-screen pb-2 md:max-w-7xl relative font-sans">
+    <div className="max-w-md mx-auto bg-white min-h-screen pb-6 md:max-w-7xl relative font-sans">
       
       <div className="sticky top-0 z-50 bg-white">
         <div className="bg-[#6B46C1] py-5 px-5 md:px-8 shadow-md relative z-10">
@@ -87,10 +119,8 @@ const ItemsPage = () => {
               </div>
             </div>
 
-            {/* Container for Grid Toggle & Sort Dropdown */}
             <div className="flex items-center gap-2 md:gap-3">
               
-              {/* CHANGES MADE HERE: Premium Grid Layout Toggle */}
               <div className="flex items-center bg-white/10 rounded-xl p-0.5 border border-white/20 backdrop-blur-md">
                 <button 
                   onClick={() => setGridCols('1')}
@@ -112,7 +142,6 @@ const ItemsPage = () => {
                 </button>
               </div>
 
-              {/* Sort Dropdown */}
               <div className="relative" ref={dropdownRef}>
                 <motion.button
                   whileTap={{ scale: 0.95 }}
@@ -195,8 +224,7 @@ const ItemsPage = () => {
           </div>
         )}
 
-        {/* CHANGES MADE HERE: Applied the dynamicGridClass to the main grid container */}
-        {loading ? (
+        {isLoading ? (
           <div className={`grid gap-3 md:gap-4 mt-2 ${dynamicGridClass}`}>
             {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
               <ProductCard key={i} isLoading={true} className="w-full" />
@@ -210,11 +238,24 @@ const ItemsPage = () => {
           </div>
         ) : (
           <div className={`grid gap-3 md:gap-4 mt-2 ${dynamicGridClass}`}>
-            {items.map(item => (
+            {items.map((item) => (
               <ProductCard key={item._id} item={item} className="w-full" />
             ))}
           </div>
         )}
+
+        {/* CHANGES MADE HERE: Invisible Trigger Element for Infinite Scrolling */}
+        <div ref={lastItemRef} className="w-full h-16 mt-4 flex items-center justify-center">
+          {isFetchingNextPage && (
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              className="flex items-center gap-2 px-4 py-2 bg-[#F8F6FF] border border-[#EBE5F7] rounded-full text-[#6B46C1] font-bold text-xs shadow-sm"
+            >
+              <Loader2 className="w-4 h-4 animate-spin" /> Fetching more deals...
+            </motion.div>
+          )}
+        </div>
       </div>
     </div>
   );
