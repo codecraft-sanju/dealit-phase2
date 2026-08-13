@@ -186,7 +186,7 @@ useEffect(() => {
   }
 
   return (
-    <div className={`min-h-screen bg-gray-900 font-sans selection:bg-emerald-500/30 ${shouldShowBottomNav ? 'pb-16 md:pb-0' : ''}`}> 
+    <div className={`min-h-screen #F9F8FF font-sans selection:bg-emerald-500/30 ${shouldShowBottomNav ? 'pb-16 md:pb-0' : ''}`}> 
       
       <Suspense fallback={null}>
         <CompleteProfilePopup user={user} setUser={setUser} />
