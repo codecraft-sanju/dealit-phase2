@@ -36,17 +36,60 @@ const itemSchema = new mongoose.Schema({
 });
 
 
-
-// 1. Text Index for fast searching by Admin
 itemSchema.index({ title: 'text', category: 'text', condition: 'text' });
-
-// 2. Compound Index for fast filtering and sorting (e.g., getting pending items ordered by date)
 itemSchema.index({ status: 1, created_at: -1 });
-
 itemSchema.index({ owner: 1, status: 1, created_at: -1 });
-
-
-// 4. For marketplace filtering
 itemSchema.index({ status: 1, estimated_value: 1, category: 1 });
+
+
+const syncCategoryCount = async function (categoryName) {
+  if (!categoryName) return;
+  try {
+    const Category = mongoose.model('Category');
+   
+    const Item = mongoose.model('Item'); 
+  
+    const count = await Item.countDocuments({
+      category: categoryName,
+      status: 'active',
+      estimated_value: { $gt: 0 }
+    });
+    
+    await Category.findOneAndUpdate(
+      { name: categoryName },
+      { activeItemsCount: count }
+    );
+  } catch (error) {
+    console.error(`Failed to sync count for category: ${categoryName}`, error);
+  }
+};
+
+
+itemSchema.post('save', async function (doc) {
+  await syncCategoryCount.bind(this)(doc.category);
+});
+
+
+itemSchema.post('deleteOne', { document: true, query: false }, async function (doc) {
+  if (doc) {
+    await syncCategoryCount.bind(this)(doc.category);
+  }
+});
+
+
+itemSchema.pre('findOneAndUpdate', async function () {
+  this._oldDoc = await this.model.findOne(this.getQuery());
+});
+
+itemSchema.post('findOneAndUpdate', async function (doc) {
+  if (doc) {
+    await syncCategoryCount.bind(this)(doc.category);
+    
+    if (this._oldDoc && this._oldDoc.category !== doc.category) {
+      await syncCategoryCount.bind(this)(this._oldDoc.category);
+    }
+  }
+});
+
 
 module.exports = mongoose.model('Item', itemSchema);

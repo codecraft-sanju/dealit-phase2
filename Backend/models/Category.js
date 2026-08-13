@@ -1,3 +1,4 @@
+// Category.js
 const mongoose = require('mongoose'); 
 
 const categorySchema = new mongoose.Schema({
@@ -9,11 +10,15 @@ const categorySchema = new mongoose.Schema({
   },
   icon: {
     type: String,
-    default: 'Package' // Agar koi select na kare toh default Package rahega
+    default: 'Package'
   },
   isActive: {
     type: Boolean,
     default: true
+  },
+  activeItemsCount: {
+    type: Number,
+    default: 0
   },
   created_at: { 
     type: Date, 
@@ -21,4 +26,7 @@ const categorySchema = new mongoose.Schema({
   }
 });
 
-module.exports = mongoose.model('Category', categorySchema); 
+
+categorySchema.index({ isActive: 1, activeItemsCount: -1 });
+
+module.exports = mongoose.model('Category', categorySchema);

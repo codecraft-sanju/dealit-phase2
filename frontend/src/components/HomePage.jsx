@@ -1,6 +1,8 @@
+// HomePage.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery, useMutation } from '@tanstack/react-query';
+// CHANGES MADE HERE: Imported keepPreviousData for smooth transitions
+import { useQuery, useMutation, keepPreviousData } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -72,53 +74,69 @@ const ModernShimmer = ({ className }) => (
    </div>
 );
 
+// CHANGES MADE HERE: Added safeSrc check to prevent empty string error
 const ShimmerImg = ({ src, alt, className, wrapperClassName = "" }) => {
   const [isLoaded, setIsLoaded] = useState(false);
+  const safeSrc = src ? src : undefined;
+
   return (
     <div className={`relative ${wrapperClassName}`}>
       {!isLoaded && <ModernShimmer className={`absolute inset-0 ${className}`} />}
-      <img
-        src={src}
-        alt={alt}
-        className={`${className} ${isLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}
-        onLoad={() => setIsLoaded(true)}
-      />
+      {safeSrc && (
+        <img
+          src={safeSrc}
+          alt={alt}
+          className={`${className} ${isLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}
+          onLoad={() => setIsLoaded(true)}
+        />
+      )}
     </div>
   );
 };
 
+// CHANGES MADE HERE: Added safeSrc check for desktop and mobile sources
 const ShimmerPicture = ({ desktopSrc, mobileSrc, alt, imgClassName, motionProps }) => {
   const [isLoaded, setIsLoaded] = useState(false);
+  const safeDesktopSrc = desktopSrc ? desktopSrc : undefined;
+  const safeMobileSrc = mobileSrc ? mobileSrc : undefined;
+
   return (
     <>
       {!isLoaded && <ModernShimmer className="absolute inset-0 z-0 rounded-none" />}
       <picture className={`w-full h-full block pointer-events-none relative z-10 ${isLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}>
-        <source media="(min-width: 768px)" srcSet={desktopSrc} />
-        <motion.img
-          {...motionProps}
-          src={mobileSrc}
-          alt={alt}
-          className={imgClassName}
-          onLoad={() => setIsLoaded(true)}
-        />
+        {safeDesktopSrc && <source media="(min-width: 768px)" srcSet={safeDesktopSrc} />}
+        {safeMobileSrc && (
+          <motion.img
+            {...motionProps}
+            src={safeMobileSrc}
+            alt={alt}
+            className={imgClassName}
+            onLoad={() => setIsLoaded(true)}
+          />
+        )}
       </picture>
     </>
   );
 };
 
+// CHANGES MADE HERE: Added safeSrc check for motion images
 const ShimmerMotionImg = ({ src, alt, className, onError, motionProps, wrapperClassName = "" }) => {
   const [isLoaded, setIsLoaded] = useState(false);
+  const safeSrc = src ? src : undefined;
+
   return (
     <div className={`relative ${wrapperClassName}`}>
       {!isLoaded && <ModernShimmer className="absolute inset-0 rounded-full" />}
-      <motion.img
-        {...motionProps}
-        src={src}
-        alt={alt}
-        className={`${className} ${isLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}
-        onLoad={() => setIsLoaded(true)}
-        onError={onError}
-      />
+      {safeSrc && (
+        <motion.img
+          {...motionProps}
+          src={safeSrc}
+          alt={alt}
+          className={`${className} ${isLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}
+          onLoad={() => setIsLoaded(true)}
+          onError={onError}
+        />
+      )}
     </div>
   );
 };
@@ -137,7 +155,6 @@ const HomePage = ({ user, setUser }) => {
    const scrollLeftPos = useRef(0);
 
    useEffect(() => {
-    
      initialAnimationPlayed = true;
 
      const handleBonusClaimedEvent = () => {
@@ -149,7 +166,14 @@ const HomePage = ({ user, setUser }) => {
      return () => window.removeEventListener('bonusClaimedSuccess', handleBonusClaimedEvent);
    }, []);
 
-   const { data: bonusSettings = { enabled: true, amount: 50, isNewUIEnabled: true, heroBannerImage: '', howItWorksImage: '' } } = useQuery({
+   // CHANGES MADE HERE: Replaced empty strings with valid placeholder paths to prevent initial empty src
+   const { data: bonusSettings = { 
+     enabled: true, 
+     amount: 50, 
+     isNewUIEnabled: true, 
+     heroBannerImage: '/hero-banner3.png', 
+     howItWorksImage: '/how-it-works3.png' 
+   } } = useQuery({
      queryKey: ['publicSettings'],
      queryFn: async () => {
        const res = await axios.get(`${API_URL}/admin/public-settings`);
@@ -181,18 +205,20 @@ const HomePage = ({ user, setUser }) => {
        const response = await axios.get(`${API_URL}/categories?activeOnly=true&hasItems=true`);
        return response.data.data;
      },
-     staleTime: Infinity, 
+     staleTime: 1000 * 60 * 5,
    });
 
-   const { data: items = [], isLoading: loadingItems } = useQuery({
+   // CHANGES MADE HERE: Updated to extract isInitialLoadingItems and isFetchingItems, plus added placeholderData
+   const { data: items = [], isLoading: isInitialLoadingItems, isFetching: isFetchingItems } = useQuery({
      queryKey: ['items', activeCategory], 
      queryFn: async () => {
        const url = activeCategory === 'All' 
          ? `${API_URL}/items?limit=20` 
-         : `${API_URL}/items?category=${activeCategory}&limit=20`;
+         : `${API_URL}/items?category=${encodeURIComponent(activeCategory)}&limit=20`;
        const response = await axios.get(url);
        return response.data.data;
      },
+     placeholderData: keepPreviousData,
    });
 
    const { data: randomAvatars = [] } = useQuery({
@@ -331,10 +357,8 @@ const HomePage = ({ user, setUser }) => {
                
                <motion.div variants={itemVariants} className="w-[40%] flex flex-col gap-2.5">
 
-                 {/* CHANGE START: Applied glossy, shimmer, and 3D coin effects from the old UI to the new UI */}
                  <div className={`flex-1 bg-gradient-to-br from-[#805ad5] via-[#7551c6] to-[#5a3da6] rounded-[20px] p-3 text-white shadow-[0_8px_20px_rgba(128,90,213,0.4),inset_0_1px_1px_rgba(255,255,255,0.3)] flex flex-col justify-between relative overflow-hidden transition-all duration-700 ${showCelebration ? 'shadow-[0_0_30px_rgba(250,204,21,0.6)] scale-[1.05]' : ''}`}>
                    
-                   {/* Background Glare Sweep */}
                    <div className="absolute top-0 left-[-150%] w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-[-25deg] animate-[glare_4s_infinite_ease-in-out] pointer-events-none z-0"></div>
 
                    <div className="flex justify-between items-start mb-2 relative z-10">
@@ -421,7 +445,6 @@ const HomePage = ({ user, setUser }) => {
                      )}
                    </div>
                  </div>
-                 {/* CHANGE END */}
 
                  {/* Trust Badges */}
                  <div className="bg-white rounded-[20px] p-2.5 flex flex-col justify-between gap-1 shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-gray-100 flex-1">
@@ -555,7 +578,7 @@ const HomePage = ({ user, setUser }) => {
                </motion.div>
              </div>
 
-             {loadingItems ? (
+             {isInitialLoadingItems ? (
                <div className="flex overflow-x-auto hide-scrollbar gap-3 pb-2 pt-1">
                  {[1, 2, 3, 4].map((i) => (
                    <ProductCard key={i} isLoading={true} className="min-w-[140px] w-[140px] flex-shrink-0 shadow-sm" />
@@ -571,7 +594,8 @@ const HomePage = ({ user, setUser }) => {
                  initial={shouldAnimate ? "hidden" : false}
                  animate="show"
                  variants={containerVariants}
-                 className="flex overflow-x-auto hide-scrollbar gap-3 pb-4 snap-x"
+                 // CHANGES MADE HERE: Added smooth transition classes using isFetchingItems
+                 className={`flex overflow-x-auto hide-scrollbar gap-3 pb-4 snap-x transition-opacity duration-300 ${isFetchingItems ? 'opacity-50' : 'opacity-100'}`}
                >
                  {items.map((item) => (
                    <motion.div variants={itemVariants} key={item._id} className="min-w-[145px] w-[145px] flex-shrink-0 snap-start">
@@ -852,7 +876,7 @@ const HomePage = ({ user, setUser }) => {
                </Link>
              </div>
 
-             {loadingItems ? (
+             {isInitialLoadingItems ? (
                <div className="flex overflow-x-auto hide-scrollbar gap-3 pb-2 pt-1">
                  {[1, 2, 3, 4].map((i) => (
                    <ProductCard key={i} isLoading={true} className="min-w-[140px] w-[140px] flex-shrink-0 shadow-sm" />
@@ -868,7 +892,8 @@ const HomePage = ({ user, setUser }) => {
                  initial={shouldAnimate ? "hidden" : false} 
                  animate="show" 
                  variants={containerVariants}
-                 className="flex overflow-x-auto hide-scrollbar gap-3 pb-4 pt-1 snap-x"
+                 // CHANGES MADE HERE: Added smooth transition classes using isFetchingItems
+                 className={`flex overflow-x-auto hide-scrollbar gap-3 pb-4 pt-1 snap-x transition-opacity duration-300 ${isFetchingItems ? 'opacity-50' : 'opacity-100'}`}
                >
                  {items.map((item) => (
                    <motion.div variants={itemVariants} key={item._id} className="min-w-[140px] w-[140px] flex-shrink-0 snap-start">
@@ -936,10 +961,10 @@ const HomePage = ({ user, setUser }) => {
 
                  <div className="flex items-center gap-1.5">
                    <div className="flex -space-x-1.5 hover:space-x-0 transition-all duration-300 cursor-pointer">
-                    
+                   
           
                      {(randomAvatars.length > 0 ? randomAvatars : DUMMY_AVATARS).map((src, i) => {
-                      
+                     
                     
                        const finalSrc = (src && src.includes('ui-avatars.com')) ? DUMMY_AVATARS[i % DUMMY_AVATARS.length] : src;
 

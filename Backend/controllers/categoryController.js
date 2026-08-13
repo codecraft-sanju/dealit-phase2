@@ -3,23 +3,20 @@ const Item = require('../models/Item');
 
 const getCategories = async (req, res) => {
   try {
-    const { activeOnly } = req.query; 
+    const { activeOnly, hasItems } = req.query; 
     
     let queryCondition = { isActive: true };
 
-
-    if (activeOnly === 'true') {
    
-      const activeCategoryNames = await Item.distinct('category', {
-        status: 'active',
-        estimated_value: { $gt: 0 }
-      });
-      
-    
-      queryCondition.name = { $in: activeCategoryNames };
+    if (activeOnly === 'true' || hasItems === 'true') {
+      queryCondition.activeItemsCount = { $gt: 0 };
     }
 
-    const categories = await Category.find(queryCondition).sort({ name: 1 }); // name ke hisaab se A-Z sort
+
+    const categories = await Category.find(queryCondition)
+      .select('name icon activeItemsCount') 
+      .sort({ name: 1 })
+      .lean(); 
     
     res.status(200).json({ 
       success: true, 

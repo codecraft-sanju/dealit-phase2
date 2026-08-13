@@ -9,8 +9,8 @@ const Notification = require('../models/Notification');
 const AuraLog = require('../models/AuraLog'); 
 const AITrainingLog = require('../models/AITrainingLog');
 const AISetting = require('../models/AISetting');
-const PersonalAI = require('../models/PersonalAI'); // Added PersonalAI
-const VisitorAIChat = require('../models/VisitorAIChat'); // Added VisitorAIChat
+const PersonalAI = require('../models/PersonalAI'); 
+const VisitorAIChat = require('../models/VisitorAIChat');
 
 const { queueNotification } = require('../services/queue');
 const { refundRazorpayPayment } = require('./paymentController');
