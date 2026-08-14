@@ -18,7 +18,7 @@ const loadRazorpayScript = () => {
   });
 };
 
-/* --- ADDED: Credit Packs Data --- */
+
 const CREDIT_PACKS = [
   { id: 'starter', price: 49, credits: 50, label: 'Starter', bonus: '+1 Bonus' },
   { id: 'popular', price: 99, credits: 110, label: 'Most Popular', bonus: '+11 Bonus', highlight: true },

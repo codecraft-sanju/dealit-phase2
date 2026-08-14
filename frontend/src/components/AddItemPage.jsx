@@ -26,7 +26,7 @@ const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
 
-// ─── Indian States List ───────────────────────────────────────────────────────
+
 const INDIAN_STATES = [
   'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
   'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand',
@@ -89,7 +89,7 @@ const getCroppedImg = async (imageSrc, pixelCrop) => {
 };
 
 
-// ─── State Autocomplete Input ─────────────────────────────────────────────────
+
 const StateAutocompleteInput = ({ value, onChange }) => {
   const [suggestions, setSuggestions] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -97,7 +97,7 @@ const StateAutocompleteInput = ({ value, onChange }) => {
   const containerRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Filter states based on input
+ 
   const getFilteredStates = (query) => {
     if (!query.trim()) return [];
     const q = query.toLowerCase();
@@ -901,9 +901,9 @@ const AddItemPage = ({ user, setUser }) => {
                         </div>
                       ))}
 
-                      {/* City + State row — State uses autocomplete */}
+                  
                       <div className="grid grid-cols-2 gap-3">
-                        {/* City — plain input */}
+                   
                         <div className="relative">
                           <MapPin className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-400 pointer-events-none" />
                           <input

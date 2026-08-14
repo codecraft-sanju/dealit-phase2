@@ -38,17 +38,17 @@ const userSchema = new mongoose.Schema({
   
   unreadNotificationsCount: { type: Number, default: 0 },
   aiChatTokensUsed: {
-  type: Number,
-  default: 0
-},
-aiVoiceTokensUsed: {
-  type: Number,
-  default: 0
-},
-lastAITokenReset: {
-  type: Date,
-  default: null
-},
+    type: Number,
+    default: 0
+  },
+  aiVoiceTokensUsed: {
+    type: Number,
+    default: 0
+  },
+  lastAITokenReset: {
+    type: Date,
+    default: null
+  },
 
   savedAddresses: [{
     fullName: { type: String },
@@ -63,6 +63,9 @@ lastAITokenReset: {
   
   account_credits: { type: Number, default: 0 },
   aura_points: { type: Number, default: 100 }, 
+  
+ 
+  razorpay_customer_id: { type: String, default: null },
   
   listedProductsCount: { type: Number, default: 0 },
   rewardedListingsCount: { type: Number, default: 0 },

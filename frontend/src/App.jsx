@@ -66,7 +66,7 @@ const RecentlyViewedPage = smartLazy(() => import('./components/RecentlyViewedPa
 const CompleteProfilePopup = smartLazy(() => import('./components/CompleteProfilePopup'));
 const CreateAIPage = smartLazy(() => import('./ai/CreateAIPage'));
 const PublicAiChatPage = smartLazy(() => import('./ai/PublicAiChatPage'));
-
+const SavedPaymentsPage = smartLazy(() => import('./components/SavedPaymentsPage'));
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
@@ -269,14 +269,14 @@ useEffect(() => {
             <Route path="/help-support" element={user ? <HelpSupportPage /> : <Navigate to="/login" />} />
             <Route path="/recently-viewed" element={<RecentlyViewedPage />} />
             
-            {/* AI Routes */}
+    
             <Route path="/ai-chat" element={user ? <AiChatPage user={user} /> : <Navigate to="/login" />} />
             <Route path="/ai-chat/:sessionId" element={user ? <AiChatPage user={user} /> : <Navigate to="/login" />} />
             
-            {/* CHANGED: New Routes for Personal AI */}
+         
             <Route path="/create-ai" element={user ? <CreateAIPage user={user} /> : <Navigate to="/login" />} />
             <Route path="/ai/:username" element={<PublicAiChatPage />} />
-            
+            <Route path="/saved-payments" element={user ? <SavedPaymentsPage user={user} /> : <Navigate to="/login" />} />
             <Route path="*" element={<div className="text-white text-center mt-20 text-xl">404 - Page Not Found</div>} />
           </Routes>
         </Suspense>

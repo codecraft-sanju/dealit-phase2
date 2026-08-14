@@ -73,10 +73,34 @@ const createOrder = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid pack selected or amount missing' });
     }
 
+    // --- ADDED: Professional Razorpay Customer Creation Logic ---
+    const user = await User.findById(req.user._id);
+    let customerId = user.razorpay_customer_id;
+
+    // Agar customer id nahi hai toh pehle Razorpay me customer banayenge
+    if (!customerId) {
+      try {
+        const customer = await razorpayInstance.customers.create({
+          name: user.full_name || 'Dealit User',
+          email: user.email,
+          contact: user.phone || undefined,
+          fail_existing: 0
+        });
+        customerId = customer.id;
+        user.razorpay_customer_id = customerId;
+        await user.save();
+      } catch (custErr) {
+        console.error("Failed to create Razorpay Customer:", custErr);
+        // Continue without customer ID if it fails
+      }
+    }
+    // --- END ADDED LOGIC ---
+
     const options = {
       amount: amountToCharge * 100, 
       currency: 'INR',
       receipt: `receipt_order_${Date.now()}`,
+      ...(customerId && { customer_id: customerId }), // ADDED: Required for saving cards
       notes: {
         userId: req.user._id.toString(),
         creditsToAward: creditsToAward.toString()
@@ -288,7 +312,6 @@ const getUserTransactions = async (req, res) => {
   try {
     const userId = req.user._id; 
     
-    // Pagination aur Filters req.query se aayenge
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const type = req.query.type || 'all';
@@ -322,6 +345,40 @@ const getUserTransactions = async (req, res) => {
   }
 };
 
+/* --- ADDED: Razorpay Token APIs for Saved Cards/UPI --- */
+const getSavedPaymentMethods = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    
+    if (!user.razorpay_customer_id) {
+      return res.status(200).json({ success: true, data: [] });
+    }
+
+    const tokens = await razorpayInstance.customers.fetchTokens(user.razorpay_customer_id);
+    res.status(200).json({ success: true, data: tokens.items || [] });
+  } catch (error) {
+    console.error('Error fetching saved methods:', error);
+    res.status(500).json({ success: false, message: 'Could not fetch saved payment methods.' });
+  }
+};
+
+const deleteSavedPaymentMethod = async (req, res) => {
+  try {
+    const { tokenId } = req.params;
+    const user = await User.findById(req.user._id);
+
+    if (!user.razorpay_customer_id) {
+      return res.status(404).json({ success: false, message: 'Customer not found.' });
+    }
+
+    await razorpayInstance.customers.deleteToken(user.razorpay_customer_id, tokenId);
+    res.status(200).json({ success: true, message: 'Payment method removed successfully.' });
+  } catch (error) {
+    console.error('Error deleting payment method:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete payment method.' });
+  }
+};
+
 module.exports = {
   createOrder,
   verifyPayment,
@@ -329,5 +386,7 @@ module.exports = {
   getUserTransactions,
   verifyRazorpayConnection,
   refundRazorpayPayment,
-  fetchRazorpayPaymentInfo 
+  fetchRazorpayPaymentInfo,
+  getSavedPaymentMethods, 
+  deleteSavedPaymentMethod 
 };

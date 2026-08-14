@@ -5,7 +5,8 @@ import {
   Camera, Loader2, Coins, ChevronRight, ClipboardList, Archive, Tag,
   Heart, Wallet, Bell, HelpCircle, Edit2, X, Home, Hash, Truck,
   Shield, Star, Trash2, Settings, LayoutList, ShoppingBag,
-  ArrowLeftRight, Trophy, Headset, CheckCircle2, AlertCircle, Info
+  ArrowLeftRight, Trophy, Headset, CheckCircle2, AlertCircle, Info,
+  CreditCard
 } from 'lucide-react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -46,7 +47,6 @@ const GLOBAL_STYLES = `
     border-radius: var(--r-sm);
   }
 
-  /* Toast system */
   #toast-root {
     position: fixed;
     top: 16px;
@@ -94,7 +94,6 @@ const GLOBAL_STYLES = `
     to   { opacity: 0; transform: translateY(-8px) scale(0.94); }
   }
 
-  /* Safe area bottom */
   .pb-safe-area {
     padding-bottom: max(16px, env(safe-area-inset-bottom));
   }
@@ -180,7 +179,7 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
   const navigate = useNavigate();
   const [scrollY, setScrollY] = useState(0);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [localPreview, setLocalPreview] = useState(null); // optimistic image preview
+  const [localPreview, setLocalPreview] = useState(null); 
 
   const [editForm, setEditForm] = useState({
     full_name: '',
@@ -198,7 +197,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
 
   const queryClient = useQueryClient();
 
-  // ── Inject global styles once ──
   useEffect(() => {
     const id = 'profile-global-styles';
     if (!document.getElementById(id)) {
@@ -209,7 +207,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
     }
   }, []);
 
-  // ── Scroll tracking ──
   useEffect(() => {
     const onScroll = () => setScrollY(window.scrollY);
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -218,7 +215,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
 
   const isScrolled = scrollY > 30;
 
-  // ── Queries ──
   const { data: profileData, isLoading: loading } = useQuery({
     queryKey: ['profile'],
     queryFn: async () => {
@@ -244,7 +240,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
     }
   }, [profileData, setUser]);
 
-  // ── Image Upload — optimistic preview ──
   const uploadImageMutation = useMutation({
     mutationFn: async (file) => {
       const formData = new FormData();
@@ -280,7 +275,7 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-   
+    
     const objectUrl = URL.createObjectURL(file);
     setLocalPreview(objectUrl);
     uploadImageMutation.mutate(file);
@@ -335,7 +330,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
 
   if (!user) return <Navigate to="/login" />;
 
-  // ── Derived stats ──
   const swapsBadge = userStats?.swapsActive > 0 ? `${userStats.swapsActive} Active` : null;
   let swapsSubtitle = 'Your Trade Offers';
   if (userStats?.receivedSwaps > 0 || userStats?.sentSwaps > 0) {
@@ -347,7 +341,7 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
   }
   const ordersBadge = userStats?.activeOrders > 0 ? `${userStats.activeOrders} Active` : null;
 
-  // ── Menu config ──
+  /* --- MODIFIED: Added Saved Payments route to Menu Groups --- */
   const menuGroups = [
     {
       title: 'My Activity',
@@ -361,8 +355,9 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
     {
       title: 'Rewards & Payments',
       items: [
-        { to: '/offers',  icon: Trophy,  title: 'Play & Earn', subtitle: 'Complete events for credits', color: 'bg-[#f3f0ff] text-[#6B46C1]' },
-        { to: '/wallet',  icon: Wallet,  title: 'My Wallet',   subtitle: 'Credit Balance & Purchases', color: 'bg-[#f3f0ff] text-[#6B46C1]' },
+        { to: '/offers',          icon: Trophy,      title: 'Play & Earn',       subtitle: 'Complete events for credits', color: 'bg-[#f3f0ff] text-[#6B46C1]' },
+        { to: '/wallet',          icon: Wallet,      title: 'My Wallet',         subtitle: 'Credit Balance & Purchases',  color: 'bg-[#f3f0ff] text-[#6B46C1]' },
+        { to: '/saved-payments',  icon: CreditCard,  title: 'Saved Cards & UPI', subtitle: 'Manage payment methods',      color: 'bg-[#f3f0ff] text-[#6B46C1]' },
       ]
     },
     {
@@ -374,10 +369,8 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
     }
   ];
 
-  // ── Avatar src: optimistic → server → fallback ──
   const avatarSrc = localPreview || profileData?.profilePic;
 
-  // ── Shared input class ──
   const inputCls =
     'w-full bg-gray-50 border border-gray-200 rounded-xl pl-12 pr-4 py-3.5 ' +
     'focus:border-[#6B46C1] focus:bg-white focus:ring-4 focus:ring-[#6B46C1]/10 ' +
@@ -391,7 +384,7 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
 
   return (
     <>
-    
+      
       <ToastProvider />
 
       <div className="min-h-screen bg-[#f2f2f7] pb-2 font-sans relative overflow-x-hidden selection:bg-[#6B46C1]/20">
@@ -401,7 +394,7 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
         <div className="absolute top-10 -left-20 w-80 h-80 bg-[#805ad5] rounded-full mix-blend-multiply filter blur-[100px] opacity-60 z-0 pointer-events-none" />
         <div className="absolute top-20 -right-20 w-80 h-80 bg-[#d53f8c] rounded-full mix-blend-multiply filter blur-[100px] opacity-30 z-0 pointer-events-none" />
 
-     
+      
         <header
           style={{ transition: 'var(--transition-smooth)' }}
           className={`fixed top-0 left-0 right-0 z-50 ${
@@ -430,11 +423,9 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
           </div>
         </header>
 
-        {/* ── Page body ── */}
         <div className="max-w-md mx-auto md:max-w-7xl px-4 md:px-8 pt-28 relative z-20">
           <AnimatePresence mode="wait">
 
-            {/* ── Shimmer skeleton ── */}
             {loading ? (
               <motion.div
                 key="skeleton"
@@ -460,7 +451,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
               </motion.div>
             ) : (
 
-              /* ── Main content ── */
               <motion.div
                 key="content"
                 variants={pageVariants}
@@ -469,16 +459,13 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                 className="grid grid-cols-1 lg:grid-cols-12 gap-6"
               >
 
-                {/* ── LEFT: Profile card ── */}
                 <div className="lg:col-span-4 flex flex-col gap-4">
 
-                  {/* Profile widget */}
                   <motion.div
                     variants={itemVariants}
                     className="bg-white rounded-[var(--r-lg)] border border-gray-100 p-6 flex flex-col items-center text-center"
                     style={{ boxShadow: 'var(--shadow-card)' }}
                   >
-                    {/* Avatar */}
                     <div className="relative mb-4">
                       <div className="w-24 h-24 rounded-full p-[3px] bg-gradient-to-tr from-[#e9e3ff] to-[#c4b5fd] shadow-sm">
                         <div className="w-full h-full rounded-full overflow-hidden bg-white flex items-center justify-center relative">
@@ -523,9 +510,7 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                       <Edit2 className="w-4 h-4" /> Edit Profile
                     </button>
 
-                    {/* Stats row */}
                     <div className="flex w-full gap-3">
-                      {/* Credits */}
                       <div
                         className="flex-1 bg-white rounded-[var(--r-md)] p-3 flex items-center gap-3 border border-gray-100 hover:shadow-md transition-shadow"
                         style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.03)' }}
@@ -543,7 +528,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                         </div>
                       </div>
 
-                      {/* Aura */}
                       <div
                         className="flex-1 bg-white rounded-[var(--r-md)] p-3 flex items-center gap-3 border border-gray-100 hover:shadow-md transition-shadow"
                         style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.03)' }}
@@ -563,7 +547,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                     </div>
                   </motion.div>
 
-                  {/* Aura CTA */}
                   <motion.div variants={itemVariants}>
                     <Link
                       to="/aura"
@@ -586,7 +569,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                   </motion.div>
                 </div>
 
-                {/* ── RIGHT: Menu groups ── */}
                 <div className="lg:col-span-8 flex flex-col gap-5 mt-2 lg:mt-0 pb-10">
 
                   {menuGroups.map((group, gIdx) => (
@@ -636,7 +618,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                     </motion.div>
                   ))}
 
-                  {/* Delete account */}
                   <motion.div variants={itemVariants}>
                     <div
                       className="bg-white border border-gray-50 overflow-hidden"
@@ -669,12 +650,10 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
           </AnimatePresence>
         </div>
 
-        {/* ── Edit Profile Bottom Sheet ── */}
         <AnimatePresence>
           {isEditModalOpen && (
             <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
 
-              {/* Backdrop */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -684,7 +663,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                 onClick={() => setIsEditModalOpen(false)}
               />
 
-              {/* Sheet */}
               <motion.div
                 initial={{ opacity: 0, y: '100%' }}
                 animate={{ opacity: 1, y: 0 }}
@@ -692,7 +670,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                 transition={{ type: 'spring', damping: 28, stiffness: 280 }}
                 className="bg-white w-full max-w-lg rounded-t-[var(--r-lg)] sm:rounded-[var(--r-lg)] overflow-hidden shadow-2xl flex flex-col max-h-[92vh] relative z-10"
               >
-                {/* Sheet header */}
                 <div className="px-5 py-4 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-20">
                   <h2 className="text-[18px] font-bold text-gray-900">Edit Profile</h2>
                   <button
@@ -704,11 +681,9 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                   </button>
                 </div>
 
-                {/* Scrollable form area */}
                 <div className="p-5 overflow-y-auto flex-1 overscroll-contain pb-32 sm:pb-6">
                   <form id="editProfileForm" onSubmit={handleEditSubmit} className="space-y-7">
 
-                    {/* Basic info */}
                     <div className="space-y-3">
                       <h3 className="text-[11px] font-bold text-[#6B46C1] uppercase tracking-widest mb-1">
                         Basic Information
@@ -733,7 +708,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                       </div>
                     </div>
 
-                    {/* Pickup address */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between mb-1">
                         <h3 className="text-[11px] font-bold text-[#6B46C1] uppercase tracking-widest">
@@ -806,7 +780,6 @@ const ProfilePage = ({ user, setUser, onLogout }) => {
                   </form>
                 </div>
 
-                {/* Sheet footer — fixed at bottom with safe area */}
                 <div
                   className="border-t border-gray-100 bg-white flex gap-3 absolute sm:relative bottom-0 w-full z-20 px-4 pt-3 pb-safe-area"
                 >
