@@ -169,7 +169,7 @@ useEffect(() => {
     }
   }, [navigate]);
 
- // CHANGED: Added '/create-ai' to bypass desktop landing page
+ 
   const isAiChatRoute = location.pathname.startsWith('/ai-chat') || location.pathname.startsWith('/ai/') || location.pathname.startsWith('/create-ai');
   const hideNavbarRoutes = ['/login', '/signup', '/forgot-password'];
   const shouldShowBottomNav = !hideNavbarRoutes.includes(location.pathname) && !location.pathname.startsWith('/admin') && !isAiChatRoute;
@@ -210,6 +210,7 @@ useEffect(() => {
             } />
             
             <Route path="/login" element={user ? <Navigate to="/" replace /> : <AuthPage defaultMode="login" setUser={setUser} />} />
+            <Route path="/register" element={user ? <Navigate to="/" replace /> : <AuthPage defaultMode="signup" setUser={setUser} />} />
             <Route path="/signup" element={user ? <Navigate to="/" replace /> : <AuthPage defaultMode="signup" setUser={setUser} />} />
             <Route path="/forgot-password" element={user ? <Navigate to="/" replace /> : <ForgotPasswordPage setUser={setUser} />} />
           

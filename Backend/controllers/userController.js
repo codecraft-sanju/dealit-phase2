@@ -72,7 +72,7 @@ const generateUniqueReferralCode = async (name) => {
 
 const registerUser = async (req, res) => {
   try {
-    let { email } = req.body;
+    let { email, referralCodeInput } = req.body;
     if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
     email = email.toLowerCase().trim();
     
@@ -83,19 +83,27 @@ const registerUser = async (req, res) => {
         return res.status(400).json({ success: false, message: 'User already exists with this email. Please login.' });
       }
     } else {
-     
+      
       const defaultName = email.split('@')[0];
       const newReferralCode = await generateUniqueReferralCode(defaultName);
+
+      let referrerUserId = null;
+      if (referralCodeInput) {
+        const referrerUser = await User.findOne({ referralCode: referralCodeInput });
+        if (referrerUser && !referrerUser.isDeleted) {
+           referrerUserId = referrerUser._id;
+        }
+      }
 
       user = new User({
         full_name: defaultName,
         email,
         isVerified: false,
-        referralCode: newReferralCode 
+        referralCode: newReferralCode,
+        referredBy: referrerUserId
       });
     }
 
-  
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     user.otp = otp;
     user.otpExpiry = Date.now() + 10 * 60 * 1000; 
@@ -141,9 +149,40 @@ const verifyOtp = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
     }
 
+    // Check if this is their first time verifying (Registration)
+    const isFirstTimeVerification = !user.isVerified;
+
     user.isVerified = true;
     user.otp = undefined;
     user.otpExpiry = undefined;
+
+    // Apply Referral Reward ONLY on first-time verification
+    if (isFirstTimeVerification && user.referredBy) {
+      const creditSettings = await CreditSetting.findOne();
+      const isEnabled = creditSettings ? creditSettings.isReferralSystemEnabled : true;
+      const referralReward = creditSettings ? creditSettings.referralRewardCredits : 40;
+      
+      if (isEnabled) {
+          const referrerUser = await User.findById(user.referredBy);
+          
+          if (referrerUser && !referrerUser.isDeleted) {
+              referrerUser.totalReferrals += 1;
+              referrerUser.account_credits += referralReward;
+              await referrerUser.save();
+
+              user.account_credits += referralReward; // Reward the new user too
+              
+              queueNotification({
+                user: referrerUser._id,
+                type: 'CREDIT_ADDED',
+                title: 'Referral Bonus! 🎁',
+                message: `Your friend joined Dealit! You earned ${referralReward} credits.`,
+                metadata: { amount: referralReward, reason: 'referral' }
+              });
+          }
+      }
+    }
+
     await user.save();
 
     sendTokenResponse(user, 200, res, 'Account verified and logged in successfully!');
@@ -166,7 +205,6 @@ const loginUser = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Account not found. Please sign up first.' });
     }
 
-   
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     user.otp = otp;
     user.otpExpiry = Date.now() + 10 * 60 * 1000;
@@ -194,7 +232,7 @@ const loginUser = async (req, res) => {
 
 const googleLogin = async (req, res) => {
   try {
-    const { token } = req.body;
+    const { token, referralCodeInput } = req.body;
     if (!token) {
       return res.status(400).json({ success: false, message: 'Google token is required' });
     }
@@ -246,14 +284,49 @@ const googleLogin = async (req, res) => {
     } else {
       const newReferralCode = await generateUniqueReferralCode(name);
       
+      let referrerUserId = null;
+      if (referralCodeInput) {
+        const referrerUser = await User.findOne({ referralCode: referralCodeInput });
+        if (referrerUser && !referrerUser.isDeleted) {
+           referrerUserId = referrerUser._id;
+        }
+      }
+
       user = new User({
         full_name: name,
         email: cleanEmail,
         profilePic: picture || '',
         isVerified: true,
         referralCode: newReferralCode,
-        aura_points: 100 
+        aura_points: 100,
+        referredBy: referrerUserId
       });
+
+      if (referrerUserId) {
+        const creditSettings = await CreditSetting.findOne();
+        const isEnabled = creditSettings ? creditSettings.isReferralSystemEnabled : true;
+        const referralReward = creditSettings ? creditSettings.referralRewardCredits : 40;
+        
+        if (isEnabled) {
+            const referrerUser = await User.findById(referrerUserId);
+            
+            if (referrerUser && !referrerUser.isDeleted) {
+                referrerUser.totalReferrals += 1;
+                referrerUser.account_credits += referralReward;
+                await referrerUser.save();
+
+                user.account_credits += referralReward;
+                
+                queueNotification({
+                  user: referrerUser._id,
+                  type: 'CREDIT_ADDED',
+                  title: 'Referral Bonus! 🎁',
+                  message: `Your friend joined Dealit via Google! You earned ${referralReward} credits.`,
+                  metadata: { amount: referralReward, reason: 'referral' }
+                });
+            }
+        }
+      }
 
       await user.save();
     }
@@ -541,7 +614,7 @@ const claimWelcomeBonus = async (req, res) => {
 
   
     user.account_credits += amount;
-    user.aura_points = (user.aura_points || 0) + 50; //  Welcome bonus par +50 Aura
+    user.aura_points = (user.aura_points || 0) + 50; 
     user.hasClaimedWelcomeBonus = true;
     await user.save();
 
@@ -613,7 +686,7 @@ const deleteUserProfile = async (req, res) => {
     user.account_credits = 0; 
     user.aura_points = 0;
     user.listedProductsCount = 0;
-    user.rewardedListingsCount = 0; // Reset rewarded listings count to 0
+    user.rewardedListingsCount = 0; 
     user.referralCode = `DEL_${Date.now()}`;
     user.otp = undefined;
     user.resetPasswordOtp = undefined;
@@ -659,12 +732,10 @@ const getRandomAvatars = async (req, res) => {
     ]);
 
     const avatars = randomUsers.map((u, i) => {
-      // Return user profile pic if exists, else fallback to ui-avatars
       if (u.profilePic) return u.profilePic;
       return `https://ui-avatars.com/api/?name=${encodeURIComponent(u.full_name || 'User')}&background=A388E1&color=fff&size=40`;
     });
 
-    // Handle edge case if less than 5 users in the entire database
     while(avatars.length < 5) {
        avatars.push(`https://ui-avatars.com/api/?name=U${avatars.length}&background=A388E1&color=fff&size=40`);
     }
@@ -674,6 +745,7 @@ const getRandomAvatars = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server Error fetching avatars' });
   }
 };
+
 const syncRecentlyViewed = async (req, res) => {
   try {
     const { viewedIds } = req.body;
@@ -688,10 +760,8 @@ const syncRecentlyViewed = async (req, res) => {
   
     let combined = [...(viewedIds || []), ...user.recently_viewed.map(id => id.toString())];
     
-    // Duplicates hatao
     combined = [...new Set(combined)];
     
-    // Max 20 items ki limit lagao
     if (combined.length > 20) {
       combined = combined.slice(0, 20);
     }
@@ -705,7 +775,6 @@ const syncRecentlyViewed = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
-
 
 const clearRecentlyViewed = async (req, res) => {
   try {

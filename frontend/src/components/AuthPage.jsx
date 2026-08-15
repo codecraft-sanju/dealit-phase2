@@ -11,7 +11,6 @@ const API_URL = `${API_BASE}/api`;
 
 const isWebView = typeof window !== 'undefined' && window.ReactNativeWebView;
 
-// Fallback dummy faces just in case the API fails or user doesn't have a profile pic
 const FALLBACK_AVATARS = [
   'https://i.pravatar.cc/100?img=47',
   'https://i.pravatar.cc/100?img=12',
@@ -96,6 +95,10 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
   const [loading, setLoading] = useState(false);
   const [avatars, setAvatars] = useState([]);
 
+  // Extract referral code from URL parameters
+  const queryParams = new URLSearchParams(location.search);
+  const referralCodeInput = queryParams.get('ref') || '';
+
   useEffect(() => {
     setIsSignUpMode(defaultMode === 'signup');
     setError('');
@@ -108,7 +111,6 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
       try {
         const res = await axios.get(`${API_URL}/users/random-avatars`);
         if (res.data.success && res.data.data) {
-          // We only need 4 avatars for the Auth UI
           setAvatars(res.data.data.slice(0, 4));
         }
       } catch (err) {
@@ -170,7 +172,8 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
     setLoading(true);
     try {
       const res = await axios.post(`${API_URL}/users/google-login`, {
-        token: credentialResponse.credential
+        token: credentialResponse.credential,
+        referralCodeInput // Send referral code if it exists
       }, { withCredentials: true });
 
       if (res.data.success) {
@@ -194,7 +197,10 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
     const endpoint = isSignUpMode ? `${API_URL}/users/register` : `${API_URL}/users/login`;
     
     try {
-      const res = await axios.post(endpoint, { email }, { withCredentials: true });
+      const res = await axios.post(endpoint, { 
+        email, 
+        ...(isSignUpMode && referralCodeInput && { referralCodeInput }) // Send referral code only on signup
+      }, { withCredentials: true });
       
       if (res.data.success) {
         setShowOtp(true);
@@ -223,17 +229,14 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
     } finally { setLoading(false); }
   };
 
-  // Prepare images to display (use fetched if available, else fallback)
   const displayAvatars = avatars.length === 4 ? avatars : FALLBACK_AVATARS;
 
   return (
     <div className="aw-root">
-      
       {/* HERO SECTION */}
       <div className="new-hero-section">
         <div className="new-hero-header">
           <div className="mb-brand">
-            {/* Added your actual logo.png here */}
             <img src="/logo.png" alt="Dealit logo" className="brand-logo" />
             <span>dealit</span>
           </div>
@@ -258,12 +261,10 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
         </div>
       </div>
 
-     
       <div className="stats-banner-wrap">
         <div className="stats-banner">
           <div className="avatars">
             {displayAvatars.map((src, i) => {
-              // If the backend sends an initial-based ui-avatar, replace it with a dummy face for better UI
               const finalSrc = src.includes('ui-avatars.com') ? FALLBACK_AVATARS[i] : src;
               return (
                 <img 
@@ -280,7 +281,6 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
         </div>
       </div>
 
- 
       <div className="mb-sheet">
         <div className="sheet-content">
           
@@ -365,7 +365,7 @@ const AuthPage = ({ setUser, defaultMode = 'login' }) => {
                 </button>
               </div>
               
-              <div style={{ flex: 1 }}></div> {/* Filler to push UI up */}
+              <div style={{ flex: 1 }}></div>
             </div>
           )}
 
