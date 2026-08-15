@@ -6,6 +6,10 @@ import axios from 'axios';
 const API_BASE = import.meta.env.VITE_BACKEND_API;
 const API_URL = `${API_BASE}/api`;
 
+// CHANGED: Yahan humne cloudinary links ko variables me nikal liya hai code clean rakhne ke liye
+const CLOUDINARY_LOGO_ICON = "https://res.cloudinary.com/dia3qhc0x/image/upload/v1786813922/logo_w3rjuf.png";
+const CLOUDINARY_LOGO_TEXT = "https://res.cloudinary.com/dia3qhc0x/image/upload/v1786813947/img_txpwuo.jpg";
+
 const Navbar = ({ user }) => {
   const location = useLocation();
   const [credits, setCredits] = useState(user?.account_credits || 0);
@@ -47,7 +51,8 @@ const Navbar = ({ user }) => {
     return () => {
       window.removeEventListener('notificationsRead', handleNotificationsRead);
     };
-  }, [user, location.pathname]);
+  // CHANGED: location.pathname yahan se hata diya gaya hai faltu API calls rokne ke liye
+  }, [user]);
 
   return (
     <>
@@ -57,8 +62,9 @@ const Navbar = ({ user }) => {
             
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2 z-10">
-              <img src="/logo.png" alt="Dealit Logo" className="w-8 h-8 object-contain" />
-              <img src="/img.jpeg" alt="Dealit" className="h-6 object-contain" />
+              {/* CHANGED: src me direct link ki jagah humne upar banaye gaye variables use kiye hain */}
+              <img src={CLOUDINARY_LOGO_ICON} alt="Dealit Logo" className="w-8 h-8 object-contain" />
+              <img src={CLOUDINARY_LOGO_TEXT} alt="Dealit" className="h-6 object-contain" />
             </Link>
             
             {/* Desktop Search Bar */}
