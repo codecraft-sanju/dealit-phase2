@@ -138,11 +138,11 @@ const HelpSupportPage = () => {
 
         <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-8">
           
-          {/* Quick Support Cards */}
+         
           <section>
             <div className="flex items-center gap-2 mb-4 px-1">
               <Phone className="w-4 h-4 text-white/90" />
-              {/* CHANGED: Made text white so it shows up on purple background */}
+             
               <h2 className="text-xs font-bold text-white/90 uppercase tracking-widest">Get Direct Support</h2>
             </div>
             

@@ -85,7 +85,7 @@ const TermsPage = () => {
 
         </div>
         
-        {/* Bottom spacer for mobile scrolling */}
+      
         <div className="h-10"></div>
       </div>
     </div>

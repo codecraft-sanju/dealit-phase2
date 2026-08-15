@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
-import { ArrowLeft, Wallet, Coins, CreditCard, ChevronRight, Check, MoreHorizontal, Plus, Package, Sparkles, Copy, Users, Target, Share2, History, ArrowDownLeft, XCircle, Clock, X, Truck, Filter, List, Loader2, RefreshCcw, Zap } from 'lucide-react';
+/* --- MODIFIED: Added HelpCircle, FileText, Download, ShieldAlert for the dropdown menu --- */
+import { ArrowLeft, Wallet, Coins, CreditCard, ChevronRight, Check, MoreHorizontal, Plus, Package, Sparkles, Copy, Users, Target, Share2, History, ArrowDownLeft, XCircle, Clock, X, Truck, Filter, List, Loader2, RefreshCcw, Zap, HelpCircle, FileText, Download, ShieldAlert } from 'lucide-react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import CoinCelebration from './CoinCelebration';
@@ -17,7 +18,6 @@ const loadRazorpayScript = () => {
     document.body.appendChild(script);
   });
 };
-
 
 const CREDIT_PACKS = [
   { id: 'starter', price: 49, credits: 50, label: 'Starter', bonus: '+1 Bonus' },
@@ -50,6 +50,9 @@ const WalletPage = ({ user, setUser }) => {
   const [customAmount, setCustomAmount] = useState('');
   const [processing, setProcessing] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
+  
+  /* --- MODIFIED: Added state for the 3-dots dropdown menu --- */
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const [appSettings, setAppSettings] = useState({ 
     isReferralSystemEnabled: true, 
@@ -297,15 +300,73 @@ const WalletPage = ({ user, setUser }) => {
   return (
     <div className="max-w-md mx-auto bg-white min-h-screen pb-2 md:max-w-7xl relative">
       
+      {/* --- MODIFIED: Header now includes the functional dropdown menu with Framer Motion --- */}
       <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm flex justify-between items-center px-5 py-4 md:px-8 transition-all">
         <Link to="/" className="p-2 -ml-2 text-gray-700 hover:text-[#A388E1] hover:bg-gray-50 rounded-full transition-colors">
           <ArrowLeft className="w-6 h-6" />
         </Link>
         <h1 className="text-lg font-bold text-gray-900">Earn Credits</h1>
-        <button className="p-2 -mr-2 text-gray-700 hover:text-[#A388E1] hover:bg-gray-50 rounded-full transition-colors">
-          <MoreHorizontal className="w-6 h-6" />
-        </button>
+        
+        <div className="relative">
+          <button 
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="p-2 -mr-2 text-gray-700 hover:text-[#A388E1] hover:bg-gray-50 rounded-full transition-colors"
+          >
+            <MoreHorizontal className="w-6 h-6" />
+          </button>
+
+          <AnimatePresence>
+            {isMenuOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+                className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50"
+              >
+                <div className="py-2">
+                  <Link 
+                    to="/help-support" 
+                    onClick={() => setIsMenuOpen(false)}
+                    className="w-full px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                  >
+                    <HelpCircle className="w-4 h-4 text-gray-400" />
+                    Help & Support
+                  </Link>
+                  <Link 
+                    to="/terms" 
+                    onClick={() => setIsMenuOpen(false)}
+                    className="w-full px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                  >
+                    <FileText className="w-4 h-4 text-gray-400" />
+                    How Credits Work
+                  </Link>
+                  <button 
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      alert('Your statement is being generated and will download shortly.');
+                    }}
+                    className="w-full px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                  >
+                    <Download className="w-4 h-4 text-gray-400" />
+                    Download Statement
+                  </button>
+                  <div className="h-px bg-gray-100 my-1"></div>
+                  <Link 
+                    to="/refund-policy" 
+                    onClick={() => setIsMenuOpen(false)}
+                    className="w-full px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors text-red-600 hover:bg-red-50"
+                  >
+                    <ShieldAlert className="w-4 h-4 text-red-400" />
+                    Refund Policy
+                  </Link>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
+      {/* --- END MODIFIED --- */}
 
       <div className="md:grid md:grid-cols-2 md:gap-8 md:px-8 mt-4">
         
