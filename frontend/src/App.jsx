@@ -268,12 +268,8 @@ useEffect(() => {
             <Route path="/notifications" element={user ? <NotificationsPage /> : <Navigate to="/login" />} />
             <Route path="/help-support" element={user ? <HelpSupportPage /> : <Navigate to="/login" />} />
             <Route path="/recently-viewed" element={<RecentlyViewedPage />} />
-            
-    
             <Route path="/ai-chat" element={user ? <AiChatPage user={user} /> : <Navigate to="/login" />} />
             <Route path="/ai-chat/:sessionId" element={user ? <AiChatPage user={user} /> : <Navigate to="/login" />} />
-            
-         
             <Route path="/create-ai" element={user ? <CreateAIPage user={user} /> : <Navigate to="/login" />} />
             <Route path="/ai/:username" element={<PublicAiChatPage />} />
             <Route path="/saved-payments" element={user ? <SavedPaymentsPage user={user} /> : <Navigate to="/login" />} />
