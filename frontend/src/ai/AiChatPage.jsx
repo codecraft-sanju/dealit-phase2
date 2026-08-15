@@ -1,7 +1,8 @@
+{/* Reason: Added scroll detection on the sidebar's recent chats list to hide the secondary action buttons (Code Assistant, Image Generator, Create AI Agent) with a smooth slide-up animation when scrolling down, and reveal them again when scrolling up, providing a cleaner and more professional UX. */}
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Send, Sparkles, Plus, Settings, HelpCircle, MessageSquare, X, Trash2,
-  Minimize2, ChevronDown, Mic, User, WifiOff, Check, Unlock, Code, Image as ImageIcon, Wand2 // CHANGED: Imported Wand2 for Create AI button
+  Minimize2, ChevronDown, Mic, User, WifiOff, Check, Unlock, Code, Image as ImageIcon, Wand2
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -316,6 +317,8 @@ const AiChatPage = ({ user }) => {
   const [isOffline,             setIsOffline]           = useState(!navigator.onLine);
   const [localCredits, setLocalCredits] = useState(user?.account_credits || 0);
 
+  const [hideSidebarActions, setHideSidebarActions] = useState(false);
+
   const autoMicRef = useRef(false);
   const handleMicClickRef = useRef(null);
 
@@ -324,6 +327,7 @@ const AiChatPage = ({ user }) => {
   const audioRef           = useRef(null);
   const isStreamingRef     = useRef(false);
   const textareaRef        = useRef(null);
+  const lastSidebarScrollY = useRef(0);
 
   const currentSuggestions = chatMode === 'code' 
     ? CODE_SUGGESTIONS 
@@ -404,6 +408,22 @@ const AiChatPage = ({ user }) => {
     return () => window.removeEventListener('resize', handle);
   }, []);
 
+  useEffect(() => {
+    if (!isSidebarOpen) {
+      setHideSidebarActions(false);
+    }
+  }, [isSidebarOpen]);
+
+  const handleSidebarScroll = (e) => {
+    const currentScrollY = e.target.scrollTop;
+    if (currentScrollY > 20 && currentScrollY > lastSidebarScrollY.current + 2) {
+      setHideSidebarActions(true);
+    } else if (currentScrollY < lastSidebarScrollY.current - 5 || currentScrollY <= 20) {
+      setHideSidebarActions(false);
+    }
+    lastSidebarScrollY.current = currentScrollY;
+  };
+
   const handleToggleContext = () => {
     const next = !isSmartContextEnabled;
     setIsSmartContextEnabled(next);
@@ -480,8 +500,8 @@ const AiChatPage = ({ user }) => {
             id: msg._id || `hist_${idx}`,
             role: msg.role === 'assistant' ? 'bot' : msg.role,
             content: msg.content,
-            type: msg.type || 'text', // Handle legacy texts
-            imageUrl: msg.imageUrl, // Handle stored images
+            type: msg.type || 'text',
+            imageUrl: msg.imageUrl,
             prompt: msg.prompt,
             timestamp: new Date(msg.createdAt || Date.now()).toLocaleTimeString([], {
               hour: '2-digit', minute: '2-digit',
@@ -1173,50 +1193,63 @@ const AiChatPage = ({ user }) => {
             </button>
           </div>
           
-        
-          <button
-            onClick={handleCodeChat}
-            className={`relative group flex items-center rounded-xl bg-[#030712] hover:bg-gray-900 text-white transition-all  shadow-sm
-              ${isSidebarOpen ? 'p-3 gap-3 w-full' : 'justify-center w-12 h-12'}`}
-          >
-            <div className="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-full p-1 shadow-inner shrink-0">
-              <Code className="w-4 h-4 text-white" />
-            </div>
-            {isSidebarOpen && <span className="font-semibold text-sm whitespace-nowrap">&lt;/&gt; Code Assistant</span>}
-            {!isSidebarOpen && <SidebarTooltip text="Code Assistant" />}
-          </button>
+          <AnimatePresence initial={false}>
+            {!hideSidebarActions && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+                className={`flex flex-col w-full overflow-hidden ${isSidebarOpen ? 'gap-2' : 'gap-4 items-center'}`}
+              >
+                <button
+                  onClick={handleCodeChat}
+                  className={`relative group flex items-center rounded-xl bg-[#030712] hover:bg-gray-900 text-white transition-all  shadow-sm
+                    ${isSidebarOpen ? 'p-3 gap-3 w-full' : 'justify-center w-12 h-12'}`}
+                >
+                  <div className="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-full p-1 shadow-inner shrink-0">
+                    <Code className="w-4 h-4 text-white" />
+                  </div>
+                  {isSidebarOpen && <span className="font-semibold text-sm whitespace-nowrap">&lt;/&gt; Code Assistant</span>}
+                  {!isSidebarOpen && <SidebarTooltip text="Code Assistant" />}
+                </button>
 
-          <button
-            onClick={handleImageChat}
-            className={`relative group flex items-center rounded-xl bg-[#030712] hover:bg-gray-900 text-white transition-all shadow-sm
-              ${isSidebarOpen ? 'p-3 gap-3 w-full' : 'justify-center w-12 h-12'}`}
-          >
-            <div className="bg-gradient-to-br from-purple-500 to-blue-500 rounded-full p-1 shadow-inner shrink-0">
-              <ImageIcon className="w-4 h-4 text-white" />
-            </div>
-            {isSidebarOpen && <span className="font-semibold text-sm whitespace-nowrap">Image Generator</span>}
-            {!isSidebarOpen && <SidebarTooltip text="Image Generator" />}
-          </button>
+                <button
+                  onClick={handleImageChat}
+                  className={`relative group flex items-center rounded-xl bg-[#030712] hover:bg-gray-900 text-white transition-all shadow-sm
+                    ${isSidebarOpen ? 'p-3 gap-3 w-full' : 'justify-center w-12 h-12'}`}
+                >
+                  <div className="bg-gradient-to-br from-purple-500 to-blue-500 rounded-full p-1 shadow-inner shrink-0">
+                    <ImageIcon className="w-4 h-4 text-white" />
+                  </div>
+                  {isSidebarOpen && <span className="font-semibold text-sm whitespace-nowrap">Image Generator</span>}
+                  {!isSidebarOpen && <SidebarTooltip text="Image Generator" />}
+                </button>
 
+                <button
+                  onClick={() => {
+                    navigate('/create-ai');
+                    if (window.innerWidth <= 768) setIsSidebarOpen(false);
+                  }}
+                  className={`relative group flex items-center rounded-xl bg-[#030712] hover:bg-gray-900 text-white transition-all shadow-sm
+                    ${isSidebarOpen ? 'p-3 gap-3 w-full' : 'justify-center w-12 h-12'}`}
+                >
+                  <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full p-1 shadow-inner shrink-0">
+                    <Wand2 className="w-4 h-4 text-white" />
+                  </div>
+                  {isSidebarOpen && <span className="font-semibold text-sm whitespace-nowrap">Create AI Agent</span>}
+                  {!isSidebarOpen && <SidebarTooltip text="Create AI Agent" />}
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
        
-          <button
-            onClick={() => {
-              navigate('/create-ai');
-              if (window.innerWidth <= 768) setIsSidebarOpen(false);
-            }}
-            className={`relative group flex items-center rounded-xl bg-[#030712] hover:bg-gray-900 text-white transition-all shadow-sm
-              ${isSidebarOpen ? 'p-3 gap-3 w-full' : 'justify-center w-12 h-12'}`}
-          >
-            <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full p-1 shadow-inner shrink-0">
-              <Wand2 className="w-4 h-4 text-white" />
-            </div>
-            {isSidebarOpen && <span className="font-semibold text-sm whitespace-nowrap">Create AI Agent</span>}
-            {!isSidebarOpen && <SidebarTooltip text="Create AI Agent" />}
-          </button>
-      
         </div>
 
-        <div className={`flex-1 overflow-y-auto px-3 py-2 ai-no-scrollbar`}>
+        <div 
+          className={`flex-1 overflow-y-auto px-3 py-2 ai-no-scrollbar`}
+          onScroll={handleSidebarScroll}
+        >
           {isSidebarOpen && (
             <>
               <div className="text-xs font-bold tracking-wider text-gray-500 mb-3 px-2 uppercase">Recent Chats</div>

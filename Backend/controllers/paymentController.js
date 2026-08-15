@@ -359,12 +359,10 @@ const getSavedPaymentMethods = async (req, res) => {
     res.status(200).json({ success: true, data: tokens.items || [] });
   } catch (error) {
     console.error('Error fetching saved methods:', error);
-    // Modified to return empty array instead of 500 error if Razorpay data is missing or invalid
+  
     res.status(200).json({ success: true, data: [] });
   }
 };
-
-
 const deleteSavedPaymentMethod = async (req, res) => {
   try {
     const { tokenId } = req.params;
@@ -382,8 +380,6 @@ const deleteSavedPaymentMethod = async (req, res) => {
   }
 };
 
-
-
 const downloadWalletStatement = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -400,12 +396,12 @@ const downloadWalletStatement = async (req, res) => {
 
     doc.pipe(res);
 
-    // --- 1. HEADER SECTION ---
+    
     doc.fillColor('#6B46C1').fontSize(28).font('Helvetica-Bold').text('Dealit.', 50, 45);
     doc.fillColor('#333333').fontSize(10).font('Helvetica-Bold').text('STATEMENT OF ACCOUNT', 400, 55, { align: 'right' });
     doc.moveTo(50, 85).lineTo(545, 85).lineWidth(2).strokeColor('#A388E1').stroke();
 
-    // --- 2. USER & SUMMARY SECTION ---
+   
     doc.moveDown(2);
     
     doc.fillColor('#666666').fontSize(10).font('Helvetica').text('Account Holder:', 50, 105);
@@ -509,10 +505,6 @@ const downloadWalletStatement = async (req, res) => {
     }
   }
 };
-/* --- END MODIFIED --- */
-
-
-
 
 module.exports = {
   createOrder,
