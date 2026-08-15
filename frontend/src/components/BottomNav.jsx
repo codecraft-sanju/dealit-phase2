@@ -151,7 +151,7 @@ const BottomNav = ({ user }) => {
    
 <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-2xl border-t border-gray-100/50 rounded-t-[2rem] z-50 shadow-[0_-10px_40px_rgba(107,70,193,0.15)] pb-[env(safe-area-inset-bottom)] overflow-hidden">
       
-      {/* CHANGED: Added px-4 to keep icons away from the new curved edges */}
+      
       <div className="flex justify-around items-center h-16 px-4 relative">
         
         <Link

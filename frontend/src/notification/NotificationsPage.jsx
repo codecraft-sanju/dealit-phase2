@@ -13,7 +13,11 @@ import {
   ShoppingBag,
   Info,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Filter,
+  ChevronDown,
+  Check,
+  CheckCheck
 } from 'lucide-react';
 import axios from 'axios';
 import { formatDistanceToNow } from 'date-fns';
@@ -48,12 +52,12 @@ const NotificationsPage = () => {
   const navigate = useNavigate();
 
   const [activeFilter, setActiveFilter] = useState('All');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isPushEnabled, setIsPushEnabled] = useState(false);
   const [toast, setToast] = useState(null);
   const toastTimeoutRef = useRef(null);
   const publicVapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
   
-  // CHANGED: Determine if the user is in the mobile app
   const isMobileApp = localStorage.getItem('is_dealit_app') === 'true';
 
   const showToast = (text, type = 'info') => {
@@ -64,10 +68,8 @@ const NotificationsPage = () => {
 
   useEffect(() => {
     if (isMobileApp) {
-      // App ke andar hamesha disable dikhao initially
       setIsPushEnabled(false);
     } else if ('serviceWorker' in navigator && 'PushManager' in window) {
-      // Sirf web browser me service worker check karo
       navigator.serviceWorker.ready.then((registration) => {
         registration.pushManager.getSubscription().then((subscription) => {
           setIsPushEnabled(!!subscription);
@@ -78,7 +80,7 @@ const NotificationsPage = () => {
     return () => {
       if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     };
-  }, [isMobileApp]); // CHANGED: Added isMobileApp to dependency array
+  }, [isMobileApp]); 
 
   const urlBase64ToUint8Array = (base64String) => {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -92,7 +94,6 @@ const NotificationsPage = () => {
   };
 
   const handlePushToggle = async () => {
-    // Agar app ke andar se click kiya toh sidha error de do
     if (isMobileApp) {
       showToast('Push notifications are managed automatically in the app.', 'error');
       return;
@@ -171,17 +172,7 @@ const NotificationsPage = () => {
   });
 
   const notifications = data?.pages.flatMap(page => page.data) || [];
-
   const hasUnread = notifications.some(n => !n.isRead);
-
-  useEffect(() => {
-    if (hasUnread) {
-      const timer = setTimeout(() => {
-        markAllAsReadMutation.mutate();
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [hasUnread]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -275,11 +266,9 @@ const NotificationsPage = () => {
         break;
       
       case 'TRADE_ALERT':
-        
         if (reason === 'new_offer') {
           navigate('/swaps?tab=received');
         } else if (reason === 'payment_pending') {
-      
           navigate('/swaps?tab=sent');
         } else if (refId) {
           navigate(`/deal/${refId}`);
@@ -346,8 +335,69 @@ const NotificationsPage = () => {
             </h1>
           </div>
           
-          <div className="flex items-center gap-2">
-          
+          <div className="flex items-center gap-2 relative">
+            
+            {hasUnread && (
+              <button
+                onClick={() => markAllAsReadMutation.mutate()}
+                disabled={markAllAsReadMutation.isPending}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-full transition-colors text-sm font-medium border border-white/20 disabled:opacity-50"
+                title="Mark all as read"
+              >
+                {markAllAsReadMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <CheckCheck className="w-4 h-4" />
+                )}
+                <span className="hidden sm:inline">Mark all read</span>
+              </button>
+            )}
+
+            <button
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-full transition-colors text-sm font-medium border border-white/20"
+            >
+              <Filter className="w-4 h-4" />
+              <span className="hidden sm:inline">{activeFilter}</span>
+              <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isFilterOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            <AnimatePresence>
+              {isFilterOpen && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setIsFilterOpen(false)} 
+                  />
+                  <motion.div
+                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                    transition={{ duration: 0.15, ease: "easeOut" }}
+                    className="absolute top-12 right-0 w-48 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 py-1"
+                  >
+                    {['All', 'Trades', 'Wallet', 'Orders'].map((filter) => (
+                      <button
+                        key={filter}
+                        onClick={() => {
+                          setActiveFilter(filter);
+                          setIsFilterOpen(false);
+                        }}
+                        className={`w-full text-left px-4 py-3 text-sm font-medium flex items-center justify-between transition-colors ${
+                          activeFilter === filter 
+                            ? 'bg-[#f4f2f9] text-[#6B46C1]' 
+                            : 'text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        {filter}
+                        {activeFilter === filter && <Check className="w-4 h-4" />}
+                      </button>
+                    ))}
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+
             {!isMobileApp && (
               <button
                 onClick={handlePushToggle}
@@ -365,29 +415,7 @@ const NotificationsPage = () => {
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col pt-18 pb-24 px-4 relative z-10 max-w-md mx-auto w-full">
-        
-        <div className="flex overflow-x-auto hide-scrollbar gap-2 mb-4 py-2 -mx-4 px-4 sticky top-0 z-20 bg-[#f4f2f9]/90 backdrop-blur-sm">
-          {['All', 'Trades', 'Wallet', 'Orders'].map((filter) => (
-            <button
-              key={filter}
-              onClick={() => setActiveFilter(filter)}
-              className={`relative px-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${
-                activeFilter === filter ? 'text-white' : 'text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 shadow-sm'
-              }`}
-            >
-              {activeFilter === filter && (
-                <motion.div
-                  layoutId="activeNotificationFilter"
-                  className="absolute inset-0 bg-[#6B46C1] rounded-full -z-10 shadow-sm"
-                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                />
-              )}
-              <span className="relative z-10">{filter}</span>
-            </button>
-          ))}
-        </div>
-
+      <main className="flex-1 flex flex-col pt-20 pb-24 px-4 relative z-10 max-w-md mx-auto w-full">
         {isLoading ? (
           <NotificationsShimmer />
         ) : isError ? (
@@ -413,7 +441,6 @@ const NotificationsPage = () => {
             <AnimatePresence>
               {notifications.map((notif) => {
                 const { icon: Icon, color, bg } = getIconData(notif.type);
-                
                 const isWelcomeBonus = notif.metadata?.reason === 'signup_bonus';
 
                 return (
@@ -423,16 +450,24 @@ const NotificationsPage = () => {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     onClick={() => handleNotificationClick(notif)} 
+                    // CHANGED: Added slight purple tint to background when unread
                     className={`p-4 rounded-2xl border transition-all relative overflow-hidden cursor-pointer hover:shadow-md 
                       ${notif.isRead 
                         ? 'bg-white border-gray-100 shadow-sm' 
-                        : 'bg-white border-[#6B46C1]/30 shadow-md ring-1 ring-[#6B46C1]/10'}`}
+                        : 'bg-[#FCFAFF] border-[#6B46C1]/30 shadow-md ring-1 ring-[#6B46C1]/10'}`}
                   >
+                    {/* CHANGED: Shimmer Overlay for Unread Notifications */}
                     {!notif.isRead && (
-                      <div className="absolute top-4 right-4 w-2.5 h-2.5 rounded-full bg-[#6B46C1] shadow-[0_0_8px_rgba(107,70,193,0.6)]"></div>
+                      <div className="shimmer-overlay"></div>
+                    )}
+
+                    {!notif.isRead && (
+                      // CHANGED: Added z-10 so the dot stays above the shimmer
+                      <div className="absolute top-4 right-4 w-2.5 h-2.5 rounded-full bg-[#6B46C1] shadow-[0_0_8px_rgba(107,70,193,0.6)] z-10"></div>
                     )}
                     
-                    <div className="flex gap-4">
+                    {/* CHANGED: Added relative z-10 so content stays above the shimmer animation */}
+                    <div className="flex gap-4 relative z-10">
                       
                       <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 overflow-hidden ${isWelcomeBonus ? 'bg-teal-50' : bg}`}>
                         {isWelcomeBonus ? (
@@ -489,7 +524,6 @@ const NotificationsPage = () => {
         )}
       </main>
 
-      
       <AnimatePresence>
         {toast && (
           <motion.div
@@ -518,6 +552,28 @@ const NotificationsPage = () => {
         .hide-scrollbar {
           -ms-overflow-style: none;
           scrollbar-width: none;
+        }
+
+        /* CHANGED: Premium Shimmer Effect CSS */
+        @keyframes shimmerEffect {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+        .shimmer-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(
+            to right,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(107, 70, 193, 0.08) 50%,
+            rgba(255, 255, 255, 0) 100%
+          );
+          animation: shimmerEffect 2.5s infinite linear;
+          pointer-events: none; /* User clicks pass through this overlay */
+          z-index: 0;
         }
       `}</style>
     </div>

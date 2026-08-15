@@ -5,7 +5,8 @@ const User = require('../models/User');
 const getUserNotifications = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 20; 
+    // const limit = parseInt(req.query.limit, 10) || 20; 
+    const limit = Math.min(parseInt(req.query.limit, 10) || 20, 50);
     const skip = (page - 1) * limit;
     const filterType = req.query.filter || 'All';
 
@@ -60,11 +61,9 @@ const markAsRead = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Notification not found or already read' });
     }
 
-    const user = await User.findById(req.user._id);
-    if (user && user.unreadNotificationsCount > 0) {
-      user.unreadNotificationsCount -= 1;
-      await user.save();
-    }
+   await User.findByIdAndUpdate(req.user._id, {
+  $inc: { unreadNotificationsCount: -1 }
+});
 
     res.status(200).json({ success: true, data: notification });
   } catch (error) {
@@ -129,11 +128,12 @@ const unsubscribePush = async (req, res) => {
 
 const syncUnreadCount = async (req, res) => {
   try {
-    const userId = req.user ? req.user._id : req.body.userId;
-    
-    if (!userId) {
-      return res.status(400).json({ success: false, message: 'User ID is required' });
+  
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ success: false, message: 'Not authorized' });
     }
+    
+    const userId = req.user._id;
 
     const actualUnreadCount = await Notification.countDocuments({ user: userId, isRead: false });
 
