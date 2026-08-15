@@ -1,5 +1,6 @@
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
+const PDFDocument = require('pdfkit');
 const User = require('../models/User'); 
 const Transaction = require('../models/Transaction');
 
@@ -345,9 +346,7 @@ const getUserTransactions = async (req, res) => {
   }
 };
 
-/* --- ADDED: Razorpay Token APIs for Saved Cards/UPI --- */
 
-// MODIFIED: Added user null check and graceful error handling
 const getSavedPaymentMethods = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
@@ -365,7 +364,7 @@ const getSavedPaymentMethods = async (req, res) => {
   }
 };
 
-// MODIFIED: Added user null check
+
 const deleteSavedPaymentMethod = async (req, res) => {
   try {
     const { tokenId } = req.params;
@@ -383,6 +382,138 @@ const deleteSavedPaymentMethod = async (req, res) => {
   }
 };
 
+
+
+const downloadWalletStatement = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const user = await User.findById(userId);
+
+    const transactions = await Transaction.find({ user: userId })
+      .sort({ createdAt: -1 })
+      .limit(100);
+
+    const doc = new PDFDocument({ margin: 50, size: 'A4' });
+
+    res.setHeader('Content-disposition', `attachment; filename="Dealit_Statement_${Date.now()}.pdf"`);
+    res.setHeader('Content-type', 'application/pdf');
+
+    doc.pipe(res);
+
+    // --- 1. HEADER SECTION ---
+    doc.fillColor('#6B46C1').fontSize(28).font('Helvetica-Bold').text('Dealit.', 50, 45);
+    doc.fillColor('#333333').fontSize(10).font('Helvetica-Bold').text('STATEMENT OF ACCOUNT', 400, 55, { align: 'right' });
+    doc.moveTo(50, 85).lineTo(545, 85).lineWidth(2).strokeColor('#A388E1').stroke();
+
+    // --- 2. USER & SUMMARY SECTION ---
+    doc.moveDown(2);
+    
+    doc.fillColor('#666666').fontSize(10).font('Helvetica').text('Account Holder:', 50, 105);
+    doc.fillColor('#111827').fontSize(14).font('Helvetica-Bold').text(user.full_name || 'Dealit User', 50, 120);
+    doc.fillColor('#4B5563').fontSize(10).font('Helvetica').text(user.email, 50, 138);
+
+    doc.fillColor('#666666').fontSize(10).font('Helvetica').text('Date Generated:', 400, 105, { align: 'right' });
+    doc.fillColor('#111827').fontSize(10).font('Helvetica-Bold').text(new Date().toLocaleDateString('en-IN'), 400, 120, { align: 'right' });
+
+    doc.fillColor('#666666').fontSize(10).font('Helvetica').text('Available Balance:', 400, 150, { align: 'right' });
+    doc.fillColor('#10B981').fontSize(18).font('Helvetica-Bold').text(`${user.account_credits} CR`, 400, 165, { align: 'right' });
+
+    // --- 3. TABLE HEADER ---
+    let y = 230; 
+    doc.rect(50, y, 495, 30).fill('#F3F4F6');
+    
+    doc.fillColor('#4B5563').fontSize(9).font('Helvetica-Bold');
+    doc.text('DATE', 60, y + 10, { width: 90 });
+    doc.text('DESCRIPTION', 160, y + 10, { width: 170 });
+    doc.text('STATUS', 340, y + 10, { width: 80 });
+    doc.text('AMOUNT', 430, y + 10, { width: 105, align: 'right' });
+
+    y += 30;
+
+    // --- 4. TABLE ROWS ---
+    if (transactions.length === 0) {
+        doc.fillColor('#9CA3AF').font('Helvetica').fontSize(10);
+        doc.text('No transactions found for this account.', 50, y + 20, { align: 'center', width: 495 });
+    } else {
+        transactions.forEach((tx, index) => {
+            if (y > 750) {
+                doc.addPage();
+                y = 50; 
+            }
+
+            if (index % 2 === 0) {
+                doc.rect(50, y, 495, 35).fill('#FAFAFA');
+            }
+
+            const date = new Date(tx.createdAt || tx.created_at).toLocaleDateString('en-IN');
+            
+            const typeText = (tx.transactionType || 'wallet_recharge')
+                .split('_')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+            
+            const status = tx.status.toUpperCase();
+            const isShipping = tx.transactionType === 'shipping_fee';
+            const isSuccess = tx.status === 'success';
+
+            let amountStr = tx.amount.toString();
+            let amountColor = '#111827';
+            
+            if (isShipping) {
+                amountStr = `- Rs. ${amountStr}`;
+            } else {
+                amountStr = `+ ${amountStr} CR`;
+                if(isSuccess) amountColor = '#10B981'; 
+            }
+
+            if (tx.status === 'failed') amountColor = '#EF4444'; 
+
+            let statusColor = '#F59E0B'; 
+            if (isSuccess) statusColor = '#10B981'; 
+            if (tx.status === 'failed') statusColor = '#EF4444'; 
+
+            // Exact X/Y coordinates so text will NEVER overlap
+            doc.fillColor('#6B7280').fontSize(9).font('Helvetica');
+            doc.text(date, 60, y + 12, { width: 90 });
+            
+            doc.fillColor('#111827').font('Helvetica-Bold');
+            doc.text(typeText, 160, y + 12, { width: 170 });
+            
+            doc.fillColor(statusColor).font('Helvetica-Bold');
+            doc.text(status, 340, y + 12, { width: 80 });
+            
+            doc.fillColor(amountColor).font('Helvetica-Bold');
+            doc.text(amountStr, 430, y + 12, { width: 105, align: 'right' });
+
+            doc.moveTo(50, y + 35).lineTo(545, y + 35).lineWidth(0.5).strokeColor('#E5E7EB').stroke();
+            
+            y += 35; 
+        });
+    }
+
+    // --- 5. FOOTER ---
+    doc.moveDown(3);
+    if (doc.y > 750) doc.addPage();
+    
+    doc.fillColor('#9CA3AF').fontSize(8).font('Helvetica');
+    doc.text('This is a computer-generated statement and does not require a physical signature.', 50, doc.y, { align: 'center', width: 495 });
+    doc.moveDown(0.5);
+    doc.text(`Dealit © ${new Date().getFullYear()} - dealiit.com`, { align: 'center', width: 495 });
+
+    doc.end();
+
+  } catch (error) {
+    console.error('Error generating statement:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, message: 'Failed to generate statement' });
+    }
+  }
+};
+/* --- END MODIFIED --- */
+
+
+
+
 module.exports = {
   createOrder,
   verifyPayment,
@@ -392,5 +523,6 @@ module.exports = {
   refundRazorpayPayment,
   fetchRazorpayPaymentInfo,
   getSavedPaymentMethods, 
-  deleteSavedPaymentMethod 
+  deleteSavedPaymentMethod ,
+  downloadWalletStatement
 };

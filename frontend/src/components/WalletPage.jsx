@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
-/* --- MODIFIED: Added HelpCircle, FileText, Download, ShieldAlert for the dropdown menu --- */
+
 import { ArrowLeft, Wallet, Coins, CreditCard, ChevronRight, Check, MoreHorizontal, Plus, Package, Sparkles, Copy, Users, Target, Share2, History, ArrowDownLeft, XCircle, Clock, X, Truck, Filter, List, Loader2, RefreshCcw, Zap, HelpCircle, FileText, Download, ShieldAlert } from 'lucide-react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -184,7 +184,7 @@ const WalletPage = ({ user, setUser }) => {
     }
   };
 
-  /* --- MODIFIED: Updated function arguments to accept packId and optional amount --- */
+  
   const handlePayment = async (packId, amount = null) => {
     if (packId === 'custom' && (!amount || amount < 10)) return;
     setProcessing(true);
@@ -284,7 +284,29 @@ const WalletPage = ({ user, setUser }) => {
     }
   };
 
-  /* --- MODIFIED: Pass 'custom' identifier and the custom amount --- */
+  const handleDownloadStatement = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/payment/statement`, {
+        withCredentials: true,
+        responseType: 'blob',
+      });
+
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'Dealit_Wallet_Statement.pdf');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading statement:', error);
+      alert('Failed to download statement. Please try again.');
+    }
+  };
+
+ 
   const handleCustomSubmit = (e) => {
     e.preventDefault();
     handlePayment('custom', Number(customAmount));
@@ -341,10 +363,11 @@ const WalletPage = ({ user, setUser }) => {
                     <FileText className="w-4 h-4 text-gray-400" />
                     How Credits Work
                   </Link>
+                
                   <button 
                     onClick={() => {
                       setIsMenuOpen(false);
-                      alert('Your statement is being generated and will download shortly.');
+                      handleDownloadStatement();
                     }}
                     className="w-full px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors"
                   >
