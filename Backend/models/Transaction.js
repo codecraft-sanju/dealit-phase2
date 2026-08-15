@@ -13,7 +13,7 @@ const transactionSchema = new mongoose.Schema({
   razorpay_order_id: { 
     type: String, 
   },
-razorpay_payment_id: { 
+  razorpay_payment_id: { 
     type: String,
     unique: true,
     sparse: true
@@ -42,7 +42,7 @@ razorpay_payment_id: {
 transactionSchema.index({ status: 1, created_at: -1 });
 
 // Payment verification ke time webhook me duplicate check instant hoga
-transactionSchema.index({ razorpay_payment_id: 1 });
+// ---> CHANGE MADE: Removed the duplicate transactionSchema.index({ razorpay_payment_id: 1 }); from here since unique: true already creates the index.
 
 // User ki transaction history (getUserTransactions API) turant load hogi
 transactionSchema.index({ user: 1, transactionType: 1 });

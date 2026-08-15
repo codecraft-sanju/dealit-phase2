@@ -39,7 +39,7 @@ const barterRequestSchema = new mongoose.Schema({
     pincode: { type: String }
   },
   
-  // NEW FIELDS: Requester Shipping Breakdown
+ 
   requesterBaseShippingCost: { type: Number, default: 0 },
   requesterPlatformFee: { type: Number, default: 0 },
   requesterGstAmount: { type: Number, default: 0 },
