@@ -92,10 +92,10 @@ const createOrder = async (req, res) => {
         await user.save();
       } catch (custErr) {
         console.error("Failed to create Razorpay Customer:", custErr);
-        // Continue without customer ID if it fails
+    
       }
     }
-    // --- END ADDED LOGIC ---
+    
 
     const options = {
       amount: amountToCharge * 100, 
@@ -397,7 +397,7 @@ const downloadWalletStatement = async (req, res) => {
     doc.pipe(res);
 
     
-    doc.fillColor('#6B46C1').fontSize(28).font('Helvetica-Bold').text('Dealit.', 50, 45);
+    doc.fillColor('#6B46C1').fontSize(28).font('Helvetica-Bold').text('Dealit', 50, 45);
     doc.fillColor('#333333').fontSize(10).font('Helvetica-Bold').text('STATEMENT OF ACCOUNT', 400, 55, { align: 'right' });
     doc.moveTo(50, 85).lineTo(545, 85).lineWidth(2).strokeColor('#A388E1').stroke();
 
