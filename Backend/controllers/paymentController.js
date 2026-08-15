@@ -346,11 +346,13 @@ const getUserTransactions = async (req, res) => {
 };
 
 /* --- ADDED: Razorpay Token APIs for Saved Cards/UPI --- */
+
+// MODIFIED: Added user null check and graceful error handling
 const getSavedPaymentMethods = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
     
-    if (!user.razorpay_customer_id) {
+    if (!user || !user.razorpay_customer_id) {
       return res.status(200).json({ success: true, data: [] });
     }
 
@@ -358,16 +360,18 @@ const getSavedPaymentMethods = async (req, res) => {
     res.status(200).json({ success: true, data: tokens.items || [] });
   } catch (error) {
     console.error('Error fetching saved methods:', error);
-    res.status(500).json({ success: false, message: 'Could not fetch saved payment methods.' });
+    // Modified to return empty array instead of 500 error if Razorpay data is missing or invalid
+    res.status(200).json({ success: true, data: [] });
   }
 };
 
+// MODIFIED: Added user null check
 const deleteSavedPaymentMethod = async (req, res) => {
   try {
     const { tokenId } = req.params;
     const user = await User.findById(req.user._id);
 
-    if (!user.razorpay_customer_id) {
+    if (!user || !user.razorpay_customer_id) {
       return res.status(404).json({ success: false, message: 'Customer not found.' });
     }
 

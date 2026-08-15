@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { ArrowLeft, CreditCard, Trash2, Smartphone, Loader2, AlertCircle, ShieldCheck, Lock } from 'lucide-react';
+import { ArrowLeft, CreditCard, Trash2, Smartphone, Loader2, AlertCircle, ShieldCheck, Lock, Wifi } from 'lucide-react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -29,16 +29,18 @@ const itemVariants = {
 
 // --- Premium Skeleton Loader ---
 const SkeletonCard = () => (
-  <div className="bg-white p-5 rounded-[1.25rem] border border-gray-100 shadow-sm flex items-center justify-between relative overflow-hidden">
+  <div className="bg-white rounded-[1.5rem] border border-gray-100 shadow-sm relative overflow-hidden h-48 w-full">
     <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent z-10"></div>
-    <div className="flex items-center gap-4 w-full">
-      <div className="w-12 h-12 rounded-xl bg-gray-100 animate-pulse shrink-0"></div>
-      <div className="space-y-2.5 w-full">
-        <div className="h-4 w-32 bg-gray-100 rounded-md animate-pulse"></div>
-        <div className="h-3 w-20 bg-gray-100 rounded-md animate-pulse"></div>
+    <div className="w-full h-full p-6 flex flex-col justify-between">
+      <div className="flex justify-between items-start">
+        <div className="w-12 h-8 bg-gray-100 rounded-md animate-pulse"></div>
+        <div className="w-8 h-8 bg-gray-100 rounded-full animate-pulse"></div>
+      </div>
+      <div className="space-y-4">
+        <div className="h-6 w-3/4 bg-gray-100 rounded-md animate-pulse"></div>
+        <div className="h-4 w-1/4 bg-gray-100 rounded-md animate-pulse"></div>
       </div>
     </div>
-    <div className="w-10 h-10 rounded-full bg-gray-50 animate-pulse shrink-0"></div>
   </div>
 );
 
@@ -91,19 +93,19 @@ const SavedPaymentsPage = ({ user }) => {
     <div className="max-w-md mx-auto bg-[#F8F9FA] min-h-screen pb-6 md:max-w-7xl relative font-sans">
       
       {/* --- Header --- */}
-      <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100/80 shadow-sm flex items-center px-5 py-4 md:px-8 transition-all">
-        <Link to="/profile" className="p-2 -ml-2 text-gray-500 hover:text-[#6B46C1] hover:bg-[#F8F6FF] rounded-full transition-all active:scale-95 mr-3">
+      <div className="sticky top-0 z-50 bg-[#6B46C1] shadow-md flex items-center px-5 py-4 md:px-8 transition-all">
+        <Link to="/profile" className="p-2 -ml-2 text-white/90 hover:text-white hover:bg-white/10 rounded-full transition-all active:scale-95 mr-3">
           <ArrowLeft className="w-6 h-6" />
         </Link>
-        <h1 className="text-lg font-black text-gray-900 tracking-tight flex items-center gap-2">
+        <h1 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
           Saved Methods
         </h1>
       </div>
 
-      <div className="p-5 md:px-8 max-w-2xl mx-auto mt-2">
+      <div className="p-5 md:px-8 max-w-2xl mx-auto mt-4">
         
         {/* --- Info Banner --- */}
-        <div className="bg-gradient-to-r from-[#F8F6FF] to-white p-4 rounded-2xl border border-[#EBE5F7] mb-6 flex gap-3 items-start shadow-sm">
+        <div className="bg-white p-4 rounded-2xl border border-gray-100 mb-6 flex gap-3 items-start shadow-sm">
           <div className="p-2 bg-[#6B46C1]/10 rounded-full shrink-0 mt-0.5">
             <Lock className="w-4 h-4 text-[#6B46C1]" />
           </div>
@@ -117,8 +119,7 @@ const SavedPaymentsPage = ({ user }) => {
 
         {/* --- Content Area --- */}
         {loading ? (
-          <div className="space-y-4">
-            <SkeletonCard />
+          <div className="space-y-5">
             <SkeletonCard />
             <SkeletonCard />
           </div>
@@ -149,7 +150,7 @@ const SavedPaymentsPage = ({ user }) => {
             variants={containerVariants}
             initial="hidden"
             animate="show"
-            className="space-y-3"
+            className="space-y-5"
           >
             <AnimatePresence>
               {tokens.map((token) => {
@@ -159,60 +160,79 @@ const SavedPaymentsPage = ({ user }) => {
                     variants={itemVariants}
                     key={token.id}
                     layout
-                    className="bg-white p-4 sm:p-5 rounded-[1.25rem] border border-gray-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] hover:shadow-md hover:border-[#EBE5F7] flex items-center justify-between transition-all group"
+                    className="relative group w-full"
                   >
-                    <div className="flex items-center gap-4">
-                      {/* Premium Icon Styling */}
-                      <div className={`p-3 rounded-2xl flex items-center justify-center shadow-inner relative overflow-hidden ${
-                        isCard 
-                          ? 'bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100/50' 
-                          : 'bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-100/50'
-                      }`}>
-                        <div className="absolute top-0 right-0 w-8 h-8 bg-white/40 rounded-full blur-xl"></div>
-                        {isCard ? <CreditCard className="w-6 h-6 text-blue-600 relative z-10" /> : <Smartphone className="w-6 h-6 text-orange-600 relative z-10" />}
-                      </div>
-                      
-                      <div>
-                        {isCard ? (
-                          <>
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md border border-gray-100">
-                                {token.card.network}
-                              </span>
+                    {isCard ? (
+                      <div className="w-full h-48 sm:h-56 bg-gradient-to-tr from-gray-900 via-gray-800 to-gray-900 rounded-[1.5rem] p-6 text-white shadow-xl flex flex-col justify-between overflow-hidden relative">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
+                        
+                        <div className="flex justify-between items-start relative z-10">
+                          <div className="flex items-center gap-2">
+                            <div className="w-10 h-8 bg-gradient-to-br from-amber-200 to-yellow-500 rounded-md opacity-90 shadow-sm flex items-center justify-center">
+                              <div className="w-6 h-4 border border-amber-700/30 rounded-sm"></div>
                             </div>
-                            <p className="font-black text-gray-900 tracking-tight text-sm sm:text-base">
-                              •••• •••• •••• {token.card.last4}
-                            </p>
-                            <p className="text-[11px] text-gray-500 font-bold mt-0.5">
-                              Expires {token.card.expiry_month}/{token.card.expiry_year}
-                            </p>
-                          </>
-                        ) : (
-                          <>
-                             <div className="flex items-center gap-2 mb-0.5">
-                              <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md border border-gray-100">
-                                UPI ID
-                              </span>
+                            <Wifi className="w-5 h-5 text-gray-300 rotate-90" />
+                          </div>
+                          
+                          <button 
+                            onClick={() => handleDelete(token.id)}
+                            disabled={deletingId === token.id}
+                            className="w-8 h-8 flex items-center justify-center bg-white/10 hover:bg-red-500/80 rounded-full transition-all backdrop-blur-sm"
+                          >
+                            {deletingId === token.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin text-white" />
+                            ) : (
+                              <Trash2 className="w-4 h-4 text-white/80" />
+                            )}
+                          </button>
+                        </div>
+
+                        <div className="relative z-10">
+                          <p className="font-mono text-xl sm:text-2xl tracking-[0.2em] mb-2 opacity-90">
+                            •••• •••• •••• {token.card.last4}
+                          </p>
+                          <div className="flex justify-between items-end">
+                            <div>
+                              <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Valid Thru</p>
+                              <p className="font-mono text-sm tracking-widest">{token.card.expiry_month}/{token.card.expiry_year}</p>
                             </div>
-                            <p className="font-black text-gray-900 tracking-tight text-sm sm:text-base">
-                              {token.vpa.address}
-                            </p>
-                          </>
-                        )}
+                            <span className="text-sm font-black uppercase tracking-widest italic opacity-80">
+                              {token.card.network}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    
-                    <button 
-                      onClick={() => handleDelete(token.id)}
-                      disabled={deletingId === token.id}
-                      className="w-10 h-10 flex items-center justify-center text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-all active:scale-90 group-hover:text-gray-400"
-                    >
-                      {deletingId === token.id ? (
-                        <Loader2 className="w-5 h-5 animate-spin text-red-500" />
-                      ) : (
-                        <Trash2 className="w-5 h-5" />
-                      )}
-                    </button>
+                    ) : (
+                      <div className="w-full bg-gradient-to-br from-[#6B46C1] to-[#4A2D8B] rounded-[1.5rem] p-6 text-white shadow-lg flex flex-col justify-between overflow-hidden relative min-h-[8rem]">
+                        <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+                        
+                        <div className="flex justify-between items-start relative z-10 mb-6">
+                          <div className="flex items-center gap-2 bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-lg">
+                            <Smartphone className="w-4 h-4" />
+                            <span className="text-xs font-bold uppercase tracking-widest">UPI Method</span>
+                          </div>
+                          
+                          <button 
+                            onClick={() => handleDelete(token.id)}
+                            disabled={deletingId === token.id}
+                            className="w-8 h-8 flex items-center justify-center bg-white/10 hover:bg-red-500/80 rounded-full transition-all backdrop-blur-sm"
+                          >
+                            {deletingId === token.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin text-white" />
+                            ) : (
+                              <Trash2 className="w-4 h-4 text-white/80" />
+                            )}
+                          </button>
+                        </div>
+
+                        <div className="relative z-10">
+                          <p className="text-[11px] text-white/70 uppercase tracking-widest mb-1">Linked UPI ID</p>
+                          <p className="font-bold text-lg sm:text-xl tracking-wide">
+                            {token.vpa.address}
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </motion.div>
                 )
               })}
@@ -232,7 +252,6 @@ const SavedPaymentsPage = ({ user }) => {
 
       </div>
       
-      {/* Shimmer CSS for skeleton */}
       <style>{`
         @keyframes shimmer {
           100% { transform: translateX(100%); }
