@@ -487,7 +487,7 @@ const downloadWalletStatement = async (req, res) => {
         });
     }
 
-    // --- 5. FOOTER ---
+   
     doc.moveDown(3);
     if (doc.y > 750) doc.addPage();
     

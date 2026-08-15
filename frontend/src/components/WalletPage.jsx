@@ -284,14 +284,28 @@ const WalletPage = ({ user, setUser }) => {
     }
   };
 
-  const handleDownloadStatement = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/payment/statement`, {
-        withCredentials: true,
-        responseType: 'blob',
-      });
+const handleDownloadStatement = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/payment/statement`, {
+      withCredentials: true,
+      responseType: 'blob',
+    });
 
-      const blob = new Blob([response.data], { type: 'application/pdf' });
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const isApp = window.localStorage.getItem('is_dealit_app') === 'true';
+
+    if (isApp && window.ReactNativeWebView) {
+      const reader = new FileReader();
+      reader.readAsDataURL(blob);
+      reader.onloadend = () => {
+        const base64data = reader.result.split(',')[1];
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          type: 'DOWNLOAD_PDF',
+          base64: base64data,
+          filename: 'Dealit_Wallet_Statement.pdf'
+        }));
+      };
+    } else {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -300,11 +314,12 @@ const WalletPage = ({ user, setUser }) => {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Error downloading statement:', error);
-      alert('Failed to download statement. Please try again.');
     }
-  };
+  } catch (error) {
+    console.error('Error downloading statement:', error);
+    alert('Failed to download statement. Please try again.');
+  }
+};
 
  
   const handleCustomSubmit = (e) => {
