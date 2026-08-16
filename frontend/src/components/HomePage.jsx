@@ -1,7 +1,7 @@
 // HomePage.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-// CHANGES MADE HERE: Imported keepPreviousData for smooth transitions
+
 import { useQuery, useMutation, keepPreviousData } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -74,7 +74,7 @@ const ModernShimmer = ({ className }) => (
    </div>
 );
 
-// CHANGES MADE HERE: Added safeSrc check to prevent empty string error
+
 const ShimmerImg = ({ src, alt, className, wrapperClassName = "" }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const safeSrc = src ? src : undefined;
@@ -94,7 +94,7 @@ const ShimmerImg = ({ src, alt, className, wrapperClassName = "" }) => {
   );
 };
 
-// CHANGES MADE HERE: Added safeSrc check for desktop and mobile sources
+
 const ShimmerPicture = ({ desktopSrc, mobileSrc, alt, imgClassName, motionProps }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const safeDesktopSrc = desktopSrc ? desktopSrc : undefined;
@@ -119,7 +119,7 @@ const ShimmerPicture = ({ desktopSrc, mobileSrc, alt, imgClassName, motionProps 
   );
 };
 
-// CHANGES MADE HERE: Added safeSrc check for motion images
+
 const ShimmerMotionImg = ({ src, alt, className, onError, motionProps, wrapperClassName = "" }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const safeSrc = src ? src : undefined;
@@ -166,14 +166,13 @@ const HomePage = ({ user, setUser }) => {
      return () => window.removeEventListener('bonusClaimedSuccess', handleBonusClaimedEvent);
    }, []);
 
-   // CHANGES MADE HERE: Replaced empty strings with valid placeholder paths to prevent initial empty src
    const { data: bonusSettings = { 
      enabled: true, 
      amount: 50, 
      isNewUIEnabled: true, 
      heroBannerImage: '/hero-banner3.png', 
      howItWorksImage: '/how-it-works3.png' 
-   } } = useQuery({
+   },isLoading: loadingSettings} = useQuery({
      queryKey: ['publicSettings'],
      queryFn: async () => {
        const res = await axios.get(`${API_URL}/admin/public-settings`);
@@ -208,7 +207,7 @@ const HomePage = ({ user, setUser }) => {
      staleTime: 1000 * 60 * 5,
    });
 
-   // CHANGES MADE HERE: Updated to extract isInitialLoadingItems and isFetchingItems, plus added placeholderData
+
    const { data: items = [], isLoading: isInitialLoadingItems, isFetching: isFetchingItems } = useQuery({
      queryKey: ['items', activeCategory], 
      queryFn: async () => {
@@ -333,13 +332,20 @@ const HomePage = ({ user, setUser }) => {
          <meta name="description" content="Sell your unused items, earn credits, and get what you actually want on DealIt. Start bartering today!" />
        </Helmet>
 
-       <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-purple-100/40 to-transparent pointer-events-none"></div>
+  <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-purple-100/40 to-transparent pointer-events-none"></div>
 
-       {bonusSettings.isNewUIEnabled ? (
+    
+       {loadingSettings ? (
+         <div className="px-4 pt-3 pb-4 relative z-10 mt-2">
+           <ModernShimmer className="w-full h-[200px] md:h-[250px] rounded-[20px] shadow-sm" />
+           <div className="flex gap-2 mt-4">
+             <ModernShimmer className="w-[100px] h-10 rounded-2xl" />
+             <ModernShimmer className="w-[100px] h-10 rounded-2xl" />
+           </div>
+         </div>
+       ) : bonusSettings.isNewUIEnabled ? (
          <>
-           {/* ======================= NEW UI ======================= */}
            <div className="px-3 pt-3 pb-0 relative z-10">
-
              <div className="flex gap-2.5 mb-4 items-stretch">
 
                <motion.div

@@ -174,13 +174,8 @@ useEffect(() => {
   const shouldShowBottomNav = !hideNavbarRoutes.includes(location.pathname) && !location.pathname.startsWith('/admin') && !isAiChatRoute;
   
   const publicDesktopRoutes = ['/login', '/privacy', '/terms', '/refund-policy', '/cancellation-policy'];
-
- 
-
   const allowedFloatingAIPaths = ['/', '/notifications', '/profile', '/wallet'];
   const shouldShowFloatingAIMobile = user && allowedFloatingAIPaths.includes(location.pathname);
-
-
   if (isDesktop && !location.pathname.startsWith('/admin') && !publicDesktopRoutes.includes(location.pathname) && !isAiChatRoute) {
     return (
       <Suspense fallback={<PremiumLoader />}>

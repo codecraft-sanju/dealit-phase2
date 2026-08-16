@@ -319,19 +319,22 @@ const handleDownloadStatement = async () => {
     const isApp = window.localStorage.getItem('is_dealit_app') === 'true';
 
     if (isApp && window.ReactNativeWebView) {
-      let binary = '';
-      const bytes = new Uint8Array(response.data);
-      const len = bytes.byteLength;
-      for (let i = 0; i < len; i++) {
-          binary += String.fromCharCode(bytes[i]);
-      }
-      const base64data = window.btoa(binary);
-
-      window.ReactNativeWebView.postMessage(JSON.stringify({
-        type: 'DOWNLOAD_PDF',
-        base64: base64data,
-        filename: 'Dealit_Wallet_Statement.pdf'
-      }));
+    
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const reader = new FileReader();
+      
+      reader.onloadend = () => {
+       
+        const base64data = reader.result.split(',')[1];
+        
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          type: 'DOWNLOAD_PDF',
+          base64: base64data,
+          filename: 'Dealit_Wallet_Statement.pdf'
+        }));
+      };
+      
+      reader.readAsDataURL(blob);
     } else {
       const blob = new Blob([response.data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
