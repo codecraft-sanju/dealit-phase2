@@ -75,6 +75,7 @@ const WalletPage = ({ user, setUser }) => {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
 
+
   useEffect(() => {
     if (!user) {
       setLoading(false);
@@ -103,6 +104,20 @@ const WalletPage = ({ user, setUser }) => {
     };
     fetchData();
   }, [user]);
+
+
+  useEffect(() => {
+    const handleNativeAppError = (event) => {
+      const errorMsg = event.detail || 'Unknown error occurred in app.';
+      alert(`App Download Error:\n${errorMsg}`);
+    };
+
+    window.addEventListener('NATIVE_APP_ERROR', handleNativeAppError);
+
+    return () => {
+      window.removeEventListener('NATIVE_APP_ERROR', handleNativeAppError);
+    };
+  }, []);
 
   const fetchTransactions = async (pageNum, currentType, isLoadMore = false) => {
     if (isLoadMore) {
@@ -171,7 +186,7 @@ const WalletPage = ({ user, setUser }) => {
       url: referralLink
     };
 
-    // CHANGED: Added native app check to trigger the mobile share sheet
+   
     const isApp = window.localStorage.getItem('is_dealit_app') === 'true';
 
     if (isApp && window.ReactNativeWebView) {
@@ -298,24 +313,27 @@ const handleDownloadStatement = async () => {
   try {
     const response = await axios.get(`${API_URL}/payment/statement`, {
       withCredentials: true,
-      responseType: 'blob',
+      responseType: 'arraybuffer',
     });
 
-    const blob = new Blob([response.data], { type: 'application/pdf' });
     const isApp = window.localStorage.getItem('is_dealit_app') === 'true';
 
     if (isApp && window.ReactNativeWebView) {
-      const reader = new FileReader();
-      reader.readAsDataURL(blob);
-      reader.onloadend = () => {
-        const base64data = reader.result.split(',')[1];
-        window.ReactNativeWebView.postMessage(JSON.stringify({
-          type: 'DOWNLOAD_PDF',
-          base64: base64data,
-          filename: 'Dealit_Wallet_Statement.pdf'
-        }));
-      };
+      let binary = '';
+      const bytes = new Uint8Array(response.data);
+      const len = bytes.byteLength;
+      for (let i = 0; i < len; i++) {
+          binary += String.fromCharCode(bytes[i]);
+      }
+      const base64data = window.btoa(binary);
+
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        type: 'DOWNLOAD_PDF',
+        base64: base64data,
+        filename: 'Dealit_Wallet_Statement.pdf'
+      }));
     } else {
+      const blob = new Blob([response.data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -327,7 +345,8 @@ const handleDownloadStatement = async () => {
     }
   } catch (error) {
     console.error('Error downloading statement:', error);
-    alert('Failed to download statement. Please try again.');
+   
+    alert(`Failed to download statement: ${error.message || 'Unknown Web Error'}`);
   }
 };
 
@@ -347,7 +366,7 @@ const handleDownloadStatement = async () => {
   return (
     <div className="max-w-md mx-auto bg-white min-h-screen pb-2 md:max-w-7xl relative">
       
-      {/* --- MODIFIED: Header now includes the functional dropdown menu with Framer Motion --- */}
+     
       <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm flex justify-between items-center px-5 py-4 md:px-8 transition-all">
         <Link to="/" className="p-2 -ml-2 text-gray-700 hover:text-[#A388E1] hover:bg-gray-50 rounded-full transition-colors">
           <ArrowLeft className="w-6 h-6" />
@@ -414,7 +433,7 @@ const handleDownloadStatement = async () => {
           </AnimatePresence>
         </div>
       </div>
-      {/* --- END MODIFIED --- */}
+     
 
       <div className="md:grid md:grid-cols-2 md:gap-8 md:px-8 mt-4">
         

@@ -176,7 +176,8 @@ useEffect(() => {
   const publicDesktopRoutes = ['/login', '/privacy', '/terms', '/refund-policy', '/cancellation-policy'];
 
  
-  const allowedFloatingAIPaths = ['/', '/notifications', '/profile'];
+
+  const allowedFloatingAIPaths = ['/', '/notifications', '/profile', '/wallet'];
   const shouldShowFloatingAIMobile = user && allowedFloatingAIPaths.includes(location.pathname);
 
 
