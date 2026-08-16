@@ -169,12 +169,16 @@ useEffect(() => {
     }
   }, [navigate]);
 
- 
   const isAiChatRoute = location.pathname.startsWith('/ai-chat') || location.pathname.startsWith('/ai/') || location.pathname.startsWith('/create-ai');
   const hideNavbarRoutes = ['/login', '/signup', '/forgot-password'];
   const shouldShowBottomNav = !hideNavbarRoutes.includes(location.pathname) && !location.pathname.startsWith('/admin') && !isAiChatRoute;
   
   const publicDesktopRoutes = ['/login', '/privacy', '/terms', '/refund-policy', '/cancellation-policy'];
+
+ 
+  const allowedFloatingAIPaths = ['/', '/notifications', '/profile'];
+  const shouldShowFloatingAIMobile = user && allowedFloatingAIPaths.includes(location.pathname);
+
 
   if (isDesktop && !location.pathname.startsWith('/admin') && !publicDesktopRoutes.includes(location.pathname) && !isAiChatRoute) {
     return (
@@ -196,7 +200,9 @@ useEffect(() => {
       
       <main>
         <Suspense fallback={<TopProgressBar />}>
-        {user && !isAiChatRoute && !location.pathname.startsWith('/admin') && <FloatingAIAssistant user={user} />}
+     
+        {shouldShowFloatingAIMobile && <FloatingAIAssistant user={user} />}
+    
           <Routes>
             <Route path="/" element={
               user ? (

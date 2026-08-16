@@ -40,7 +40,7 @@ const FloatingAIAssistant = ({ user }) => {
   const audioRef          = useRef(null);
   const isStreamingRef    = useRef(false);
 
-  // ---------- network ----------
+  
   useEffect(() => {
     const on  = () => setIsOffline(false);
     const off = () => setIsOffline(true);
@@ -49,21 +49,21 @@ const FloatingAIAssistant = ({ user }) => {
     return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
   }, []);
 
-  // ---------- persist messages ----------
+  
   useEffect(() => {
     if (currentSessionId && messages.length > 0) {
       localStorage.setItem(`dealit_ai_history_${currentSessionId}`, JSON.stringify(messages));
     }
   }, [messages, currentSessionId]);
 
-  // ---------- native speech bridge ----------
+
   useEffect(() => {
     const handler = (e) => { if (e.detail?.type === 'SPEECH_FINISHED') setVoiceState('idle'); };
     window.addEventListener('NATIVE_APP_EVENT', handler);
     return () => window.removeEventListener('NATIVE_APP_EVENT', handler);
   }, []);
 
-  // ---------- cleanup ----------
+ 
   useEffect(() => {
     if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = () => {};
     return () => {

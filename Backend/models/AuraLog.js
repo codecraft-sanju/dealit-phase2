@@ -1,3 +1,4 @@
+// models/AuraLog.js
 const mongoose = require('mongoose');
 
 const auraLogSchema = new mongoose.Schema({
@@ -26,7 +27,9 @@ const auraLogSchema = new mongoose.Schema({
 });
 
 
-// User ki history fetch karte waqt hamesha date ke hisaab se descending order me chahiye hogi
 auraLogSchema.index({ user: 1, created_at: -1 });
+
+
+auraLogSchema.index({ created_at: -1, type: 1, points: -1 });
 
 module.exports = mongoose.model('AuraLog', auraLogSchema);

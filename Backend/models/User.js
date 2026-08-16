@@ -64,7 +64,6 @@ const userSchema = new mongoose.Schema({
   account_credits: { type: Number, default: 0 },
   aura_points: { type: Number, default: 100 }, 
   
- 
   razorpay_customer_id: { type: String, default: null },
   
   listedProductsCount: { type: Number, default: 0 },
@@ -90,5 +89,8 @@ userSchema.index({ full_name: 'text', email: 'text', phone: 'text', city: 'text'
 userSchema.index({ created_at: -1 });
 userSchema.index({ role: 1 });
 userSchema.index({ isVerified: 1, created_at: -1 });
+
+
+userSchema.index({ aura_points: -1 });
 
 module.exports = mongoose.model('User', userSchema);
