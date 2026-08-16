@@ -106,16 +106,30 @@ const ItemDetailPage = ({ user }) => {
     }
   };
 
-  const handleShare = async () => {
+ const handleShare = async () => {
     try {
-      if (navigator.share) {
+      const shareTitle = item.title;
+      const shareText = `Check out this ${item.title} on Dealit!`;
+      const shareUrl = window.location.href;
+
+      // CHANGED: Added isApp check to be perfectly consistent with Wallet page
+      const isApp = window.localStorage.getItem('is_dealit_app') === 'true';
+
+      if (isApp && window.ReactNativeWebView) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          type: 'NATIVE_SHARE',
+          title: shareTitle,
+          message: shareText,
+          url: shareUrl
+        }));
+      } else if (navigator.share) {
         await navigator.share({
-          title: item.title,
-          text: `Check out this ${item.title} on Dealit!`,
-          url: window.location.href,
+          title: shareTitle,
+          text: shareText,
+          url: shareUrl,
         });
       } else {
-        navigator.clipboard.writeText(window.location.href);
+        navigator.clipboard.writeText(shareUrl);
         alert('Link copied to clipboard!');
       }
     } catch (error) {

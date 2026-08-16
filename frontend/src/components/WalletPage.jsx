@@ -161,7 +161,7 @@ const WalletPage = ({ user, setUser }) => {
     }
   };
 
-  const handleShare = async () => {
+ const handleShare = async () => {
     if (!profileData?.referralCode) return;
 
     const referralLink = `${window.location.origin}/register?ref=${profileData.referralCode}`;
@@ -171,7 +171,17 @@ const WalletPage = ({ user, setUser }) => {
       url: referralLink
     };
 
-    if (navigator.share) {
+    // CHANGED: Added native app check to trigger the mobile share sheet
+    const isApp = window.localStorage.getItem('is_dealit_app') === 'true';
+
+    if (isApp && window.ReactNativeWebView) {
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        type: 'NATIVE_SHARE',
+        title: shareData.title,
+        message: shareData.text,
+        url: shareData.url
+      }));
+    } else if (navigator.share) {
       try {
         await navigator.share(shareData);
       } catch (err) {
