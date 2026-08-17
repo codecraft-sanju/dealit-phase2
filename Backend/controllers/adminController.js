@@ -11,7 +11,7 @@ const AITrainingLog = require('../models/AITrainingLog');
 const AISetting = require('../models/AISetting');
 const PersonalAI = require('../models/PersonalAI'); 
 const VisitorAIChat = require('../models/VisitorAIChat');
-
+const { fetchAwsDailyCosts, createFreeTierAlertBudget } = require('../services/awsBillingService');
 const { queueNotification } = require('../services/queue');
 const { refundRazorpayPayment } = require('./paymentController');
 
@@ -1100,8 +1100,6 @@ const resetUserAILimits = async (req, res) => {
 };
 
 
-
-// 1. Get all Personal AI Agents with Pagination & Search
 const getAllPersonalAIs = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
@@ -1148,7 +1146,7 @@ const getAllPersonalAIs = async (req, res) => {
   }
 };
 
-// 2. Toggle Status (Block / Unblock Agent)
+
 const togglePersonalAIStatus = async (req, res) => {
   try {
     const agentId = req.params.id;
@@ -1172,7 +1170,7 @@ const togglePersonalAIStatus = async (req, res) => {
   }
 };
 
-// 3. Delete AI Agent (Admin Override)
+
 const deletePersonalAIByAdmin = async (req, res) => {
   try {
     const agentId = req.params.id;
@@ -1197,7 +1195,32 @@ const deletePersonalAIByAdmin = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server Error deleting AI Agent' });
   }
 };
+const getAwsBillingStats = async (req, res) => {
+  try {
+    const billingData = await fetchAwsDailyCosts();
+    res.status(200).json({ success: true, data: billingData });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server Error fetching AWS billing stats' });
+  }
+};
 
+const setupAwsBudgetAlert = async (req, res) => {
+  try {
+    const { email, budgetLimit } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Alert email address is required' });
+    }
+    if (!budgetLimit || isNaN(budgetLimit) || Number(budgetLimit) <= 0) {
+      return res.status(400).json({ success: false, message: 'A valid budget limit greater than 0 is required' });
+    }
+    
+    await createFreeTierAlertBudget(email, budgetLimit);
+    res.status(200).json({ success: true, message: `AWS Budget alert of $${budgetLimit} set successfully` });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server Error creating AWS budget' });
+  }
+};
 module.exports = {
   getPendingItems,
   updateItemStatus,
@@ -1219,8 +1242,8 @@ module.exports = {
   updateAISettings, 
   getAILogStats ,
   resetUserAILimits,
-
-
+getAwsBillingStats,
+  setupAwsBudgetAlert,
   getAllPersonalAIs,
   togglePersonalAIStatus,
   deletePersonalAIByAdmin

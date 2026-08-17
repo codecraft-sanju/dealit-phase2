@@ -23,7 +23,8 @@ const {
   getAILogStats,
   resetUserAILimits,
   
-  
+  getAwsBillingStats,
+  setupAwsBudgetAlert,
   getAllPersonalAIs,
   togglePersonalAIStatus,
   deletePersonalAIByAdmin
@@ -105,4 +106,6 @@ router.route('/personal-ais/:id/toggle-status')
 router.route('/personal-ais/:id')
   .delete(protect, admin, deletePersonalAIByAdmin);
 
+  router.get('/aws-billing', protect, admin, getAwsBillingStats);
+router.post('/aws-budget', protect, admin, setupAwsBudgetAlert);
 module.exports = router;

@@ -7,6 +7,7 @@ import {
   PieChart, Pie, Cell 
 } from 'recharts';
 
+import AwsBillingWidget from './AwsBillingWidget';
 const COLORS = ['#34d399', '#c084fc', '#60a5fa', '#fbbf24', '#f43f5e', '#0ea5e9'];
 const API_BASE = import.meta.env.VITE_BACKEND_API || 'http://localhost:5000';
 
@@ -475,7 +476,7 @@ const DashboardOverview = ({ data }) => {
           </div>
         </div>
 
-        {/* 2. DYNAMIC: Live Activity Feed */}
+       
         <div className="bg-white/[0.02] p-5 md:p-6 lg:p-8 rounded-2xl md:rounded-3xl border border-white/5 shadow-lg backdrop-blur-md flex flex-col h-[320px] md:h-[400px]">
           <h3 className="text-base md:text-lg font-black text-white mb-4 md:mb-6 tracking-tight flex items-center justify-between shrink-0">
             <span className="flex items-center gap-2"><RefreshCw className="w-4 h-4 md:w-5 md:h-5 text-pink-400" /> Live Activity</span>
@@ -532,6 +533,7 @@ const DashboardOverview = ({ data }) => {
         </div>
 
       </div>
+      <AwsBillingWidget />
     </div>
   );
 };

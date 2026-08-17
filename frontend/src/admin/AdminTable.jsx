@@ -10,7 +10,7 @@ const AdminTable = ({
   data,
   AVAILABLE_ICONS,
   handleViewClick,
-  handleViewAILogClick, // ADDED: Prop for handling AI Log View
+  handleViewAILogClick, 
   handleApprove,
   handleRejectClick,
   handleEditOfferClick,
