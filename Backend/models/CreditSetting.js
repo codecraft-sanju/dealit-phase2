@@ -24,13 +24,15 @@ const creditSettingSchema = new mongoose.Schema({
   isNewUIEnabled: { type: Boolean, default: true },
   heroBannerImage: { type: String, default: '' }, 
   howItWorksImage: { type: String, default: '' },
-  
   isReferralSystemEnabled: { type: Boolean, default: true },
   referralRewardCredits: { type: Number, default: 40 }, 
   maxReferralLimit: { type: Number, default: 5 },   
   milestoneReferralReward: { type: Number, default: 100 }, 
   auraReward: { type: Number, default: 50 },
   auraPenalty: { type: Number, default: 50 },
+  awsCacheHours: { type: Number, default: 24 },
+  awsLastFetchTime: { type: Number, default: 0 },
+  awsCachedData: { type: Object, default: {} },
   updated_at: { type: Date, default: Date.now }
 });
 

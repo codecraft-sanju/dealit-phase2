@@ -136,7 +136,7 @@ const getAllTransactions = async (req, res) => {
     const totalPlatformFees = Number((baseShippingIncome * 0.02).toFixed(2));
 
     const totalGstCollected = Number((shippingIncome - baseShippingIncome - totalPlatformFees).toFixed(2));
-   
+    
     res.status(200).json({ 
       success: true, 
       financials: {
@@ -470,7 +470,8 @@ const updateCreditSettings = async (req, res) => {
     
       isNewUIEnabled,
       heroBannerImage,
-      howItWorksImage
+      howItWorksImage,
+      awsCacheHours
 
     } = req.body;
     
@@ -513,6 +514,7 @@ const updateCreditSettings = async (req, res) => {
     if (heroBannerImage !== undefined) setting.heroBannerImage = heroBannerImage;
     if (howItWorksImage !== undefined) setting.howItWorksImage = howItWorksImage;
 
+    if (awsCacheHours !== undefined) setting.awsCacheHours = awsCacheHours;
 
     setting.updated_at = Date.now();
 
@@ -531,7 +533,7 @@ const updateCreditSettings = async (req, res) => {
 
 const getPublicCreditSettings = async (req, res) => {
   try {
-   
+    
     let setting = await CreditSetting.findOne().select(
       'isReferralSystemEnabled referralRewardCredits maxAllowedListings maxReferralLimit milestoneReferralReward isWelcomeBonusEnabled welcomeBonusAmount shippingMethod flatShippingCost autoCancelHours auraReward auraPenalty minImagesRequired isDiscountSimulationEnabled isWhatsAppNotificationEnabled isEmailNotificationEnabled isNewUIEnabled heroBannerImage howItWorksImage'
     );
@@ -1180,10 +1182,10 @@ const deletePersonalAIByAdmin = async (req, res) => {
       return res.status(404).json({ success: false, message: 'AI Agent not found' });
     }
 
-    // Clean up related chat history first
+   
     await VisitorAIChat.deleteMany({ personalAI: agent._id });
     
-    // Delete the agent
+    
     await agent.deleteOne();
 
     res.status(200).json({ 
@@ -1195,10 +1197,18 @@ const deletePersonalAIByAdmin = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server Error deleting AI Agent' });
   }
 };
+
 const getAwsBillingStats = async (req, res) => {
   try {
-    const billingData = await fetchAwsDailyCosts();
-    res.status(200).json({ success: true, data: billingData });
+    
+    let setting = await CreditSetting.findOne();
+    const cacheHours = setting && setting.awsCacheHours ? setting.awsCacheHours : 24;
+    
+    const billingData = await fetchAwsDailyCosts(cacheHours);
+    
+  
+    res.status(200).json({ success: true, data: { ...billingData, cacheHours } });
+    
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server Error fetching AWS billing stats' });
   }
@@ -1221,6 +1231,7 @@ const setupAwsBudgetAlert = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server Error creating AWS budget' });
   }
 };
+
 module.exports = {
   getPendingItems,
   updateItemStatus,
@@ -1242,7 +1253,7 @@ module.exports = {
   updateAISettings, 
   getAILogStats ,
   resetUserAILimits,
-getAwsBillingStats,
+  getAwsBillingStats,
   setupAwsBudgetAlert,
   getAllPersonalAIs,
   togglePersonalAIStatus,

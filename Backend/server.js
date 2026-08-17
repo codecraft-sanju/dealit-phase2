@@ -33,8 +33,6 @@ const Notification = require('./models/Notification');
 
 const app = express();
 
-connectDB();
-
 app.use(cors({
   origin: [
     process.env.FRONTEND_URL, 
@@ -90,39 +88,38 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, async () => {
-  console.log(`Server is running on port ${PORT}`);
-  
-  verifyRazorpayConnection();
-  await verifyShiprocketConnection();
-
-  startAITrainingCron();
-
- 
-  cron.schedule('0 * * * *', async () => {
-    console.log('Running auto-cancel overdue orders cron job...');
-    await autoCancelOverdueOrders();
+connectDB().then(() => {
+  app.listen(PORT, async () => {
+    console.log(`Server is running on port ${PORT}`);
     
-    console.log('Running auto-cancel overdue barters cron job...');
-    await autoCancelOverdueBarters();
-    
-  
-    console.log('Running auto-cancel incomplete dispatches cron job...');
-    await autoCancelIncompleteDispatches();
-  });
+    verifyRazorpayConnection();
+    await verifyShiprocketConnection();
 
- 
-  cron.schedule('0 0 * * *', async () => {
-    console.log('Running daily notification count sync job...');
-    try {
-      const users = await User.find({}, '_id');
-      for (const user of users) {
-        const actualCount = await Notification.countDocuments({ user: user._id, isRead: false });
-        await User.findByIdAndUpdate(user._id, { unreadNotificationsCount: actualCount });
+    startAITrainingCron();
+
+    cron.schedule('0 * * * *', async () => {
+      console.log('Running auto-cancel overdue orders cron job...');
+      await autoCancelOverdueOrders();
+      
+      console.log('Running auto-cancel overdue barters cron job...');
+      await autoCancelOverdueBarters();
+      
+      console.log('Running auto-cancel incomplete dispatches cron job...');
+      await autoCancelIncompleteDispatches();
+    });
+
+    cron.schedule('0 0 * * *', async () => {
+      console.log('Running daily notification count sync job...');
+      try {
+        const users = await User.find({}, '_id');
+        for (const user of users) {
+          const actualCount = await Notification.countDocuments({ user: user._id, isRead: false });
+          await User.findByIdAndUpdate(user._id, { unreadNotificationsCount: actualCount });
+        }
+        console.log(`Successfully synced notification counts for ${users.length} users.`);
+      } catch (error) {
+        console.error('Error running notification count sync job:', error);
       }
-      console.log(`Successfully synced notification counts for ${users.length} users.`);
-    } catch (error) {
-      console.error('Error running notification count sync job:', error);
-    }
+    });
   });
 });
