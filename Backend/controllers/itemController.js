@@ -347,37 +347,64 @@ const deleteItem = async (req, res) => {
   }
 };
 
+
+
 const searchItems = async (req, res) => {
   try {
-    const { q } = req.query;
+    const { q, category, minCredits, maxCredits, sort, page = 1, limit = 20 } = req.query;
 
-    if (!q) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Please provide a search query' 
-      });
+    const pageNumber = parseInt(page, 10) || 1;
+    const limitNumber = parseInt(limit, 10) || 20;
+    const skip = (pageNumber - 1) * limitNumber;
+
+    // Base condition
+    let queryCondition = {
+      status: 'active',
+      estimated_value: { $gt: 0 }
+    };
+
+    
+    if (q && q.trim() !== '') {
+      queryCondition.$text = { $search: q };
     }
 
-    const searchRegex = new RegExp(q, 'i');
+    // 2. Apply Filters
+    if (category && category !== 'All') {
+      queryCondition.category = category;
+    }
+    
+    if (minCredits || maxCredits) {
+      queryCondition.estimated_value = { ...queryCondition.estimated_value };
+      if (minCredits) queryCondition.estimated_value.$gte = Number(minCredits);
+      if (maxCredits) queryCondition.estimated_value.$lte = Number(maxCredits);
+    }
 
-    const items = await Item.find({
-      status: 'active',
-      estimated_value: { $gt: 0 },
-      $or: [
-        { title: searchRegex },
-        { description: searchRegex },
-        { category: searchRegex }
-      ]
-    })
-    .populate('owner', 'full_name city email profilePic')
-    .sort({ created_at: -1 });
+    // 3. Apply Sorting
+    let sortCondition = { created_at: -1 }; // Default Newestif (sort === 'value_asc') sortCondition = { estimated_value: 1 };
+    if (sort === 'value_desc') sortCondition = { estimated_value: -1 };
+    // If searching text and no sort is specified, sort by relevance score
+    if (q && !sort) sortCondition = { score: { $meta: "textScore" } };
 
+  
+    const [total, items] = await Promise.all([
+      Item.countDocuments(queryCondition),
+      Item.find(queryCondition, q && !sort ? { score: { $meta: "textScore" } } : {})
+        .populate('owner', 'full_name city email profilePic')
+        .sort(sortCondition)
+        .skip(skip)
+        .limit(limitNumber)
+    ]);
+
+    
     const setting = await CreditSetting.findOne();
     const modifiedItems = items.map(item => applyDiscountSimulation(item, setting?.isDiscountSimulationEnabled || false));
 
     res.status(200).json({
       success: true,
       count: modifiedItems.length,
+      total,
+      totalPages: Math.ceil(total / limitNumber),
+      currentPage: pageNumber,
       data: modifiedItems
     });
   } catch (error) {
