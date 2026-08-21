@@ -2,6 +2,7 @@ const Groq = require('groq-sdk');
 const { GoogleGenerativeAI, SchemaType } = require('@google/generative-ai');
 const axios = require('axios');
 const rateLimit = require('express-rate-limit');
+const NodeCache = require('node-cache'); // 🚀 NEW: Caching package
 
 const User = require('../models/User'); 
 const Item = require('../models/Item');
@@ -11,11 +12,17 @@ const Transaction = require('../models/Transaction');
 const AIChat = require('../models/AIChat');
 const AITrainingLog = require('../models/AITrainingLog');
 const prompts = require('../config/prompts');
-
-const AISetting = require('../models/AISetting');
+const AISetting = require('../models/AISetting'); 
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+// 🚀 SMART CACHE: User ka context 5 mins (300 seconds) tak RAM me save rahega
+const aiContextCache = new NodeCache({ stdTTL: 300, checkperiod: 320 });
+
+// 🚀 SMART FALLBACK MODELS LIST
+const GROQ_MODELS_LOGIC = ["openai/gpt-oss-120b", "qwen/qwen3.6-27b", "openai/gpt-oss-20b"];
+const GROQ_MODELS_FAST = ["openai/gpt-oss-20b", "qwen/qwen3.6-27b"];
 
 const aiChatLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -84,19 +91,37 @@ const generateItemDescription = async (req, res) => {
     const prompt = prompts.generateItemDescriptionPrompt(title, category, condition);
     console.log("[AI] Requesting description from Groq...");
 
-    const chatCompletion = await groq.chat.completions.create({
-      messages: [{ role: "user", content: prompt }],
-      model: "llama-3.1-8b-instant",
-    });
+    let generatedText = null;
+    let lastError = null;
 
-    const generatedText = chatCompletion.choices[0]?.message?.content;
-    if (!generatedText) throw new Error("Empty response from Groq.");
+    for (const model of GROQ_MODELS_FAST) {
+      try {
+        console.log(`[AI] Trying model for description: ${model}`);
+        const chatCompletion = await groq.chat.completions.create({
+          messages: [{ role: "user", content: prompt }],
+          model: model,
+        });
+        generatedText = chatCompletion.choices[0]?.message?.content;
+        
+        if (generatedText) {
+          console.log(`[AI] Success! Description generated using ${model}.`);
+          break; 
+        }
+      } catch (err) {
+        lastError = err;
+        console.error(`[AI Error] Model ${model} failed. Reason: ${err.message}`);
+      }
+    }
 
-    console.log("[AI] Success! Description generated.");
+    if (!generatedText) {
+      console.error("[AI Critical Error] All models failed for generateItemDescription. Last Error:", lastError);
+      throw new Error(`All models failed. Last error: ${lastError?.message}`);
+    }
+
     res.status(200).json({ success: true, description: generatedText.trim() });
 
   } catch (error) {
-    console.error("AI Error (Groq):", error);
+    console.error("AI Error (Groq Item Description):", error);
     res.status(500).json({ success: false, message: 'Failed to generate description' });
   }
 };
@@ -123,6 +148,7 @@ const analyzeImages = async (req, res) => {
             },
           };
         } catch (imgError) {
+          console.error(`[AI Vision] Image fetch failed for URL: ${url}. Error: ${imgError.message}`);
           return null;
         }
       })
@@ -131,7 +157,7 @@ const analyzeImages = async (req, res) => {
     const imageParts = imagePartsRaw.filter(part => part !== null);
     if (imageParts.length === 0) throw new Error("Could not fetch any images due to network timeout or invalid URLs.");
 
-    const geminiModels = ["gemini-flash-latest", "gemini-1.5-flash", "gemini-1.5-pro"];
+    const geminiModels = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"];
     const responseSchema = {
       type: SchemaType.OBJECT,
       properties: {
@@ -144,6 +170,7 @@ const analyzeImages = async (req, res) => {
 
     let generatedText = null;
     let successfulModel = null;
+    let lastGeminiError = null;
 
     for (const modelName of geminiModels) {
       console.log(`[AI Vision] Trying Gemini model: ${modelName}...`);
@@ -163,16 +190,21 @@ const analyzeImages = async (req, res) => {
           break; 
         }
       } catch (modelError) {
-        console.log(`[AI Vision] Model ${modelName} failed. Reason: ${modelError.message}`);
+        lastGeminiError = modelError;
+        console.error(`[AI Vision] Model ${modelName} failed. Reason: ${modelError.message}`);
       }
     }
 
-    if (!generatedText) throw new Error("All Gemini Vision models failed or are not found.");
+    if (!generatedText) {
+      console.error("[AI Vision Critical] All Gemini models failed. Last Error:", lastGeminiError);
+      throw new Error("All Gemini Vision models failed or are not found.");
+    }
 
     let parsedData;
     try {
       parsedData = JSON.parse(generatedText);
     } catch (parseError) {
+      console.error("[AI Vision JSON Error] Failed to parse generated text:", generatedText);
       throw new Error("AI did not return valid JSON object.");
     }
     
@@ -186,7 +218,7 @@ const analyzeImages = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("AI Vision Error (Gemini):", error);
+    console.error("AI Vision Error (Gemini Final Error):", error);
     res.status(500).json({ success: false, message: 'Failed to analyze images with AI.' });
   }
 };
@@ -263,7 +295,6 @@ const processChat = async (req, res) => {
   });
 
   try {
-    // MODIFIED: Destructure disableUI from body
     const { message, sessionId, isSmartContextEnabled, chatMode, disableUI } = req.body;
     const userId = req.user._id;
     const userRole = req.user.role; 
@@ -328,8 +359,36 @@ const processChat = async (req, res) => {
     }
 
     if (isSmartContextEnabled !== false) { 
-      myItems = await Item.find({ owner: userId, status: 'active' }).select('title estimated_value category condition').limit(10).lean();
       
+      // 🚀 CACHING LOGIC START: Agar RAM me data hai to wahi use karo!
+      const cacheKey = `user_context_${userId}`;
+      const cachedData = aiContextCache.get(cacheKey);
+
+      if (cachedData) {
+        console.log(`[AI Cache] Hit! Using cached DB context for user: ${userId}`);
+        myItems = cachedData.myItems;
+        recentOrders = cachedData.recentOrders;
+        activeSwaps = cachedData.activeSwaps;
+        recentTransactions = cachedData.recentTransactions;
+        incomingOffers = cachedData.incomingOffers;
+        pendingDispatches = cachedData.pendingDispatches;
+      } else {
+        console.log(`[AI Cache] Miss! Fetching fresh context from DB for user: ${userId}`);
+        myItems = await Item.find({ owner: userId, status: 'active' }).select('title estimated_value category condition').limit(10).lean();
+        
+        [recentOrders, activeSwaps, recentTransactions, incomingOffers, pendingDispatches] = await Promise.all([
+          Order.find({ buyer: userId }).select('itemPrice orderStatus totalAmount trackingDetails').populate('item', 'title').sort({ created_at: -1 }).limit(3).lean(),
+          BarterRequest.find({ requester: userId, status: { $in: ['PENDING', 'AWAITING_PAYMENT'] } }).populate('item', 'title').populate('offered_item', 'title').sort({ created_at: -1 }).limit(3).lean(),
+          Transaction.find({ user: userId }).select('amount status transactionType createdAt').sort({ createdAt: -1 }).limit(3).lean(),
+          BarterRequest.find({ owner: userId, status: 'PENDING' }).populate('item', 'title').populate('offered_item', 'title').sort({ created_at: -1 }).limit(3).lean(),
+          Order.find({ seller: userId, orderStatus: 'pending' }).select('totalAmount orderStatus').populate('item', 'title').sort({ created_at: -1 }).limit(3).lean()
+        ]);
+
+        // DB se laane ke baad RAM me daal do 5 minute (300 sec) ke liye
+        aiContextCache.set(cacheKey, { myItems, recentOrders, activeSwaps, recentTransactions, incomingOffers, pendingDispatches });
+      }
+      // 🚀 CACHING LOGIC END
+
       const userCredits = user.account_credits || 0;
       const maxListedValue = myItems.length > 0 ? Math.max(...myItems.map(i => i.estimated_value || 0)) : 0;
       
@@ -355,12 +414,8 @@ const processChat = async (req, res) => {
         ];
       }
 
-      [recentOrders, activeSwaps, recentTransactions, incomingOffers, pendingDispatches, chatDoc, marketItems] = await Promise.all([
-        Order.find({ buyer: userId }).select('itemPrice orderStatus totalAmount trackingDetails').populate('item', 'title').sort({ created_at: -1 }).limit(3).lean(),
-        BarterRequest.find({ requester: userId, status: { $in: ['PENDING', 'AWAITING_PAYMENT'] } }).populate('item', 'title').populate('offered_item', 'title').sort({ created_at: -1 }).limit(3).lean(),
-        Transaction.find({ user: userId }).select('amount status transactionType createdAt').sort({ createdAt: -1 }).limit(3).lean(),
-        BarterRequest.find({ owner: userId, status: 'PENDING' }).populate('item', 'title').populate('offered_item', 'title').sort({ created_at: -1 }).limit(3).lean(),
-        Order.find({ seller: userId, orderStatus: 'pending' }).select('totalAmount orderStatus').populate('item', 'title').sort({ created_at: -1 }).limit(3).lean(),
+      // 🔄 Dynamic Queries: Ye hamesha DB se fetch honge kyunki ye message to message badalte hain
+      [chatDoc, marketItems] = await Promise.all([
         sessionId ? AIChat.findOne({ _id: sessionId, user: userId }) : Promise.resolve(null),
         Item.find(marketQuery).select('_id title estimated_value images category condition').sort({ created_at: -1 }).limit(5).lean()
       ]);
@@ -411,7 +466,6 @@ const processChat = async (req, res) => {
       return res.end();
     }
 
-    // MODIFIED: Pass disableUI flag here
     let systemPrompt = prompts.getBaseSystemPrompt(user, chatMode, disableUI);
 
     if (isSmartContextEnabled !== false) {
@@ -457,29 +511,33 @@ const processChat = async (req, res) => {
       { role: "user", content: message }
     ];
 
-    let chatCompletion;
-    let aiConfig = await AISetting.findOne();
-    if (!aiConfig) {
-      aiConfig = await AISetting.create({});
+    let chatCompletion = null;
+    let lastChatError = null;
+    
+    for (const model of GROQ_MODELS_LOGIC) {
+      try {
+        console.log(`[AI Chat] Trying model: ${model}`);
+        chatCompletion = await groq.chat.completions.create({
+          messages: messagesArray,
+          model: model, 
+          stream: true, 
+        }, { signal: abortController.signal });
+        
+        console.log(`[AI Chat] Success streaming initialized with model: ${model}`);
+        break; 
+      } catch (err) {
+        lastChatError = err;
+        if (err.name === 'AbortError') {
+          console.log("[AI Chat] Stream aborted by client disconnection.");
+          return;
+        }
+        console.error(`[AI Chat] Model ${model} failed. Error: ${err.message}`);
+      }
     }
 
-    try {
-      chatCompletion = await groq.chat.completions.create({
-        messages: messagesArray,
-        model: aiConfig.activeModelId, 
-        stream: true, 
-      }, { signal: abortController.signal });
-    } catch (primaryError) {
-      if (primaryError.name === 'AbortError') {
-        console.log("[AI] Stream aborted by client disconnection.");
-        return;
-      }
-      console.log(`[AI] ${aiConfig.activeModelId} model failed, falling back to ${aiConfig.fallbackModelId}...`, primaryError.message);
-      chatCompletion = await groq.chat.completions.create({
-        messages: messagesArray,
-        model: aiConfig.fallbackModelId, 
-        stream: true, 
-      }, { signal: abortController.signal });
+    if (!chatCompletion) {
+      console.error("[AI Critical] All chat models failed. Last error:", lastChatError);
+      throw new Error(`All Groq models failed. Last error: ${lastChatError?.message}`);
     }
     
     if (isClientDisconnected) return; 
@@ -505,7 +563,7 @@ const processChat = async (req, res) => {
 
     res.write(`data: ${JSON.stringify({ type: 'session_id', sessionId: currentSessionId })}\n\n`);
 
-try {
+    try {
       for await (const chunk of chatCompletion) {
         if (isClientDisconnected || req.socket.destroyed) {
           abortController.abort();
@@ -519,6 +577,7 @@ try {
       }
     } catch (streamError) {
       if (streamError.name !== 'AbortError') {
+        console.error(`[AI Chat Stream Error]: ${streamError.message}`);
         throw streamError;
       }
     }
@@ -552,7 +611,7 @@ try {
     console.error('Production AI Chat Error:', error);
     
     if (!res.headersSent && !isClientDisconnected) {
-      res.status(500).json({ success: false, reply: 'Server connection failed.' });
+      res.status(500).json({ success: false, reply: 'Server connection failed. Our AI is taking a moment.' });
     } else if (!res.writableEnded && !isClientDisconnected) { 
       res.write(`data: ${JSON.stringify({ content: '\n\n**System Error**: Connection lost.' })}\n\n`);
       res.write('data: [DONE]\n\n');
@@ -574,7 +633,6 @@ const processCodeChat = async (req, res) => {
     const { message, sessionId } = req.body;
     const userId = req.user._id;
 
-    
     const hasTokens = await checkAndConsumeAIToken(userId, 'chat');
     if (!hasTokens) {
       return res.status(429).json({ 
@@ -584,7 +642,6 @@ const processCodeChat = async (req, res) => {
       });
     }
 
-    // Fetch user and existing chat session (no smart context queries needed)
     const [user, chatDoc] = await Promise.all([
       User.findById(userId).select('full_name').lean(),
       sessionId ? AIChat.findOne({ _id: sessionId, user: userId }) : Promise.resolve(null)
@@ -611,26 +668,30 @@ const processCodeChat = async (req, res) => {
       { role: "user", content: message }
     ];
 
-    let aiConfig = await AISetting.findOne();
-    if (!aiConfig) {
-      aiConfig = await AISetting.create({});
+    let chatCompletion = null;
+    let lastCodeError = null;
+
+    for (const model of GROQ_MODELS_LOGIC) {
+      try {
+        console.log(`[AI Code] Trying model: ${model}`);
+        chatCompletion = await groq.chat.completions.create({
+          messages: messagesArray,
+          model: model, 
+          stream: true, 
+        }, { signal: abortController.signal });
+        
+        console.log(`[AI Code] Success streaming initialized with model: ${model}`);
+        break; 
+      } catch (err) {
+        lastCodeError = err;
+        if (err.name === 'AbortError') return; 
+        console.error(`[AI Code] Model ${model} failed. Error: ${err.message}`);
+      }
     }
 
-    let chatCompletion;
-    try {
-      chatCompletion = await groq.chat.completions.create({
-        messages: messagesArray,
-        model: aiConfig.activeModelId, 
-        stream: true, 
-      }, { signal: abortController.signal });
-    } catch (primaryError) {
-      if (primaryError.name === 'AbortError') return;
-      console.log(`[AI] ${aiConfig.activeModelId} model failed for code chat, falling back...`, primaryError.message);
-      chatCompletion = await groq.chat.completions.create({
-        messages: messagesArray,
-        model: aiConfig.fallbackModelId, 
-        stream: true, 
-      }, { signal: abortController.signal });
+    if (!chatCompletion) {
+      console.error("[AI Critical] All code chat models failed. Last Error:", lastCodeError);
+      throw new Error(`All AI Code models failed. Last error: ${lastCodeError?.message}`);
     }
     
     if (isClientDisconnected) return; 
@@ -670,6 +731,7 @@ const processCodeChat = async (req, res) => {
       }
     } catch (streamError) {
       if (streamError.name !== 'AbortError') {
+        console.error(`[AI Code Stream Error]: ${streamError.message}`);
         throw streamError;
       }
     }
@@ -750,7 +812,7 @@ const synthesizeVoice = async (req, res) => {
       return response.data.pipe(res);
 
     } catch (elevenLabsError) {
-      console.log('⚠️ [TTS] ElevenLabs failed/credits exhausted. Falling back to Deepgram...');
+      console.log(`⚠️ [TTS] ElevenLabs failed/credits exhausted (${elevenLabsError.message}). Falling back to Deepgram...`);
 
       const DEEPGRAM_API_KEY = process.env.DEEPGRAM_API_KEY;
       const deepgramVoiceId = voicePref === 'male' ? 'aura-orion-en' : 'aura-asteria-en';
@@ -779,7 +841,7 @@ const synthesizeVoice = async (req, res) => {
         return deepgramResponse.data.pipe(res);
 
       } catch (deepgramError) {
-        console.log('🔴 [TTS] Deepgram also failed. Using Chrome/Client Native API.');
+        console.log(`🔴 [TTS] Deepgram also failed (${deepgramError.message}). Using Chrome/Client Native API.`);
         
         if (!res.headersSent) {
           return res.status(503).json({
@@ -844,20 +906,34 @@ const generateMarketImage = async (req, res) => {
 
     let finalPrompt = prompt;
     if (prompt.length < 50) {
-      try {
-        const enhanceCompletion = await groq.chat.completions.create({
-          messages: [
-            { role: "system", content: "You are an expert prompt engineer. Enhance the user's idea into a highly detailed, cinematic, photorealistic image generation prompt. Output ONLY the prompt. Max 50 words." },
-            { role: "user", content: prompt }
-          ],
-          model: "llama-3.1-8b-instant",
-          temperature: 0.7,
-          max_tokens: 100,
-        });
-        const enhanced = enhanceCompletion.choices[0]?.message?.content?.trim();
-        if (enhanced) finalPrompt = enhanced;
-      } catch (e) {
-        console.error(e);
+      
+      let enhanced = null;
+      for (const model of GROQ_MODELS_FAST) {
+        try {
+          console.log(`[AI Image] Enhancing prompt with ${model}...`);
+          const enhanceCompletion = await groq.chat.completions.create({
+            messages: [
+              { role: "system", content: "You are an expert prompt engineer. Enhance the user's idea into a highly detailed, cinematic, photorealistic image generation prompt. Output ONLY the prompt. Max 50 words." },
+              { role: "user", content: prompt }
+            ],
+            model: model,
+            temperature: 0.7,
+            max_tokens: 100,
+          });
+          enhanced = enhanceCompletion.choices[0]?.message?.content?.trim();
+          if (enhanced) {
+             console.log(`[AI Image] Prompt enhanced successfully!`);
+             break;
+          }
+        } catch (e) {
+          console.error(`[AI Image Error] Enhancer model ${model} failed. Error: ${e.message}`);
+        }
+      }
+      
+      if (enhanced) {
+        finalPrompt = enhanced;
+      } else {
+        console.log(`[AI Image] All enhancer models failed, using original prompt.`);
       }
     }
 
@@ -883,12 +959,14 @@ const generateMarketImage = async (req, res) => {
       return res.status(200).json({ success: true, imageUrl, source: 'huggingface', prompt: finalPrompt });
 
     } catch (primaryError) {
+      console.error(`[AI Image] Huggingface failed (${primaryError.message}). Falling back to Pollinations...`);
       const fallbackUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(finalPrompt)}?nologo=true&seed=${randomSeed}&width=1024&height=1024&enhance=false`;
 
       return res.status(200).json({ success: true, imageUrl: fallbackUrl, source: 'pollinations', prompt: finalPrompt });
     }
 
   } catch (error) {
+    console.error("AI Image Generation Final Error:", error);
     return res.status(500).json({ success: false, message: 'Failed to generate image from both providers.' });
   }
 };
